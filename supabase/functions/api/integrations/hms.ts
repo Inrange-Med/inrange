@@ -51,7 +51,9 @@ export async function joinLink(roomId: string, role: CallRole, name: string, use
   const code = codes.find((c) => c.role === role && c.enabled)?.code;
   if (!code) throw new Error(`100ms room ${roomId} has no enabled code for role "${role}"`);
   const q = new URLSearchParams({ name, userId: String(userId) });
-  return `https://${env.hmsSubdomain}.app.100ms.live/meeting/${code}?${q}`;
+  // HMS_SUBDOMAIN may be "inrange" or the full "inrange.app.100ms.live"
+  const sub = env.hmsSubdomain.replace(/^https?:\/\//, "").replace(/\.app\.100ms\.live\/?$/, "");
+  return `https://${sub}.app.100ms.live/meeting/${code}?${q}`;
 }
 
 export function mockJoinLink(appointmentId: number, role: CallRole, name: string) {
