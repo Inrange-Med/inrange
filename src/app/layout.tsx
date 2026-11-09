@@ -22,7 +22,7 @@ const text = Wix_Madefor_Text({
  * every signed-in area, sign-in, onboarding and the video call set noindex in their own layout or page.
  */
 export const metadata: Metadata = {
-  metadataBase: new URL("https://inrange.in"),
+  metadataBase: new URL("https://inrangemed.com"),
   title: {
     default: "InRange | Doctor-led care for weight and blood sugar",
     template: "%s",

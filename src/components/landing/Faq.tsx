@@ -59,8 +59,8 @@ export default function Faq() {
           <Mask id="faq-title" className="h2" lines={["Questions people", "ask us first."]} />
           <p className="body" data-reveal="rise" style={{ "--d": "140ms" } as React.CSSProperties}>
             For anything else, write to{" "}
-            <a href="mailto:care@inrange.in" className={s.mail}>
-              care@inrange.in
+            <a href="mailto:aamerjalan3@gmail.com" className={s.mail}>
+              aamerjalan3@gmail.com
             </a>{" "}
             and a member of the care team will reply.
           </p>

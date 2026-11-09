@@ -1,4 +1,4 @@
-/** /robots.txt, built once at build time: crawlers may visit, and the sitemap is on inrange.in. */
+/** /robots.txt, built once at build time: crawlers may visit, and the sitemap is on inrangemed.com. */
 
 import type { MetadataRoute } from "next";
 
@@ -10,6 +10,6 @@ export default function robots(): MetadataRoute.Robots {
       userAgent: "*",
       allow: "/",
     },
-    sitemap: "https://inrange.in/sitemap.xml",
+    sitemap: "https://inrangemed.com/sitemap.xml",
   };
 }

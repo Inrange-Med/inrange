@@ -15,13 +15,14 @@ const COLS = [
   },
   {
     title: "Contact",
-    links: [["care@inrange.in", "mailto:care@inrange.in"]],
+    links: [["aamerjalan3@gmail.com", "mailto:aamerjalan3@gmail.com"]],
   },
   {
     title: "Legal",
     links: [
       ["Privacy policy", "/privacy"],
       ["Terms of service", "/terms"],
+      ["Cancellation and refunds", "/refund"],
       ["Grievance officer", "/grievance"],
     ],
   },

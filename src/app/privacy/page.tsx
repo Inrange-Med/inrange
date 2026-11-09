@@ -45,7 +45,7 @@ export default function PrivacyPage() {
           heading: "Your choices",
           body: [
             "You can change your privacy consent in Profile, under Privacy and security.",
-            "To get a copy of your data or have it deleted, write to care@inrange.in from your registered email, or message your care team.",
+            "To get a copy of your data or have it deleted, write to aamerjalan3@gmail.com from your registered email, or message your care team.",
           ],
         },
       ]}

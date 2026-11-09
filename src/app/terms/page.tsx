@@ -33,7 +33,7 @@ export default function TermsPage() {
           heading: "Payments",
           body: [
             "You see an itemised price before you pay. During the pilot, some payments are test payments; the checkout says so when nothing is charged.",
-            "Cancellation and refund terms for prepaid plans are confirmed before public launch. Until then, write to care@inrange.in about any payment.",
+            "Cancellations and refunds follow our cancellation and refund policy at inrangemed.com/refund.",
           ],
         },
         {
