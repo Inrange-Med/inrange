@@ -45,7 +45,12 @@ function bookableDate(raw: string | undefined): string {
   return raw!;
 }
 
-/** Frees lapsed checkout holds and creates the default timetable for `date` for any doctor without one. */
+/**
+ * Frees lapsed checkout holds and creates `date`'s 30-minute slots: from each doctor's own weekly
+ * hours (doctor_hours), or the default timetable (Mon to Sat, 10:00-13:00 and 15:00-19:00) for a
+ * doctor who has set none. Days off get none. Slots that already exist (booked, held, blocked) are
+ * left as they are; changing hours removes only open future slots (routes/doctor.ts).
+ */
 async function prepareSlots(date: string) {
   await sql`update doctor_slots set status = 'Available', held_by = null, held_until = null
             where status = 'Held' and held_until < now()`;
@@ -53,13 +58,19 @@ async function prepareSlots(date: string) {
     insert into doctor_slots (doctor_id, slot_date, start_time, end_time)
     select d.id, ${date}::date, t::time, (t + interval '30 minutes')::time
     from doctors d
-    cross join (
-      select generate_series(timestamp '2000-01-01 10:00', timestamp '2000-01-01 12:30', interval '30 minutes') as t
+    cross join lateral (
+      select generate_series(timestamp '2000-01-01' + h.start_time,
+                             timestamp '2000-01-01' + h.end_time - interval '30 minutes', interval '30 minutes') as t
+      from doctor_hours h where h.doctor_id = d.id and h.weekday = extract(isodow from ${date}::date)
+      union all
+      select generate_series(timestamp '2000-01-01 10:00', timestamp '2000-01-01 12:30', interval '30 minutes')
+      where not exists (select 1 from doctor_hours h where h.doctor_id = d.id) and extract(isodow from ${date}::date) < 7
       union all
       select generate_series(timestamp '2000-01-01 15:00', timestamp '2000-01-01 18:30', interval '30 minutes')
+      where not exists (select 1 from doctor_hours h where h.doctor_id = d.id) and extract(isodow from ${date}::date) < 7
     ) g
-    where d.active and extract(isodow from ${date}::date) < 7
-      and not exists (select 1 from doctor_slots s where s.doctor_id = d.id and s.slot_date = ${date}::date)
+    where d.active
+      and not exists (select 1 from doctor_days_off o where o.doctor_id = d.id and o.day = ${date}::date)
     on conflict do nothing`;
 }
 

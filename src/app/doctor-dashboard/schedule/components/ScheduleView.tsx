@@ -7,6 +7,7 @@
 */
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import ErrorNotice from "@/components/ui/ErrorNotice";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import PageHead from "@/components/ui/PageHead";
@@ -101,6 +102,14 @@ export default function ScheduleView() {
       <PageHead
         className={clinicStyles.pageHead}
         title="Schedule"
+        action={
+          <Link
+            href="/doctor-dashboard/hours"
+            className={clinicStyles.textLink}
+          >
+            Working hours
+          </Link>
+        }
         sub={
           <>
             <span className="num">{inMonth.length}</span> consultations in{" "}

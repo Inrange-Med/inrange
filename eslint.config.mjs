@@ -29,7 +29,7 @@ const onlyOwnArea = (area) => ({
   message: `Files in src/app/${area} may import only their own area (@/app/${area}/...). Move shared code to src/components, src/services, src/hooks or src/lib.`,
 });
 
-const ROUTE_AREAS = ["patient-dashboard", "doctor-dashboard", "sign-in", "onboarding", "consultation", "pricing"];
+const ROUTE_AREAS = ["patient-dashboard", "doctor-dashboard", "admin", "sign-in", "onboarding", "consultation", "pricing"];
 
 const ENV_ONLY_IN_LIB_AND_SERVICES = {
   group: ["@/config/env"],

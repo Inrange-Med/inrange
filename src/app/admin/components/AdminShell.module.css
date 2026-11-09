@@ -1,0 +1,289 @@
+/*
+  The admin area's frame, the doctor shell's (Arhaan's clinician ClinicShell) with two places: a quiet
+  rail on a laptop, a top bar and a dock on a phone.
+*/
+.app {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--bg);
+}
+
+/* ---------- the rail (laptop) ---------- */
+.rail {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .app {
+    display: grid;
+    grid-template-columns: 248px minmax(0, 1fr);
+  }
+  .rail {
+    position: sticky;
+    top: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+    height: 100vh;
+    height: 100dvh;
+    padding: 24px 16px 20px;
+    border-right: 1px solid var(--hair);
+    background: var(--bg-2);
+  }
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding-inline: 10px;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.portal {
+  padding: 4px 8px;
+  border-radius: 7px;
+  background: var(--hover-wash);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--slate-800);
+}
+
+.nav {
+  display: grid;
+  gap: 2px;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-family: var(--font-display);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--ink-2);
+  text-decoration: none;
+  transition:
+    background-color 180ms var(--ease-out),
+    color 180ms var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .navItem:not([aria-current]):hover {
+    background: var(--hover-wash);
+    color: var(--ink);
+  }
+}
+
+.navItem[aria-current="page"] {
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 0 0 1px var(--hair);
+}
+
+.navItem svg {
+  color: var(--slate-700);
+}
+
+.me {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: auto;
+  padding: 12px;
+  border-radius: var(--r-media);
+  background: var(--paper);
+  box-shadow: 0 0 0 1px var(--hair);
+}
+
+.me div {
+  display: grid;
+  min-width: 0;
+}
+
+.me strong {
+  font-size: 0.875rem;
+  font-weight: 560;
+}
+
+.me div span {
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  color: var(--ink-3);
+}
+
+/* sign out: the quiet text button where Arhaan's rail keeps its small account control (.reset) */
+.signOut {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 560;
+  color: var(--ink-3);
+  cursor: pointer;
+  transition:
+    background-color 180ms var(--ease-out),
+    color 180ms var(--ease-out);
+}
+
+.rail .signOut {
+  align-self: center;
+  margin-top: -16px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .signOut:hover {
+    background: var(--hover-wash);
+    color: var(--ink);
+  }
+}
+
+.signOut:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.topMe {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ---------- phone chrome ---------- */
+.top {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: calc(8px + env(safe-area-inset-top)) var(--gutter) 8px;
+  background: var(--chrome-bg);
+  --chrome-blur: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: var(--chrome-blur);
+  backdrop-filter: var(--chrome-blur);
+}
+
+@media (min-width: 1024px) {
+  .top {
+    display: none;
+  }
+}
+
+.dock {
+  position: fixed;
+  z-index: 40;
+  left: 10px;
+  right: 10px;
+  bottom: calc(10px + env(safe-area-inset-bottom));
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  padding: 6px;
+  border-radius: 999px;
+  background: rgb(10 11 12 / 0.92);
+  --chrome-blur: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: var(--chrome-blur);
+  backdrop-filter: var(--chrome-blur);
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 0.06),
+    0 18px 40px -20px rgb(0 0 0 / 0.45);
+}
+
+@media (min-width: 1024px) {
+  .dock {
+    display: none;
+  }
+}
+
+.dockTab {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 7px 0 6px;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 560;
+  color: var(--on-dark-3);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    color 200ms var(--ease-out),
+    background-color 200ms var(--ease-out),
+    transform 160ms var(--ease-out);
+}
+
+.dockTab:active {
+  transform: scale(0.95);
+}
+
+.dockTab[aria-current="page"] {
+  background: rgb(236 237 239 / 0.08);
+  color: var(--signal);
+}
+
+.dockTab:focus-visible {
+  outline-color: var(--signal);
+}
+
+.main {
+  min-width: 0;
+  padding-bottom: calc(100px + env(safe-area-inset-bottom));
+}
+
+@media (min-width: 1024px) {
+  .main {
+    padding-bottom: 32px;
+  }
+}
+
+/* on the rail the focus ring takes the signal ink */
+.rail :focus-visible {
+  outline-color: var(--signal-ink);
+}
+
+@media (min-width: 768px) {
+  .dock {
+    max-width: 280px;
+    margin-inline: auto;
+  }
+}
+
+/* the toast sits above the dock on a phone */
+.toast {
+  bottom: calc(96px + env(safe-area-inset-bottom));
+}
+@media (min-width: 1024px) {
+  .toast {
+    bottom: 24px;
+  }
+}
+
+/* a long error (a path, an address) breaks inside the toast instead of running off the screen */
+.toast {
+  overflow-wrap: anywhere;
+}
+.toast > span {
+  min-width: 0;
+}
+
+/* the offline line above the page, as in the patient shell */
+.offline {
+  margin: 8px 0 0;
+  padding: 10px var(--gutter);
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--ink-2);
+  text-align: center;
+}

@@ -33,3 +33,18 @@ export type DoctorPatient = {
   sex: string;
   mobile: string;
 };
+
+/** One stretch of working time on a weekday, India time ("09:00" to "13:30"). `weekday` is ISO: 1 is Monday, 7 Sunday. */
+export type WorkingRange = { weekday: number; start: string; end: string };
+
+/**
+ * The signed-in doctor's bookable hours (GET /api/doctor/availability). `usesDefault` is true until
+ * the doctor saves their own week; `daysOff` are "YYYY-MM-DD", today onward; `bookedOutside` counts
+ * booked consultations that fall outside these hours and stay booked.
+ */
+export type DoctorAvailability = {
+  weekly: WorkingRange[];
+  daysOff: string[];
+  usesDefault: boolean;
+  bookedOutside: number;
+};

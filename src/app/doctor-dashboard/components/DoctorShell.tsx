@@ -2,8 +2,10 @@
 
 /*
   The doctor's workspace around every /doctor-dashboard page (Arhaan's clinician ClinicShell): a
-  quiet rail of five places on a laptop, a top bar and a dock on a phone, and the toast. The places
-  lead (Today, Schedule, Patients); the two queues with counts (Notes, Messages) close the list.
+  quiet rail of six places on a laptop, a top bar and a dock on a phone, and the toast. The places
+  lead (Today, Schedule, Patients); the two queues with counts (Notes, Messages) follow, and Hours,
+  set once and rarely changed, closes the list. The phone dock keeps five tabs so every label fits at
+  390px: Hours is left out there, lights Schedule, and is reached from the Schedule page head.
   Sign out sits under the doctor's name on the rail and beside the avatar in the phone top bar.
   Only signed-in doctors get past it: anyone signed out goes to /sign-in (?next= brings them back to
   this page), a patient to /patient-dashboard. Offline, a line above the page says so.
@@ -19,6 +21,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   CalendarBlank,
   ChatsCircle,
+  Clock,
   Notepad,
   SquaresFour,
   Users,
@@ -40,7 +43,13 @@ import SignOutButton from "./SignOutButton";
 import clinicStyles from "@/app/doctor-dashboard/styles/ClinicSurfaces.module.css";
 import styles from "./DoctorShell.module.css";
 
-type Section = "today" | "schedule" | "patients" | "notes" | "messages";
+type Section =
+  | "today"
+  | "schedule"
+  | "patients"
+  | "notes"
+  | "messages"
+  | "hours";
 
 const SECTIONS: {
   id: Section;
@@ -48,6 +57,8 @@ const SECTIONS: {
   label: string;
   icon: typeof Users;
   count?: keyof DoctorWorkCounts;
+  /** false keeps a place off the phone dock (rail only) */
+  dock?: false;
 }[] = [
   {
     id: "today",
@@ -81,6 +92,13 @@ const SECTIONS: {
     label: "Messages",
     icon: ChatsCircle,
     count: "messagesForYou",
+  },
+  {
+    id: "hours",
+    href: "/doctor-dashboard/hours",
+    label: "Hours",
+    icon: Clock,
+    dock: false,
   },
 ];
 
@@ -119,6 +137,7 @@ export default function DoctorShell({ children }: { children: ReactNode }) {
         signInHrefFor(window.location.pathname + window.location.search),
       );
     if (role === "PATIENT") router.replace("/patient-dashboard");
+    if (role === "ADMIN") router.replace("/admin");
   }, [role, router]);
 
   if (!isDoctor) {
@@ -207,9 +226,12 @@ export default function DoctorShell({ children }: { children: ReactNode }) {
           </div>
 
           <nav className={styles.dock} aria-label="Clinician">
-            {SECTIONS.map((item) => {
+            {SECTIONS.filter((item) => item.dock !== false).map((item) => {
               const Icon = item.icon;
-              const on = item.id === section;
+              // Hours has no tab of its own on a phone: it sits under Schedule
+              const on =
+                item.id === section ||
+                (item.id === "schedule" && section === "hours");
               const count = countOf(item.count);
               return (
                 <Link

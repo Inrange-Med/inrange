@@ -20,6 +20,9 @@ assert.equal(
   "/onboarding?step=report",
 );
 assert.equal(pathAfterSignIn("/onboarding", D), D); // doctors do not onboard
+assert.equal(pathAfterSignIn("/admin/doctors", "/admin"), "/admin/doctors");
+assert.equal(pathAfterSignIn("/admin/doctors", D), D); // only admins reach /admin
+assert.equal(pathAfterSignIn("/onboarding", "/admin"), "/admin");
 for (const hostile of [
   "https://evil.com",
   "//evil.com",

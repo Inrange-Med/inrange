@@ -22,37 +22,41 @@ Every endpoint here:
 
 ## Endpoints
 
-| Method | Path | Status | Service function | Screen |
-| --- | --- | --- | --- | --- |
-| GET | `/api/doctor/me` | exists | `doctorPortalService.getMyDoctorProfile` | Rail (name, specialisation, photo), note signature |
-| GET | `/api/appointments/doctor?date=YYYY-MM-DD` | exists | `doctorPortalService.listAppointmentsOn` | Today (day list, next patient) |
-| GET | `/api/appointments/doctor` | exists | `doctorPortalService.listAllAppointments` | Schedule, Patients, Record, Today (next working day) |
-| GET | `/api/doctor/patients` | exists | `doctorPortalService.listMyPatients` | Patients, Record header, Messages, Notes |
-| GET | `/api/doctor/patients/:patientId/record` | PROPOSED | `patientRecordService.getPatientRecord` | Record, Today "Next" brief, Messages, Notes |
-| GET | `/api/doctor/patients/snapshots` | PROPOSED | `patientRecordService.listPatientSnapshots` | Patients columns, care-week tag in Messages and Notes |
-| GET | `/api/doctor/queue` | PROPOSED | `patientRecordService.listWaitingItems` | Today "Waiting on you", Patients filter, Record |
-| GET | `/api/doctor/work-counts` | PROPOSED | `patientRecordService.getWorkCounts` | Rail and dock badges |
-| GET | `/api/doctor/patients/:patientId/photos` | PROPOSED | `patientRecordService.listProgressPhotos` | Record, Progress photos |
-| POST | `/api/doctor/patients/:patientId/photos/viewed` | PROPOSED | `patientRecordService.recordPhotoViewing` | Record, "Show photos" |
-| POST | `/api/doctor/patients/:patientId/symptoms/:symptomId/acknowledgement` | PROPOSED | `patientRecordService.acknowledgeSymptom` | Record safety strip, Trackers, Messages |
-| DELETE | `/api/doctor/patients/:patientId/symptoms/:symptomId/acknowledgement` | PROPOSED | `patientRecordService.undoSymptomAcknowledgement` | the toast's Undo |
-| POST | `/api/doctor/patients/:patientId/labs/:labId/review` | PROPOSED | `patientRecordService.reviewLabReport` | Record, Labs "Mark reviewed" |
-| POST | `/api/doctor/patients/:patientId/prescriptions/:prescriptionId/sign` | PROPOSED | `patientRecordService.signPrescription` | Record, Prescriptions "Review and sign" |
-| POST | `/api/doctor/patients/:patientId/private-notes` | PROPOSED | `patientRecordService.addPrivateNote` | Record, Private notes |
-| POST | `/api/doctor/patients/:patientId/plan-recommendation` | live | `patientRecordService.recommendPlan` | Record, Programme plan "Recommend a plan" `{ planId, note }`; replaces this doctor's earlier suggestion, which the patient sees first on Plans |
-| DELETE | `/api/doctor/patients/:patientId/plan-recommendation` | live | `patientRecordService.withdrawPlanRecommendation` | Record, Programme plan "Withdraw" |
-| GET | `/api/doctor/notes` | PROPOSED | `clinicalNoteService.listClinicalNotes` | Notes, Record "Visits", Note review |
-| GET | `/api/doctor/notes/:noteId` | PROPOSED | `clinicalNoteService.getClinicalNote` | Note review |
-| PUT | `/api/doctor/notes/:noteId` | PROPOSED | `clinicalNoteService.saveClinicalNote` | Note review (autosave) |
-| POST | `/api/doctor/notes/:noteId/sign` | PROPOSED | `clinicalNoteService.signClinicalNote` | Note review, Sign |
-| POST | `/api/doctor/notes/:noteId/addenda` | PROPOSED | `clinicalNoteService.addClinicalNoteAddendum` | Note review, signed note |
-| GET | `/api/chat/doctor/sessions` | PROPOSED | `doctorChatService.listMyChatSessions` | Messages list |
-| POST | `/api/chat/sessions/:sessionId/read` | PROPOSED | `doctorChatService.markChatRead` | Messages, opening a chat |
-| POST | `/api/chat/sessions/:sessionId/no-reply-needed` | PROPOSED | `doctorChatService.markNoReplyNeeded` | Messages, "No reply needed" |
-| DELETE | `/api/chat/sessions/:sessionId/no-reply-needed` | PROPOSED | `doctorChatService.undoNoReplyNeeded` | the toast's Undo |
-| GET | `/api/chat/sessions/:sessionId/messages` | PROPOSED (consultations-and-care.md) | `chatService.listChatHistory` | Messages, earlier messages |
-| GET/POST | `/api/chat/sessions/:sessionId/messages` | pilot | `chatService.connectToChatSession` (polling) | Messages (live; `senderRole: "DOCTOR"`) |
-| GET | `/api/video/appointments/:appointmentId/join` | exists | `videoConsultationService.joinVideoConsultation` | "Start consultation" opens `/consultation/:appointmentId` |
+| Method   | Path                                                                  | Status                               | Service function                                  | Screen                                                                                                                                         |
+| -------- | --------------------------------------------------------------------- | ------------------------------------ | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET      | `/api/doctor/me`                                                      | exists                               | `doctorPortalService.getMyDoctorProfile`          | Rail (name, specialisation, photo), note signature                                                                                             |
+| GET      | `/api/appointments/doctor?date=YYYY-MM-DD`                            | exists                               | `doctorPortalService.listAppointmentsOn`          | Today (day list, next patient)                                                                                                                 |
+| GET      | `/api/appointments/doctor`                                            | exists                               | `doctorPortalService.listAllAppointments`         | Schedule, Patients, Record, Today (next working day)                                                                                           |
+| GET      | `/api/doctor/patients`                                                | exists                               | `doctorPortalService.listMyPatients`              | Patients, Record header, Messages, Notes                                                                                                       |
+| GET      | `/api/doctor/availability`                                            | exists                               | `doctorPortalService.getMyAvailability`           | Hours                                                                                                                                          |
+| PUT      | `/api/doctor/availability`                                            | exists                               | `doctorPortalService.saveWeeklyHours`             | Hours, Weekly hours "Save hours"                                                                                                               |
+| PUT      | `/api/doctor/days-off/:date`                                          | exists                               | `doctorPortalService.addDayOff`                   | Hours, Days off "Add"                                                                                                                          |
+| DELETE   | `/api/doctor/days-off/:date`                                          | exists                               | `doctorPortalService.removeDayOff`                | Hours, Days off "Remove"                                                                                                                       |
+| GET      | `/api/doctor/patients/:patientId/record`                              | PROPOSED                             | `patientRecordService.getPatientRecord`           | Record, Today "Next" brief, Messages, Notes                                                                                                    |
+| GET      | `/api/doctor/patients/snapshots`                                      | PROPOSED                             | `patientRecordService.listPatientSnapshots`       | Patients columns, care-week tag in Messages and Notes                                                                                          |
+| GET      | `/api/doctor/queue`                                                   | PROPOSED                             | `patientRecordService.listWaitingItems`           | Today "Waiting on you", Patients filter, Record                                                                                                |
+| GET      | `/api/doctor/work-counts`                                             | PROPOSED                             | `patientRecordService.getWorkCounts`              | Rail and dock badges                                                                                                                           |
+| GET      | `/api/doctor/patients/:patientId/photos`                              | PROPOSED                             | `patientRecordService.listProgressPhotos`         | Record, Progress photos                                                                                                                        |
+| POST     | `/api/doctor/patients/:patientId/photos/viewed`                       | PROPOSED                             | `patientRecordService.recordPhotoViewing`         | Record, "Show photos"                                                                                                                          |
+| POST     | `/api/doctor/patients/:patientId/symptoms/:symptomId/acknowledgement` | PROPOSED                             | `patientRecordService.acknowledgeSymptom`         | Record safety strip, Trackers, Messages                                                                                                        |
+| DELETE   | `/api/doctor/patients/:patientId/symptoms/:symptomId/acknowledgement` | PROPOSED                             | `patientRecordService.undoSymptomAcknowledgement` | the toast's Undo                                                                                                                               |
+| POST     | `/api/doctor/patients/:patientId/labs/:labId/review`                  | PROPOSED                             | `patientRecordService.reviewLabReport`            | Record, Labs "Mark reviewed"                                                                                                                   |
+| POST     | `/api/doctor/patients/:patientId/prescriptions/:prescriptionId/sign`  | PROPOSED                             | `patientRecordService.signPrescription`           | Record, Prescriptions "Review and sign"                                                                                                        |
+| POST     | `/api/doctor/patients/:patientId/private-notes`                       | PROPOSED                             | `patientRecordService.addPrivateNote`             | Record, Private notes                                                                                                                          |
+| POST     | `/api/doctor/patients/:patientId/plan-recommendation`                 | live                                 | `patientRecordService.recommendPlan`              | Record, Programme plan "Recommend a plan" `{ planId, note }`; replaces this doctor's earlier suggestion, which the patient sees first on Plans |
+| DELETE   | `/api/doctor/patients/:patientId/plan-recommendation`                 | live                                 | `patientRecordService.withdrawPlanRecommendation` | Record, Programme plan "Withdraw"                                                                                                              |
+| GET      | `/api/doctor/notes`                                                   | PROPOSED                             | `clinicalNoteService.listClinicalNotes`           | Notes, Record "Visits", Note review                                                                                                            |
+| GET      | `/api/doctor/notes/:noteId`                                           | PROPOSED                             | `clinicalNoteService.getClinicalNote`             | Note review                                                                                                                                    |
+| PUT      | `/api/doctor/notes/:noteId`                                           | PROPOSED                             | `clinicalNoteService.saveClinicalNote`            | Note review (autosave)                                                                                                                         |
+| POST     | `/api/doctor/notes/:noteId/sign`                                      | PROPOSED                             | `clinicalNoteService.signClinicalNote`            | Note review, Sign                                                                                                                              |
+| POST     | `/api/doctor/notes/:noteId/addenda`                                   | PROPOSED                             | `clinicalNoteService.addClinicalNoteAddendum`     | Note review, signed note                                                                                                                       |
+| GET      | `/api/chat/doctor/sessions`                                           | PROPOSED                             | `doctorChatService.listMyChatSessions`            | Messages list                                                                                                                                  |
+| POST     | `/api/chat/sessions/:sessionId/read`                                  | PROPOSED                             | `doctorChatService.markChatRead`                  | Messages, opening a chat                                                                                                                       |
+| POST     | `/api/chat/sessions/:sessionId/no-reply-needed`                       | PROPOSED                             | `doctorChatService.markNoReplyNeeded`             | Messages, "No reply needed"                                                                                                                    |
+| DELETE   | `/api/chat/sessions/:sessionId/no-reply-needed`                       | PROPOSED                             | `doctorChatService.undoNoReplyNeeded`             | the toast's Undo                                                                                                                               |
+| GET      | `/api/chat/sessions/:sessionId/messages`                              | PROPOSED (consultations-and-care.md) | `chatService.listChatHistory`                     | Messages, earlier messages                                                                                                                     |
+| GET/POST | `/api/chat/sessions/:sessionId/messages`                              | pilot                                | `chatService.connectToChatSession` (polling)      | Messages (live; `senderRole: "DOCTOR"`)                                                                                                        |
+| GET      | `/api/video/appointments/:appointmentId/join`                         | exists                               | `videoConsultationService.joinVideoConsultation`  | "Start consultation" opens `/consultation/:appointmentId`                                                                                      |
 
 ## Requests and responses
 
@@ -72,13 +76,25 @@ flagged-symptom tick in Messages. Reading it is itself an audit entry ("Opened t
   "careStartedAt": "2026-08-04T10:00:00+05:30",
   "identityVerified": true,
   "heightCm": 162,
-  "weights": [{ "at": "2026-10-20T08:10:00+05:30", "kg": 81.4, "source": "Patient logged" }],
+  "weights": [
+    {
+      "at": "2026-10-20T08:10:00+05:30",
+      "kg": 81.4,
+      "source": "Patient logged"
+    }
+  ],
   "waist": { "at": "2026-09-01T10:30:00+05:30", "cm": 96 },
   "hba1c": [{ "at": "2026-08-02T09:00:00+05:30", "value": 6.1 }],
   "conditions": ["Hypertension"],
   "allergies": "No known drug allergies",
   "outsideMedicines": ["Telmisartan 40 mg once a day"],
-  "consents": ["Terms", "Privacy", "Health data", "Video consultation", "Call transcription"],
+  "consents": [
+    "Terms",
+    "Privacy",
+    "Health data",
+    "Video consultation",
+    "Call transcription"
+  ],
   "plan": {
     "goals": [{ "label": "Protein a day", "value": "90 g" }],
     "reviewAt": "2026-11-15T00:00:00+05:30",
@@ -93,7 +109,15 @@ flagged-symptom tick in Messages. Reading it is itself an audit entry ("Opened t
       "collectedAt": "2026-10-18T07:30:00+05:30",
       "reportedAt": "2026-10-19T18:00:00+05:30",
       "status": "DOCTOR_REVIEW_PENDING",
-      "results": [{ "test": "HbA1c", "value": 5.8, "unit": "%", "range": "4.0-5.6", "flag": "HIGH" }],
+      "results": [
+        {
+          "test": "HbA1c",
+          "value": 5.8,
+          "unit": "%",
+          "range": "4.0-5.6",
+          "flag": "HIGH"
+        }
+      ],
       "doctorComment": null,
       "reviewedAt": null
     }
@@ -104,7 +128,15 @@ flagged-symptom tick in Messages. Reading it is itself an audit entry ("Opened t
       "version": 3,
       "status": "SIGNED",
       "date": "2026-10-01T11:00:00+05:30",
-      "items": [{ "name": "Metformin", "strength": "500 mg", "dose": "1 tablet", "frequency": "Twice a day with food", "duration": "8 weeks" }],
+      "items": [
+        {
+          "name": "Metformin",
+          "strength": "500 mg",
+          "dose": "1 tablet",
+          "frequency": "Twice a day with food",
+          "duration": "8 weeks"
+        }
+      ],
       "advice": "Take with meals."
     }
   ],
@@ -120,12 +152,40 @@ flagged-symptom tick in Messages. Reading it is itself an audit entry ("Opened t
     }
   ],
   "symptoms": [
-    { "id": "sym_9", "label": "Dizziness", "severity": "Moderate", "note": "After lunch", "at": "2026-10-27T14:05:00+05:30", "requiresReview": true, "acknowledged": false }
+    {
+      "id": "sym_9",
+      "label": "Dizziness",
+      "severity": "Moderate",
+      "note": "After lunch",
+      "at": "2026-10-27T14:05:00+05:30",
+      "requiresReview": true,
+      "acknowledged": false
+    }
   ],
   "adherence": { "taken": 12, "due": 14 },
-  "injections": { "name": "Wegovy", "strength": "0.5 mg", "taken": 2, "perStep": 4, "lastAt": "2026-10-24T08:00:00+05:30", "lastSite": "left thigh", "dueToday": false },
-  "privateNotes": [{ "id": "pn_3", "at": "2026-10-02T09:00:00+05:30", "text": "Prefers evening calls.", "by": "Dr. Govind Singh" }],
-  "audit": [{ "at": "2026-10-28T09:12:00+05:30", "action": "Opened the record, Dr. Govind Singh" }],
+  "injections": {
+    "name": "Wegovy",
+    "strength": "0.5 mg",
+    "taken": 2,
+    "perStep": 4,
+    "lastAt": "2026-10-24T08:00:00+05:30",
+    "lastSite": "left thigh",
+    "dueToday": false
+  },
+  "privateNotes": [
+    {
+      "id": "pn_3",
+      "at": "2026-10-02T09:00:00+05:30",
+      "text": "Prefers evening calls.",
+      "by": "Dr. Govind Singh"
+    }
+  ],
+  "audit": [
+    {
+      "at": "2026-10-28T09:12:00+05:30",
+      "action": "Opened the record, Dr. Govind Singh"
+    }
+  ],
   "photosShared": true
 }
 ```
@@ -154,7 +214,6 @@ condition) and the care-week tag in Messages and Notes.
   }
 ]
 ```
-
 
 #### GET `/api/doctor/queue` (PROPOSED)
 
@@ -198,7 +257,13 @@ Screen: Record "Progress photos". Answers only while the patient shares photos w
 
 ```json
 [
-  { "id": "set_1", "takenAt": "2026-08-04T08:00:00+05:30", "frontUrl": "https://...", "sideUrl": null, "weightKg": 86.2 }
+  {
+    "id": "set_1",
+    "takenAt": "2026-08-04T08:00:00+05:30",
+    "frontUrl": "https://...",
+    "sideUrl": null,
+    "weightKg": 86.2
+  }
 ]
 ```
 
@@ -227,7 +292,9 @@ Screen: the toast's Undo after the above. No body.
 Screen: Record, Labs "Mark reviewed". The comment is shown to the patient with the report.
 
 ```json
-{ "comment": "Your sugar is a little higher than we want. We will go through it on the call." }
+{
+  "comment": "Your sugar is a little higher than we want. We will go through it on the call."
+}
 ```
 
 #### POST `/api/doctor/patients/:patientId/prescriptions/:prescriptionId/sign` (PROPOSED)
@@ -271,22 +338,79 @@ may be left empty here).
   "sections": [
     {
       "key": "summary",
-      "draft": [{ "id": "note_44-summary-1", "text": "Nausea settled after week one.", "evidence": [{ "segmentId": "a3", "quote": "nausea is gone" }], "by": "scribe", "flag": null }],
-      "current": [{ "id": "note_44-summary-1", "text": "Nausea settled after week one.", "evidence": [{ "segmentId": "a3", "quote": "nausea is gone" }], "by": "scribe", "flag": null }],
+      "draft": [
+        {
+          "id": "note_44-summary-1",
+          "text": "Nausea settled after week one.",
+          "evidence": [{ "segmentId": "a3", "quote": "nausea is gone" }],
+          "by": "scribe",
+          "flag": null
+        }
+      ],
+      "current": [
+        {
+          "id": "note_44-summary-1",
+          "text": "Nausea settled after week one.",
+          "evidence": [{ "segmentId": "a3", "quote": "nausea is gone" }],
+          "by": "scribe",
+          "flag": null
+        }
+      ],
       "checked": false
     },
     { "key": "assessment", "draft": [], "current": [], "checked": false },
     { "key": "plan", "draft": [], "current": [], "checked": false },
     { "key": "patient", "draft": [], "current": [], "checked": false }
   ],
-  "medicines": [{ "id": "m1", "action": "CHANGE", "name": "Metformin", "strength": "1000 mg", "detail": "Once a day with dinner", "was": "500 mg twice a day", "evidence": [{ "segmentId": "a9", "quote": null }], "include": true }],
-  "followUps": [{ "id": "f1", "text": "Send the protein guide", "owner": "Dietitian", "evidence": [], "include": true, "done": false }],
-  "recordUpdates": [{ "id": "u1", "field": "allergies", "label": "Allergies", "from": "Not recorded", "to": "No known drug allergies", "include": true }],
+  "medicines": [
+    {
+      "id": "m1",
+      "action": "CHANGE",
+      "name": "Metformin",
+      "strength": "1000 mg",
+      "detail": "Once a day with dinner",
+      "was": "500 mg twice a day",
+      "evidence": [{ "segmentId": "a9", "quote": null }],
+      "include": true
+    }
+  ],
+  "followUps": [
+    {
+      "id": "f1",
+      "text": "Send the protein guide",
+      "owner": "Dietitian",
+      "evidence": [],
+      "include": true,
+      "done": false
+    }
+  ],
+  "recordUpdates": [
+    {
+      "id": "u1",
+      "field": "allergies",
+      "label": "Allergies",
+      "from": "Not recorded",
+      "to": "No known drug allergies",
+      "include": true
+    }
+  ],
   "checks": {},
-  "transcript": [{ "id": "a3", "t": 95, "who": "patient", "text": "The nausea is gone now.", "english": null, "unsure": null, "missed": null }],
+  "transcript": [
+    {
+      "id": "a3",
+      "t": 95,
+      "who": "patient",
+      "text": "The nausea is gone now.",
+      "english": null,
+      "unsure": null,
+      "missed": null
+    }
+  ],
   "signed": null,
   "addenda": [],
-  "history": [{ "at": "2026-10-28T10:50:00+05:30", "what": "Draft written by the scribe" }]
+  "history": [
+    { "at": "2026-10-28T10:50:00+05:30", "what": "Draft written by the scribe" }
+  ]
 }
 ```
 
@@ -359,7 +483,12 @@ their chats.
     "sessionId": 118,
     "patientId": "42",
     "patientName": "Aanya Kapoor",
-    "lastMessage": { "text": "Is it fine to take it after dinner?", "fromDoctor": false, "sentAt": "2026-10-28T09:40:00+05:30", "hasFile": false },
+    "lastMessage": {
+      "text": "Is it fine to take it after dinner?",
+      "fromDoctor": false,
+      "sentAt": "2026-10-28T09:40:00+05:30",
+      "hasFile": false
+    },
     "waitingSince": "2026-10-28T09:40:00+05:30",
     "urgent": false,
     "unread": true

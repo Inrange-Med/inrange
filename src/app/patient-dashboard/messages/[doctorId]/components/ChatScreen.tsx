@@ -108,7 +108,7 @@ export default function ChatScreen({ doctorId }: { doctorId: string }) {
     setSocketError(null);
     connection.current.send({
       senderUserId: user.userId,
-      senderRole: user.role,
+      senderRole: "PATIENT", // PatientShell lets only patients reach this screen
       messageType: "TEXT",
       messageText: text,
       fileUrl: null,

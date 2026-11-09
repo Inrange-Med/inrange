@@ -1,0 +1,325 @@
+/*
+  The admin area's page furniture, in the doctor dashboard's language (ClinicSurfaces): page width,
+  the larger page head, list rows, pills, row actions, in-page confirm boxes and the doctor form.
+  Both admin screens import it as adminStyles.
+*/
+
+/* ---------- page ---------- */
+.page {
+  max-width: calc(1240px + var(--gutter) * 2);
+  margin-inline: auto;
+  padding: clamp(16px, 3vw, 36px) var(--gutter) 0;
+}
+
+/* passed to the kit's PageHead as className, as the doctor dashboard does */
+.pageHead {
+  display: grid;
+  gap: 6px;
+  margin-bottom: clamp(20px, 3vw, 28px);
+}
+
+.pageHead h1 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(2rem, 1.62rem + 1.2vw, 2.75rem);
+  line-height: 1.05;
+  letter-spacing: -0.024em;
+  text-wrap: wrap;
+}
+
+.pageHead > p {
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--ink-3);
+}
+
+.stack {
+  display: grid;
+  gap: clamp(16px, 2vw, 24px);
+  max-width: 880px;
+}
+
+.count {
+  min-width: 28px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--bg);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.empty {
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--ink-3);
+}
+
+/* ---------- list rows ---------- */
+.list {
+  display: grid;
+  list-style: none;
+}
+
+.item {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding-block: 18px;
+  border-top: 1px solid var(--hair);
+}
+
+.item:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.item:last-child {
+  padding-bottom: 0;
+}
+
+.itemHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px 12px;
+}
+
+.name {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 520;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+
+.facts a {
+  color: inherit;
+}
+
+.muted {
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--ink-3);
+}
+
+.note {
+  padding: 12px 14px;
+  border-radius: var(--r-media);
+  background: var(--bg);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 7px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.pill[data-tone="ok"] {
+  background: var(--signal-wash);
+  color: var(--signal-ink);
+}
+
+.pill[data-tone="pending"] {
+  background: var(--bg);
+  color: var(--ink-2);
+  box-shadow: inset 0 0 0 1px var(--hair);
+}
+
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* report links: one per line, each opens the signed file in a new tab */
+.reports {
+  display: grid;
+  list-style: none;
+}
+
+.reports a,
+.reports span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  font-size: 0.875rem;
+  font-weight: 560;
+  color: var(--slate-800);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.reports span {
+  font-weight: 450;
+  color: var(--ink-3);
+}
+
+.reports svg {
+  flex: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .reports a:hover {
+    text-decoration: underline;
+  }
+}
+
+/* ---------- actions ---------- */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* a dark pill without the arrow well, for a row's own action */
+.solid {
+  padding: 6px 22px;
+}
+
+.actions :global(.btn) {
+  min-height: 44px;
+}
+
+/* busy: the button's own spinner says it is working; the cursor never changes */
+.actions button:disabled {
+  cursor: default;
+}
+
+.actions button:disabled:active,
+.actions button:disabled :global(.well) {
+  transform: none;
+}
+
+.actions button[data-busy="false"]:disabled {
+  opacity: 0.55;
+}
+
+.textBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 0.875rem;
+  font-weight: 560;
+  color: var(--slate-800);
+  cursor: pointer;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .textBtn:hover {
+    text-decoration: underline;
+  }
+}
+
+.confirm {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border-radius: var(--r-media);
+  background: var(--signal-wash);
+}
+
+.confirm p {
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.textarea {
+  width: 100%;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: var(--r-media);
+  background: var(--paper);
+  box-shadow: inset 0 0 0 1px var(--hair-2);
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--ink);
+  resize: vertical;
+  transition: box-shadow 180ms var(--ease-out);
+}
+
+.textarea:focus {
+  outline: none;
+  box-shadow: inset 0 0 0 1.5px var(--ink);
+}
+
+.textarea[aria-invalid="true"] {
+  box-shadow: inset 0 0 0 1.5px var(--alert);
+}
+
+/* ---------- recently decided ---------- */
+.history summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 520;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  list-style: none;
+}
+
+.history summary::-webkit-details-marker {
+  display: none;
+}
+
+.history summary svg {
+  margin-left: auto;
+  transition: transform 240ms var(--ease-out);
+}
+
+.history[open] summary svg {
+  transform: rotate(180deg);
+}
+
+/* ---------- the doctor form ---------- */
+.form {
+  display: grid;
+  gap: 18px;
+}
+
+.fields {
+  display: grid;
+  gap: 18px;
+}
+
+@media (min-width: 768px) {
+  .fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .wide {
+    grid-column: 1 / -1;
+  }
+}
+
+.input[readonly] {
+  background: var(--bg);
+  color: var(--ink-2);
+  box-shadow: none;
+}

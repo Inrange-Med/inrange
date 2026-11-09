@@ -5,7 +5,7 @@
  * Everything else calls these functions. Never read or write these keys anywhere else.
  */
 
-type UserRole = "PATIENT" | "DOCTOR";
+type UserRole = "PATIENT" | "DOCTOR" | "ADMIN";
 
 /** What we keep about the signed-in person between page loads. */
 type SessionUser = {
@@ -83,8 +83,9 @@ export function saveSession(params: {
   } | null;
 }): SessionUser {
   const claims = decodeTokenPayload(params.accessToken);
+  const claimed = String(claims.role ?? "").toUpperCase();
   const role: UserRole =
-    String(claims.role ?? "").toUpperCase() === "DOCTOR" ? "DOCTOR" : "PATIENT";
+    claimed === "DOCTOR" || claimed === "ADMIN" ? claimed : "PATIENT";
   const rawId =
     params.user?.userId ??
     params.user?.id ??
@@ -132,5 +133,6 @@ export function clearSession() {
 
 /** Where a signed-in person lands. */
 export function homePathFor(role: UserRole) {
+  if (role === "ADMIN") return "/admin";
   return role === "DOCTOR" ? "/doctor-dashboard" : "/patient-dashboard";
 }

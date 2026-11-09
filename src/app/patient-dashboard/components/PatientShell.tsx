@@ -91,6 +91,7 @@ export default function PatientShell({ children }: { children: ReactNode }) {
         signInHrefFor(window.location.pathname + window.location.search),
       );
     if (role === "DOCTOR") router.replace("/doctor-dashboard");
+    if (role === "ADMIN") router.replace("/admin");
   }, [role, router]);
 
   useEffect(() => {

@@ -122,6 +122,7 @@ applies the dashboard design tokens. The landing page does not.
 | ---------- | ------------------------------- | ---------------------------- | ------------------------------------------- |
 | Patient    | `/patient-dashboard/...`        | `src/app/patient-dashboard/` | `patient-dashboard/components/PatientShell` |
 | Doctor     | `/doctor-dashboard/...`         | `src/app/doctor-dashboard/`  | `doctor-dashboard/components/DoctorShell`   |
+| Admin      | `/admin`, `/admin/doctors`      | `src/app/admin/`             | `admin/components/AdminShell`               |
 | Sign-in    | `/sign-in`                      | `src/app/sign-in/`           | none                                        |
 | Onboarding | `/onboarding`                   | `src/app/onboarding/`        | none                                        |
 | Video call | `/consultation/[appointmentId]` | `src/app/consultation/`      | none (both roles)                           |

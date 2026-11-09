@@ -71,7 +71,7 @@ async function loadStart(): Promise<Start> {
         window.location.pathname + window.location.search,
       ),
     };
-  if (user.role === "DOCTOR") return { redirectTo: homePathFor("DOCTOR") };
+  if (user.role !== "PATIENT") return { redirectTo: homePathFor(user.role) };
   const [status, served] = await Promise.all([
     getOnboardingStatus(),
     getOnboardingConfig(),
