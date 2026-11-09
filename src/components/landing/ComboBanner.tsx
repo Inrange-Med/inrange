@@ -80,8 +80,8 @@ export default function ComboBanner() {
 
         {/* Center Details */}
         <p className={s.text}>
-          <strong>Doctor Consultation + Complete Lab Test</strong> combo package
-          starting at just <span className={s.price}>₹1999</span>
+          <strong>Doctor consultation and home lab tests</strong> in one
+          package, with an itemised price before you pay
         </p>
 
         {/* Right Action */}

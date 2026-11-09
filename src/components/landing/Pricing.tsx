@@ -21,7 +21,7 @@ const INCLUDED: [string, "Free" | "Included" | "Itemised"][] = [
   ["A doctor review every 14 days", "Included"],
   ["Blood tests at home through partner labs", "Included"],
   ["Your nutrition and strength plan", "Included"],
-  ["The Medistry app, with WhatsApp support", "Included"],
+  ["The InRange app, with WhatsApp support", "Included"],
   [
     "Medicine, only if your doctor prescribes it, sealed and verified",
     "Itemised",
@@ -252,7 +252,7 @@ export default function Pricing() {
               Shown in full, itemised, after your free consultation. Nothing is
               paid until then.
             </p>
-            <Cta href="/pricing" variant="mint" className={s.cta}>
+            <Cta variant="mint" className={s.cta}>
               Start free check
             </Cta>
           </div>

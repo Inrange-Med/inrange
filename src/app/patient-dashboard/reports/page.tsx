@@ -3,7 +3,7 @@
 import type { Metadata } from "next";
 import ReportsView from "./components/ReportsView";
 
-export const metadata: Metadata = { title: "Reports | Medistry" };
+export const metadata: Metadata = { title: "Reports | InRange" };
 
 export default function ReportsPage() {
   return <ReportsView />;

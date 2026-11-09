@@ -19,12 +19,20 @@ export default function PrescriptionItems({
               {item.name} {item.strength}
             </strong>
             <span>
-              {item.dose}, {lcFirst(item.frequency)}, for {item.duration}
+              {[
+                item.dose,
+                item.frequency && lcFirst(item.frequency),
+                item.duration && `for ${item.duration}`,
+              ]
+                .filter(Boolean)
+                .join(", ")}
             </span>
           </li>
         ))}
       </ul>
-      <p className={styles.advice}>{prescription.advice}</p>
+      {prescription.advice && (
+        <p className={styles.advice}>{prescription.advice}</p>
+      )}
     </>
   );
 }

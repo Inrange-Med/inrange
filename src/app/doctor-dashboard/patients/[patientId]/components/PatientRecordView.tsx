@@ -9,7 +9,7 @@
   prescriptions, plan, labs and visits.
 */
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import ErrorNotice from "@/components/ui/ErrorNotice";
@@ -41,6 +41,7 @@ import PhotosPanel from "./PhotosPanel";
 import PlanPanel from "./PlanPanel";
 import PrescriptionsPanel from "./PrescriptionsPanel";
 import PrivateNotesPanel from "./PrivateNotesPanel";
+import ProgrammePlanPanel from "./ProgrammePlanPanel";
 import RecordHeader from "./RecordHeader";
 import RecordSectionNav from "./RecordSectionNav";
 import SafetyStrip from "./SafetyStrip";
@@ -84,6 +85,16 @@ export default function PatientRecordView({
   );
   const queue = useApiResource("doctor-queue", listWaitingItems);
   const notes = useApiResource("doctor-notes", listClinicalNotes);
+
+  // a link to a section (a signed note's "Review and sign" opens #prescriptions) lands on it once the
+  // record is on screen; the browser cannot, because the section does not exist until the data loads
+  const loaded = Boolean(record.data);
+  useEffect(() => {
+    if (!loaded || !window.location.hash) return;
+    document
+      .getElementById(decodeURIComponent(window.location.hash.slice(1)))
+      ?.scrollIntoView({ block: "start" });
+  }, [loaded]);
 
   const nextVisit = useMemo(
     () =>
@@ -200,6 +211,13 @@ export default function PatientRecordView({
           />
         )}
         {!fresh && <PlanPanel plan={data.plan} />}
+        {!fresh && (
+          <ProgrammePlanPanel
+            patientId={patientId}
+            record={data}
+            onChanged={record.reload}
+          />
+        )}
         {!fresh && (
           <LabsPanel
             patientId={patientId}

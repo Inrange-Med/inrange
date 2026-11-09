@@ -68,7 +68,8 @@ the team's original "Free" label for a null price, so set real prices before lau
 | POST | `/api/reports` | Reports, onboarding, `/pricing` | [reports](reports.md) |
 | GET | `/api/labs/packages` | Lab booking, package step | [lab-tests-redcliffe](lab-tests-redcliffe.md) |
 | GET | `/api/labs/packages/:code` | Lab booking, "What is tested" | [lab-tests-redcliffe](lab-tests-redcliffe.md) |
-| GET | `/api/labs/locations/search?query=` | Lab booking, new address | [lab-tests-redcliffe](lab-tests-redcliffe.md) |
+| GET | `/api/labs/locations/search?query=&latitude=&longitude=` | Lab booking, new address | [lab-tests-redcliffe](lab-tests-redcliffe.md) |
+| GET | `/api/labs/locations/reverse?latitude&longitude` | Lab booking, Use my current location | [lab-tests-redcliffe](lab-tests-redcliffe.md) |
 | GET | `/api/labs/locations/:eloc` | Lab booking, new address | [lab-tests-redcliffe](lab-tests-redcliffe.md) |
 | GET | `/api/labs/serviceability?latitude&longitude` | Lab booking, address step | [lab-tests-redcliffe](lab-tests-redcliffe.md) |
 | GET | `/api/labs/slots?date&addressId` | Lab booking, time step; Change time | [lab-tests-redcliffe](lab-tests-redcliffe.md) |
@@ -94,6 +95,8 @@ the team's original "Free" label for a null price, so set real prices before lau
 | POST | `/api/doctor/patients/:patientId/labs/:labId/review` | Doctor: Record, Labs | [doctor-dashboard](doctor-dashboard.md) |
 | POST | `/api/doctor/patients/:patientId/prescriptions/:prescriptionId/sign` | Doctor: Record, Prescriptions | [doctor-dashboard](doctor-dashboard.md) |
 | POST | `/api/doctor/patients/:patientId/private-notes` | Doctor: Record, Private notes | [doctor-dashboard](doctor-dashboard.md) |
+| POST | `/api/doctor/patients/:patientId/plan-recommendation` | Doctor: Record, Programme plan | [doctor-dashboard](doctor-dashboard.md) |
+| DELETE | `/api/doctor/patients/:patientId/plan-recommendation` | Doctor: Record, Programme plan | [doctor-dashboard](doctor-dashboard.md) |
 | GET | `/api/doctor/notes` | Doctor: Notes, Record | [doctor-dashboard](doctor-dashboard.md) |
 | GET | `/api/doctor/notes/:noteId` | Doctor: Note review | [doctor-dashboard](doctor-dashboard.md) |
 | PUT | `/api/doctor/notes/:noteId` | Doctor: Note review | [doctor-dashboard](doctor-dashboard.md) |

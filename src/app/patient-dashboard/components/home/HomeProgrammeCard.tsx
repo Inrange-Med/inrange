@@ -38,13 +38,13 @@ export default function HomeProgrammeCard({
         </Link>
       </h2>
       {active ? (
-        <p className={pageStyles.quietLine}>A doctor review every month.</p>
+        <p className={pageStyles.quietLine}>A doctor review every 14 days.</p>
       ) : (
         <>
           <ul className={pageStyles.process}>
             <li>
               <Stethoscope size={16} aria-hidden="true" />A doctor review every
-              month
+              14 days
             </li>
             <li>
               <Receipt size={16} aria-hidden="true" />

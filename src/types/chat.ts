@@ -1,9 +1,11 @@
-/** The consultation chat: socket messages, and the doctor's list of patient chats. */
+/** The consultation chat: its messages, and the doctor's list of patient chats. */
 
 export type ChatRole = "PATIENT" | "DOCTOR";
 
-/** One message on the consultation chat socket. */
+/** One consultation chat message. */
 export type ChatMessage = {
+  /** the server's id, used to skip repeats */
+  id?: number;
   sessionId: number;
   senderUserId: number;
   senderRole: ChatRole;

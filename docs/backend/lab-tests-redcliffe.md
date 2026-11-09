@@ -3,7 +3,7 @@
 ## Purpose
 
 The home blood test booking: packages, address, a collection slot, the 30-minute hold, payment,
-tracking and the report. The browser calls the Medistry routes below; each route calls one function
+tracking and the report. The browser calls the InRange routes below; each route calls one function
 in `src/server/redcliffe/redcliffeClient.ts` (server only, holds the key). Add the env vars, write
 each route as 3 to 5 lines calling the client, and the lab booking is live.
 
@@ -16,7 +16,7 @@ each route as 3 to 5 lines calling the client, and the lab booking is live.
 ## Endpoints
 
 All need the patient's Bearer token; a booking or address that is not the caller's answers 404.
-`id` in the Redcliffe column is the **partner** booking id stored on our row, never Medistry's id.
+`id` in the Redcliffe column is the **partner** booking id stored on our row, never InRange's id.
 
 | Method | Path | Status | Service function | Calls `redcliffeClient.` (Redcliffe endpoint) | Screen |
 | --- | --- | --- | --- | --- | --- |
@@ -25,7 +25,8 @@ All need the patient's Bearer token; a booking or address that is not the caller
 | DELETE | `/api/address/:addressId` | exists | `addressService.deleteAddress` | none | address step, Remove |
 | GET | `/api/labs/packages` | PROPOSED | `listLabPackages` | `getPackageData()`, following `links.next` (`center-package-data/?search=`) | package step, onboarding care package |
 | GET | `/api/labs/packages/:code` | PROPOSED | `getLabPackageTests` | `getPackageParameters(code)` (`package-parameter-data/?code=`) | "What is tested" |
-| GET | `/api/labs/locations/search?query=` | PROPOSED | `searchLabLocations` | `searchLocations(query)` (`get-partner-location-2-eloc/?place_query=`) | new address: search |
+| GET | `/api/labs/locations/search?query=&latitude=&longitude=` | PROPOSED | `searchLabLocations` | `searchLocations(query)` (`get-partner-location-2-eloc/?place_query=`) | new address: search (the point is optional, ranks nearby first) |
+| GET | `/api/labs/locations/reverse?latitude&longitude` | PROPOSED | `findLabLocationAt` | none (pilot: Photon reverse) | new address: Use my current location |
 | GET | `/api/labs/locations/:eloc` | PROPOSED | `getLabLocationCoordinates` | `getCoordinatesForEloc(eloc)` (`get-partner-loc-2-eloc/?eloc=`) | new address: pick a place |
 | GET | `/api/labs/serviceability?latitude&longitude` | PROPOSED | `checkLabServiceability` | `checkServiceability(lat, lng)` (`is-location-serviceable/`) | address step |
 | GET | `/api/labs/slots?date&addressId` | PROPOSED | `listLabSlots` | `listTimeSlots(date, address.latitude, address.longitude)` (`get-time-slot-list/`) | time step, "Change time" |
@@ -71,10 +72,11 @@ field). Log `e.body` for the rest; the key is never in it.
 
 What each route answers (shapes in `src/types/labTest.ts`, in `{ success, message, data }`):
 
-- **packages**: `LabPackage[]`, only codes Medistry enabled. `testCount` <- `parameters`, `fastingNote` <- `fasting_time`, `reportTime` <- `tat_time`, `forGender` <- `recommended_gender`, `ageRange` <- `recommended_age` "5-99", `price` <- `package_center_prices.offer_price`, `listPrice` <- `.package_price`.
+- **packages**: `LabPackage[]`, only codes InRange enabled. `testCount` <- `parameters`, `fastingNote` <- `fasting_time`, `reportTime` <- `tat_time`, `forGender` <- `recommended_gender`, `ageRange` <- `recommended_age` "5-99", `price` <- `package_center_prices.offer_price`, `listPrice` <- `.package_price`.
 - **packages/:code**: `{ code, name, groups: [{ name: data[].name, tests: data[].package_detail[].name }] }`.
 - **locations/search**: `LabPlaceMatch[]` from `results[]` (`name` <- `placeName`, `address` <- `placeAddress`, city/state/pincode <- `address.*`). The client trims `eloc` and turns "No record(s) found" into `[]`.
 - **locations/:eloc**: `{ latitude, longitude }`.
+- **Pilot (Redcliffe key not set)**: search and reverse use Photon (OpenStreetMap, India only), so real addresses work; each place gets a 6-character `eloc` cached in `place_cache` for `locations/:eloc`. `latitude`/`longitude` on search come from the visitor's rough IP location (the `inrange_geo` cookie set by `src/proxy.ts` from Vercel's geo headers). With the key set, search is Redcliffe's and `reverse` answers 404.
 - **serviceability**: `{ serviceable, message }`, exactly what the client returns.
 - **slots**: a flat list `[{ slotId, startTime, endTime, available }]` (above). The app groups them.
 - **bookings** (every booking route): `LabBooking`. From `createBooking`: `partnerBookingId` <- `booking_id`, `packageName` <- `packages[0].name`, `price.packagePrice` <- `discounted_price.total_price_package`, `price.total` <- `final_total_price` (what checkout charges), `holdExpiresAt` <- now + 30 min. From `getBookings`: `collector` <- `phlebo_detail`; `getPhleboTracking` -> `collector.trackingUrl` <- `tracking_link`; `getBookingTestStatus` -> `tests[]` (`pending_tests` PENDING, `completed_tests` COMPLETED, `rejected_tests` REJECTED, `dismissed_tests` DISMISSED; "Booking is not synced yet." means `tests: []`).
@@ -94,7 +96,7 @@ createBooking({
 });
 ```
 
-`is_credit: true`: Medistry collects the money, Redcliffe collects nothing at the door. The client
+`is_credit: true`: InRange collects the money, Redcliffe collects nothing at the door. The client
 adds `booking_date` (today, IST), `customer_altphonenumber` and `customer_whatsappnumber` (= mobile).
 With `carePackageCode` the price is the care package's (backend table), and the consultation is
 marked paid when the payment verifies.

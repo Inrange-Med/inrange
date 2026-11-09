@@ -3,7 +3,7 @@
 /*
   Resources (Arhaan Resources.tsx): the video for this point in care, the rest of the videos, then
   short reads. What shows depends on whether the patient's programme is running (from their
-  profile). Before it: how Medistry works, how the medicine works, blood tests and when to call us.
+  profile). Before it: how InRange works, how the medicine works, blood tests and when to call us.
   Once it runs: every guide that does not need a prescribed pen, since the backend does not say yet
   which pen, if any, is prescribed.
 */
@@ -25,7 +25,7 @@ type VideoGuide = Guide & { video: NonNullable<Guide["video"]> };
 
 const VIDEOS = GUIDES.filter((guide): guide is VideoGuide => !!guide.video);
 const EARLY = [
-  "how-medistry-works",
+  "how-inrange-works",
   "how-your-medicine-works",
   "blood-tests",
   "when-to-call",
@@ -37,7 +37,7 @@ const showsFor = (guide: Guide, active: boolean) =>
 const pinnedFor = (active: boolean) =>
   active
     ? { slug: "eating-with-less-appetite", why: "For your programme" }
-    : { slug: "how-medistry-works", why: "Before your first consultation" };
+    : { slug: "how-inrange-works", why: "Before your first consultation" };
 const metaOf = (guide: VideoGuide) =>
   `${guide.video.length}, ${PRESENTERS[guide.video.by].name}`;
 
@@ -62,12 +62,12 @@ export default function ResourcesView() {
   const active = profile.data?.planStatus.trim().toLowerCase() === "active";
   const pin = pinnedFor(active);
   const top = VIDEOS.find((guide) => guide.slug === pin.slug) ?? VIDEOS[0];
-  // once a plan is running, how Medistry works has done its job
+  // once a plan is running, how InRange works has done its job
   const rest = VIDEOS.filter(
     (guide) =>
       guide !== top &&
       showsFor(guide, active) &&
-      !(active && guide.slug === "how-medistry-works"),
+      !(active && guide.slug === "how-inrange-works"),
   );
   const reads = GUIDES.filter(
     (guide) => !guide.video && showsFor(guide, active),

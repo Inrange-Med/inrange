@@ -1,4 +1,4 @@
-# Medistry app: how the code is organised
+# InRange app: how the code is organised
 
 Read this before adding or moving a file. Every rule here is a rule; the ones marked **(lint)**
 fail `npm run lint` when broken. The visual design of every signed-in screen comes from the design
@@ -108,8 +108,8 @@ pieces in `components/home/`) and `styles/` (`FoldingSection.module.css`, import
   to `src/components/ui/` in the same change.
 - Every file starts with a short comment saying what it is for and anything non-obvious about it.
 - Every page sets its own document title (`export const metadata` in a server `page.tsx` or
-  `layout.tsx`). Known exceptions: the placeholder public pages (`assessment`, `grievance`,
-  `privacy`, `terms`), which keep the root title until the founders supply their content. A screen that needs the browser keeps `page.tsx` a small server file that sets the
+  `layout.tsx`). Known exception: `assessment` and `pricing`, which only redirect to sign-in and onboarding. The pilot
+  legal pages (`privacy`, `terms`, `grievance`) use `PilotLegalPage` until counsel supplies the final text. A screen that needs the browser keeps `page.tsx` a small server file that sets the
   title, reads route params and renders the client screen from `components/` (`HomeView`,
   `TodayView`, `PatientRecordView`).
 
@@ -125,7 +125,7 @@ applies the dashboard design tokens. The landing page does not.
 | Sign-in    | `/sign-in`                      | `src/app/sign-in/`           | none                                        |
 | Onboarding | `/onboarding`                   | `src/app/onboarding/`        | none                                        |
 | Video call | `/consultation/[appointmentId]` | `src/app/consultation/`      | none (both roles)                           |
-| Pricing    | `/pricing`                      | `src/app/pricing/`           | none (linked from the website)              |
+| Pricing    | `/pricing`                      | `src/app/pricing/`           | none: redirects to `/onboarding`            |
 
 ## 3. Talking to the backend
 

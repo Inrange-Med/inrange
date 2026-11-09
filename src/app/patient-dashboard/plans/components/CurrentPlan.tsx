@@ -19,9 +19,8 @@ export default function CurrentPlan({
         <div>
           <dt>Programme</dt>
           <dd>
-            {plan
-              ? `${plan.name}, ${plan.durationMonths} ${plan.durationMonths === 1 ? "month" : "months"}`
-              : "Active"}
+            {/* plan names already carry the length ("InRange 4 months") */}
+            {plan ? plan.name : "Active"}
           </dd>
         </div>
         {plan?.priceRupees != null && (

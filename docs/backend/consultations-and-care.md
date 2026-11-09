@@ -27,7 +27,8 @@ doctor dashboard).
 | GET | `/api/care/medicine-orders` | PROPOSED | `carePlanService.loadCarePlan` | Care, deliveries |
 | POST | `/api/chat/init` | exists | `chatService.startChatSession` | Chat |
 | GET | `/api/chat/sessions/:sessionId/messages` | PROPOSED | `chatService.listChatHistory` | Chat (both dashboards) |
-| Socket.IO | `join_consultation`, `send_consultation_message`, `receive_consultation_message`, `error_message` | exists | `chatService.connectToChatSession` | Chat (both dashboards) |
+| POST | `/api/chat/sessions/:sessionId/messages` | pilot | `chatService.connectToChatSession` (send) | Chat (both dashboards) |
+| GET | `/api/chat/sessions/:sessionId/messages?afterId=` | pilot | `chatService.connectToChatSession` (polls every 3 s) | Chat (both dashboards) |
 | GET | `/api/video/appointments/:appointmentId/join` | exists | `videoConsultationService.joinVideoConsultation` | Video room |
 | POST | `/api/video/appointments/:appointmentId/end` (doctor) | exists | `videoConsultationService.endVideoConsultation` | Video room |
 
@@ -125,7 +126,7 @@ short-lived signed URL; `version` above 1 shows "updated after your follow-up".
     "doctorRegistrationNo": "DMC/R/12345",
     "signedAt": "2026-10-02T11:20:00+05:30",
     "version": 2,
-    "pdfUrl": "https://files.medistry.co/rx/rx_118.pdf",
+    "pdfUrl": "https://files.inrange.co/rx/rx_118.pdf",
     "items": [
       {
         "medicineName": "Metformin",

@@ -1,0 +1,26 @@
+{
+  "version": "5",
+  "specifiers": {
+    "npm:hono@4.7.10": "4.7.10",
+    "npm:jose@5.9.6": "5.9.6",
+    "npm:postgres@3.4.5": "3.4.5"
+  },
+  "npm": {
+    "hono@4.7.10": {
+      "integrity": "sha512-QkACju9MiN59CKSY5JsGZCYmPZkA6sIW6OFCUp7qDjZu6S6KHtJHhAc9Uy9mV9F8PJ1/HQ3ybZF2yjCa/73fvQ=="
+    },
+    "jose@5.9.6": {
+      "integrity": "sha512-AMlnetc9+CV9asI19zHmrgS/WYsWUwCn2R7RzlbJWD7F9eWYUTGyBmU9o6PxngtLGOiDGPRu+Uc4fhKzbpteZQ=="
+    },
+    "postgres@3.4.5": {
+      "integrity": "sha512-cDWgoah1Gez9rN3H4165peY9qfpEo+SA61oQv65O3cRUE1pOEoJWwddwcqKE8XZYjbblOJlYDlLV4h67HrEVDg=="
+    }
+  },
+  "workspace": {
+    "dependencies": [
+      "npm:hono@4.7.10",
+      "npm:jose@5.9.6",
+      "npm:postgres@3.4.5"
+    ]
+  }
+}

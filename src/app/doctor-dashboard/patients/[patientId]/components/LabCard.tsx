@@ -46,8 +46,9 @@ export default function LabCard({
   const before = (test: string) =>
     older?.results.find((result) => result.test === test)?.value;
   const pending = lab.status === "DOCTOR_REVIEW_PENDING";
-  // still at the lab: never called reviewed, and no empty table
-  const waiting = lab.status === "PROCESSING" || !lab.results.length;
+  // still at the lab: never called reviewed
+  const waiting = lab.status === "PROCESSING";
+  const uploaded = lab.source === "UPLOAD";
 
   const review = async () => {
     setSaving(true);
@@ -68,9 +69,10 @@ export default function LabCard({
         <div>
           <strong>{lab.packageName}</strong>
           <span>
-            Collected {shortDate(lab.collectedAt)}
-            {lab.reportedAt && `, reported ${shortDate(lab.reportedAt)}`},
-            partner lab
+            {uploaded ? "Dated" : "Collected"} {shortDate(lab.collectedAt)}
+            {lab.reportedAt &&
+              `, ${uploaded ? "uploaded" : "reported"} ${shortDate(lab.reportedAt)}`}
+            , {uploaded ? "from the patient" : "partner lab"}
           </span>
         </div>
         {waiting ? (
@@ -92,6 +94,20 @@ export default function LabCard({
         <p className={clinicStyles.muted}>
           Sample collected {shortDate(lab.collectedAt)}. Results come from the
           partner lab and appear here for your review.
+        </p>
+      ) : !lab.results.length ? (
+        <p className={clinicStyles.muted}>
+          The values are in the report file.{" "}
+          {lab.fileUrl && (
+            <a
+              className={clinicStyles.textLink}
+              href={lab.fileUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Open the report
+            </a>
+          )}
         </p>
       ) : (
         <>

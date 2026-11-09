@@ -31,7 +31,7 @@ export default function OnboardingTopBar({
   return (
     <header className={styles.bar}>
       <div className={styles.barStart}>
-        <Link href="/" className={styles.brand} aria-label="Medistry home">
+        <Link href="/" className={styles.brand} aria-label="InRange home">
           <Wordmark height={24} />
         </Link>
         {!done && (

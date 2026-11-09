@@ -31,6 +31,7 @@ import ToastProvider from "@/components/ui/ToastProvider";
 import { useApiResource } from "@/hooks/useApiResource";
 import { useOnline } from "@/hooks/useOnline";
 import { useSessionUser } from "@/hooks/useSessionUser";
+import { DATA_CHANGED_EVENT } from "@/lib/http/apiClient";
 import { signInHrefFor } from "@/lib/navigation/signInReturn";
 import { getMyDoctorProfile } from "@/services/doctorPortalService";
 import { getWorkCounts } from "@/services/patientRecordService";
@@ -100,11 +101,17 @@ export default function DoctorShell({ children }: { children: ReactNode }) {
     isDoctor ? "doctor-profile" : null,
     getMyDoctorProfile,
   );
-  // the badges refresh on every move between places, so a signed note or answered message drops off
+  // the badges refresh on every move between places and after every change the doctor makes
+  // (an answered message, a reviewed report, a signed note), so done work drops off at once
   const counts = useApiResource(
     isDoctor ? `work-counts-${pathname}` : null,
     getWorkCounts,
   );
+  const reloadCounts = counts.reload;
+  useEffect(() => {
+    window.addEventListener(DATA_CHANGED_EVENT, reloadCounts);
+    return () => window.removeEventListener(DATA_CHANGED_EVENT, reloadCounts);
+  }, [reloadCounts]);
 
   useEffect(() => {
     if (role === "OUT")
@@ -137,7 +144,7 @@ export default function DoctorShell({ children }: { children: ReactNode }) {
             <Link
               href="/doctor-dashboard"
               className={styles.brand}
-              aria-label="Medistry clinician portal"
+              aria-label="InRange clinician portal"
             >
               <Wordmark height={24} />
               <span className={styles.portal}>Clinician</span>
@@ -179,7 +186,7 @@ export default function DoctorShell({ children }: { children: ReactNode }) {
             <Link
               href="/doctor-dashboard"
               className={styles.brand}
-              aria-label="Medistry clinician portal"
+              aria-label="InRange clinician portal"
             >
               <Wordmark height={22} />
               <span className={styles.portal}>Clinician</span>

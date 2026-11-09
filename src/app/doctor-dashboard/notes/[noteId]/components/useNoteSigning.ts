@@ -26,6 +26,7 @@ export function useNoteSigning({
   their,
   setNote,
   toast,
+  saved,
 }: {
   note: ClinicalNote;
   /** every note, with this one as it now stands */
@@ -35,6 +36,8 @@ export function useNoteSigning({
   their: string;
   setNote: (note: ClinicalNote) => void;
   toast: (message: string) => void;
+  /** settles when every edit sent so far has saved */
+  saved: () => Promise<unknown>;
 }) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [afterSigning, setAfterSigning] = useState<string | null>(null);
@@ -54,7 +57,8 @@ export function useNoteSigning({
     const at = queue.findIndex((queued) => queued.id === note.id);
     // the next note waiting after this one, else the first before it
     setAfterSigning((others(queue.slice(at + 1)) ?? others(queue))?.id ?? null);
-    signClinicalNote(note.id, sendToApp)
+    saved()
+      .then(() => signClinicalNote(note.id, sendToApp))
       .then((signed) => {
         setNote(signed);
         toast(

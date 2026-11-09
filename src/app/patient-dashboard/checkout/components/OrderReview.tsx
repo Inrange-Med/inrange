@@ -25,6 +25,7 @@ export default function OrderReview({
   notice,
   awaitingConfirmation,
   paymentReady,
+  pilotPayment,
   onPay,
 }: {
   order: PaymentOrder;
@@ -32,6 +33,8 @@ export default function OrderReview({
   notice: CheckoutNotice;
   awaitingConfirmation: boolean;
   paymentReady: boolean;
+  /** pilot: the payment is simulated and nothing is charged */
+  pilotPayment: boolean;
   onPay: (themeColour: string) => void;
 }) {
   const total = formatRupees(order.amountPaise / 100);
@@ -62,6 +65,11 @@ export default function OrderReview({
             securely by Razorpay.
           </span>
         </p>
+        {pilotPayment && (
+          <p className={styles.calm} role="status">
+            Pilot test payment. Nothing is charged.
+          </p>
+        )}
         {!paymentReady && (
           <p className={styles.calm} role="status">
             Online payment is not switched on yet. Nothing has been charged.

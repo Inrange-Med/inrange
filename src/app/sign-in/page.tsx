@@ -7,7 +7,7 @@ import type { Metadata } from "next";
 import SignInFlow from "./components/SignInFlow";
 
 export const metadata: Metadata = {
-  title: "Sign in | Medistry",
+  title: "Sign in | InRange",
   robots: { index: false, follow: false },
 };
 

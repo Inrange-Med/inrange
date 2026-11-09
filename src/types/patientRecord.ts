@@ -21,6 +21,10 @@ export type LabReport = {
   collectedAt: string; // ISO
   reportedAt: string | null;
   status: "PROCESSING" | "DOCTOR_REVIEW_PENDING" | "REVIEWED";
+  /** UPLOAD: the patient's own report; LAB: from the partner lab */
+  source: "UPLOAD" | "LAB";
+  /** short-lived link to the report file; results stay empty until values are parsed from it */
+  fileUrl: string | null;
   results: LabResult[];
   doctorComment: string | null;
   reviewedAt: string | null;
@@ -108,8 +112,18 @@ export type SinceLastVisit = {
 };
 
 /** GET /api/doctor/patients/:patientId/record */
+/** The plan the doctor suggested, shown first on the patient's Plans screen. */
+export type PlanRecommendation = {
+  planId: number;
+  planName: string;
+  note: string;
+  recommendedAt: string;
+};
+
 export type PatientRecord = {
   patientId: string;
+  planRecommendation: PlanRecommendation | null;
+  activePlan: { planName: string; endsAt: string } | null;
   programme: string;
   city: string;
   careStartedAt: string | null;

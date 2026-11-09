@@ -3,7 +3,7 @@
 import type { Metadata } from "next";
 import ScheduleView from "./components/ScheduleView";
 
-export const metadata: Metadata = { title: "Schedule | Medistry" };
+export const metadata: Metadata = { title: "Schedule | InRange" };
 
 export default function SchedulePage() {
   return <ScheduleView />;

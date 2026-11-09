@@ -2,7 +2,7 @@
 
 /**
  * Sign in (and create an account, which is the same flow: the OTP creates it) by mobile OTP.
- * Phone, then code; the code submits itself at the fourth digit (the state and calls are in
+ * Phone, then code; the code submits itself at the sixth digit (the state and calls are in
  * useOtpSignIn). Someone already signed in goes straight to their account. The top bar's
  * X (and the wordmark) go back to the website; on the code step its arrow goes back to the number.
  */
@@ -71,7 +71,7 @@ export default function SignInFlow({
           ) : (
             <span className={styles.slot} aria-hidden="true" />
           )}
-          <Link href="/" className={styles.brand} aria-label="Medistry home">
+          <Link href="/" className={styles.brand} aria-label="InRange home">
             <Wordmark height={34} />
           </Link>
           <Link
@@ -103,6 +103,7 @@ export default function SignInFlow({
             digits={signIn.digits}
             code={signIn.code}
             error={signIn.codeError}
+            pilotHint={signIn.pilotHint}
             shake={signIn.shake}
             busy={signIn.busy}
             verified={signIn.verified}
@@ -123,7 +124,7 @@ export default function SignInFlow({
             <p className={`${formStyles.hint} ${styles.footLinks}`}>
               <span>
                 Trouble signing in?{" "}
-                <a href="mailto:care@medistry.in">care@medistry.in</a>
+                <a href="mailto:care@inrange.in">care@inrange.in</a>
               </span>
             </p>
           </footer>

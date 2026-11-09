@@ -12,6 +12,8 @@
  *   POST   /api/doctor/patients/:patientId/labs/:labId/review                    PROPOSED. Marks a lab report reviewed { comment }
  *   POST   /api/doctor/patients/:patientId/prescriptions/:prescriptionId/sign    PROPOSED. Signs a draft prescription
  *   POST   /api/doctor/patients/:patientId/private-notes                         PROPOSED. Adds a private note { text }
+ *   POST   /api/doctor/patients/:patientId/plan-recommendation                   Suggests a plan { planId, note }
+ *   DELETE /api/doctor/patients/:patientId/plan-recommendation                   Withdraws that suggestion
  * Reads return null on 404, so screens can say so. BMI, care week and "since the last visit" are
  * worked out here from the record.
  */
@@ -84,6 +86,8 @@ function toPatientRecord(
 ): PatientRecord {
   const record: PatientRecord = {
     patientId,
+    planRecommendation: raw.planRecommendation ?? null,
+    activePlan: raw.activePlan ?? null,
     programme: raw.programme ?? "",
     city: raw.city ?? "",
     careStartedAt: raw.careStartedAt ?? null,
@@ -251,5 +255,24 @@ export async function addPrivateNote(
   await apiRequest(`/api/doctor/patients/${patientId}/private-notes`, {
     method: "POST",
     body: { text },
+  });
+}
+
+export async function recommendPlan(
+  patientId: string,
+  planId: number,
+  note: string,
+): Promise<void> {
+  await apiRequest(`/api/doctor/patients/${patientId}/plan-recommendation`, {
+    method: "POST",
+    body: { planId, note },
+  });
+}
+
+export async function withdrawPlanRecommendation(
+  patientId: string,
+): Promise<void> {
+  await apiRequest(`/api/doctor/patients/${patientId}/plan-recommendation`, {
+    method: "DELETE",
   });
 }

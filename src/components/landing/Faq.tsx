@@ -44,7 +44,7 @@ const QA = [
   },
   {
     q: "Is this suitable in an emergency?",
-    a: "No. Medistry is planned, ongoing care. If you have chest pain, severe breathlessness, fainting or any other emergency, go to the nearest hospital or call 112.",
+    a: "No. InRange is planned, ongoing care. If you have chest pain, severe breathlessness, fainting or any other emergency, go to the nearest hospital or call 112.",
   },
 ];
 
@@ -59,8 +59,8 @@ export default function Faq() {
           <Mask id="faq-title" className="h2" lines={["Questions people", "ask us first."]} />
           <p className="body" data-reveal="rise" style={{ "--d": "140ms" } as React.CSSProperties}>
             For anything else, write to{" "}
-            <a href="mailto:care@medistry.in" className={s.mail}>
-              care@medistry.in
+            <a href="mailto:care@inrange.in" className={s.mail}>
+              care@inrange.in
             </a>{" "}
             and a member of the care team will reply.
           </p>

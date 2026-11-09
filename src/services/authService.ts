@@ -1,6 +1,6 @@
 /**
  * Sign-in by mobile OTP. The landing page's sign-in modal still uses AUTH_ENDPOINTS in config/env.ts.
- *   POST /api/auth/send-otp     sends the code { mobile } -> { message }
+ *   POST /api/auth/send-otp     sends the code { mobile } -> { message, data: { mock } } (mock: pilot, the message names the code)
  *   POST /api/auth/verify-otp   checks it { mobile, otp } -> { data: { accessToken, refreshToken, user, nextScreen } }
  *   POST /api/auth/logout       ends the session
  */
@@ -21,13 +21,17 @@ type VerifyOtpResponse = {
   nextScreen?: string;
 };
 
+/** Sends the code. Returns the pilot hint ("Pilot mode: enter ...") when no SMS is sent, else null. */
 export async function sendOtp(mobile: string): Promise<string | null> {
-  const body = await apiRequest<{ message?: string }>("/api/auth/send-otp", {
+  const body = await apiRequest<{
+    message?: string;
+    data?: { mock?: boolean };
+  }>("/api/auth/send-otp", {
     method: "POST",
     body: { mobile },
     authenticated: false,
   });
-  return body?.message ?? null;
+  return body?.data?.mock ? (body.message ?? null) : null;
 }
 
 export async function verifyOtp(

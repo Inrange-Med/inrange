@@ -103,7 +103,7 @@ which is also the right starting content. Keep the codes `FIRST_TIME` (never com
     "experiences": [{ "code": "FIRST_TIME", "label": "This is my first real attempt" }, { "code": "SELF_DIET", "label": "Diet and exercise on my own" }],
     "conditions": [{ "code": "T2D", "label": "Type 2 diabetes" }, { "code": "OTHER", "label": "Something else" }],
     "consents": [
-      { "type": "TERMS", "title": "Terms of service", "line": "How Medistry works, what it costs and how to cancel.", "more": "You are 18 or over and ...", "required": true },
+      { "type": "TERMS", "title": "Terms of service", "line": "How InRange works, what it costs and how to cancel.", "more": "You are 18 or over and ...", "required": true },
       { "type": "AI", "title": "Call transcription", "line": "An AI scribe drafts your doctor's notes from your video calls.", "more": "If you agree, ...", "required": false }
     ]
   }

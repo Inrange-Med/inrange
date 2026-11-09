@@ -58,8 +58,8 @@ export default function CareProgrammeCard({
         programme && (
           <>
             <p className={pageStyles.text}>
-              Not on a programme yet. Your doctor suggests one after your first
-              consultation, and a dietitian joins you once it starts.
+              Not on a programme yet. Plans shows the one your doctor suggests,
+              and a dietitian joins you once it starts.
             </p>
             <Link
               href="/patient-dashboard/plans"

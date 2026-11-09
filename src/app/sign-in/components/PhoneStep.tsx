@@ -58,8 +58,8 @@ export default function PhoneStep({
         </h1>
         <p className={pageStyles.sub}>
           {creating
-            ? "We text you a 4-digit code, so there is no password to remember."
-            : `${signedOut ? "You're signed out. " : ""}We text a 4-digit code to your mobile.`}
+            ? "We text you a 6-digit code, so there is no password to remember."
+            : `${signedOut ? "You're signed out. " : ""}We text a 6-digit code to your mobile.`}
         </p>
       </div>
 
@@ -130,7 +130,7 @@ export default function PhoneStep({
       </div>
 
       <p className={pageStyles.switch}>
-        {creating ? "Already with Medistry?" : "New to Medistry?"}{" "}
+        {creating ? "Already with InRange?" : "New to InRange?"}{" "}
         <Link
           href={creating ? "/sign-in" : "/sign-in?new=1"}
           className={`${formStyles.link} ${pageStyles.link}`}

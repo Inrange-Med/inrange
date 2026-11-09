@@ -1,14 +1,15 @@
 /**
- * Home blood tests through Redcliffe Labs. The Medistry backend calls Redcliffe (it holds the secret
+ * Home blood tests through Redcliffe Labs. The InRange backend calls Redcliffe (it holds the secret
  * key); each route below names the Redcliffe call behind it. Doc: docs/backend/lab-tests-redcliffe.md
  *   GET  /api/labs/packages                           PROPOSED. Bookable packages (center-package-data)
  *   GET  /api/labs/packages/:code                     PROPOSED. What a package tests (package-parameter-data)
- *   GET  /api/labs/locations/search?query=            PROPOSED. Area search (get-partner-location-2-eloc)
+ *   GET  /api/labs/locations/search?query=&latitude=&longitude=  PROPOSED. Area search, nearby first (get-partner-location-2-eloc)
+ *   GET  /api/labs/locations/reverse?latitude&longitude          PROPOSED. The place at a point ("Use my current location")
  *   GET  /api/labs/locations/:eloc                    PROPOSED. A place's coordinates (get-partner-loc-2-eloc)
  *   GET  /api/labs/serviceability?latitude&longitude  PROPOSED. Whether collectors reach a point (is-location-serviceable)
  *   GET  /api/labs/slots?date&addressId               PROPOSED. Collection windows on a day (get-time-slot-list)
  *   POST /api/labs/bookings                           PROPOSED. Holds a slot for 30 minutes (center-create-booking)
- *   GET  /api/labs/bookings                           PROPOSED. The patient's bookings (Medistry database)
+ *   GET  /api/labs/bookings                           PROPOSED. The patient's bookings (InRange database)
  *   GET  /api/labs/bookings/:id                       PROPOSED. One booking (center-get-booking, booking-test-status, corporate-phlebo-tracking)
  *   POST /api/labs/bookings/:id/reschedule            PROPOSED. Moves it (center-update-booking, rescheduled)
  *   POST /api/labs/bookings/:id/cancel                PROPOSED. Cancels it (center-update-booking, cancelled)
@@ -121,13 +122,28 @@ export async function getLabPackageTests(
   return body.data;
 }
 
+/** `near` ranks places around that point first (the visitor's rough location); `signal` drops a stale search. */
 export async function searchLabLocations(
   query: string,
+  near?: LabCoordinates | null,
+  signal?: AbortSignal,
 ): Promise<LabPlaceMatch[]> {
   const body = await labRequest("/api/labs/locations/search", {
-    query: { query },
+    query: { query, latitude: near?.latitude, longitude: near?.longitude },
+    signal,
   });
   return listFrom<LabPlaceMatch>(body);
+}
+
+/** The place at a point, for "Use my current location". */
+export async function findLabLocationAt(
+  point: LabCoordinates,
+): Promise<LabPlaceMatch> {
+  const body = await labRequest<{ data: LabPlaceMatch }>(
+    "/api/labs/locations/reverse",
+    { query: point },
+  );
+  return body.data;
 }
 
 export async function getLabLocationCoordinates(

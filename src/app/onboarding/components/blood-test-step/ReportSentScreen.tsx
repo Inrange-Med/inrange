@@ -38,8 +38,8 @@ export default function ReportSentScreen({
             Report sent
           </h1>
           <p className={pageStyles.why}>
-            Your report is with our medical team for review. We&apos;ll let you
-            know when you can book your consultation.
+            Your report is in. Your account shows when you can book your
+            consultation.
           </p>
         </div>
         <div className={pageStyles.bmiCard}>

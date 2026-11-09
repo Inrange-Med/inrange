@@ -28,6 +28,7 @@ type RawSlot = {
 
 /** The backend's appointment row. Fields differ a little between the patient and doctor lists. */
 export type RawAppointment = {
+  VisitType?: string | null;
   AppointmentId?: number | string;
   id?: number | string;
   DoctorId?: number | string;
@@ -73,6 +74,10 @@ export function toAppointment(
     (raw.PatientPhone ? `Patient ${raw.PatientPhone.slice(-4)}` : "Patient");
   return {
     id: String(raw.AppointmentId ?? raw.id ?? ""),
+    visitType:
+      raw.VisitType === "FIRST" || raw.VisitType === "FOLLOW_UP"
+        ? raw.VisitType
+        : null,
     doctorId: raw.DoctorId != null ? String(raw.DoctorId) : null,
     doctorName: raw.DoctorName ?? "Your doctor",
     doctorPhotoUrl: raw.DoctorPhoto ?? null,

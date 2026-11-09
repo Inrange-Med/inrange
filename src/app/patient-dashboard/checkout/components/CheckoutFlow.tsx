@@ -24,6 +24,7 @@ import { useApiResource } from "@/hooks/useApiResource";
 import { takePendingConsultationReason } from "@/lib/consultations/pendingConsultationReason";
 import { ApiError, errorMessage } from "@/lib/http/apiClient";
 import {
+  isMockPayment,
   openRazorpayCheckout,
   usableRazorpayKey,
 } from "@/lib/payments/razorpayCheckout";
@@ -213,6 +214,7 @@ export default function CheckoutFlow() {
         notice={notice}
         awaitingConfirmation={unconfirmed !== null}
         paymentReady={usableRazorpayKey(current.razorpayKeyId) !== null}
+        pilotPayment={isMockPayment(current.razorpayKeyId)}
         onPay={(themeColour) => pay(current, themeColour)}
       />
     );

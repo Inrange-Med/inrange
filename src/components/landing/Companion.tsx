@@ -59,7 +59,7 @@ export default function Companion() {
           <Tag dark>Between appointments</Tag>
           <Mask id="companion-title" className={`h2 ${s.title}`} lines={["Care that notices", "when things slip."]} />
           <p className={s.lede} data-reveal="rise" style={{ "--d": "180ms" } as React.CSSProperties}>
-            The Medistry app holds your plan, your readings and your reminders, and your care team is on WhatsApp too. An AI
+            The InRange app holds your plan, your readings and your reminders, and your care team is on WhatsApp too. An AI
             care assistant answers everyday questions at any hour, and anything clinical, complex or risky goes straight to a
             doctor. If a check-in is missed, we reach out first.
           </p>
@@ -79,7 +79,7 @@ export default function Companion() {
               </span>
               <span>
                 <strong>Your care team</strong>
-                <small>In the Medistry app, and on WhatsApp</small>
+                <small>In the InRange app, and on WhatsApp</small>
               </span>
             </header>
 

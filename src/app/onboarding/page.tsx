@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import OnboardingFlow from "./components/OnboardingFlow";
 
 export const metadata: Metadata = {
-  title: "Your health profile | Medistry",
+  title: "Your health profile | InRange",
   robots: { index: false, follow: false },
 };
 

@@ -1,0 +1,56 @@
+<!doctype html>
+<!-- The pilot's stand-in video room. The API hands out this page as the consultation's joinLink
+     until the 100ms keys are set; then it hands out the real 100ms room and this page goes unused.
+     It shows the person's own camera so the call screen can be rehearsed end to end. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>InRange video room</title>
+<style>
+  :root { --bg:#0f1011; --panel:#18191b; --hair:rgb(236 237 239 / .11); --on:#eeeff0; --on2:rgb(238 239 240 / .72); --ease:cubic-bezier(.23,1,.32,1); }
+  * { box-sizing:border-box; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--on);
+    font:15px/1.5 "Wix Madefor Text", system-ui, sans-serif; -webkit-font-smoothing:antialiased; }
+  main { height:100%; display:grid; grid-template-rows:1fr auto; gap:12px; padding:12px; }
+  .stage { position:relative; border-radius:16px; overflow:hidden; background:var(--panel); border:1px solid var(--hair); display:grid; place-items:center; }
+  video { width:100%; height:100%; object-fit:cover; transform:scaleX(-1); opacity:0; transition:opacity .6s var(--ease); }
+  video.on { opacity:1; }
+  .empty { position:absolute; inset:0; display:grid; place-items:center; text-align:center; padding:24px; color:var(--on2); }
+  .who { position:absolute; left:12px; bottom:12px; padding:6px 12px; border-radius:999px; background:rgb(15 16 17 / .72);
+    backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); font-size:13px; }
+  .who b { font-weight:600; color:var(--on); }
+  .note { margin:0; padding:12px 16px; border-radius:16px; border:1px solid var(--hair); background:var(--panel); color:var(--on2); font-size:13.5px; }
+  .note strong { color:var(--on); font-weight:600; }
+  @media (min-width:900px) { main { padding:16px; gap:16px; } .stage { border-radius:20px; } .note { border-radius:20px; } }
+  @media (prefers-reduced-motion:reduce) { video { transition:none; } }
+</style>
+</head>
+<body>
+<main>
+  <div class="stage">
+    <video id="me" autoplay playsinline muted></video>
+    <p class="empty" id="empty">Starting your camera</p>
+    <p class="who"><b id="name">You</b> <span id="role"></span></p>
+  </div>
+  <p class="note"><strong>Pilot video room.</strong> Live video connects once the video provider key is added.</p>
+</main>
+<script>
+  const params = new URLSearchParams(location.search);
+  const name = params.get("name");
+  const role = params.get("role");
+  if (name) document.getElementById("name").textContent = name;
+  if (role) document.getElementById("role").textContent = "· " + (role === "doctor" ? "Doctor" : "Patient");
+  const empty = document.getElementById("empty");
+  const video = document.getElementById("me");
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    empty.textContent = "This browser cannot show the camera here.";
+  } else {
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
+      .then((stream) => { video.srcObject = stream; video.classList.add("on"); empty.hidden = true; })
+      .catch(() => { empty.textContent = "Camera is off. Allow camera access in your browser to see yourself here."; });
+  }
+</script>
+</body>
+</html>

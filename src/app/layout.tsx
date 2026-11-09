@@ -18,19 +18,19 @@ const text = Wix_Madefor_Text({
 });
 
 /**
- * The site-wide defaults (the team's own landing copy). Pages set their own titles ("Care | Medistry");
+ * The site-wide defaults (the team's own landing copy). Pages set their own titles ("Care | InRange");
  * every signed-in area, sign-in, onboarding and the video call set noindex in their own layout or page.
  */
 export const metadata: Metadata = {
-  metadataBase: new URL("https://medistry.in"),
+  metadataBase: new URL("https://inrange.in"),
   title: {
-    default: "Medistry | Doctor-led care for weight and blood sugar",
+    default: "InRange | Doctor-led care for weight and blood sugar",
     template: "%s",
   },
   description:
     "A doctor-led programme for obesity and type 2 diabetes in India. A free check, a free first consultation, blood tests at home, nutrition built on Indian food, and a care team that follows your progress every week.",
   openGraph: {
-    title: "Medistry | Doctor-led care for weight and blood sugar",
+    title: "InRange | Doctor-led care for weight and blood sugar",
     description:
       "A doctor-led programme for obesity and type 2 diabetes. Consultation, tests, nutrition and follow-up in one plan.",
     locale: "en_IN",

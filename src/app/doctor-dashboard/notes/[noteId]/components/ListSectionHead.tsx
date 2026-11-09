@@ -27,9 +27,9 @@ export default function ListSectionHead({ listKey }: { listKey: NoteListKey }) {
             />{" "}
             Checked
           </>
-        ) : (
+        ) : review.note.transcribed ? (
           "Found by the scribe"
-        )
+        ) : null
       }
     >
       {!review.done && (

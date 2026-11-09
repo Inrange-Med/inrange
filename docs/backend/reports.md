@@ -3,7 +3,7 @@
 ## Purpose
 
 The reports in a patient's record: ones the patient uploads, and ones Redcliffe sends for a home
-blood test booked through Medistry.
+blood test booked through InRange.
 
 - Screens: `/patient-dashboard/reports`, the onboarding "I have a report" step (path `OWN_REPORT`),
   and "Yes, I have a Report" on `/pricing`.
@@ -42,7 +42,7 @@ Patient Bearer token, `multipart/form-data`:
     "title": "Lipid profile",
     "reportDate": "2026-10-12",
     "source": "UPLOADED",
-    "fileUrl": "https://files.medistry.in/reports/88.pdf?signature=...",
+    "fileUrl": "https://files.inrange.in/reports/88.pdf?signature=...",
     "labBookingId": null,
     "addedAt": "2026-10-28T10:15:00+05:30",
     "reviewStatus": "UNDER_REVIEW",
@@ -64,7 +64,7 @@ Every report in the patient's record, newest `reportDate` first.
   "success": true,
   "data": [
     { "id": 91, "title": "Smart Full Body Checkup", "reportDate": "2026-10-30", "source": "LAB_BOOKING", "fileUrl": null, "labBookingId": "LB1042", "addedAt": "2026-10-31T09:02:00+05:30", "reviewStatus": "UNDER_REVIEW", "reviewNote": null },
-    { "id": 88, "title": "Lipid profile", "reportDate": "2026-10-12", "source": "UPLOADED", "fileUrl": "https://files.medistry.in/reports/88.pdf?signature=...", "labBookingId": null, "addedAt": "2026-10-28T10:15:00+05:30", "reviewStatus": null, "reviewNote": null }
+    { "id": 88, "title": "Lipid profile", "reportDate": "2026-10-12", "source": "UPLOADED", "fileUrl": "https://files.inrange.in/reports/88.pdf?signature=...", "labBookingId": null, "addedAt": "2026-10-28T10:15:00+05:30", "reviewStatus": null, "reviewNote": null }
   ]
 }
 ```

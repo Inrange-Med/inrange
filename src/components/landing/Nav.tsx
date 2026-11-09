@@ -899,7 +899,7 @@
 //       */
 
 //       localStorage.setItem(
-//         "medistry_auth_token",
+//         "inrange_auth_token",
 //         accessToken
 //       );
 
@@ -911,7 +911,7 @@
 
 //       if (refreshToken) {
 //         localStorage.setItem(
-//           "medistry_refresh_token",
+//           "inrange_refresh_token",
 //           refreshToken
 //         );
 //       }
@@ -923,7 +923,7 @@
 //       */
 
 //       localStorage.setItem(
-//         "medistry_onboarding_mobile",
+//         "inrange_onboarding_mobile",
 //         mobile
 //       );
 
@@ -937,7 +937,7 @@
 //       */
 
 //       localStorage.setItem(
-//         "medistry_auth_response",
+//         "inrange_auth_response",
 //         JSON.stringify(data)
 //       );
 
@@ -949,14 +949,14 @@
 
 //       if (data?.user) {
 //         localStorage.setItem(
-//           "medistry_user",
+//           "inrange_user",
 //           JSON.stringify(data.user)
 //         );
 //       }
 
 //       if (data?.data?.user) {
 //         localStorage.setItem(
-//           "medistry_user",
+//           "inrange_user",
 //           JSON.stringify(data.data.user)
 //         );
 //       }
@@ -969,7 +969,7 @@
 
 //       if (data?.customer) {
 //         localStorage.setItem(
-//           "medistry_customer",
+//           "inrange_customer",
 //           JSON.stringify(
 //             data.customer
 //           )
@@ -978,7 +978,7 @@
 
 //       if (data?.data?.customer) {
 //         localStorage.setItem(
-//           "medistry_customer",
+//           "inrange_customer",
 //           JSON.stringify(
 //             data.data.customer
 //           )
@@ -997,7 +997,7 @@
 //         "";
 
 //       localStorage.setItem(
-//         "medistry_next_screen",
+//         "inrange_next_screen",
 //         nextScreen
 //       );
 
@@ -1129,7 +1129,7 @@
 //           <a
 //             href="#top"
 //             className={s.brand}
-//             aria-label="Medistry home"
+//             aria-label="InRange home"
 //             onClick={() =>
 //               setOpen(false)
 //             }
@@ -1641,7 +1641,7 @@ import Pricing from "./Pricing";
 
 
 /** Opens the sign-in modal from anywhere on the landing page (Hero and Footer buttons). */
-const OPEN_LOGIN_EVENT = "medistry:open-login";
+const OPEN_LOGIN_EVENT = "inrange:open-login";
 export function openLogin() {
   window.dispatchEvent(new Event(OPEN_LOGIN_EVENT));
 }
@@ -2085,7 +2085,7 @@ export default function Nav() {
   */
 
   const handleOtpChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const value = event.target.value.replace(/\D/g, "").slice(0, 4);
+    const value = event.target.value.replace(/\D/g, "").slice(0, 6);
     setOtp(value);
 
     if (authError) {
@@ -2241,40 +2241,40 @@ export default function Nav() {
   //       );
   //     }
 
-  //     localStorage.setItem("medistry_auth_token", accessToken);
+  //     localStorage.setItem("inrange_auth_token", accessToken);
 
   //     if (refreshToken) {
-  //       localStorage.setItem("medistry_refresh_token", refreshToken);
+  //       localStorage.setItem("inrange_refresh_token", refreshToken);
   //     }
 
-  //     localStorage.setItem("medistry_onboarding_mobile", mobile);
-  //     localStorage.setItem("medistry_auth_response", JSON.stringify(data));
+  //     localStorage.setItem("inrange_onboarding_mobile", mobile);
+  //     localStorage.setItem("inrange_auth_response", JSON.stringify(data));
 
   //     if (data?.user) {
-  //       localStorage.setItem("medistry_user", JSON.stringify(data.user));
+  //       localStorage.setItem("inrange_user", JSON.stringify(data.user));
   //     }
 
   //     if (data?.data?.user) {
-  //       localStorage.setItem("medistry_user", JSON.stringify(data.data.user));
+  //       localStorage.setItem("inrange_user", JSON.stringify(data.data.user));
   //     }
 
   //     if (data?.customer) {
   //       localStorage.setItem(
-  //         "medistry_customer",
+  //         "inrange_customer",
   //         JSON.stringify(data.customer),
   //       );
   //     }
 
   //     if (data?.data?.customer) {
   //       localStorage.setItem(
-  //         "medistry_customer",
+  //         "inrange_customer",
   //         JSON.stringify(data.data.customer),
   //       );
   //     }
 
   //     const nextScreen = data?.data?.nextScreen || data?.nextScreen || "";
 
-  //     localStorage.setItem("medistry_next_screen", nextScreen);
+  //     localStorage.setItem("inrange_next_screen", nextScreen);
 
   //     console.log("Access token saved successfully.");
   //     console.log("Next screen:", nextScreen);
@@ -2380,40 +2380,40 @@ export default function Nav() {
   //       );
   //     }
 
-  //     localStorage.setItem("medistry_auth_token", accessToken);
+  //     localStorage.setItem("inrange_auth_token", accessToken);
 
   //     if (refreshToken) {
-  //       localStorage.setItem("medistry_refresh_token", refreshToken);
+  //       localStorage.setItem("inrange_refresh_token", refreshToken);
   //     }
 
-  //     localStorage.setItem("medistry_onboarding_mobile", mobile);
-  //     localStorage.setItem("medistry_auth_response", JSON.stringify(data));
+  //     localStorage.setItem("inrange_onboarding_mobile", mobile);
+  //     localStorage.setItem("inrange_auth_response", JSON.stringify(data));
 
   //     if (data?.user) {
-  //       localStorage.setItem("medistry_user", JSON.stringify(data.user));
+  //       localStorage.setItem("inrange_user", JSON.stringify(data.user));
   //     }
 
   //     if (data?.data?.user) {
-  //       localStorage.setItem("medistry_user", JSON.stringify(data.data.user));
+  //       localStorage.setItem("inrange_user", JSON.stringify(data.data.user));
   //     }
 
   //     if (data?.customer) {
   //       localStorage.setItem(
-  //         "medistry_customer",
+  //         "inrange_customer",
   //         JSON.stringify(data.customer),
   //       );
   //     }
 
   //     if (data?.data?.customer) {
   //       localStorage.setItem(
-  //         "medistry_customer",
+  //         "inrange_customer",
   //         JSON.stringify(data.data.customer),
   //       );
   //     }
 
   //     const nextScreen = data?.data?.nextScreen || data?.nextScreen || "";
 
-  //     localStorage.setItem("medistry_next_screen", nextScreen);
+  //     localStorage.setItem("inrange_next_screen", nextScreen);
 
   //     console.log("Access token saved successfully.");
   //     console.log("Next screen:", nextScreen);
@@ -2469,8 +2469,8 @@ export default function Nav() {
     setAuthError("");
     setAuthMessage("");
 
-    if (otp.length !== 4) {
-      setAuthError("Please enter the 4-digit OTP.");
+    if (otp.length !== 6) {
+      setAuthError("Please enter the 6-digit OTP.");
       return;
     }
 
@@ -2607,7 +2607,7 @@ export default function Nav() {
           <a
             href="#top"
             className={s.brand}
-            aria-label="Medistry home"
+            aria-label="InRange home"
             onClick={() => setOpen(false)}
           >
             <Wordmark height={34} />
@@ -2784,7 +2784,7 @@ export default function Nav() {
               <p>
                 {authStep === "mobile"
                   ? "Enter your mobile number to continue."
-                  : `We sent a 4-digit OTP to +91 ${mobile}`}
+                  : `We sent a 6-digit OTP to +91 ${mobile}`}
               </p>
             </div>
 
@@ -2841,10 +2841,10 @@ export default function Nav() {
                   type="text"
                   inputMode="numeric"
                   autoComplete="one-time-code"
-                  placeholder="0000"
+                  placeholder="000000"
                   value={otp}
                   onChange={handleOtpChange}
-                  maxLength={4}
+                  maxLength={6}
                   disabled={authLoading}
                   className={`${s.authInput} ${s.otpInput}`}
                 />
@@ -2856,7 +2856,7 @@ export default function Nav() {
                 <button
                   type="submit"
                   className={s.authPrimaryButton}
-                  disabled={authLoading || otp.length !== 4}
+                  disabled={authLoading || otp.length !== 6}
                 >
                   {authLoading ? "Verifying..." : "Verify & Continue"}
                 </button>

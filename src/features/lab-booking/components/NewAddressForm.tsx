@@ -27,6 +27,9 @@ export default function NewAddressForm({
         query={form.query}
         onQuery={form.changeQuery}
         matches={form.matches}
+        searching={form.searching}
+        locating={form.locating}
+        onLocate={form.locate}
         checkingEloc={form.checkingEloc}
         onPick={form.pick}
         error={form.error}

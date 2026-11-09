@@ -21,7 +21,8 @@ never calls a service. Each `X.tsx` default-exports `X`; its styles sit beside i
 | `Sheet.tsx` | Bottom sheet on a phone, centred panel on a laptop. |
 | `SlotPicker.tsx` | Week, day, time, confirm; days come from `@/lib/calendar/bookingWeeks` (India time). |
 | `ToastProvider.tsx` | The confirmation toast; pages call `useToast()`. |
-| `Wordmark.tsx` | The Medistry wordmark (outlines in `wordmarkPaths.ts`). |
+| `PilotLegalPage.tsx` | The pilot privacy, terms and grievance pages: title, pilot note and plain sections. |
+| `Wordmark.tsx` | The InRange wordmark (geometry in `wordmarkPaths.ts`; the landing page reuses it). |
 
 ## Stylesheets (`styles/`)
 

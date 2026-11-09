@@ -1,6 +1,13 @@
-/** The first part of adding an address: search the area, then choose the right place from the matches. */
+/**
+ * The first part of adding an address: use the current location, or search the area and choose the
+ * right place. Matches update as the patient types; the first is the best match (Enter picks it).
+ */
 
-import { CaretRight, WarningCircle } from "@phosphor-icons/react";
+import {
+  CaretRight,
+  NavigationArrow,
+  WarningCircle,
+} from "@phosphor-icons/react";
 import type { LabPlaceMatch } from "@/types/labTest";
 import formStyles from "@/components/ui/styles/FormControls.module.css";
 import styles from "../LabBookingFlow.module.css";
@@ -9,6 +16,9 @@ export default function AddressPlaceSearch({
   query,
   onQuery,
   matches,
+  searching,
+  locating,
+  onLocate,
   checkingEloc,
   onPick,
   error,
@@ -17,6 +27,9 @@ export default function AddressPlaceSearch({
   query: string;
   onQuery: (query: string) => void;
   matches: LabPlaceMatch[] | null;
+  searching: boolean;
+  locating: boolean;
+  onLocate: () => void;
   checkingEloc: string | null;
   onPick: (match: LabPlaceMatch) => void;
   error: string | null;
@@ -24,29 +37,50 @@ export default function AddressPlaceSearch({
 }) {
   return (
     <>
+      <button
+        type="button"
+        className={`btn btn--ghost ${styles.pill}`}
+        onClick={onLocate}
+        aria-busy={locating}
+        disabled={locating}
+      >
+        <NavigationArrow size={17} weight="bold" aria-hidden="true" />
+        <span>{locating ? "Finding you…" : "Use my current location"}</span>
+      </button>
       <label className={formStyles.field}>
         <span className={formStyles.label}>Search your area</span>
         <input
           className={formStyles.input}
           value={query}
           onChange={(event) => onQuery(event.target.value)}
-          placeholder="Society, sector or street"
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && matches?.[0]) onPick(matches[0]);
+          }}
+          placeholder="Society, building, street or PIN code"
           autoComplete="off"
+          enterKeyHint="search"
+          aria-busy={searching}
           autoFocus
         />
       </label>
-      {matches && matches.length === 0 && (
-        <p className={styles.foot}>
-          Nothing found. Try the society or sector name.
+      {searching && !matches?.length && (
+        <p className={styles.foot} aria-live="polite">
+          Searching…
+        </p>
+      )}
+      {!searching && matches && matches.length === 0 && (
+        <p className={styles.foot} aria-live="polite">
+          Nothing found. Try the society, sector or PIN code.
         </p>
       )}
       {matches && matches.length > 0 && (
         <ul className={styles.packets}>
-          {matches.map((match) => (
+          {matches.map((match, index) => (
             <li key={match.eloc}>
               <button
                 type="button"
                 className={styles.packet}
+                data-suggested={index === 0 || undefined}
                 onClick={() => onPick(match)}
                 aria-busy={checkingEloc === match.eloc}
               >

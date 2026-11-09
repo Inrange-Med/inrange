@@ -41,7 +41,7 @@ function heightText(cm: number | null) {
   if (!cm) return { cm: "", feet: "", inches: "" };
   const totalInches = Math.round(cm / 2.54);
   return {
-    cm: String(Math.round(cm)),
+    cm: oneDecimal(cm),
     feet: String(Math.floor(totalInches / 12)),
     inches: String(totalInches % 12),
   };
@@ -105,7 +105,7 @@ export default function HealthProfileForm({ profile, onSaved }: Props) {
     setSaveError(null);
     const changes = {
       conditions: conditions.trim(),
-      heightCm: heightCm === null ? null : Math.round(heightCm),
+      heightCm: heightCm === null ? null : Math.round(heightCm * 10) / 10,
       weightKg: weightKg === null ? null : Math.round(weightKg * 10) / 10,
     };
     try {

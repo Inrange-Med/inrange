@@ -36,7 +36,11 @@ export default function PastConsultationsCard({
               <strong className={styles.pastHead}>
                 {appointment.status === "CANCELLED"
                   ? "Cancelled consultation"
-                  : "Consultation"}
+                  : appointment.visitType === "FIRST"
+                    ? "First consultation"
+                    : appointment.visitType === "FOLLOW_UP"
+                      ? "Follow-up consultation"
+                      : "Consultation"}
               </strong>
               <span className={styles.pastBy}>
                 <span className="num">{dateOf(appointment.startsAt)}</span>,{" "}

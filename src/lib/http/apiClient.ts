@@ -1,5 +1,5 @@
 /**
- * The HTTP client for the Medistry backend.
+ * The HTTP client for the InRange backend.
  *
  * The ONLY file that calls fetch(). Services in src/services/ call apiRequest(); pages and
  * components call services. This keeps the base URL, auth header and error handling in one place.
@@ -19,6 +19,9 @@ export type ApiEnvelope<T> = {
   error?: string;
   data?: T;
 };
+
+/** Fired on window after every successful write, so screens that count work (the doctor's badges) refresh. */
+export const DATA_CHANGED_EVENT = "inrange:data-changed";
 
 export class ApiError extends Error {
   readonly status: number;
@@ -100,15 +103,18 @@ export async function apiRequest<TBody = ApiEnvelope<unknown>>(
   const isFormData =
     typeof FormData !== "undefined" && body instanceof FormData;
 
-  const headers: Record<string, string> = { Accept: "application/json" };
+  // run the API in Mumbai, beside the database, wherever the person is (Supabase regional invocation)
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+    "x-region": "ap-south-1",
+  };
   if (body !== undefined && !isFormData)
     headers["Content-Type"] = "application/json";
   const token = authenticated ? getAccessToken() : null;
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  let response: Response;
-  try {
-    response = await fetch(buildUrl(path, query), {
+  const send = () =>
+    fetch(buildUrl(path, query), {
       method,
       headers,
       body:
@@ -120,10 +126,25 @@ export async function apiRequest<TBody = ApiEnvelope<unknown>>(
       signal,
       cache: "no-store",
     });
+  let response: Response;
+  try {
+    // a read that got no answer, or a gateway error (502 to 504), is a brief platform blip: it is safe
+    // to try once more. A write is never repeated.
+    const retry = async () => {
+      await new Promise((resolve) => setTimeout(resolve, 700));
+      return send();
+    };
+    response = await send().catch((firstError: Error) => {
+      if (method !== "GET" || firstError.name === "AbortError")
+        throw firstError;
+      return retry();
+    });
+    if (method === "GET" && [502, 503, 504].includes(response.status))
+      response = await retry();
   } catch (networkError) {
     if ((networkError as Error).name === "AbortError") throw networkError;
     throw new ApiError(
-      "Cannot reach Medistry. Check your connection and try again.",
+      "Cannot reach InRange. Check your connection and try again.",
       0,
       null,
     );
@@ -158,6 +179,8 @@ export async function apiRequest<TBody = ApiEnvelope<unknown>>(
       parsed,
     );
   }
+  if (method !== "GET" && typeof window !== "undefined")
+    window.dispatchEvent(new Event(DATA_CHANGED_EVENT));
   return parsed as TBody;
 }
 

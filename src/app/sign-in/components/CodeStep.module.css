@@ -1,4 +1,4 @@
-/* The code step (CodeStep): one real input under four round cells, the resend line. */
+/* The code step (CodeStep): one real input under six round cells, the resend line. */
 
 .inline {
   min-height: 0;
@@ -13,7 +13,7 @@
   color: var(--on-dark-2);
 }
 
-/* ---------- the code: one real input under four round cells ---------- */
+/* ---------- the code: one real input under six round cells ---------- */
 .otpWrap {
   display: grid;
   gap: 14px;
@@ -22,9 +22,9 @@
   position: relative;
   justify-self: center;
   display: grid;
-  --c: min(64px, 16vw, 9.5vh);
-  grid-template-columns: repeat(4, var(--c));
-  gap: clamp(8px, 2.6vw, 12px);
+  --c: min(54px, 11.5vw, 8vh);
+  grid-template-columns: repeat(6, var(--c));
+  gap: clamp(6px, 2vw, 10px);
   width: fit-content;
 }
 /* the input covers the cells, so taps, paste and the keyboard's code suggestion all land in it */

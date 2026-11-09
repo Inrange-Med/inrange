@@ -22,6 +22,8 @@ import styles from "./LabReportUpload.module.css";
 
 const MAX_AGE_DAYS = 90;
 const MAX_BYTES = 10 * 1024 * 1024;
+// the picker's accept list is only a hint (a file manager can still offer "All files")
+const REPORT_TYPES = ["application/pdf", "image/png", "image/jpeg"];
 const DAY_MS = 864e5;
 
 /** Whole days from the report's date to today, both India dates ("2026-10-28" parses as UTC midnight). */
@@ -75,12 +77,13 @@ export default function LabReportUpload({
 
   const pick = (chosen: File | undefined) => {
     if (!chosen) return;
-    setError(
-      chosen.size > MAX_BYTES
+    const problem = !REPORT_TYPES.includes(chosen.type)
+      ? "Choose a PDF, PNG or JPEG file."
+      : chosen.size > MAX_BYTES
         ? "This file is over 10 MB. Choose a smaller one."
-        : null,
-    );
-    setFile(chosen.size > MAX_BYTES ? null : chosen);
+        : null;
+    setError(problem);
+    setFile(problem ? null : chosen);
   };
 
   const submit = async () => {
@@ -149,8 +152,8 @@ export default function LabReportUpload({
           {file
             ? `${fileSize(file.size)}. Tap to change.`
             : check?.valid
-              ? "Max size 10MB"
-              : "Please provide a valid report date (<= 3 months) first"}
+              ? "A PDF or photo, up to 10 MB"
+              : "Enter the date on the report first, within the last 3 months"}
         </span>
       </button>
 

@@ -31,9 +31,15 @@ export default function LabBookingCollectionCard({
           </dd>
         </div>
         <div>
-          <dt>{booking.paymentRequired ? "Price" : "Paid by"}</dt>
-          <dd className="num">
+          <dt>
             {booking.paymentRequired
+              ? "Price"
+              : booking.price.total > 0
+                ? "Paid"
+                : "Paid by"}
+          </dt>
+          <dd className="num">
+            {booking.price.total > 0
               ? formatRupees(booking.price.total)
               : "Your plan"}
           </dd>

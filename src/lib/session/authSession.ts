@@ -16,12 +16,26 @@ type SessionUser = {
 };
 
 const STORAGE_KEYS = {
-  accessToken: "medistry_auth_token",
-  refreshToken: "medistry_refresh_token",
-  user: "medistry_user",
+  accessToken: "inrange_auth_token",
+  refreshToken: "inrange_refresh_token",
+  user: "inrange_user",
 } as const;
 
 const isBrowser = () => typeof window !== "undefined";
+
+const SESSION_CHANGED = "inrange:session";
+
+/** Calls `listener` whenever the session changes here (sign-in, sign-out, a 401) or in another tab. */
+export function subscribeToSession(listener: () => void) {
+  window.addEventListener(SESSION_CHANGED, listener);
+  window.addEventListener("storage", listener);
+  return () => {
+    window.removeEventListener(SESSION_CHANGED, listener);
+    window.removeEventListener("storage", listener);
+  };
+}
+
+const announce = () => window.dispatchEvent(new Event(SESSION_CHANGED));
 
 /** Reads the role and name the backend put inside the JWT. Returns {} if the token is not a JWT. */
 function decodeTokenPayload(token: string): Record<string, unknown> {
@@ -95,6 +109,7 @@ export function saveSession(params: {
   if (params.refreshToken)
     localStorage.setItem(STORAGE_KEYS.refreshToken, params.refreshToken);
   localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(sessionUser));
+  announce();
   return sessionUser;
 }
 
@@ -106,11 +121,13 @@ export function updateSessionUser(changes: Partial<SessionUser>) {
     STORAGE_KEYS.user,
     JSON.stringify({ ...current, ...changes }),
   );
+  announce();
 }
 
 export function clearSession() {
   if (!isBrowser()) return;
   Object.values(STORAGE_KEYS).forEach((key) => localStorage.removeItem(key));
+  announce();
 }
 
 /** Where a signed-in person lands. */

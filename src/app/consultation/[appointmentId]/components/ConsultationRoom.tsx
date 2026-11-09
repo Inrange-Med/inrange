@@ -137,7 +137,7 @@ export default function ConsultationRoom({
             className={styles.frame}
             title="Video consultation"
             src={stage.room.joinLink}
-            allow="camera; microphone; display-capture; autoplay; clipboard-write"
+            allow="camera; microphone; display-capture; autoplay; fullscreen; clipboard-write"
           />
         </div>
       )}

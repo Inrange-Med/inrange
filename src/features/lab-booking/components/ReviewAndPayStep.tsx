@@ -7,6 +7,7 @@
  * covers is booked at once instead, and the patient goes to `bookedHref`.
  */
 
+import { addressText } from "@/lib/format/address";
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -88,7 +89,7 @@ export default function ReviewAndPayStep({
       step: "package",
     },
     { label: "When", value: when, step: "time" },
-    { label: "Where", value: address.addressLine, step: "address" },
+    { label: "Where", value: addressText(address), step: "address" },
     {
       label: "For",
       value: `${patient.name}, ${patient.age}, ${patient.gender.toLowerCase()}`,

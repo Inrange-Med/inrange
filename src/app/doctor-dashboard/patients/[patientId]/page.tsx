@@ -6,7 +6,7 @@
 import type { Metadata } from "next";
 import PatientRecordView from "./components/PatientRecordView";
 
-export const metadata: Metadata = { title: "Patient record | Medistry" };
+export const metadata: Metadata = { title: "Patient record | InRange" };
 
 export default async function PatientRecordPage({
   params,

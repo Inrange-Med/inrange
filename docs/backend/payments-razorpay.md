@@ -23,7 +23,7 @@ available yet" (a 404) and nothing is activated.
 | GET | `/api/payments` | PROPOSED | `paymentService.listPayments` | Plans, "Invoices" |
 | POST | `/api/webhooks/razorpay` | PROPOSED | none (Razorpay calls it) | none |
 
-`referenceId` per purpose: `PLAN` = `SubscriptionPlans.PlanId`; `LAB_BOOKING` = the Medistry lab
+`referenceId` per purpose: `PLAN` = `SubscriptionPlans.PlanId`; `LAB_BOOKING` = the InRange lab
 booking id (from `POST /api/labs/bookings`); `CONSULTATION_FEE` = the slot id the patient chose
 (`SlotId` from `GET /api/schedule/available-slots`).
 
@@ -58,7 +58,7 @@ Steps:
    | purpose            | referenceId                       | Amount and checks                                                                                   |
    | ------------------ | --------------------------------- | --------------------------------------------------------------------------------------------------- |
    | `PLAN`             | `SubscriptionPlans.PlanId`        | `Price * 100`. 400 if the plan is missing, `IsActive` is false, or `Price` is null or 0. 409 if the user already has an active plan. |
-   | `LAB_BOOKING`      | Medistry lab booking id (from `POST /api/labs/bookings`) | The booking's stored total (Redcliffe package price, plus any collection charge), in paise. 400 if the booking is not the user's, is cancelled, or the 30-minute slot hold has expired. 409 if already paid. |
+   | `LAB_BOOKING`      | InRange lab booking id (from `POST /api/labs/bookings`) | The booking's stored total (Redcliffe package price, plus any collection charge), in paise. 400 if the booking is not the user's, is cancelled, or the 30-minute slot hold has expired. 409 if already paid. |
    | `CONSULTATION_FEE` | The slot id the patient chose (`SlotId` from `GET /api/schedule/available-slots`) | The first-consultation fee (the "consultation only" care package price). 400 if the patient is not `APPROVED` (`GET /api/eligibility`), the slot is not one they may book, or it is taken. 409 if their first consultation is already paid. **Hold the slot** for this patient while the order is open (for example 15 minutes), so no one else can book it. |
 
 3. If this user already has a `CREATED` order for the same `purpose` + `referenceId` and the same
@@ -74,13 +74,17 @@ Steps:
      "amount": 1799900,
      "currency": "INR",
      "receipt": "pay_418",
-     "notes": { "userId": "57", "purpose": "PLAN", "referenceId": "3" }
+     "notes": { "userId": "57", "purpose": "PLAN", "referenceId": "3" },
+     "payment": {
+       "capture": "automatic",
+       "capture_options": { "automatic_expiry_period": 12, "refund_speed": "normal" }
+     }
    }
    ```
 
-   (`receipt` is your own id, at most 40 characters; payments are captured automatically for
-   orders created this way on current Razorpay accounts. Check "Payment capture" in the dashboard
-   is set to automatic.)
+   (`receipt` is your own id, at most 40 characters. `payment.capture` makes the order auto-capture
+   whatever the Dashboard's capture setting says; a payment authorised more than 12 minutes after it
+   started is not auto-captured, so `/verify` captures it, else Razorpay refunds it.)
 5. Store the row with `Status = CREATED` and return:
 
 ```json
@@ -139,9 +143,11 @@ Steps:
    as lowercase hex, using the **stored** order id. Compare with `razorpaySignature` using a
    constant-time comparison. Mismatch: 400 `"Payment could not be verified."`, and do not mark
    anything paid.
-3. Optional but recommended: `GET https://api.razorpay.com/v1/payments/{razorpayPaymentId}` and
-   check `order_id` matches, `amount` equals the stored `AmountPaise`, and `status` is `captured`
-   (or `authorized` if you capture manually).
+3. `GET https://api.razorpay.com/v1/payments/{razorpayPaymentId}` and check `order_id` matches,
+   `amount` equals the stored `AmountPaise` and `currency` is `INR`. If `status` is `authorized`,
+   capture it (`POST /v1/payments/{id}/capture` with `{ amount, currency }`). Fulfil only when it is
+   `captured` (Razorpay refunds uncaptured payments); otherwise 409 "not confirmed yet", and the page
+   offers to retry the confirmation (never a second payment).
 4. In one transaction: set `Status = PAID`, `RazorpayPaymentId`, `PaidAt`, `InvoiceNumber`, then run
    fulfilment (below) if `FulfilledAt` is null, and set `FulfilledAt`.
 5. If the order is already `PAID` (the webhook got there first), skip straight to the response.
@@ -166,9 +172,11 @@ const ok = expected.length === razorpaySignature.length && crypto.timingSafeEqua
 
 ### POST `/api/webhooks/razorpay` (PROPOSED)
 
-Set up in the Razorpay dashboard (Settings, Webhooks) with the URL
-`https://<backend>/api/webhooks/razorpay`, the secret `RAZORPAY_WEBHOOK_SECRET`, and the events
-`payment.captured` and `payment.failed`.
+Set up in the Razorpay Dashboard (Accounts & Settings, Webhooks), once in Test mode and again in Live
+mode, with the URL `https://<backend>/api/webhooks/razorpay?forceFunctionRegion=ap-south-1`, the secret
+`RAZORPAY_WEBHOOK_SECRET`, and the events `payment.captured`, `order.paid` and `payment.failed`.
+Razorpay retries a non-2xx answer for 24 hours, wants a 2xx within 5 seconds, and may send
+`payment.failed` before a later `payment.captured` (UPI), so `payment.failed` is never final.
 
 - Auth: none (Razorpay calls it). Trust comes only from the signature.
 - Read the **raw** request body (before JSON parsing). Compute
@@ -230,7 +238,7 @@ available yet."
       "amountPaise": 1799900,
       "paidAt": "2026-10-28T09:41:12.000Z",
       "invoiceNumber": "MED-2026-000123",
-      "invoiceUrl": "https://files.medistry.in/invoices/MED-2026-000123.pdf"
+      "invoiceUrl": "https://files.inrange.in/invoices/MED-2026-000123.pdf"
     }
   ]
 }
@@ -270,7 +278,7 @@ One function, `fulfilPayment(payment)`, guarded by `FulfilledAt` so it runs once
   `planId = ReferenceId`. After this ships, restrict the public `POST /api/subscriptions/activate`
   route to staff/admin use, so a plan can only be started by a verified payment.
 - `LAB_BOOKING`: confirm the held slot with Redcliffe `center-confirm-booking` using the booking's
-  Redcliffe booking id and `"is_confirmed": true`, then mark the Medistry booking confirmed and
+  Redcliffe booking id and `"is_confirmed": true`, then mark the InRange booking confirmed and
   paid. If Redcliffe refuses (the hold expired), keep the payment `PAID`, flag the booking for the
   care team and refund through `POST /v1/payments/{id}/refund`; do not silently drop it.
 - `CONSULTATION_FEE`: book the held slot for this patient (what `PUT /api/schedule/book` does, with
@@ -286,9 +294,8 @@ One function, `fulfilPayment(payment)`, guarded by `FulfilledAt` so it runs once
 | `RAZORPAY_KEY_SECRET`     | Secret. Basic-auth password for the Orders API and the HMAC key for `/verify`. Never sent to the browser. |
 | `RAZORPAY_WEBHOOK_SECRET` | The secret set on the webhook in the Razorpay dashboard. HMAC key for `/api/webhooks/razorpay`. |
 
-The frontend also reads `NEXT_PUBLIC_RAZORPAY_KEY_ID` (`.env.example`), used only if an order
-response leaves `razorpayKeyId` empty. Prefer returning it from the backend so the key and the order
-always come from the same Razorpay account.
+The browser gets the key id only from the order response, so the key and the order always come from
+the same Razorpay account. The frontend has no Razorpay setting of its own.
 
 ### Suggested table: `Payments`
 

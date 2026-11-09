@@ -6,6 +6,7 @@
 
 import type {
   ClinicalNote,
+  MedicineChange,
   NoteListKey,
   NoteSection,
   NoteSectionKey,
@@ -187,6 +188,37 @@ export function toggleMedicine(note: ClinicalNote, id: string): NoteEdit {
   return {
     note: { ...note, medicines },
     change: `${changed?.include ? "Included" : "Left out"} ${changed?.name ?? "a medicine"}`,
+  };
+}
+
+/** Ids of medicines the doctor typed in (the scribe's have evidence); only these can be removed. */
+export const ADDED_MEDICINE_PREFIX = "added-";
+
+export function addMedicine(
+  note: ClinicalNote,
+  medicine: Pick<MedicineChange, "action" | "name" | "strength" | "detail">,
+): NoteEdit {
+  const added: MedicineChange = {
+    ...medicine,
+    id: `${ADDED_MEDICINE_PREFIX}${Date.now().toString(36)}`,
+    was: null,
+    evidence: [],
+    include: true,
+  };
+  return {
+    note: { ...note, medicines: [...note.medicines, added] },
+    change: `Added ${medicine.name}`,
+  };
+}
+
+export function removeMedicine(note: ClinicalNote, id: string): NoteEdit {
+  const removed = note.medicines.find((medicine) => medicine.id === id);
+  return {
+    note: {
+      ...note,
+      medicines: note.medicines.filter((medicine) => medicine.id !== id),
+    },
+    change: `Removed ${removed?.name ?? "a medicine"}`,
   };
 }
 

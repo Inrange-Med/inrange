@@ -10,7 +10,7 @@ import styles from "./VideoThumb.module.css";
 
 const DRAWINGS: Record<string, { d: string; hi?: string }> = {
   // a phone on a video call: the frame, a head and shoulders, the brand dot
-  "how-medistry-works": {
+  "how-inrange-works": {
     d: "M62 18h36a6 6 0 0 1 6 6v52a6 6 0 0 1-6 6H62a6 6 0 0 1-6-6V24a6 6 0 0 1 6-6ZM80 38a8 8 0 1 0 0.01 0M66 66c3-9 9-13 14-13s11 4 14 13",
     hi: "M80 28a2 2 0 1 0 0.01 0",
   },

@@ -1,21 +1,28 @@
-import Link from "next/link";
+/** /grievance: how to raise a complaint during the pilot. */
+import type { Metadata } from "next";
+import PilotLegalPage from "@/components/ui/PilotLegalPage";
 
-export default function Page() {
+export const metadata: Metadata = { title: "Grievances | InRange" };
+
+export default function GrievancePage() {
   return (
-    <main
-      style={{
-        minHeight: "70vh",
-        maxWidth: 760,
-        margin: "0 auto",
-        padding: "4rem 1.5rem",
-      }}
-    >
-      <h1>Grievance officer</h1>
-      <p>
-        This page content has not been supplied in the project. Please contact
-        care@medistry.in for further information.
-      </p>
-      <Link href="/">Back to home</Link>
-    </main>
+    <PilotLegalPage
+      title="Grievances"
+      intro="If you have a complaint about your care, your data or a payment, tell us and we will look into it."
+      sections={[
+        {
+          heading: "How to raise a complaint",
+          body: [
+            "Write to care@inrange.in with your registered mobile number, what happened and when. You can also message your care team in the app.",
+          ],
+        },
+        {
+          heading: "Grievance officer",
+          body: [
+            "The grievance officer's name and address are published here before public launch. During the pilot, complaints sent to care@inrange.in reach the team directly.",
+          ],
+        },
+      ]}
+    />
   );
 }

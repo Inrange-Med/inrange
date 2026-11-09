@@ -54,19 +54,23 @@ export default function HomeView() {
   const toast = useToast();
   const now = useNow();
   const home = useApiResource("patient-home", loadHome);
-  const { data, reload } = home;
+  const { data, reload, setData } = home;
 
+  // the card shows the new reading (or drops an undone one) at once; the reload then confirms it
   const saveWeight = useCallback(
     async (weightKg: number) => {
       const reading = await logWeight(weightKg);
+      if (data)
+        setData({ ...data, weights: [...(data.weights ?? []), reading] });
       reload();
       toast("Weight saved", () => {
+        if (data) setData(data);
         deleteWeightReading(reading.id)
           .then(reload)
           .catch((error) => toast(errorMessage(error)));
       });
     },
-    [reload, toast],
+    [data, reload, setData, toast],
   );
 
   if (!data) {
@@ -98,7 +102,7 @@ export default function HomeView() {
       <h1 className={styles.h1}>
         {greeting(new Date(now).getHours())}, {firstName}.
       </h1>
-      <p className={styles.sub}>Welcome to Medistry</p>
+      <p className={styles.sub}>Welcome to InRange</p>
     </header>
   );
   const weightCard = (

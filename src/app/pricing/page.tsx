@@ -1,12 +1,10 @@
-/** /pricing: consultation and diagnostics, linked from the landing page. Sets the title; the screen is PricingView. */
-
-import type { Metadata } from "next";
-import PricingView from "./components/PricingView";
-
-export const metadata: Metadata = {
-  title: "Consultation & Diagnostics | Medistry",
-};
+/**
+ * /pricing stays as a URL (the landing banner and menu link here), but the consultation and blood test
+ * choice now lives in onboarding, with the real packages and prices. Signed-out visitors are sent to
+ * sign in first by the onboarding screen itself.
+ */
+import { redirect } from "next/navigation";
 
 export default function PricingPage() {
-  return <PricingView />;
+  redirect("/onboarding");
 }

@@ -29,6 +29,8 @@ export type Appointment = {
   consultationType: ConsultationType;
   status: AppointmentStatus;
   reason: string;
+  /** FIRST or FOLLOW_UP when the backend says which; null for older rows */
+  visitType: "FIRST" | "FOLLOW_UP" | null;
 };
 
 /** PUT /api/schedule/book body. */

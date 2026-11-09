@@ -128,5 +128,5 @@ export default defineConfig([
   },
 
   // The public landing page is frozen (see ARCHITECTURE.md) and keeps its original code.
-  globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts", "scripts/**", "src/components/landing/**"]),
+  globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts", "scripts/**", "src/components/landing/**", "supabase/**"]),
 ]);

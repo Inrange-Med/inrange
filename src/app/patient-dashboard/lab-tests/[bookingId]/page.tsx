@@ -3,7 +3,7 @@
 import type { Metadata } from "next";
 import LabBookingDetailView from "../components/LabBookingDetailView";
 
-export const metadata: Metadata = { title: "Blood test | Medistry" };
+export const metadata: Metadata = { title: "Blood test | InRange" };
 
 export default async function LabBookingPage({
   params,

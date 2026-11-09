@@ -1,4 +1,4 @@
-/** The second step: the 4-digit code, one real input under four round cells, and resend. */
+/** The second step: the 6-digit code, one real input under six round cells, and resend. */
 
 import type { CSSProperties, RefObject } from "react";
 import { WarningCircle } from "@phosphor-icons/react";
@@ -12,6 +12,8 @@ type Props = {
   digits: string;
   code: string;
   error: string | null;
+  /** pilot only: the backend sends no SMS and says which code to enter */
+  pilotHint: string | null;
   shake: number;
   busy: boolean;
   verified: boolean;
@@ -23,7 +25,7 @@ type Props = {
   onResend: () => void;
 };
 
-const CODE_LENGTH = 4;
+const CODE_LENGTH = 6;
 const CELLS = Array.from({ length: CODE_LENGTH }, (_, i) => i);
 
 const minutesSeconds = (seconds: number) =>
@@ -34,6 +36,7 @@ export default function CodeStep({
   digits,
   code,
   error,
+  pilotHint,
   shake,
   busy,
   verified,
@@ -86,9 +89,9 @@ export default function CodeStep({
             type="text"
             inputMode="numeric"
             autoComplete="one-time-code"
-            pattern="\d{4}"
+            pattern="\d{6}"
             maxLength={CODE_LENGTH}
-            aria-label="4-digit code"
+            aria-label="6-digit code"
             aria-invalid={!!error}
             aria-describedby="sign-in-code-hint"
             value={code}
@@ -140,10 +143,12 @@ export default function CodeStep({
           ) : busy ? (
             "Checking the code"
           ) : (
-            <span className={styles.onWay}>
-              <i aria-hidden="true" />
-              Your code is on its way.
-            </span>
+            (pilotHint ?? (
+              <span className={styles.onWay}>
+                <i aria-hidden="true" />
+                Your code is on its way.
+              </span>
+            ))
           )}
         </p>
       </div>

@@ -9,7 +9,7 @@ import type { Metadata } from "next";
 import PatientShell from "./components/PatientShell";
 
 export const metadata: Metadata = {
-  title: "Your account | Medistry",
+  title: "Your account | InRange",
   robots: { index: false, follow: false },
 };
 

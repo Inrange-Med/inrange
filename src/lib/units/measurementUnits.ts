@@ -2,7 +2,7 @@
 
 /**
  * Units the visitor chooses, mixed and matched per measure, remembered on this device only
- * (localStorage "medistry-units"). Every tool keeps its maths in kilograms and centimetres; only
+ * (localStorage "inrange-units"). Every tool keeps its maths in kilograms and centimetres; only
  * what is shown and typed changes. Defaults follow everyday Indian use: weight in kilograms, height
  * in feet and inches, and waist in inches (the way a tailor or a jeans size gives it).
  */
@@ -15,7 +15,7 @@ type WaistUnit = "cm" | "in";
 type Units = { weight: WeightUnit; height: HeightUnit; waist: WaistUnit };
 
 const DEFAULT_UNITS: Units = { weight: "kg", height: "ftin", waist: "in" };
-const STORAGE_KEY = "medistry-units";
+const STORAGE_KEY = "inrange-units";
 const POUNDS_PER_KG = 2.20462;
 const CM_PER_INCH = 2.54;
 

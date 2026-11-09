@@ -77,7 +77,7 @@
 .rowTools {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 16px;
   margin-top: -6px;
 }
 
@@ -247,4 +247,13 @@
   .fuRow .owner {
     padding-left: 30px;
   }
+}
+
+/* the doctor's own medicine: the add sheet's fields, and the row's add and remove links */
+.addForm {
+  display: grid;
+  gap: 18px;
+}
+.addLink {
+  margin-top: 6px;
 }

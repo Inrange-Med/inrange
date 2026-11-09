@@ -3,7 +3,7 @@
 import type { Metadata } from "next";
 import HomeView from "./components/home/HomeView";
 
-export const metadata: Metadata = { title: "Home | Medistry" };
+export const metadata: Metadata = { title: "Home | InRange" };
 
 export default function PatientHomePage() {
   return <HomeView />;

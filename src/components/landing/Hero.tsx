@@ -54,7 +54,7 @@ export default function Hero() {
             style={{ "--d": "640ms" } as React.CSSProperties}
           >
             <button type="button" onClick={openLogin} className="btn btn--mint">
-              Start checkup
+              Start free check
             </button>
             <a href="#check" className="btn btn--ghost-dark">
               See where you stand

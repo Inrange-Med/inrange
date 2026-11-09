@@ -1,7 +1,7 @@
 /*
   Home's third card before the first consultation (Arhaan HomeView "Before your plan"): the three
   steps in their order, a counsellor's call, blood tests only if none in the last 90 days, then the
-  doctor. The card opens how Medistry works; the blood-test step leads to booking a home test or
+  doctor. The card opens how InRange works; the blood-test step leads to booking a home test or
   uploading a recent report.
 */
 
@@ -63,7 +63,7 @@ export default function FirstStepsCard({
       <div className={pageStyles.head}>
         <h2 id="stage-heading" className={pageStyles.label}>
           <Link
-            href="/patient-dashboard/resources/how-medistry-works"
+            href="/patient-dashboard/resources/how-inrange-works"
             className={pageStyles.stretch}
           >
             Before your plan

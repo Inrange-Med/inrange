@@ -3,7 +3,7 @@
 import type { Metadata } from "next";
 import NotesView from "./components/NotesView";
 
-export const metadata: Metadata = { title: "Notes | Medistry" };
+export const metadata: Metadata = { title: "Notes | InRange" };
 
 export default function NotesPage() {
   return <NotesView />;

@@ -19,7 +19,7 @@ const KNOWN_PAGES: BackDestination[] = [
   { href: "/patient-dashboard/resources", label: "Resources" },
   { href: "/patient-dashboard/profile", label: "Profile" },
 ];
-const STORAGE_KEY = "medistry-from";
+const STORAGE_KEY = "inrange-from";
 
 function withoutTrailingSlash(path: string): string {
   return path.replace(/\/$/, "") || "/";

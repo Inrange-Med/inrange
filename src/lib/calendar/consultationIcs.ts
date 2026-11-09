@@ -21,18 +21,18 @@ function consultationIcs(appointment: Appointment) {
   return [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//Medistry//Consultation//EN",
+    "PRODID:-//InRange//Consultation//EN",
     "BEGIN:VEVENT",
-    `UID:${appointment.id}@medistry.co`,
+    `UID:${appointment.id}@inrange.co`,
     `DTSTAMP:${icsStamp(new Date())}`,
     `DTSTART:${icsStamp(start)}`,
     `DTEND:${icsStamp(end)}`,
-    `SUMMARY:Medistry consultation with ${appointment.doctorName}`,
-    "DESCRIPTION:Video consultation. Join from your Medistry account; the call opens 10 minutes before.",
+    `SUMMARY:InRange consultation with ${appointment.doctorName}`,
+    "DESCRIPTION:Video consultation. Join from your InRange account; the call opens 10 minutes before.",
     "BEGIN:VALARM",
     "TRIGGER:-PT30M",
     "ACTION:DISPLAY",
-    "DESCRIPTION:Medistry consultation in 30 minutes",
+    "DESCRIPTION:InRange consultation in 30 minutes",
     "END:VALARM",
     "END:VEVENT",
     "END:VCALENDAR",
@@ -46,7 +46,7 @@ export function downloadConsultationIcs(appointment: Appointment) {
   );
   const link = document.createElement("a");
   link.href = url;
-  link.download = "medistry-consultation.ics";
+  link.download = "inrange-consultation.ics";
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

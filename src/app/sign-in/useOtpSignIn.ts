@@ -28,6 +28,7 @@ export function useOtpSignIn(next: string | null) {
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [code, setCode] = useState("");
   const [codeError, setCodeError] = useState<string | null>(null);
+  const [pilotHint, setPilotHint] = useState<string | null>(null);
   const [shake, setShake] = useState(0);
   const [verified, setVerified] = useState(false);
   const [resendAt, setResendAt] = useState(0);
@@ -108,7 +109,7 @@ export function useOtpSignIn(next: string | null) {
     setBusy(true);
     setPhoneError(null);
     try {
-      await sendOtp(digits);
+      setPilotHint(await sendOtp(digits));
     } catch (error) {
       setBusy(false);
       if (again) setCodeError(errorMessage(error));
@@ -158,6 +159,7 @@ export function useOtpSignIn(next: string | null) {
     phoneError,
     code,
     codeError,
+    pilotHint,
     shake,
     verified,
     resendInSeconds,

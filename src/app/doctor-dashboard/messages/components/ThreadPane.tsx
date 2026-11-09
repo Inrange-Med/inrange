@@ -16,7 +16,11 @@ import { useToast } from "@/components/ui/ToastProvider";
 import { useApiResource } from "@/hooks/useApiResource";
 import { errorMessage } from "@/lib/http/apiClient";
 import { getSessionUser } from "@/lib/session/authSession";
-import { connectToChatSession, listChatHistory } from "@/services/chatService";
+import {
+  connectToChatSession,
+  listChatHistory,
+  uniqueMessages,
+} from "@/services/chatService";
 import { markChatRead } from "@/services/doctorChatService";
 import {
   acknowledgeSymptom,
@@ -66,7 +70,7 @@ export default function ThreadPane({
   const [socketError, setSocketError] = useState<string | null>(null);
   const connection = useRef<Connection | null>(null);
 
-  const messages = [...(history.data ?? []), ...live];
+  const messages = uniqueMessages([...(history.data ?? []), ...live]);
   const symptom = record.data?.symptoms.find(
     (entry) => entry.requiresReview && !entry.acknowledged,
   );

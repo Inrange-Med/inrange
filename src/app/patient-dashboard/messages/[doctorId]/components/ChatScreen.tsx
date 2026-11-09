@@ -17,6 +17,7 @@ import {
   connectToChatSession,
   listChatHistory,
   startChatSession,
+  uniqueMessages,
 } from "@/services/chatService";
 import type { ChatMessage } from "@/types/chat";
 import formStyles from "@/components/ui/styles/FormControls.module.css";
@@ -47,7 +48,7 @@ export default function ChatScreen({ doctorId }: { doctorId: string }) {
 
   const doctor = team.data?.find((member) => member.doctorId === doctorId);
   const doctorName = doctor?.name ?? "Your doctor";
-  const messages = [...(history.data ?? []), ...live];
+  const messages = uniqueMessages([...(history.data ?? []), ...live]);
   const isMine = (message: ChatMessage) => message.senderRole === user?.role;
 
   useEffect(() => {

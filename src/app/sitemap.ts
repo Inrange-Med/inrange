@@ -7,7 +7,7 @@ export const dynamic = "force-static";
 export default function sitemap(): MetadataRoute.Sitemap {
   return [
     {
-      url: "https://medistry.in/",
+      url: "https://inrange.in/",
       changeFrequency: "monthly",
       priority: 1,
     },

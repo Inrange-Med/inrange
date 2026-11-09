@@ -3,7 +3,7 @@
 import type { Metadata } from "next";
 import CareView from "./components/CareView";
 
-export const metadata: Metadata = { title: "Your care | Medistry" };
+export const metadata: Metadata = { title: "Your care | InRange" };
 
 export default function CarePage() {
   return <CareView />;

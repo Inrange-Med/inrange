@@ -39,6 +39,8 @@ Every endpoint here:
 | POST | `/api/doctor/patients/:patientId/labs/:labId/review` | PROPOSED | `patientRecordService.reviewLabReport` | Record, Labs "Mark reviewed" |
 | POST | `/api/doctor/patients/:patientId/prescriptions/:prescriptionId/sign` | PROPOSED | `patientRecordService.signPrescription` | Record, Prescriptions "Review and sign" |
 | POST | `/api/doctor/patients/:patientId/private-notes` | PROPOSED | `patientRecordService.addPrivateNote` | Record, Private notes |
+| POST | `/api/doctor/patients/:patientId/plan-recommendation` | live | `patientRecordService.recommendPlan` | Record, Programme plan "Recommend a plan" `{ planId, note }`; replaces this doctor's earlier suggestion, which the patient sees first on Plans |
+| DELETE | `/api/doctor/patients/:patientId/plan-recommendation` | live | `patientRecordService.withdrawPlanRecommendation` | Record, Programme plan "Withdraw" |
 | GET | `/api/doctor/notes` | PROPOSED | `clinicalNoteService.listClinicalNotes` | Notes, Record "Visits", Note review |
 | GET | `/api/doctor/notes/:noteId` | PROPOSED | `clinicalNoteService.getClinicalNote` | Note review |
 | PUT | `/api/doctor/notes/:noteId` | PROPOSED | `clinicalNoteService.saveClinicalNote` | Note review (autosave) |
@@ -49,7 +51,7 @@ Every endpoint here:
 | POST | `/api/chat/sessions/:sessionId/no-reply-needed` | PROPOSED | `doctorChatService.markNoReplyNeeded` | Messages, "No reply needed" |
 | DELETE | `/api/chat/sessions/:sessionId/no-reply-needed` | PROPOSED | `doctorChatService.undoNoReplyNeeded` | the toast's Undo |
 | GET | `/api/chat/sessions/:sessionId/messages` | PROPOSED (consultations-and-care.md) | `chatService.listChatHistory` | Messages, earlier messages |
-| Socket.IO | `join_consultation`, `send_consultation_message`, `receive_consultation_message` | exists | `chatService.connectToChatSession` | Messages (live; `senderRole: "DOCTOR"`) |
+| GET/POST | `/api/chat/sessions/:sessionId/messages` | pilot | `chatService.connectToChatSession` (polling) | Messages (live; `senderRole: "DOCTOR"`) |
 | GET | `/api/video/appointments/:appointmentId/join` | exists | `videoConsultationService.joinVideoConsultation` | "Start consultation" opens `/consultation/:appointmentId` |
 
 ## Requests and responses
@@ -57,6 +59,8 @@ Every endpoint here:
 ### The patient record
 
 #### GET `/api/doctor/patients/:patientId/record` (PROPOSED)
+
+Also returns `planRecommendation: { planId, planName, note, recommendedAt } | null` (the newest suggestion) and `activePlan: { planName, endsAt } | null`.
 
 Screen: Patient record (`/doctor-dashboard/patients/:patientId`), the Today "Next" brief, and the
 flagged-symptom tick in Messages. Reading it is itself an audit entry ("Opened the record").

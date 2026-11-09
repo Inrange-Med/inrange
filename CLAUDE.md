@@ -2,7 +2,7 @@
 
 @AGENTS.md
 
-# Medistry landing page
+# InRange landing page
 
 Doctor-led metabolic care (obesity and type 2 diabetes) for affluent urban India, Delhi NCR first.
 Parent: PDPL (pharmaceutical company), funding from its balance sheet. The landing page is the whole funnel: it has to earn a 2-minute assessment start.
@@ -23,7 +23,7 @@ Full notes: the scratchpad `compliance.md` (copied to `docs/compliance.md`).
 - Say: "doctor-led", "medication only if your doctor judges it clinically appropriate", "not everyone is prescribed medication", process claims (30-minute consultation, reviews, labs).
 - Pricing: ONE package, prepaid 1, 4, 6 or 12-month plans, paid after the doctor's review. The package can include prescription medicine, so NO rupee figure appears on the page (obesity drugs cannot be advertised); the page promises an itemised price before payment. Beside the plan: "Medicine, only if your doctor prescribes it" and "not everyone is prescribed medication". Revisit any figure only with counsel.
 - Disclaimers in the footer, and near the pricing and the assessment: results vary, not emergency care, adults 18+, registered practitioners, TPG 2020.
-- No cold-chain, refrigeration or temperature cues anywhere public (copy, charts or imagery). The pharmacy section says Medistry dispenses through its own licensed pharmacy, keeps patient choice ("or any licensed pharmacy you prefer") and QR seal verification, and never names or pictures a medicine.
+- No cold-chain, refrigeration or temperature cues anywhere public (copy, charts or imagery). The pharmacy section says InRange dispenses through its own licensed pharmacy, keeps patient choice ("or any licensed pharmacy you prefer") and QR seal verification, and never names or pictures a medicine.
 - No implied or lasting outcomes: no weight trajectories, "goal reached", "one year on" or with/without comparisons. Charts show process (check-ins, reviews, labs), never results.
 - Do not name the PDPL parent on the public page until counsel signs off.
 - The primary CTA label is "Start free check" everywhere (deck: free eligibility check). It links to `ASSESSMENT_URL` (env `NEXT_PUBLIC_ASSESSMENT_URL`). The hero secondary "See where you stand" scrolls to `#check`.
@@ -33,16 +33,16 @@ Full notes: the scratchpad `compliance.md` (copied to `docs/compliance.md`).
 - Programme for obesity AND type 2 diabetes. Journey: a free two-minute eligibility check read by a doctor, then a free 15-minute first video consultation, then plan and payment after the review, then delivery and follow-up. Doctor review every 14 days.
 - Blood tests at home through partner labs (confirmed by Arhaan).
 - App first (tracker, reminders, how-to videos, AI care assistant that escalates to a doctor, pack verification, reorder), with WhatsApp support (confirmed).
-- Pharmacy: Medistry's own licensed pharmacy dispenses (Arhaan, 24 Sep), stocked through licensed distributors (deck). Keep both on the page.
+- Pharmacy: InRange's own licensed pharmacy dispenses (Arhaan, 24 Sep), stocked through licensed distributors (deck). Keep both on the page.
 - CONFIRM before launch: "Doctors are never paid per prescription" (Doctors facts); cancellation and refund terms for prepaid plans (FAQ, consumer law); how the itemised price changes if medicine is filled elsewhere; the pharmacy's name and drug-licence number for the footer.
 - Doctors: 57 on contract within month one. Copy says "50+ doctors" (CONFIRM).
 - Consultations are by video only for now (client, 23 Sep 2026). Do not mention clinics or in-person visits anywhere.
-- **Inventory-led: Medistry is the pharmacy too** (client, 24 Sep 2026). It dispenses and delivers prescriptions itself from its own licensed pharmacy (stock via the pharma parent). Never say or imply that it is asset-light, that a partner pharmacy dispenses, or that "Medistry does not sell medicine". CONFIRM the pharmacy name and drug-licence number for the footer, and counsel sign-off on e-pharmacy rules. Packs are QR-verified (temperature handling is not mentioned publicly).
+- **Inventory-led: InRange is the pharmacy too** (client, 24 Sep 2026). It dispenses and delivers prescriptions itself from its own licensed pharmacy (stock via the pharma parent). Never say or imply that it is asset-light, that a partner pharmacy dispenses, or that "InRange does not sell medicine". CONFIRM the pharmacy name and drug-licence number for the footer, and counsel sign-off on e-pharmacy rules. Packs are QR-verified (temperature handling is not mentioned publicly).
 - Pricing on the prototype: Foundation ₹4,500/mo, Complete ₹9,800/mo (CONFIRM; the brief's test ranges differ). Also CONFIRM: GST treatment, minimum term, and what Foundation includes after the first consultation.
 - WhatsApp is a primary channel and syncs with the app: text, voice notes (transcribed) and photos (meals, lab reports) are logged to the patient record. CONFIRM transcription, photo reading and lab-report parsing are live at launch. Name WhatsApp in plain text only; do not use its logo (Meta brand rules require the unaltered official mark, its green would be a second accent, and it adds no trust that the doctors do not already carry). Reviewed again 23 Sep 2026: still no.
 - An AI assistant answers everyday questions on WhatsApp and in the app; anything clinical, complex or risky is escalated to a doctor (client, 23 Sep 2026). Copy must say the assistant labels itself, never diagnoses, prescribes or changes treatment (Telemedicine Practice Guidelines 2020 bar AI from counselling or prescribing). CONFIRM the escalation rules and that the assistant is live at launch.
 - Wearables: say "a watch, ring or smart scale through Apple Health or Health Connect". Do not name Garmin, WHOOP, Oura or Fitbit until a direct integration exists, since naming them claims compatibility.
-- Photography is AI-generated (Higgsfield, Nano Banana Pro); raw masters are in `art/` (gitignored). The footer states that photographs are AI-generated illustrations, and the doctor photo is captioned "AI illustration. Not a Medistry doctor." Replace with real photography when available.
+- Photography is AI-generated (Higgsfield, Nano Banana Pro); raw masters are in `art/` (gitignored). The footer states that photographs are AI-generated illustrations, and the doctor photo is captioned "AI illustration. Not an InRange doctor." Replace with real photography when available.
 - The hero and Doctors photos are one video call seen from both ends (`hero-call.jpg`, `consult-call.jpg`); the brief, crops and safe areas are in `docs/photo-brief.md`. Masters are `art/hero-call-master.png` and `art/consult-call-master.png`.
 - Indian clinical thresholds (published consensus): BMI 23 = overweight, 25 = obesity for Asian Indians; waist ≥90 cm men / ≥80 cm women; waist-to-height ≥0.5.
 
@@ -55,7 +55,7 @@ Full notes: the scratchpad `compliance.md` (copied to `docs/compliance.md`).
   - Arcs are centred just outside the corner so each line crosses the edge at an angle. Check and FAQ intros are not sticky, so the space under them stays empty for the arcs.
 - Section tags (`Tag` in `ui.tsx`): sentence case, a 7px-radius tinted plate with the three-tick ruler glyph, 24px above the heading. They say what the section covers ("Free risk check", "If medicine is prescribed"). Never uppercase-tracked, never a dot or orb, never a number.
 - Brand kit: `~/Downloads/Medistry-Brand-Kit.pdf` (Sep 2026). Rules we follow:
-  - The wordmark is only pure white (#fff) or ink (#111). Never teal, mint or off-white. Use the outlined SVG (`Wordmark`), never live text. Minimum about 88px wide.
+  - The wordmark is only pure white (#fff) or ink (#111). Never teal, mint or off-white. Use the `Wordmark` component, never hand-set text. Until outlined InRange artwork is supplied, it sets "inrange" in Jost 500 with a drawn i (stem and raised dot); swap `wordmarkPaths.ts` for outlines then. Minimum about 88px wide.
   - The raised dot is the brand idea. `Wordmark sting` plays the kit's rising-dot motion once (nav on load, footer on reveal).
   - Favicon, home-screen icon and avatars are "the dot": an ink dot on white. The phone mockup avatar uses `Dot`.
   - Display type is Jost (headings, nav, tags, prices), weight 500, tracking about -0.02em. Body stays in Wix Madefor Text for small-size legibility.

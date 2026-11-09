@@ -1,20 +1,22 @@
 /**
  * Consultation chat between a patient and their doctor (both dashboards).
  * Doc: docs/backend/consultations-and-care.md
- *   POST /api/chat/init                           starts a session { doctorId } -> { sessionId } (needs an active appointment)
- *   GET  /api/chat/sessions/:sessionId/messages   PROPOSED. Earlier messages, oldest first -> { data: ChatMessage[] }
- * New messages travel over Socket.IO (SOCKET_URL, auth { token }), opened by connectToChatSession():
- *   emit "join_consultation"              sessionId, sent on every (re)connect
- *   emit "send_consultation_message"      { ...ChatMessage, sessionId } (without sentAt)
- *   on   "receive_consultation_message"   ChatMessage, a new message from either side
- *   on   "error_message"                  { message }, a message the server refused
+ *   POST /api/chat/init                                     starts a session { doctorId } -> { sessionId }
+ *   GET  /api/chat/sessions/:sessionId/messages?afterId=    messages, oldest first (only those after afterId) -> { data: ChatMessage[] }
+ *   POST /api/chat/sessions/:sessionId/messages             sends one { messageType, messageText, fileUrl } -> { data: ChatMessage }
+ * New messages arrive by polling every 3 seconds while the page is visible (connectToChatSession).
+ * Screens merge history and live messages with uniqueMessages(), since both may carry the same one.
  */
 
-import { io, type Socket } from "socket.io-client";
-import { SOCKET_URL } from "@/config/env";
-import { ApiError, apiRequest, listFrom } from "@/lib/http/apiClient";
-import { getAccessToken } from "@/lib/session/authSession";
+import {
+  ApiError,
+  apiRequest,
+  errorMessage,
+  listFrom,
+} from "@/lib/http/apiClient";
 import type { ChatMessage } from "@/types/chat";
+
+const POLL_MS = 3000;
 
 /** The server may leave out sentAt; the arrival time stands in. */
 const withSentAt = (message: ChatMessage): ChatMessage => ({
@@ -45,7 +47,21 @@ export async function listChatHistory(
   }
 }
 
-/** A live connection to one chat session. Call close() when the screen unmounts. */
+/** History and live messages without repeats (a message may arrive both ways). */
+export function uniqueMessages(messages: ChatMessage[]): ChatMessage[] {
+  const seen = new Set<string>();
+  return messages.filter((message) => {
+    const key =
+      message.id != null
+        ? `id:${message.id}`
+        : `${message.senderUserId}:${message.sentAt}:${message.messageText}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+/** A live connection to one chat session (polling). Call close() when the screen unmounts. */
 export function connectToChatSession(
   sessionId: number,
   handlers: {
@@ -53,26 +69,70 @@ export function connectToChatSession(
     onError: (message: string) => void;
   },
 ) {
-  const socket: Socket = io(SOCKET_URL, {
-    autoConnect: false,
-    transports: ["websocket"],
-    auth: { token: getAccessToken() },
-  });
-  socket.on("receive_consultation_message", (message: ChatMessage) =>
-    handlers.onMessage(withSentAt(message)),
-  );
-  socket.on("error_message", (error: { message?: string }) =>
-    handlers.onError(error?.message ?? "The message was not sent."),
-  );
-  socket.on("connect", () => socket.emit("join_consultation", sessionId));
-  socket.connect();
+  let lastId = 0;
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  let closed = false;
+  const seen = new Set<number>();
+
+  const deliver = (message: ChatMessage) => {
+    if (message.id != null) {
+      if (seen.has(message.id)) return;
+      seen.add(message.id);
+      lastId = Math.max(lastId, message.id);
+    }
+    handlers.onMessage(withSentAt(message));
+  };
+
+  const poll = async () => {
+    timer = null;
+    if (closed) return;
+    if (document.visibilityState === "visible") {
+      try {
+        const body = await apiRequest(
+          `/api/chat/sessions/${sessionId}/messages`,
+          {
+            query: { afterId: lastId || undefined },
+          },
+        );
+        if (!closed) listFrom<ChatMessage>(body, "messages").forEach(deliver);
+      } catch {
+        // a missed poll is retried on the next tick
+      }
+    }
+    if (!closed) timer = setTimeout(poll, POLL_MS);
+  };
+  const onVisible = () => {
+    if (document.visibilityState === "visible" && timer) {
+      clearTimeout(timer);
+      poll();
+    }
+  };
+  document.addEventListener("visibilitychange", onVisible);
+  poll();
 
   return {
-    send: (message: Omit<ChatMessage, "sessionId" | "sentAt">) =>
-      socket.emit("send_consultation_message", { ...message, sessionId }),
+    send: async (message: Omit<ChatMessage, "sessionId" | "sentAt">) => {
+      try {
+        const body = await apiRequest<{ data?: ChatMessage }>(
+          `/api/chat/sessions/${sessionId}/messages`,
+          {
+            method: "POST",
+            body: {
+              messageType: message.messageType,
+              messageText: message.messageText,
+              fileUrl: message.fileUrl,
+            },
+          },
+        );
+        if (body.data && !closed) deliver(body.data);
+      } catch (caught) {
+        handlers.onError(errorMessage(caught, "The message was not sent."));
+      }
+    },
     close: () => {
-      socket.removeAllListeners();
-      socket.disconnect();
+      closed = true;
+      if (timer) clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisible);
     },
   };
 }

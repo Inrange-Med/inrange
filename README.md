@@ -1,7 +1,9 @@
-# Medistry
+# InRange
 
-The Medistry web app: the public homepage, sign-in, onboarding, the patient and doctor dashboards
-and the video consultation (Next.js App Router). The backend is a separate service.
+The InRange web app: the public homepage, sign-in, onboarding, the patient and doctor dashboards
+and the video consultation (Next.js App Router). The backend is the `api` Supabase
+Edge Function in `supabase/` (base URL `.../functions/v1`); vendor integrations run in mock mode until
+their keys are set as function secrets.
 
 ```bash
 cp .env.example .env.local   # then fill in the values

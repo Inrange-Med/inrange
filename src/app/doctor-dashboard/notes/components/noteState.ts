@@ -84,11 +84,13 @@ export const toSign = (notes: ClinicalNote[], now: number) =>
     .sort((a, b) => a.callAt.localeCompare(b.callAt));
 
 /**
- * Where the review stands: the medicine and follow-up lists show once the call was transcribed or
- * they have rows, and a section counts as unticked only while it has text (ticks are optional).
+ * Where the review stands: the medicine list shows on every draft (the doctor can add a medicine there)
+ * and on signed notes with rows; follow-ups show once the call was transcribed or they have rows. A
+ * section counts as unticked only while it has text (ticks are optional).
  */
 export function reviewProgress(note: ClinicalNote) {
-  const showMedicines = note.transcribed || note.medicines.length > 0;
+  const showMedicines =
+    note.status === "DRAFT" || note.transcribed || note.medicines.length > 0;
   const showFollowUps = note.transcribed || note.followUps.length > 0;
   const listKeys: NoteListKey[] = [
     ...(showMedicines ? (["medicines"] as const) : []),

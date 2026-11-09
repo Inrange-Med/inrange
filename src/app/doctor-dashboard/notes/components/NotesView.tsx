@@ -20,7 +20,7 @@ export default function NotesView() {
       <PageHead
         className={clinicStyles.pageHead}
         title="Notes"
-        sub="The scribe drafts a note from every call. Nothing reaches a record until you sign it."
+        sub="Every finished call leaves a draft note here. Nothing reaches a record until you sign it."
       />
       {notes.error && !notes.data ? (
         <ErrorNotice message={notes.error} onRetry={notes.reload} />

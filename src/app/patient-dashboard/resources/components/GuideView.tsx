@@ -122,8 +122,8 @@ export default function GuideView({ slug }: { slug: string }) {
             <p
               className={`${formStyles.hint} ${styles.readFoot} ${styles.guideFoot}`}
             >
-              General guidance from Medistry&apos;s care team. Your
-              doctor&apos;s advice comes first.
+              General guidance from InRange&apos;s care team. Your doctor&apos;s
+              advice comes first.
             </p>
           </div>
         </div>

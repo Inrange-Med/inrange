@@ -1,0 +1,76 @@
+/* The pilot legal pages: one readable column on the app canvas. */
+.page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 32px 16px 80px;
+  color: var(--ink);
+  font-family: var(--font-text);
+}
+
+.home {
+  display: inline-flex;
+  color: var(--ink);
+  margin-bottom: 40px;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  font-size: clamp(30px, 6vw, 40px);
+  line-height: 1.1;
+  margin: 0 0 12px;
+}
+
+.pilot {
+  display: inline-block;
+  margin: 0 0 24px;
+  padding: 8px 12px;
+  border-radius: 7px;
+  background: var(--bg-2);
+  color: var(--ink-2);
+  font-size: 14px;
+}
+
+.intro {
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--ink-2);
+  margin: 0 0 8px;
+}
+
+.section {
+  border-top: 1px solid var(--hair);
+  margin-top: 28px;
+  padding-top: 20px;
+}
+
+.section h2 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 20px;
+  margin: 0 0 10px;
+}
+
+.section p {
+  margin: 0 0 10px;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+.contact {
+  margin-top: 36px;
+  font-size: 15px;
+  color: var(--ink-2);
+}
+
+.contact a {
+  color: var(--ink);
+}
+
+@media (min-width: 768px) {
+  .page {
+    padding-top: 48px;
+  }
+}

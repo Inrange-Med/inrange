@@ -61,12 +61,12 @@ const TODAY = [
 
 export const GUIDES: Guide[] = [
   {
-    slug: "how-medistry-works",
-    title: "How Medistry works",
+    slug: "how-inrange-works",
+    title: "How InRange works",
     line: "The counsellor's call, your first consultation, the plan and your reviews.",
     minutes: 2,
     video: {
-      label: "Meet Medistry",
+      label: "Meet InRange",
       length: "2:40",
       by: "menon",
       summary:
@@ -89,7 +89,7 @@ export const GUIDES: Guide[] = [
       {
         h: "After your first consultation",
         p: [
-          "Your doctor may suggest a plan. A plan runs for 1, 4, 6 or 12 months, paid in advance, and the price is itemised before you pay. Medicine, if prescribed, comes from Medistry's own licensed pharmacy, or any licensed pharmacy you prefer.",
+          "Your doctor may suggest a plan. A plan runs for 1, 4, 6 or 12 months, paid in advance, and the price is itemised before you pay. Medicine, if prescribed, comes from InRange's own licensed pharmacy, or any licensed pharmacy you prefer.",
         ],
       },
       {
@@ -274,7 +274,7 @@ export const GUIDES: Guide[] = [
     short: [
       "Most early effects are mild and expected. Log them in the app so your doctor sees them.",
       "Some signs need help the same day; a few need a hospital now.",
-      "In an emergency, call 112. Medistry is not an emergency service.",
+      "In an emergency, call 112. InRange is not an emergency service.",
     ],
     sections: [
       {

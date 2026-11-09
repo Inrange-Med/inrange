@@ -91,7 +91,12 @@ export default function NoteReviewBody({
   const [keysOpen, setKeysOpen] = useState(false);
   const [filter, setFilter] = useState<TranscriptFilter>("all");
 
-  const { apply, latest } = useNoteSaving(note, setNote, reloadNote, toast);
+  const { apply, latest, saved } = useNoteSaving(
+    note,
+    setNote,
+    reloadNote,
+    toast,
+  );
   const placement = useTranscriptPlacement();
   const { mode } = placement;
   const links = useTranscriptLinks({
@@ -123,6 +128,7 @@ export default function NoteReviewBody({
     their,
     setNote,
     toast,
+    saved,
   });
   const go = (to?: ClinicalNote) =>
     to && router.push(`/doctor-dashboard/notes/${to.id}`);

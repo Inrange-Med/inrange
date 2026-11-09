@@ -1,8 +1,17 @@
 /** Medicine changes found in the call. Included ones become a draft prescription, signed separately. */
 
-import { toggleMedicine } from "@/app/doctor-dashboard/notes/components/noteEdits";
+import { useState } from "react";
+import { Plus } from "@phosphor-icons/react";
+import {
+  addMedicine,
+  ADDED_MEDICINE_PREFIX,
+  removeMedicine,
+  toggleMedicine,
+} from "@/app/doctor-dashboard/notes/components/noteEdits";
+import formStyles from "@/components/ui/styles/FormControls.module.css";
 import { rxChanges } from "@/app/doctor-dashboard/notes/components/noteState";
 import { useNoteReview } from "./NoteReviewContext";
+import AddMedicineSheet from "./AddMedicineSheet";
 import EvidenceButton from "./EvidenceButton";
 import EvidenceCard from "./EvidenceCard";
 import ListSectionHead from "./ListSectionHead";
@@ -23,6 +32,7 @@ export default function MedicinesSection({
   nextPrescriptionVersion: number;
 }) {
   const review = useNoteReview();
+  const [adding, setAdding] = useState(false);
   const { note, done, pin } = review;
   const changes = rxChanges(note).length;
   const signedVersion = note.signed?.prescriptionVersion ?? null;
@@ -63,6 +73,18 @@ export default function MedicinesSection({
                       evidence={medicine.evidence}
                       label={medicine.name}
                     />
+                    {!done && medicine.id.startsWith(ADDED_MEDICINE_PREFIX) && (
+                      <button
+                        type="button"
+                        className={formStyles.link}
+                        onClick={() =>
+                          review.apply(removeMedicine(note, medicine.id))
+                        }
+                      >
+                        Remove
+                        <span className="sr-only"> {medicine.name}</span>
+                      </button>
+                    )}
                     {medicine.action !== "CONTINUE" && !done && (
                       <TickBox
                         on={medicine.include}
@@ -92,6 +114,23 @@ export default function MedicinesSection({
           <p className={sectionStyles.none}>
             No medicine came up on this call.
           </p>
+        )}
+        {!done && (
+          <>
+            <button
+              type="button"
+              className={`${formStyles.link} ${styles.addLink}`}
+              onClick={() => setAdding(true)}
+            >
+              <Plus size={16} aria-hidden="true" />
+              Add a medicine
+            </button>
+            <AddMedicineSheet
+              open={adding}
+              onClose={() => setAdding(false)}
+              onAdd={(medicine) => review.apply(addMedicine(note, medicine))}
+            />
+          </>
         )}
         <p className={styles.foot}>
           {done

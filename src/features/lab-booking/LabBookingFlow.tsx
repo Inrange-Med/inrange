@@ -2,7 +2,7 @@
 
 /**
  * Booking a home blood test: renders the current step of `flow` (useLabBookingFlow, which holds the
- * choices and the step). Redcliffe is reached only through the Medistry backend
+ * choices and the step). Redcliffe is reached only through the InRange backend
  * (docs/backend/lab-tests-redcliffe.md).
  *
  * The steps, in order (components/):

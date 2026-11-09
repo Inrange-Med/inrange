@@ -1,9 +1,11 @@
 "use client";
 
 /**
- * Applies an edit at once and saves it in the background. A save that comes back after a newer
- * edit is ignored; a failed save says so and reloads the note as the backend has it. `latest` is
- * the newest note, for undos that run later.
+ * Applies an edit at once and saves it in the background. Saves go out one after another, in edit
+ * order: each carries the whole note, and two in flight together can land on the server in either
+ * order, so a fast tick could be overwritten by the edit before it. A save that comes back after a
+ * newer edit is ignored; a failed save says so and reloads the note as the backend has it.
+ * `latest` is the newest note, for undos that run later.
  */
 
 import { useEffect, useRef } from "react";
@@ -20,6 +22,7 @@ export function useNoteSaving(
 ) {
   const latest = useRef(note);
   const saveCount = useRef(0);
+  const queue = useRef<Promise<unknown>>(Promise.resolve());
   useEffect(() => {
     latest.current = note;
   });
@@ -30,19 +33,24 @@ export function useNoteSaving(
     setNote(edit.note);
     const count = ++saveCount.current;
     const { sections, medicines, followUps, recordUpdates, checks } = edit.note;
-    saveClinicalNote(edit.note.id, {
-      sections,
-      medicines,
-      followUps,
-      recordUpdates,
-      checks,
-      change: edit.change,
-    })
+    queue.current = queue.current
+      .then(() =>
+        saveClinicalNote(edit.note.id, {
+          sections,
+          medicines,
+          followUps,
+          recordUpdates,
+          checks,
+          change: edit.change,
+        }),
+      )
       .then((saved) => count === saveCount.current && setNote(saved))
       .catch((caught) => {
         toast(errorMessage(caught, "The change was not saved."));
         reloadNote();
       });
   };
-  return { apply, latest };
+  /** settles once every save sent so far is done, so signing never overtakes an edit */
+  const saved = () => queue.current;
+  return { apply, latest, saved };
 }

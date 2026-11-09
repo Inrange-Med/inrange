@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import { ArrowRight } from "@phosphor-icons/react/dist/ssr";
-import { LOGO_BODY_PATH, LOGO_DOT_PATH, LOGO_VIEWBOX } from "./logo-paths";
+import AppWordmark from "@/components/ui/Wordmark";
 
 /** The clinical assessment, built by the product team. Set NEXT_PUBLIC_ASSESSMENT_URL once it is live. */
 export const ASSESSMENT_URL = process.env.NEXT_PUBLIC_ASSESSMENT_URL || "/assessment";
@@ -61,24 +61,11 @@ export function Dot({ size = 18 }: { size?: number }) {
 }
 
 /**
- * The Medistry wordmark, outlined from the supplied artwork. Black or white only (brand kit).
+ * The InRange wordmark (the app's Wordmark, one source). Black or white only (brand kit).
  * With `sting`, the dot starts seated on the stem like a normal i and rises into place, once.
  */
 export function Wordmark({ className, height = 30, sting = false }: { className?: string; height?: number; sting?: boolean }) {
-  return (
-    <svg
-      className={className}
-      height={height}
-      width={(height * 3633) / 1384}
-      viewBox={LOGO_VIEWBOX}
-      role="img"
-      aria-label="Medistry"
-      style={{ display: "block", overflow: "visible" }}
-    >
-      <path d={LOGO_BODY_PATH} fill="currentColor" fillRule="evenodd" />
-      <path d={LOGO_DOT_PATH} fill="currentColor" className={sting ? "sting" : undefined} />
-    </svg>
-  );
+  return <AppWordmark className={className} height={height} dotClassName={sting ? "sting" : undefined} />;
 }
 
 /** Section tag: a short, plain name for what the section covers, on a tinted plate. */

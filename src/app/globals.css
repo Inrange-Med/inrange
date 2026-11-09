@@ -1,5 +1,5 @@
 /* ------------------------------------------------------------------
-   Medistry design tokens
+   InRange design tokens
    Clinical apothecary under teal light. Depth comes from tonal steps
    and hairlines, never from heavy shadow. Mint is the only accent and
    marks actions and live data.
@@ -602,7 +602,7 @@ html {
 /* ------------------------------------------------------------------
    The rising dot (brand kit, section 06). The dot sits on the stem like
    a normal i, then rises into its floating place with a small overshoot.
-   Distances are in the wordmark's own units: the stem top is at 751,
+   Distances are in the wordmark's own units: the stem top is at 700,
    a seated tittle would sit 460 units lower than the floating dot.
 ------------------------------------------------------------------- */
 @keyframes dot-rise {

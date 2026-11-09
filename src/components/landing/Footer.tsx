@@ -15,7 +15,7 @@ const COLS = [
   },
   {
     title: "Contact",
-    links: [["care@medistry.in", "mailto:care@medistry.in"]],
+    links: [["care@inrange.in", "mailto:care@inrange.in"]],
   },
   {
     title: "Legal",
@@ -54,7 +54,7 @@ export default function Footer() {
           </p>
           {/* <Cta onClick={openLogin} variant="mint" /> */}
           <button type="button" onClick={openLogin} className="btn btn--mint">
-            Start checkup
+            Start free check
           </button>
         </div>
       </div>
@@ -83,14 +83,14 @@ export default function Footer() {
         </nav>
         <div className={s.legal}>
           <p>
-            Medistry provides medical consultations and a care programme through
+            InRange provides medical consultations and a care programme through
             registered medical practitioners, and runs its own licensed
             pharmacy, stocked through licensed distributors. Video consultations
-            follow the Telemedicine Practice Guidelines, 2020. Medistry does not
+            follow the Telemedicine Practice Guidelines, 2020. InRange does not
             advertise any medicine. Any prescription is issued only by a
             registered medical practitioner after clinical assessment, where
             medically appropriate, and is dispensed by a registered pharmacist,
-            at Medistry&rsquo;s pharmacy or at any licensed pharmacy the patient
+            at InRange&rsquo;s pharmacy or at any licensed pharmacy the patient
             chooses.
           </p>
           <p>
@@ -102,7 +102,7 @@ export default function Footer() {
             <span style={{ whiteSpace: "nowrap" }}>AI-generated</span>{" "}
             illustrations.
           </p>
-          <p className={s.copy}>© 2026 Medistry Health Private Limited.</p>
+          <p className={s.copy}>© 2026 InRange Health Private Limited.</p>
         </div>
       </div>
     </footer>

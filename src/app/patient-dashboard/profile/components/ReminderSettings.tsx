@@ -82,7 +82,7 @@ export default function ReminderSettings({
           ))}
         </ul>
         <p className={formStyles.hint}>
-          Nobody from Medistry will ever ask you for a one-time code.
+          Nobody from InRange will ever ask you for a one-time code.
         </p>
       </section>
     </div>

@@ -38,7 +38,7 @@ function sealPath() {
 }
 const SEAL = sealPath();
 
-/* What a patient sees after scanning the seal on a pack from Medistry’s pharmacy. Illustrative values. */
+/* What a patient sees after scanning the seal on a pack from InRange’s pharmacy. Illustrative values. */
 function Verify() {
   const rows: [string, string][] = [
     ["Source", "Licensed distributor"],
@@ -107,7 +107,7 @@ export default function Pharmacy() {
             <Mask id="pharmacy-title" className={`h2 ${s.title}`} lines={["Our pharmacy, or yours."]} />
           </div>
           <p className="lede" data-reveal="rise" style={{ "--d": "160ms" } as React.CSSProperties}>
-            Not everyone is prescribed medicine. If you are, Medistry&rsquo;s own licensed pharmacy dispenses it and delivers it
+            Not everyone is prescribed medicine. If you are, InRange&rsquo;s own licensed pharmacy dispenses it and delivers it
             to your door, or you can fill it at any licensed pharmacy you prefer. Every pack we send carries a coded seal: scan
             it in the app to see its source and batch record before you open it.
           </p>

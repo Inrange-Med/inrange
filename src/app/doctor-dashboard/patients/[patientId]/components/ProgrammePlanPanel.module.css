@@ -1,0 +1,23 @@
+/* The programme plan panel: the active plan or the doctor's suggestion, and the sheet to suggest one. */
+
+.body,
+.form {
+  display: grid;
+  gap: 12px;
+}
+
+.line {
+  color: var(--ink-2);
+}
+
+.line strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}

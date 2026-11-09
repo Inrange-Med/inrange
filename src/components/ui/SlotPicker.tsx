@@ -2,7 +2,7 @@
 
 /**
  * Choose a week, a day, then a time; then confirm. Data-agnostic: the page passes `loadSlots`
- * (one day at a time, as Medistry's /api/schedule/slots works) and `onConfirm` (the booking call).
+ * (one day at a time, as InRange's /api/schedule/slots works) and `onConfirm` (the booking call).
  * Used by patient booking, onboarding lab booking and rescheduling. Days and times are India's
  * (lib/format/dateTime), so the calendar matches the backend on a phone in any time zone.
  */
@@ -24,7 +24,7 @@ import SegmentedControl from "./SegmentedControl";
 import formStyles from "./styles/FormControls.module.css";
 import styles from "./SlotPicker.module.css";
 
-/** One bookable time. `id` is whatever the backend needs to book it (Medistry: SlotId). */
+/** One bookable time. `id` is whatever the backend needs to book it (InRange: SlotId). */
 export type PickableSlot = { id: string; at: string; open: boolean };
 
 const DAY_MS = 864e5;

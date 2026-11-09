@@ -124,7 +124,7 @@ export default function PatientShell({ children }: { children: ReactNode }) {
                 <Link
                   href="/patient-dashboard"
                   className={styles.brand}
-                  aria-label="Medistry, home"
+                  aria-label="InRange, home"
                 >
                   <Wordmark height={24} />
                 </Link>

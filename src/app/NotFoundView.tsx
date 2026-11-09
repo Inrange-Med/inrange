@@ -8,7 +8,7 @@
 
 import { useSyncExternalStore } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight } from "@phosphor-icons/react";
 import AppTheme from "@/components/ui/AppTheme";
 import ContourField from "@/components/ui/ContourField";
@@ -27,9 +27,18 @@ function useHasHistory() {
   );
 }
 
+/** The address asked for. Empty on the server: the 404 page is prerendered once for every address. */
+function useRequestedPath() {
+  return useSyncExternalStore(
+    subscribeToNothing,
+    () => window.location.pathname,
+    () => "",
+  );
+}
+
 export default function NotFoundView() {
   const router = useRouter();
-  const pathname = usePathname();
+  const pathname = useRequestedPath();
   const signedInHome = useSignedInHome();
   const hasHistory = useHasHistory();
   const shownPath =
@@ -44,7 +53,7 @@ export default function NotFoundView() {
           lineAlpha={0.12}
           signalAlpha={0.5}
         />
-        <Link href="/" className={styles.brand} aria-label="Medistry home">
+        <Link href="/" className={styles.brand} aria-label="InRange home">
           <Wordmark height={26} />
         </Link>
 

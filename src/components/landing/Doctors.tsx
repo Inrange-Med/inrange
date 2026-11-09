@@ -67,7 +67,7 @@ export default function Doctors() {
             sizes="(max-width: 1023px) 100vw, 60vw"
           />
           <figcaption className={s.cap}>
-            <span>AI illustration.</span> <span>Not a Medistry doctor.</span>
+            <span>AI illustration.</span> <span>Not an InRange doctor.</span>
           </figcaption>
         </figure>
 

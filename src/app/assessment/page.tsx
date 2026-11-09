@@ -1,24 +1,9 @@
-import Link from "next/link";
+/**
+ * "Start free check" lands here (ASSESSMENT_URL). In the pilot the free check is the app's own
+ * onboarding questions, which start right after sign-in, so this page sends people there.
+ */
+import { redirect } from "next/navigation";
 
 export default function AssessmentPage() {
-  return (
-    <main
-      style={{
-        minHeight: "70vh",
-        display: "grid",
-        placeItems: "center",
-        padding: "3rem 1.5rem",
-      }}
-    >
-      <section style={{ maxWidth: 620, textAlign: "center" }}>
-        <p>MEDISTRY · FREE ELIGIBILITY CHECK</p>
-        <h1>Start your health assessment</h1>
-        <p>
-          The assessment service is not configured in this project yet. Please
-          contact care@medistry.in for help getting started.
-        </p>
-        <Link href="/">Back to home</Link>
-      </section>
-    </main>
-  );
+  redirect("/sign-in");
 }

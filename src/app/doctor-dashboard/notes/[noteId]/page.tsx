@@ -6,7 +6,7 @@
 import type { Metadata } from "next";
 import NoteReviewView from "./components/NoteReviewView";
 
-export const metadata: Metadata = { title: "Call note | Medistry" };
+export const metadata: Metadata = { title: "Call note | InRange" };
 
 export default async function NoteReviewPage({
   params,
