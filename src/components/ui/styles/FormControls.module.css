@@ -108,7 +108,7 @@
   }
 }
 .go[data-busy="true"] {
-  cursor: progress;
+  cursor: default; /* the button's own spinner says it is working; no OS busy cursor */
 }
 .go[data-busy="true"] :global(.well) {
   transform: none !important;

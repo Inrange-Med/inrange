@@ -123,7 +123,7 @@
   outline-offset: 3px;
 }
 .endButton:disabled {
-  cursor: progress;
+  cursor: default; /* the button's own spinner says it is working; no OS busy cursor */
   opacity: 0.6;
 }
 
