@@ -46,7 +46,7 @@ export default function RefundPage() {
         {
           heading: "How to ask for a refund",
           body: [
-            "Write to aamerjalan3@gmail.com from your registered email, or message your care team in the app. Include your registered mobile number and what the payment was for.",
+            "Write to care@inrangemed.com from your registered email, or message your care team in the app. Include your registered mobile number and what the payment was for.",
             "We reply within 2 working days. Approved refunds go back to the card, UPI account or bank account you paid with, and usually arrive within 5 to 7 working days.",
           ],
         },

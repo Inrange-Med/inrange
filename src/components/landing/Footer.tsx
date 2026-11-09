@@ -15,7 +15,7 @@ const COLS = [
   },
   {
     title: "Contact",
-    links: [["aamerjalan3@gmail.com", "mailto:aamerjalan3@gmail.com"]],
+    links: [["care@inrangemed.com", "mailto:care@inrangemed.com"]],
   },
   {
     title: "Legal",

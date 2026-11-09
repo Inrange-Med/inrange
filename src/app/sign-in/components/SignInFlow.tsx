@@ -124,7 +124,7 @@ export default function SignInFlow({
             <p className={`${formStyles.hint} ${styles.footLinks}`}>
               <span>
                 Trouble signing in?{" "}
-                <a href="mailto:aamerjalan3@gmail.com">aamerjalan3@gmail.com</a>
+                <a href="mailto:care@inrangemed.com">care@inrangemed.com</a>
               </span>
             </p>
           </footer>
