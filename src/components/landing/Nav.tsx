@@ -1634,7 +1634,7 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, X } from "@phosphor-icons/react";
 import { ASSESSMENT_URL, Wordmark } from "./ui";
 import s from "./Nav.module.css";
-import { AUTH_ENDPOINTS } from "@/config/env";
+import { sendOtp, verifyOtp } from "@/services/authService";
 import { homePathFor, saveSession } from "@/lib/session/authSession";
 import App from "next/app";
 import Pricing from "./Pricing";
@@ -2101,23 +2101,6 @@ export default function Nav() {
   |--------------------------------------------------------------------------
   */
 
-  const parseApiResponse = async (response: Response) => {
-    const raw = await response.text();
-
-    if (!raw) {
-      return {};
-    }
-
-    try {
-      return JSON.parse(raw);
-    } catch {
-      console.error("API returned non-JSON response:", raw);
-
-      throw new Error(
-        `Backend returned an invalid response. Status: ${response.status}`,
-      );
-    }
-  };
 
   /*
   |--------------------------------------------------------------------------
@@ -2139,29 +2122,10 @@ export default function Nav() {
     try {
       setAuthLoading(true);
 
-      const response = await fetch(AUTH_ENDPOINTS.SEND_OTP, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          mobile,
-        }),
-      });
-
-      const data = await parseApiResponse(response);
-      console.log("SEND OTP RESPONSE:", data);
-
-      if (!response.ok) {
-        throw new Error(
-          data?.message ||
-            data?.error ||
-            "Unable to send OTP. Please try again.",
-        );
-      }
+      const pilotHint = await sendOtp(mobile);
 
       setAuthStep("otp");
-      setAuthMessage(data?.message || `OTP has been sent to +91 ${mobile}`);
+      setAuthMessage(pilotHint || `We sent a 6-digit code to +91 ${mobile}`);
     } catch (error) {
       console.error("Send OTP error:", error);
 
@@ -2482,61 +2446,15 @@ export default function Nav() {
     try {
       setAuthLoading(true);
 
-      const response = await fetch(AUTH_ENDPOINTS.VERIFY_OTP, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          mobile,
-          otp: code,
-        }),
-      });
-
-      const data = await parseApiResponse(response);
-      console.log("OTP VERIFY RESPONSE:", data);
-
-      if (!response.ok) {
-        throw new Error(
-          data?.message ||
-            data?.error ||
-            data?.data?.message ||
-            "Invalid OTP. Please try again.",
-        );
-      }
-
-      const accessToken =
-        data?.data?.accessToken ||
-        data?.data?.access_token ||
-        data?.accessToken ||
-        data?.access_token ||
-        data?.token ||
-        data?.authToken;
-
-      const refreshToken =
-        data?.data?.refreshToken ||
-        data?.data?.refresh_token ||
-        data?.refreshToken ||
-        data?.refresh_token;
-
-      if (!accessToken) {
-        console.error(
-          "OTP verification succeeded but no access token was found:",
-          data,
-        );
-        throw new Error(
-          "Login succeeded, but the authentication token was not returned by the backend.",
-        );
-      }
-
+      const result = await verifyOtp(mobile, code);
       const sessionUser = saveSession({
-        accessToken,
-        refreshToken,
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
         mobile,
-        user: data?.user || data?.data?.user || data?.customer || data?.data?.customer || null,
+        user: result.user,
       });
 
-      const nextScreen = data?.data?.nextScreen || data?.nextScreen || "";
+      const nextScreen = result.nextScreen;
 
       setLoginOpen(false);
       setAuthStep("mobile");

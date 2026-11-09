@@ -15,6 +15,14 @@ export const env = {
   /** Pilot: approve eligibility automatically when a report arrives (no back office yet). */
   pilotAutoApprove: get("PILOT_AUTO_APPROVE") !== "false",
 
+  /** Firebase phone sign-in: the Firebase project whose ID tokens are accepted (POST /api/auth/firebase). */
+  firebaseProjectId: get("FIREBASE_PROJECT_ID"),
+  /**
+   * Numbers that keep the code flow (PILOT_OTP while no SMS provider is set) when Firebase is on:
+   * the payment gateway's reviewer account. Comma-separated 10-digit numbers.
+   */
+  reviewerMobiles: get("REVIEWER_MOBILES").split(",").map((m) => m.trim()).filter(Boolean),
+
   msg91AuthKey: get("MSG91_AUTH_KEY"),
   msg91TemplateId: get("MSG91_TEMPLATE_ID"),
 
@@ -33,6 +41,7 @@ export const env = {
 };
 
 export const live = {
+  firebase: () => Boolean(env.firebaseProjectId),
   sms: () => Boolean(env.msg91AuthKey && env.msg91TemplateId),
   razorpay: () => Boolean(env.razorpayKeyId && env.razorpayKeySecret),
   redcliffe: () => Boolean(env.redcliffeApiKey),

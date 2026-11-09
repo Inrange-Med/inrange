@@ -1,11 +1,18 @@
 /**
- * Sign-in by mobile OTP. The landing page's sign-in modal still uses AUTH_ENDPOINTS in config/env.ts.
- *   POST /api/auth/send-otp     sends the code { mobile } -> { message, data: { mock } } (mock: pilot, the message names the code)
- *   POST /api/auth/verify-otp   checks it { mobile, otp } -> { data: { accessToken, refreshToken, user, nextScreen } }
+ * Sign-in by mobile OTP, for both sign-in screens (/sign-in and the landing page's modal).
+ *   POST /api/auth/send-otp     { mobile } -> { message, data: { provider, mock } }
+ *                               provider "firebase": Firebase texts the code (lib/auth/firebasePhone.ts);
+ *                               provider "api": the API sent it (mock: pilot, the message names the code)
+ *   POST /api/auth/verify-otp   checks an API code { mobile, otp } -> { data: { accessToken, refreshToken, user, nextScreen } }
+ *   POST /api/auth/firebase     trades Firebase's ID token { idToken } -> the same
  *   POST /api/auth/logout       ends the session
  */
 
 import { apiRequest } from "@/lib/http/apiClient";
+import {
+  confirmFirebaseCode,
+  sendFirebaseCode,
+} from "@/lib/auth/firebasePhone";
 import type { NextScreen, SignInResult } from "@/types/auth";
 
 type VerifyOtpResponse = {
@@ -25,12 +32,16 @@ type VerifyOtpResponse = {
 export async function sendOtp(mobile: string): Promise<string | null> {
   const body = await apiRequest<{
     message?: string;
-    data?: { mock?: boolean };
+    data?: { mock?: boolean; provider?: string };
   }>("/api/auth/send-otp", {
     method: "POST",
     body: { mobile },
     authenticated: false,
   });
+  if (body?.data?.provider === "firebase") {
+    await sendFirebaseCode(mobile);
+    return null;
+  }
   return body?.data?.mock ? (body.message ?? null) : null;
 }
 
@@ -38,11 +49,15 @@ export async function verifyOtp(
   mobile: string,
   otp: string,
 ): Promise<SignInResult> {
-  const body = await apiRequest<VerifyOtpResponse>("/api/auth/verify-otp", {
-    method: "POST",
-    body: { mobile, otp },
-    authenticated: false,
-  });
+  const idToken = await confirmFirebaseCode(mobile, otp);
+  const body = await apiRequest<VerifyOtpResponse>(
+    idToken ? "/api/auth/firebase" : "/api/auth/verify-otp",
+    {
+      method: "POST",
+      body: idToken ? { idToken } : { mobile, otp },
+      authenticated: false,
+    },
+  );
   const accessToken = body.data?.accessToken ?? body.accessToken;
   if (!accessToken)
     throw new Error(

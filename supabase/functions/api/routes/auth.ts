@@ -1,13 +1,20 @@
 // Sign-in by mobile code.
-//   POST /api/auth/send-otp    { mobile }        -> { message, data: { mock, codeLength } }
+//   POST /api/auth/send-otp    { mobile }        -> { message, data: { provider, mock, codeLength } }
 //   POST /api/auth/verify-otp  { mobile, otp }   -> { data: { accessToken, user, nextScreen } }
+//   POST /api/auth/firebase    { idToken }       -> same as verify-otp
+// With FIREBASE_PROJECT_ID set, send-otp answers provider "firebase" and sends nothing: the browser
+// has Firebase text the code, then trades Firebase's ID token (its proof of the phone number) at
+// /api/auth/firebase. Only REVIEWER_MOBILES keep our own code flow. Without it, our own codes
+// (MSG91, or PILOT_OTP in the pilot) are used for every number.
 //   GET  /api/auth/me                            -> { data: user }
 //   POST /api/auth/logout                        ends this session
 import { Hono } from "hono";
+import type { Context } from "hono";
+import { createRemoteJWKSet, jwtVerify } from "jose";
 import { sql } from "../lib/db.ts";
 import { body, fail, ok } from "../lib/http.ts";
 import { issueToken, requireUser } from "../lib/auth.ts";
-import { env } from "../lib/env.ts";
+import { env, live } from "../lib/env.ts";
 import { sendOtpSms, smsLive } from "../integrations/sms.ts";
 
 export const auth = new Hono();
@@ -36,6 +43,8 @@ function randomCode() {
 
 auth.post("/send-otp", async (c) => {
   const mobile = normaliseMobile((await body(c)).mobile);
+  if (live.firebase() && !env.reviewerMobiles.includes(mobile))
+    return ok(c, { provider: "firebase", mock: false, codeLength: CODE_LENGTH }, "We are sending a 6-digit code to your phone.");
   const [prev] = await sql`select * from otp_codes where mobile = ${mobile}`;
   const now = Date.now();
   let sends = 1;
@@ -56,7 +65,7 @@ auth.post("/send-otp", async (c) => {
     on conflict (mobile) do update set code_hash = excluded.code_hash, expires_at = excluded.expires_at, attempts = 0,
       sends_in_window = excluded.sends_in_window, window_started_at = excluded.window_started_at, last_sent_at = now()`;
   await sendOtpSms(mobile, code);
-  return ok(c, { mock, codeLength: CODE_LENGTH },
+  return ok(c, { provider: "api", mock, codeLength: CODE_LENGTH },
     mock ? `Pilot mode: enter ${env.pilotOtp} to sign in.` : "We sent a 6-digit code to your phone.");
 });
 
@@ -75,6 +84,38 @@ auth.post("/verify-otp", async (c) => {
   // single use: consumed in the same step it is checked
   await sql`delete from otp_codes where mobile = ${mobile}`;
 
+  return await signIn(c, mobile);
+});
+
+// Firebase signs ID tokens with Google's keys; the project, issuer and a recent sign-in are checked
+// (https://firebase.google.com/docs/auth/admin/verify-id-tokens#verify_id_tokens_using_a_third-party_jwt_library)
+const firebaseKeys = createRemoteJWKSet(
+  new URL("https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com"),
+);
+
+auth.post("/firebase", async (c) => {
+  if (!live.firebase()) fail(404, "This feature is not available yet.");
+  const idToken = String((await body(c)).idToken ?? "");
+  let claims: Record<string, unknown>;
+  try {
+    ({ payload: claims } = await jwtVerify(idToken, firebaseKeys, {
+      issuer: `https://securetoken.google.com/${env.firebaseProjectId}`,
+      audience: env.firebaseProjectId,
+      algorithms: ["RS256"],
+    }));
+  } catch {
+    return fail(401, "That sign-in did not go through. Ask for a new code.");
+  }
+  // a token is good for an hour; only a sign-in from the last 10 minutes opens a session here
+  if (!claims.sub || Date.now() / 1000 - Number(claims.auth_time ?? 0) > 600)
+    fail(401, "That sign-in is too old. Ask for a new code.");
+  const phone = String(claims.phone_number ?? "");
+  if (!phone.startsWith("+91")) fail(400, "Sign in with an Indian mobile number.");
+  return await signIn(c, normaliseMobile(phone));
+});
+
+/** The person behind a proven mobile number (a new number becomes a patient) and a new session. */
+async function signIn(c: Context, mobile: string) {
   const [user] = await sql`
     insert into users (mobile) values (${mobile})
     on conflict (mobile) do update set mobile = excluded.mobile
@@ -88,7 +129,7 @@ auth.post("/verify-otp", async (c) => {
     nextScreen,
     user: { id: user.id, userId: user.id, fullName: user.full_name ?? "", role: user.role, mobile: user.mobile },
   }, "Signed in");
-});
+}
 
 auth.get("/me", async (c) => {
   const me = await requireUser(c);
