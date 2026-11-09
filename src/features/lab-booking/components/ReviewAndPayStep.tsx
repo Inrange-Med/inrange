@@ -1,9 +1,10 @@
 "use client";
 
 /**
- * Step 5: check and pay. Every choice with a way to change it, then the price. "Continue" holds the
- * time with the lab for 30 minutes and returns the backend's price (the care package price when the
- * booking is part of one); paying goes to the checkout from `checkoutHref`. A test a paid lab plan
+ * Step 5: check and pay. Every choice with a way to change it, then the price. "Continue to payment"
+ * holds the time with the lab for 30 minutes and goes straight to the checkout from `checkoutHref`,
+ * which shows the backend's price (the care package price when the booking is part of one) before
+ * the patient pays. Coming back while the hold lasts shows a Pay link to the same checkout. A test a paid lab plan
  * covers is booked at once instead, and the patient goes to `bookedHref`.
  */
 
@@ -74,12 +75,15 @@ export default function ReviewAndPayStep({
       if (!booking.paymentRequired) {
         toast(`Home blood test booked for ${spokenDay(at)}, ${clockTime(at)}`);
         router.push(bookedHref(booking));
+      } else {
+        // straight on to pay; the checkout shows the lab's confirmed price before anything is charged
+        router.push(checkoutHref(booking));
       }
     } catch (caught) {
       setError(errorMessage(caught));
-    } finally {
       setBusy(false);
     }
+    // on success the button stays busy until the next page opens
   };
 
   const rows: { label: string; value: string; step: LabBookingStep }[] = [

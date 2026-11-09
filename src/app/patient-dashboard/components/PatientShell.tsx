@@ -7,7 +7,8 @@
   (?next= brings them back to this page) and a doctor goes to their own dashboard.
 
   The chat thread (/patient-dashboard/messages/<doctorId>) brings its own bar, so the shell draws neither
-  the bar nor the dock there, as in Arhaan's design.
+  the bar nor the dock there, as in Arhaan's design. The checkout is a focused page: the bar keeps only
+  the wordmark, with no sections and no dock, so paying is the one thing on screen.
 */
 
 import { useEffect, useState, type ReactNode } from "react";
@@ -101,6 +102,8 @@ export default function PatientShell({ children }: { children: ReactNode }) {
 
   const current = sectionFor(pathname);
   const bare = /^\/patient-dashboard\/messages\/[^/]+/.test(pathname);
+  const focused = pathname.startsWith("/patient-dashboard/checkout");
+  const tabs = !bare && !focused;
 
   if (role !== "PATIENT") {
     return (
@@ -117,7 +120,7 @@ export default function PatientShell({ children }: { children: ReactNode }) {
   return (
     <AppTheme>
       <ToastProvider className={bare ? styles.toastChat : styles.toastUp}>
-        <div className={`${styles.app} ${bare ? "" : styles.withTabs}`}>
+        <div className={`${styles.app} ${tabs ? styles.withTabs : ""}`}>
           {!bare && (
             <header className={styles.bar} data-scrolled={scrolled}>
               <div className={`${styles.barInner} ${styles.barTabs}`}>
@@ -128,18 +131,22 @@ export default function PatientShell({ children }: { children: ReactNode }) {
                 >
                   <Wordmark height={24} />
                 </Link>
-                <nav className={styles.tabs} aria-label="Sections">
-                  {SECTIONS.map((section) => (
-                    <Link
-                      key={section.id}
-                      href={section.href}
-                      className={styles.tab}
-                      aria-current={section.id === current ? "page" : undefined}
-                    >
-                      {section.label}
-                    </Link>
-                  ))}
-                </nav>
+                {tabs && (
+                  <nav className={styles.tabs} aria-label="Sections">
+                    {SECTIONS.map((section) => (
+                      <Link
+                        key={section.id}
+                        href={section.href}
+                        className={styles.tab}
+                        aria-current={
+                          section.id === current ? "page" : undefined
+                        }
+                      >
+                        {section.label}
+                      </Link>
+                    ))}
+                  </nav>
+                )}
                 {/* the bar's third column keeps the sections centred */}
                 <div className={styles.barEnd} />
               </div>
@@ -154,7 +161,7 @@ export default function PatientShell({ children }: { children: ReactNode }) {
 
           {children}
 
-          {!bare && (
+          {tabs && (
             <nav className={styles.dock} aria-label="Sections">
               {SECTIONS.map((section) => {
                 const Icon = section.icon;

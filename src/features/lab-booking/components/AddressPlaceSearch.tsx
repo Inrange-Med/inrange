@@ -29,7 +29,8 @@ export default function AddressPlaceSearch({
   matches: LabPlaceMatch[] | null;
   searching: boolean;
   locating: boolean;
-  onLocate: () => void;
+  /** null when the current location cannot be used */
+  onLocate: (() => void) | null;
   checkingEloc: string | null;
   onPick: (match: LabPlaceMatch) => void;
   error: string | null;
@@ -37,16 +38,18 @@ export default function AddressPlaceSearch({
 }) {
   return (
     <>
-      <button
-        type="button"
-        className={`btn btn--ghost ${styles.pill}`}
-        onClick={onLocate}
-        aria-busy={locating}
-        disabled={locating}
-      >
-        <NavigationArrow size={17} weight="bold" aria-hidden="true" />
-        <span>{locating ? "Finding you…" : "Use my current location"}</span>
-      </button>
+      {onLocate && (
+        <button
+          type="button"
+          className={`btn btn--ghost ${styles.pill}`}
+          onClick={onLocate}
+          aria-busy={locating}
+          disabled={locating}
+        >
+          <NavigationArrow size={17} weight="bold" aria-hidden="true" />
+          <span>{locating ? "Finding you…" : "Use my current location"}</span>
+        </button>
+      )}
       <label className={formStyles.field}>
         <span className={formStyles.label}>Search your area</span>
         <input

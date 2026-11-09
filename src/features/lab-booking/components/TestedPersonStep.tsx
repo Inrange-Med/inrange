@@ -1,7 +1,8 @@
 "use client";
 
 /**
- * Step 3: who is being tested. Starts from the patient's profile (or the onboarding answers);
+ * Step 3: who is being tested, shown only when the profile (or the onboarding answers) leaves
+ * something missing or wrong, or the patient taps Change on the review. Starts from those answers;
  * Redcliffe needs every field and accepts only male or female. The lab's rules and the package's
  * own limits (age range, one sex only) are checked here, before a time is chosen, so the booking
  * does not fail at the end.
@@ -37,6 +38,20 @@ function problemWith(draft: LabPatientDraft, labPackage: LabPackage) {
     return `${labPackage.name} is for ${labPackage.forGender === "Female" ? "women" : "men"} only.`;
   }
   return null;
+}
+
+/** The draft as a finished person when nothing is missing or wrong, else null (the step is shown). */
+export function readyPatient(
+  draft: LabPatientDraft,
+  labPackage: LabPackage,
+): LabPatient | null {
+  if (problemWith(draft, labPackage) || !draft.gender) return null;
+  return {
+    ...draft,
+    name: draft.name.trim(),
+    email: draft.email.trim(),
+    gender: draft.gender,
+  };
 }
 
 export default function TestedPersonStep({

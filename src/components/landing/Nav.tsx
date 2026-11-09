@@ -2091,6 +2091,8 @@ export default function Nav() {
     if (authError) {
       setAuthError("");
     }
+    // the 6th digit signs in, as on /sign-in: no extra tap on Verify
+    if (value.length === 6 && !authLoading) void handleVerifyOtp(undefined, value);
   };
 
   /*
@@ -2463,13 +2465,16 @@ export default function Nav() {
   //   }
   // };
 
-  const handleVerifyOtp = async (event?: FormEvent<HTMLFormElement>) => {
+  const handleVerifyOtp = async (
+    event?: FormEvent<HTMLFormElement>,
+    code: string = otp,
+  ) => {
     event?.preventDefault();
 
     setAuthError("");
     setAuthMessage("");
 
-    if (otp.length !== 6) {
+    if (code.length !== 6) {
       setAuthError("Please enter the 6-digit OTP.");
       return;
     }
@@ -2484,7 +2489,7 @@ export default function Nav() {
         },
         body: JSON.stringify({
           mobile,
-          otp,
+          otp: code,
         }),
       });
 
@@ -2707,7 +2712,7 @@ export default function Nav() {
 
           <a
             className="btn btn--mint"
-            onClick={() => router.push("/pricing")}
+            onClick={openLogin}
             tabIndex={open ? 0 : -1}
             style={{ cursor: "pointer" }}
           >

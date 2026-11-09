@@ -72,6 +72,8 @@ export function useLabBookingFlow(mode: LabBookingMode) {
   const [patient, setPatient] = useState<LabPatient | null>(null);
   const [slot, setSlot] = useState<PickableSlot | null>(null);
   const [held, setHeld] = useState<LabBooking | null>(null);
+  // the person came from the profile without the step being shown, so Back skips it too
+  const [personSkipped, setPersonSkipped] = useState(false);
 
   const stepNumber = LAB_BOOKING_STEPS.indexOf(step) + 1;
 
@@ -124,11 +126,30 @@ export function useLabBookingFlow(mode: LabBookingMode) {
         setChosenPackage(lab);
       },
     ),
-    chooseAddress: advance(setAddress),
-    savePatient: advance(setPatient),
+    /**
+     * The address, then the person step. A person the profile already fills in completely (`ready`)
+     * is taken as is, straight to the time: the review shows them with Change.
+     */
+    chooseAddress: (chosen: Address, ready: LabPatient | null) => {
+      setAddress(chosen);
+      setHeld(null);
+      const person = patient ?? ready;
+      if (person) setPatient(person);
+      setPersonSkipped(Boolean(person));
+      setStep(person ? "time" : "patient");
+    },
+    savePatient: advance((person: LabPatient) => {
+      setPatient(person);
+      setPersonSkipped(false);
+    }),
     chooseSlot: advance(setSlot),
     goTo: setStep,
-    back: () => setStep(LAB_BOOKING_STEPS[Math.max(0, stepNumber - 2)]),
+    back: () =>
+      setStep(
+        step === "time" && personSkipped
+          ? "address"
+          : LAB_BOOKING_STEPS[Math.max(0, stepNumber - 2)],
+      ),
     hold,
   };
 }

@@ -8,7 +8,8 @@
  * The steps, in order (components/):
  *   1. package  LabPackageStep (dashboard) or CarePackageStep (onboarding)
  *   2. address  CollectionAddressStep, with NewAddressForm to add one
- *   3. patient  TestedPersonStep: who is tested; prefilled from the profile or the onboarding answers
+ *   3. patient  TestedPersonStep: who is tested; skipped when the profile or the onboarding answers
+ *               already fill it in completely (the review shows them, with Change)
  *   4. time     CollectionTimeStep: the collection day and hour
  *   5. review   ReviewAndPayStep: every choice with Change, the price, then hold and pay
  *
@@ -31,7 +32,7 @@ import CollectionAddressStep from "./components/CollectionAddressStep";
 import CollectionTimeStep from "./components/CollectionTimeStep";
 import LabPackageStep from "./components/LabPackageStep";
 import ReviewAndPayStep from "./components/ReviewAndPayStep";
-import TestedPersonStep from "./components/TestedPersonStep";
+import TestedPersonStep, { readyPatient } from "./components/TestedPersonStep";
 import {
   patientFromProfile,
   type LabBookingState,
@@ -66,6 +67,10 @@ export default function LabBookingFlow({
     loadProfile,
   );
   const { step, chosenPackage, address } = flow;
+  const startingPatient = profile.loading
+    ? null
+    : (initialPatient ??
+      patientFromProfile(profile.data, getSessionUser()?.mobile ?? ""));
 
   return (
     <div className={styles.flow}>
@@ -81,7 +86,14 @@ export default function LabBookingFlow({
       {step === "address" && (
         <CollectionAddressStep
           chosenId={address?.id ?? null}
-          onChoose={flow.chooseAddress}
+          onChoose={(chosen) =>
+            flow.chooseAddress(
+              chosen,
+              startingPatient && chosenPackage
+                ? readyPatient(startingPatient, chosenPackage)
+                : null,
+            )
+          }
         />
       )}
       {step === "patient" &&
@@ -90,11 +102,7 @@ export default function LabBookingFlow({
           <LoadingSkeleton />
         ) : (
           <TestedPersonStep
-            initial={
-              flow.patient ??
-              initialPatient ??
-              patientFromProfile(profile.data, getSessionUser()?.mobile ?? "")
-            }
+            initial={flow.patient ?? startingPatient!}
             labPackage={chosenPackage}
             onSave={flow.savePatient}
           />

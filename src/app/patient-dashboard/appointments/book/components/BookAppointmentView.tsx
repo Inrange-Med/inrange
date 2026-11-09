@@ -38,9 +38,7 @@ export default function BookAppointmentView() {
   const toast = useToast();
   const now = useNow();
   const review = useApiResource("eligibility-review", loadEligibilityReview);
-  const [symptoms, setSymptoms] = useState("");
-  const [notes, setNotes] = useState("");
-  const [reasonMissing, setReasonMissing] = useState(false);
+  const [note, setNote] = useState("");
 
   const eligibility = review.data?.eligibility ?? null;
   // no eligibility endpoint yet: booking stays open as before, and the backend still decides
@@ -48,13 +46,7 @@ export default function BookAppointmentView() {
   const mustPay = eligibility !== null && !eligibility.consultationPaid;
 
   const book = async (slot: PickableSlot) => {
-    if (!symptoms.trim()) {
-      setReasonMissing(true);
-      throw new Error("Add the reason or symptoms first.");
-    }
-    const reason = notes.trim()
-      ? `${symptoms.trim()} | Note: ${notes.trim()}`
-      : symptoms.trim();
+    const reason = note.trim();
     if (mustPay) {
       savePendingConsultationReason(slot.id, reason);
       router.push(
@@ -100,16 +92,7 @@ export default function BookAppointmentView() {
     return (
       <>
         <Card title="What it is about" className={styles.card}>
-          <ReasonFields
-            symptoms={symptoms}
-            notes={notes}
-            reasonMissing={reasonMissing}
-            onSymptomsChange={(value) => {
-              setSymptoms(value);
-              setReasonMissing(false);
-            }}
-            onNotesChange={setNotes}
-          />
+          <ReasonFields reason={note} onReasonChange={setNote} />
         </Card>
         <TimeCard
           confirmLabel={mustPay ? "Pay and book" : "Book"}

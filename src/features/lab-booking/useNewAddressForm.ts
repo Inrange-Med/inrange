@@ -9,7 +9,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { errorMessage } from "@/lib/http/apiClient";
+import { ApiError, errorMessage } from "@/lib/http/apiClient";
 import { addAddress } from "@/services/addressService";
 import { roughLocation } from "@/lib/location/roughLocation";
 import {
@@ -43,6 +43,8 @@ export function useNewAddressForm(
   const search = query.trim();
 
   const [locating, setLocating] = useState(false);
+  // the lab's live place search has no "place at a point" yet: once the backend says so, the button goes
+  const [canLocate, setCanLocate] = useState(true);
 
   // search as the patient types: from 2 letters, a beat after each key, the older search dropped
   useEffect(() => {
@@ -95,7 +97,12 @@ export function useNewAddressForm(
           longitude: coords.longitude,
         })
           .then(pick)
-          .catch((caught) => setError(errorMessage(caught)))
+          .catch((caught) => {
+            if (caught instanceof ApiError && caught.isMissingEndpoint) {
+              setCanLocate(false);
+              setError("Search for your area or society instead.");
+            } else setError(errorMessage(caught));
+          })
           .finally(() => setLocating(false)),
       () => {
         setLocating(false);
@@ -154,7 +161,7 @@ export function useNewAddressForm(
     /** true while the matches shown are for older text than what is typed now */
     searching: search.length >= 2 && found?.query !== search,
     locating,
-    locate,
+    locate: canLocate ? locate : null,
     checkingEloc,
     pick,
     place,
