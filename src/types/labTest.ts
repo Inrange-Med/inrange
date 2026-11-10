@@ -125,6 +125,14 @@ export type LabBooking = {
   reschedulesLeft: number;
   canReschedule: boolean;
   canCancel: boolean;
-  collector: { name: string; phone: string; trackingUrl: string | null } | null;
+  collector: {
+    name: string;
+    phone: string;
+    trackingUrl: string | null;
+    /** from the lab's journey webhooks: the collector has set off, or has reached the address */
+    journey?: "ON_THE_WAY" | "ARRIVED" | null;
+  } | null;
+  /** true when the test is part of the eligibility check: a doctor reviews the report next */
+  forEligibility?: boolean;
   tests: { code: string; name: string; status: LabTestStatus }[];
 };

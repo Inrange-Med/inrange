@@ -6,7 +6,7 @@
  * (twice at most) or the test cancelled until a collector is assigned, each in its own sheet.
  */
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import ErrorNotice from "@/components/ui/ErrorNotice";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import PageHead from "@/components/ui/PageHead";
@@ -40,6 +40,30 @@ export default function LabBookingDetailView({
   // a stable close, so the open sheet does not re-run its effects on every tick of the clock
   const closeSheet = useCallback(() => setSheet(null), []);
   const booking = bookingResource.data;
+
+  // while the test is under way, read the lab's latest every minute and whenever the page comes back
+  // into view, without a loading flash (the backend refreshes from Redcliffe on each read)
+  const live =
+    booking !== null &&
+    ["BOOKED", "COLLECTOR_ASSIGNED", "SAMPLE_COLLECTED", "PROCESSING"].includes(
+      booking.status,
+    );
+  const { setData } = bookingResource;
+  useEffect(() => {
+    if (!live) return;
+    const refresh = () => {
+      if (document.visibilityState === "visible")
+        getLabBooking(bookingId)
+          .then((next) => next && setData(next))
+          .catch(() => {});
+    };
+    const timer = window.setInterval(refresh, 60_000);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [live, bookingId, setData]);
 
   if (bookingResource.loading) {
     return (

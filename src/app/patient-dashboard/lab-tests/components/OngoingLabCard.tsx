@@ -9,7 +9,11 @@ import { clockTime } from "@/lib/format/dateTime";
 import { formatRupees } from "@/lib/format/money";
 import type { LabBooking } from "@/types/labTest";
 import formStyles from "@/components/ui/styles/FormControls.module.css";
-import { collectionWindow, labCheckoutHref } from "./labBookingFormat";
+import {
+  collectionWindow,
+  labCheckoutHref,
+  labStatusLine,
+} from "./labBookingFormat";
 import LabStatusTracker from "./LabStatusTracker";
 import styles from "../LabTestsPage.module.css";
 
@@ -40,6 +44,9 @@ export default function OngoingLabCard({
           <span className="num">{collectionWindow(booking)}, at home</span>
         </p>
         <LabStatusTracker status={booking.status} />
+        {labStatusLine(booking) && (
+          <p className={styles.text}>{labStatusLine(booking)}</p>
+        )}
         {booking.status === "PAYMENT_PENDING" && !holdEnded && (
           <>
             <p className={styles.text}>

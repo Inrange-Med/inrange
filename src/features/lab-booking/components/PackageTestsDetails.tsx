@@ -1,6 +1,10 @@
 "use client";
 
-/** "What is tested" (Arhaan's fold): a Redcliffe package's tests by group, loaded the first time it opens. */
+/**
+ * "What is tested": a Redcliffe package's tests, loaded the first time it opens. A full-body package
+ * lists 80+ markers, so they are never shown as one block: each group (Lipid profile, Thyroid) is a
+ * row with its count that opens to a plain list; a group that is a single test is just its name.
+ */
 
 import { useState } from "react";
 import { CaretDown } from "@phosphor-icons/react";
@@ -19,9 +23,11 @@ export default function PackageTestsDetails({
 }) {
   const [tests, setTests] = useState<LabPackageTests | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const count =
-    testCount ??
-    tests?.groups.reduce((sum, group) => sum + group.tests.length, 0);
+  const loadedCount = tests?.groups.reduce(
+    (sum, group) => sum + Math.max(1, group.tests.length),
+    0,
+  );
+  const count = testCount || loadedCount;
 
   const load = (open: boolean) => {
     if (!open || tests) return;
@@ -34,6 +40,13 @@ export default function PackageTestsDetails({
       .catch((caught) => setMessage(errorMessage(caught)));
   };
 
+  // groups with their own tests first, then the single tests together, so the eye meets structure first
+  const groups = tests?.groups.filter((group) => group.tests.length > 1) ?? [];
+  const singles =
+    tests?.groups
+      .filter((group) => group.tests.length <= 1)
+      .map((group) => group.tests[0] ?? group.name) ?? [];
+
   return (
     <details
       className={styles.tested}
@@ -42,17 +55,46 @@ export default function PackageTestsDetails({
       <summary>
         <span>
           What is tested
-          {count !== undefined && <span className="num"> ({count})</span>}
+          {count ? <span className="num"> ({count})</span> : null}
         </span>
         <CaretDown size={16} aria-hidden="true" />
       </summary>
       {message && <p>{message}</p>}
-      {tests?.groups.map((group) => (
-        <p key={group.name}>
-          <strong className={styles.strong}>{group.name}:</strong>{" "}
-          {group.tests.join(", ")}.
-        </p>
-      ))}
+      {tests && (
+        <div className={styles.testGroups}>
+          {groups.map((group) => (
+            <details key={group.name} className={styles.testGroup}>
+              <summary>
+                <span>{group.name}</span>
+                <span className={`${styles.testCount} num`}>
+                  {group.tests.length}
+                  <CaretDown size={14} aria-hidden="true" />
+                </span>
+              </summary>
+              <ul className={styles.testList}>
+                {group.tests.map((name) => (
+                  <li key={name}>{name}</li>
+                ))}
+              </ul>
+            </details>
+          ))}
+          {singles.length > 0 && (
+            <div className={styles.testGroup}>
+              {groups.length > 0 && (
+                <p className={styles.testSinglesHead}>Also tested</p>
+              )}
+              <ul className={styles.testList}>
+                {singles.map((name) => (
+                  <li key={name}>{name}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {groups.length === 0 && singles.length === 0 && (
+            <p>The lab has not listed the tests for this package.</p>
+          )}
+        </div>
+      )}
     </details>
   );
 }

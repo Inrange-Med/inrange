@@ -15,6 +15,7 @@ import SlotPicker, {
   type PickableSlot,
 } from "@/components/ui/SlotPicker";
 import styles from "../LabBookingFlow.module.css";
+import { fastingSentence } from "@/lib/format/labPackage";
 
 export default function CollectionTimeStep({
   addressId,
@@ -37,10 +38,9 @@ export default function CollectionTimeStep({
 
   return (
     <>
-      {labPackage.fastingNote && (
+      {fastingSentence(labPackage.fastingNote) && (
         <p className={styles.fast}>
-          {labPackage.fastingNote.replace(/\.$/, "")}. A morning time is
-          easiest.
+          {fastingSentence(labPackage.fastingNote)} A morning time is easiest.
         </p>
       )}
       <SlotPicker

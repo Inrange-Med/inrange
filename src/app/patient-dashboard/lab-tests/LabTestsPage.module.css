@@ -199,3 +199,36 @@
     font-size: 1rem;
   }
 }
+
+/* booking another test: a quiet line about the one already booked, a link, never a blocker */
+.alreadyBooked {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 14px 16px;
+  border-radius: var(--r-media);
+  background: var(--signal-wash);
+  color: var(--ink);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.alreadyBooked > span {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.alreadyBooked strong {
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+.alreadyBooked > span > span {
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+.alreadyBooked svg {
+  flex: none;
+  color: var(--ink-3);
+}

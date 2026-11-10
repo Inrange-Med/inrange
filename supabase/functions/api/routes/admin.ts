@@ -77,6 +77,10 @@ adminRoutes.post("/admin/reviews/:patientId", async (c) => {
   await sql.begin(async (tx) => {
     await setEligibility(tx, patientId, { stage: decision!, review_note: note || null });
     await tx`update eligibility set reviewed_by = ${me.id}, reviewed_at = now() where user_id = ${patientId}`;
+    // the patient's Reports tab shows the decision on the reports it was made from
+    await tx`update reports r set review_status = ${decision!}, review_note = ${note || null}
+      from eligibility e where e.user_id = ${patientId} and r.user_id = e.user_id
+        and (r.purpose = 'ELIGIBILITY' or (r.lab_booking_id is not null and r.lab_booking_id = e.lab_booking_id))`;
   });
   return ok(c, null, decision === "APPROVED" ? "Approved" : "Marked not approved");
 });

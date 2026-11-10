@@ -30,8 +30,12 @@ export type NewPartnerBooking = {
   clientRefId: string;
 };
 export type PartnerBooking = { partnerBookingId: string; packageName: string; packagePrice: number; total: number; collectionCharge: number };
+export type LabStage = "BOOKED" | "COLLECTOR_ASSIGNED" | "SAMPLE_COLLECTED" | "PROCESSING" | "REPORT_READY" | "CANCELLED";
+export type Collector = { name: string; phone: string; trackingUrl: string | null; journey?: "ON_THE_WAY" | "ARRIVED" | null };
 export type PartnerStatus = {
-  collector: { name: string; phone: string; trackingUrl: string | null } | null;
+  /** where the lab says the booking is (center-get-booking booking_status), null when it says nothing we know */
+  stage: LabStage | null;
+  collector: Collector | null;
   tests: { code: string; name: string; status: "PENDING" | "COMPLETED" | "REJECTED" | "DISMISSED" }[];
 };
 
@@ -151,7 +155,7 @@ export function checkPatient(p: NewPartnerBooking["patient"]) {
 type RcPackagePage = {
   links: { next: string | null };
   data: { name: string; description: string; recommended_gender: string; recommended_age: string; tat_time: string;
-    fasting_time: string; code: string; parameters: number; package_center_prices: { package_price: number; offer_price: number } }[];
+    fasting_time: string; code: string | null; parameters?: number; parameter?: number; package_center_prices: { package_price: number; offer_price: number } }[];
 };
 
 let packageCache: { at: number; list: LabPackage[] } | null = null;
@@ -163,11 +167,12 @@ export async function listPackages(): Promise<LabPackage[]> {
   for (let page = 1; page <= 20; page++) {
     const body = await call<RcPackagePage>("GET", "/api/external/v2/center-package-data/", { query: { search: "", page } });
     for (const p of body.data ?? []) {
+      if (!p.code) continue; // staging lists a test with code null; it cannot be booked
       const [min, max] = String(p.recommended_age ?? "").split("-").map(Number);
       const gender = String(p.recommended_gender ?? "").toLowerCase();
       list.push({
-        code: p.code, name: p.name, description: p.description ?? "", testCount: p.parameters ?? 0,
-        fastingNote: /no fasting/i.test(p.fasting_time ?? "") ? "" : p.fasting_time ?? "",
+        code: p.code, name: p.name, description: p.description ?? "", testCount: p.parameter ?? p.parameters ?? 0, // the API sends "parameter"; the doc says "parameters"
+        fastingNote: p.fasting_time ?? "", // the app words it (src/lib/format/labPackage.ts)
         reportTime: p.tat_time ?? "", forGender: gender === "male" ? "Male" : gender === "female" ? "Female" : "Both",
         ageRange: Number.isFinite(min) && Number.isFinite(max) ? { min, max } : null,
         price: p.package_center_prices?.offer_price ?? 0, listPrice: p.package_center_prices?.package_price ?? 0, coveredByPlan: false,
@@ -192,9 +197,12 @@ export async function packageTests(code: string): Promise<LabPackageTests> {
   }
   const body = await call<{ code: string; name: string; data: { name: string; package_detail: { name: string }[] }[] }>(
     "GET", "/api/external/v2/package-parameter-data/", { query: { code } });
+  // names arrive with stray bytes ("ProlactinÊ( Pituitary gland)") and loose spacing
+  const clean = (n: string) => String(n ?? "").replace(/[^\x20-\x7E]/g, " ").replace(/\s*\(\s*/g, " (").replace(/\s*\)/g, ")")
+    .replace(/\s+,/g, ",").replace(/\*+/g, "").replace(/\s+/g, " ").trim();
   return {
-    code: body.code ?? code, name: body.name ?? "",
-    groups: (body.data ?? []).map((g) => ({ name: g.name, tests: (g.package_detail ?? []).map((t) => t.name) })),
+    code: body.code ?? code, name: clean(body.name ?? ""),
+    groups: (body.data ?? []).map((g) => ({ name: clean(g.name), tests: (g.package_detail ?? []).map((t) => clean(t.name)).filter(Boolean) })),
   };
 }
 
@@ -279,19 +287,27 @@ export async function searchPlaces(query: string, bias: Bias = null): Promise<La
     }
   }
   try {
-    const body = await call<{ results?: { eloc: string; placeName: string; placeAddress: string; address: Record<string, string> }[] }>(
+    // the doc shows { results: [{ ..., address: {...} }] }; the API answers { data: [{ eloc, placeName, placeAddress }] }
+    type RcPlace = { eloc: string; placeName: string; placeAddress: string; address?: Record<string, string> };
+    const body = await call<{ data?: RcPlace[]; results?: RcPlace[] }>(
       "GET", "/api/partner/v2/get-partner-location-2-eloc/", { query: { place_query: q } });
-    return (body.results ?? []).map((r) => ({
-      eloc: r.eloc.trim(), name: r.placeName, address: r.placeAddress,
-      city: r.address?.city ?? "", state: r.address?.state ?? "", pincode: r.address?.pincode ?? "",
-    }));
+    return (body.data ?? body.results ?? []).filter((r) => r.eloc?.trim()).map((r) => {
+      // placeAddress reads "Sector 16A, Noida, Uttar Pradesh, 201301": ..., city, state, pincode
+      const parts = String(r.placeAddress ?? "").split(",").map((x) => x.trim()).filter(Boolean);
+      const pin = parts.at(-1)?.match(/^\d{6}$/) ? parts.pop()! : "";
+      return {
+        eloc: r.eloc.trim(), name: r.placeName, address: uniq([r.placeName, ...parts, pin]).join(", "),
+        city: r.address?.city ?? parts.at(-2) ?? "", state: r.address?.state ?? parts.at(-1) ?? "",
+        pincode: r.address?.pincode ?? pin,
+      };
+    });
   } catch (e) {
     if (e instanceof RedcliffeError && /no record/i.test(e.message)) return [];
     throw e;
   }
 }
 
-/** For "Use my current location": the place at a point (mock mode only; Redcliffe has no reverse lookup). */
+/** For "Use my current location": the place at a point, from Photon (Redcliffe has no reverse lookup). */
 export async function reversePlace(latitude: number, longitude: number): Promise<LabPlace | null> {
   ensure(Number.isFinite(latitude) && Number.isFinite(longitude) && Math.abs(latitude) <= 90 && Math.abs(longitude) <= 180,
     "That location is not valid.");
@@ -305,14 +321,17 @@ export async function reversePlace(latitude: number, longitude: number): Promise
 export async function coordinates(eloc: string): Promise<{ latitude: number; longitude: number }> {
   const id = eloc.trim();
   ensure(/^[A-Za-z0-9]{6}$/.test(id), "That place is not valid. Search again.");
-  if (!redcliffeLive()) {
+  // our own cached places (Photon, "P" + lowercase) resolve locally; Redcliffe's elocs are upper case
+  if (!redcliffeLive() || /^P[a-z0-9]{5}$/.test(id)) {
     const [cached] = id.startsWith("P") ? await sql`select latitude, longitude from place_cache where eloc = ${id}` : [];
     const p = cached ?? MOCK_PLACES.find((m) => m.eloc === id) ?? (id.startsWith("MQ") ? MOCK_CITIES[Number(id[2])] : undefined);
     if (!p) throw new RedcliffeError("That place is not valid. Search again.");
     return { latitude: p.latitude, longitude: p.longitude };
   }
+  // an unknown eloc answers HTTP 500 {"error": "Server Error (500)"}
   const body = await call<{ latitude: number | string; longitude: number | string }>(
-    "GET", "/api/partner/v2/get-partner-loc-2-eloc/", { query: { eloc: id } });
+    "GET", "/api/partner/v2/get-partner-loc-2-eloc/", { query: { eloc: id } })
+    .catch((e) => { if (e instanceof RedcliffeError && e.httpStatus === 500) throw new RedcliffeError("That place is not valid. Search again."); throw e; });
   if (body.latitude === "" || body.longitude === "") throw new RedcliffeError("That place is not valid. Search again.", 200, body);
   return { latitude: Number(body.latitude), longitude: Number(body.longitude) };
 }
@@ -328,7 +347,9 @@ export async function serviceability(latitude: number, longitude: number): Promi
     const body = await call<{ message: string }>("GET", "/api/center/v2/is-location-serviceable/", { query: { longitude, latitude } });
     return { serviceable: true, message: body.message ?? "Home collection is available here." };
   } catch (e) {
-    if (e instanceof RedcliffeError && e.httpStatus !== null && e.httpStatus < 500) return { serviceable: false, message: e.message };
+    // outside coverage: 4xx "Location is non-serviceable", or (staging, far away) HTTP 500 {"error": "Server Error (500)"}
+    if (e instanceof RedcliffeError && e.httpStatus !== null && (e.httpStatus < 500 || /server error/i.test(e.message)))
+      return { serviceable: false, message: "Home collection is not available here yet." };
     throw e;
   }
 }
@@ -349,8 +370,9 @@ export async function slots(date: string, latitude: number, longitude: number): 
   });
   return (body.results ?? body.data ?? []).map((s) => ({
     slotId: s.id, startTime: s.format_24_hrs.start_time.slice(0, 5), endTime: s.format_24_hrs.end_time.slice(0, 5), available: s.available_slot,
-  }));
+  })).sort((a, b) => a.startTime.localeCompare(b.startTime)); // the lab lists them out of order
 }
+type RcBooking = Record<string, unknown> & { phlebo_detail?: unknown; phlebo_details?: unknown; phlebo?: unknown };
 type RcSlot = { id: number; available_slot: number; format_24_hrs: { start_time: string; end_time: string } };
 
 // ---------------------------------------------------------------- bookings
@@ -377,7 +399,7 @@ export async function createBooking(b: NewPartnerBooking): Promise<PartnerBookin
       booking_date: todayIST(), collection_date: b.collectionDate, collection_slot: b.slotId, package_code: [b.packageCode],
       customer_name: b.patient.name.trim(), customer_age: b.patient.age, customer_gender: gender,
       customer_email: b.patient.email.trim(), customer_phonenumber: b.patient.mobile,
-      customer_altphonenumber: b.patient.mobile, customer_whatsappnumber: b.patient.mobile,
+      customer_altphonenumber: b.patient.mobile, customer_whatsapppnumber: b.patient.mobile, // sic, three p's
       customer_address: b.address.line, address_line2: b.address.line2, customer_landmark: b.address.landmark,
       pincode: b.address.pincode, customer_latitude: b.address.latitude, customer_longitude: b.address.longitude,
       is_credit: true, client_refid: b.clientRefId, reference_data: b.clientRefId, additional_member: [],
@@ -392,6 +414,22 @@ export async function createBooking(b: NewPartnerBooking): Promise<PartnerBookin
   };
 }
 
+/**
+ * Redcliffe's booking status in words (center-get-booking booking_status, a webhook's customer_status),
+ * as seen on staging: order booked, phlebo assigned, sample collected, sample received, reports sent.
+ */
+export function stageFromWords(words: unknown): LabStage | null {
+  const w = String(words ?? "").toLowerCase();
+  if (!w) return null;
+  if (/cancel/.test(w)) return "CANCELLED";
+  if (/report(s)? (sent|ready|generated|consolidated)|consolidat/.test(w)) return "REPORT_READY";
+  if (/sample (received|synced|sync)|processing|partial report|in lab|resample collected/.test(w)) return "PROCESSING";
+  if (/sample collected|pickup (done|complete)|picked/.test(w)) return "SAMPLE_COLLECTED";
+  if (/phlebo (assigned|started|reached|arrived)|assigned/.test(w)) return "COLLECTOR_ASSIGNED";
+  if (/order booked|confirmed|booked|rescheduled|resample/.test(w)) return "BOOKED";
+  return null;
+}
+
 const partnerNumber = (id: string) => {
   const n = Number(id);
   if (!Number.isInteger(n) || n <= 0) throw new RedcliffeError("This booking has no lab reference yet.");
@@ -401,7 +439,15 @@ const partnerNumber = (id: string) => {
 /** true after payment makes the hold permanent; false releases it. No-op for mock bookings. */
 export async function confirmBooking(partnerId: string, isConfirmed: boolean): Promise<void> {
   if (!redcliffeLive() || partnerId.startsWith("RC-MOCK")) return;
-  await call("POST", "/api/external/v2/center-confirm-booking/", { body: { booking_id: partnerNumber(partnerId), is_confirmed: isConfirmed } });
+  const booking_id = partnerNumber(partnerId);
+  if (isConfirmed) {
+    await call("POST", "/api/external/v2/center-confirm-booking/", { body: { booking_id, is_confirmed: true } });
+    return;
+  }
+  // releasing a hold: is_confirmed false answers HTTP 500 on staging (Nov 2026, every form tried), while
+  // update-booking "cancelled" releases it; the documented call stays as the fallback
+  await call("POST", "/api/external/v2/center-update-booking/", { body: { booking_id, booking_status: "cancelled", remark: "Hold released before payment" } })
+    .catch(() => call("POST", "/api/external/v2/center-confirm-booking/", { body: { booking_id, is_confirmed: false } }));
 }
 
 export async function rescheduleBooking(partnerId: string, date: string, slotId: number): Promise<void> {
@@ -425,25 +471,35 @@ export async function bookingStatus(partnerId: string): Promise<PartnerStatus | 
   if (!redcliffeLive() || partnerId.startsWith("RC-MOCK")) return null;
   const id = partnerNumber(partnerId);
   const [bookings, tracking, tests] = await Promise.all([
-    call<{ data?: { phlebo_detail: { name: string; contact: string } | null }[] }>("GET", "/api/external/v2/center-get-booking", { query: { booking_id: id } }).catch(() => ({ data: [] })),
+    // the doc says { data: [...] } at center-get-booking; the API redirects without the slash and answers a bare array
+    call<RcBooking[] | { data?: RcBooking[] }>("GET", "/api/external/v2/center-get-booking/", { query: { booking_id: id } }).catch(() => []),
     call<{ data?: { tracking_link?: string } }>("GET", "/api/external/v2/corporate-phlebo-tracking/", { query: { booking_id: id } }).catch(() => ({ data: undefined })),
     call<{ data?: Record<string, string[]> }>("GET", "/api/external/v2/booking-test-status/", { query: { booking_id: id } }).catch(() => ({ data: undefined })),
   ]);
-  const phlebo = bookings.data?.[0]?.phlebo_detail ?? null;
+  const b = (Array.isArray(bookings) ? bookings : bookings.data ?? [])[0];
+  // staging fills phlebo_details { phlebo_name, phlebo_contact } (and phlebo { name, id }); the doc shows phlebo_detail { name, contact }
+  const raw = [b?.phlebo_detail, b?.phlebo_details, b?.phlebo].find((x) => x && typeof x === "object" && Object.keys(x).length) as Record<string, unknown> | undefined;
+  const phlebo = raw ? {
+    name: String(raw.phlebo_name ?? raw.name ?? raw.fullname ?? "Your collector"),
+    contact: String(raw.phlebo_contact ?? raw.contact ?? raw.phonenumber ?? raw.mobile ?? ""),
+  } : null;
   const t: Record<string, string[] | undefined> = tests.data ?? {};
   const list = (codes: string[] | undefined, status: PartnerStatus["tests"][number]["status"]) =>
     (codes ?? []).map((code) => ({ code, name: code, status }));
   return {
-    collector: phlebo ? { name: phlebo.name, phone: String(phlebo.contact ?? ""), trackingUrl: tracking.data?.tracking_link ?? null } : null,
+    stage: stageFromWords(b?.booking_status),
+    collector: phlebo ? { name: phlebo.name, phone: phlebo.contact, trackingUrl: tracking.data?.tracking_link ?? null } : null,
     tests: [...list(t.pending_tests, "PENDING"), ...list(t.completed_tests, "COMPLETED"), ...list(t.rejected_tests, "REJECTED"), ...list(t.dismissed_tests, "DISMISSED")],
   };
 }
 
 /** A fresh link to the consolidated report PDF (Redcliffe's links expire). */
 export async function reportUrl(partnerId: string): Promise<string> {
-  const body = await call<{ Report_url?: string }>("GET", `/api/external/v2/get-consolidated-report/${partnerNumber(partnerId)}`);
-  if (!body.Report_url) throw new RedcliffeError("The report is not ready yet.", 200, body);
-  return body.Report_url;
+  // the doc says "Report_url"; the API sends "report_url", and "no report" until it is ready
+  const body = await call<{ report_url?: string; Report_url?: string }>("GET", `/api/external/v2/get-consolidated-report/${partnerNumber(partnerId)}/`);
+  const url = body.report_url ?? body.Report_url ?? "";
+  if (!/^https?:\/\//.test(url)) throw new RedcliffeError("The report is not ready yet.", 200, body);
+  return url;
 }
 
 export function mockTests(code: string): PartnerStatus["tests"] {

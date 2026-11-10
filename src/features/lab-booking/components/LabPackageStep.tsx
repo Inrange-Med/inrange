@@ -10,6 +10,7 @@ import { CaretRight } from "@phosphor-icons/react";
 import { useApiResource } from "@/hooks/useApiResource";
 import { listLabPackages } from "@/services/labTestService";
 import { formatRupees } from "@/lib/format/money";
+import { packageFacts, packageName } from "@/lib/format/labPackage";
 import type { LabPackage } from "@/types/labTest";
 import ErrorNotice from "@/components/ui/ErrorNotice";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
@@ -62,7 +63,7 @@ export default function LabPackageStep({
             >
               <span className={styles.packetText}>
                 <span className={styles.packetHead}>
-                  <strong>{item.name}</strong>
+                  <strong>{packageName(item.name)}</strong>
                   <span className={`${styles.packetPrice} num`}>
                     {item.coveredByPlan ? (
                       "Covered"
@@ -78,16 +79,12 @@ export default function LabPackageStep({
                     )}
                   </span>
                 </span>
-                {item.description && (
-                  <span className={`${styles.packetWhat} ${styles.clamp}`}>
-                    {item.description}
-                  </span>
-                )}
-                <span className={`${styles.packetWhat} num`}>
-                  {item.testCount} tests
-                  {item.reportTime
-                    ? `, report ${item.reportTime.charAt(0).toLowerCase()}${item.reportTime.slice(1)}`
-                    : ""}
+                {/* the lab's description is sales copy ("Free Doctor's Consultation"); the facts and
+                    "What is tested" on the next screens say what matters */}
+                <span className={`${styles.facts} num`}>
+                  {packageFacts(item).map((fact) => (
+                    <span key={fact}>{fact}</span>
+                  ))}
                 </span>
                 {item.coveredByPlan && (
                   <em className={styles.tag}>Covered by your plan</em>

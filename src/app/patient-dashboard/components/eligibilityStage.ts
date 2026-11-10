@@ -107,19 +107,41 @@ function wordsFor(
           : seeBooking,
       };
     case "LAB_SCHEDULED":
+    case "SAMPLE_COLLECTED": {
+      // the booking's own stage is fresher than eligibility's (webhooks move it first)
+      const lab = labBooking?.status;
+      if (
+        lab === "PROCESSING" ||
+        lab === "REPORT_READY" ||
+        eligibility.stage === "SAMPLE_COLLECTED"
+      )
+        return {
+          title:
+            lab === "PROCESSING"
+              ? "The lab is testing your sample"
+              : "Your sample is at the lab",
+          text: "The report goes straight to our medical team. We'll let you know what's next.",
+          action: seeBooking,
+        };
+      if (lab === "COLLECTOR_ASSIGNED")
+        return {
+          title:
+            labBooking?.collector?.journey === "ARRIVED"
+              ? "Your collector has arrived"
+              : labBooking?.collector?.journey === "ON_THE_WAY"
+                ? "Your collector is on the way"
+                : "Your collector is assigned",
+          text: `${labBooking?.collector?.name ?? "A collector from Redcliffe Labs"} comes ${collection ?? "at the booked time"}.`,
+          action: seeBooking,
+        };
       return {
-        title: "We're waiting for your lab report",
+        title: "Your blood test is booked",
         text: collection
           ? `Home collection: ${collection}.`
           : "Your home collection is booked.",
         action: seeBooking,
       };
-    case "SAMPLE_COLLECTED":
-      return {
-        title: "Your report is on its way",
-        text: "Your sample is at the lab. The report goes straight to our medical team.",
-        action: seeBooking,
-      };
+    }
     case "UNDER_REVIEW":
       return {
         title: "Your report is with our medical team",

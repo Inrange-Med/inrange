@@ -15,7 +15,6 @@ import type { Context } from "hono";
 import { sql } from "../lib/db.ts";
 import { body, fail, intParam, ok, todayIST } from "../lib/http.ts";
 import { requirePatient } from "../lib/auth.ts";
-import { env } from "../lib/env.ts";
 import { setEligibility } from "../lib/eligibility.ts";
 import { signedUrl, uploadFile } from "../lib/storage.ts";
 
@@ -498,12 +497,11 @@ patientRoutes.post("/reports", async (c: Context) => {
 
   const path = `${me.id}/${crypto.randomUUID()}.${ext}`;
   await uploadFile("reports", path, file, file.type);
-  const reviewStatus = forEligibility ? (env.pilotAutoApprove ? "APPROVED" : "UNDER_REVIEW") : null;
-  const reviewNote = forEligibility && env.pilotAutoApprove ? "Approved for the pilot." : null;
+  const reviewStatus = forEligibility ? "UNDER_REVIEW" : null;
   const [row] = await sql`
     insert into reports (user_id, purpose, source, title, file_path, file_name, mime_type, size_bytes, report_date, review_status, review_note)
     values (${me.id}, ${forEligibility ? "ELIGIBILITY" : "GENERAL"}, 'UPLOAD', ${title}, ${path}, ${file.name}, ${file.type},
-            ${file.size}, ${reportDate}, ${reviewStatus}, ${reviewNote})
+            ${file.size}, ${reportDate}, ${reviewStatus}, null)
     returning ${REPORT_COLUMNS()}`;
   if (forEligibility) await setEligibility(sql, me.id, { path: "OWN_REPORT", stage: "UNDER_REVIEW" });
   return ok(c, await toReport(row), "Report uploaded");

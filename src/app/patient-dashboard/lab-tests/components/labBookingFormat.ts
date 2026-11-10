@@ -18,6 +18,34 @@ export const LAB_STATUS_WORDS: Record<LabBookingStatus, string> = {
   EXPIRED: "Not paid in time",
 };
 
+/**
+ * What is happening now and what comes next, in one or two plain sentences, for a booking that is
+ * paid. Says only what the lab has told us; never promises a time the lab has not given.
+ */
+export function labStatusLine(booking: LabBooking): string | null {
+  const who = booking.collector?.name ?? "The collector";
+  switch (booking.status) {
+    case "BOOKED":
+      return "Your test is booked with our partner lab, Redcliffe Labs. When they assign a collector, their name and number appear here.";
+    case "COLLECTOR_ASSIGNED":
+      if (booking.collector?.journey === "ARRIVED")
+        return `${who} has reached your address.`;
+      if (booking.collector?.journey === "ON_THE_WAY")
+        return `${who} is on the way to you.`;
+      return `${who} will come to your home at the booked time.`;
+    case "SAMPLE_COLLECTED":
+      return "Your sample has been collected and is on its way to the lab. We will tell you when the report is ready.";
+    case "PROCESSING":
+      return "The lab is testing your sample. We will tell you when the report is ready.";
+    case "REPORT_READY":
+      return booking.forEligibility
+        ? "Your report is ready and is in Reports. Your doctor reviews it next."
+        : "Your report is ready. A copy is in Reports.";
+    default:
+      return null;
+  }
+}
+
 /** Still to happen or under way: everything but a ready report, a cancellation or an unpaid hold. */
 export const isOngoing = (booking: LabBooking) =>
   !["REPORT_READY", "CANCELLED", "EXPIRED"].includes(booking.status);

@@ -315,7 +315,7 @@
   color: var(--ink-3);
   transition: transform 240ms var(--ease-out);
 }
-.tested[open] summary svg {
+.tested[open] > summary svg {
   transform: rotate(180deg);
 }
 .tested p {
@@ -359,4 +359,66 @@
   min-height: 44px;
   padding: 0 4px;
   font-size: 0.875rem;
+}
+
+/* a package's facts on one line: "87 tests · Report next day · 12 hours fasting"; wraps whole facts */
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 6px;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--ink-3);
+}
+.facts > span + span::before {
+  content: "\00B7";
+  margin-right: 6px;
+}
+
+/* ---------- "What is tested": groups that open, never one long paragraph ---------- */
+.testGroups {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  padding-bottom: 12px;
+}
+.testGroup + .testGroup {
+  border-top: 1px solid var(--hair);
+}
+.testGroup summary {
+  min-height: 44px;
+  font-weight: 500;
+  color: var(--ink-2);
+}
+.testCount {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  color: var(--ink-3);
+}
+.testGroup[open] .testCount svg {
+  transform: rotate(180deg);
+}
+.testList {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px 24px;
+  padding: 2px 0 14px;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+@media (min-width: 560px) {
+  .testList {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.testSinglesHead {
+  padding: 12px 0 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--ink-3);
+}
+.tested .testGroups p {
+  padding-bottom: 0;
 }

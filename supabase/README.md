@@ -47,7 +47,6 @@ Register these webhooks with the vendors once their keys are in:
 
 | Secret | Default | Effect |
 | --- | --- | --- |
-| `PILOT_AUTO_APPROVE` | on | A report that arrives approves eligibility at once (no back office yet). Set `false` to review by hand. |
 | `PILOT_OTP` | `123456` | The sign-in code while SMS is mocked. |
 | `APP_URL` | `https://inrange-pilot.vercel.app` | Links the API hands out (the mock video room). |
 | `DB_POOLER_URL` | set | Postgres through the transaction pooler (port 6543). |

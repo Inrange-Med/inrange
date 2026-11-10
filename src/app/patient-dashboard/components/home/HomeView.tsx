@@ -32,6 +32,8 @@ import HomeProgrammeCard from "./HomeProgrammeCard";
 import WeightCard from "./WeightCard";
 import styles from "@/app/patient-dashboard/HomePage.module.css";
 import layoutStyles from "@/components/ui/styles/PageLayout.module.css";
+import { listMyLabBookings } from "@/services/labTestService";
+import OngoingLabCard from "@/app/patient-dashboard/lab-tests/components/OngoingLabCard";
 
 function greeting(hour: number) {
   if (hour < 5) return "Hello";
@@ -41,14 +43,29 @@ function greeting(hour: number) {
 }
 
 async function loadHome() {
-  const [appointments, profile, weights, review] = await Promise.all([
-    listMyAppointments(),
-    getMyProfile(),
-    listWeightReadings(),
-    loadEligibilityReview(),
-  ]);
-  return { appointments, profile, weights, ...review };
+  const [appointments, profile, weights, review, labBookings] =
+    await Promise.all([
+      listMyAppointments(),
+      getMyProfile(),
+      listWeightReadings(),
+      loadEligibilityReview(),
+      listMyLabBookings().catch(() => null),
+    ]);
+  return {
+    appointments,
+    profile,
+    weights,
+    ...review,
+    labBookings: labBookings ?? [],
+  };
 }
+
+const LAB_UNDER_WAY = [
+  "BOOKED",
+  "COLLECTOR_ASSIGNED",
+  "SAMPLE_COLLECTED",
+  "PROCESSING",
+];
 
 export default function HomeView() {
   const toast = useToast();
@@ -95,6 +112,16 @@ export default function HomeView() {
     data.eligibility && stage === "before-consultation"
       ? eligibilityStatus(data.eligibility, data.labBooking, upcoming, now)
       : null;
+  // a paid blood test under way always shows on Home (the eligibility test is already in the status card)
+  const labUnderWay =
+    data.labBookings.find(
+      (b) =>
+        LAB_UNDER_WAY.includes(b.status) &&
+        !(status && b.id === data.labBooking?.id),
+    ) ?? null;
+  const labCard = labUnderWay && (
+    <OngoingLabCard booking={labUnderWay} now={now} />
+  );
   // one filled button per screen: when the next step is a dark "do this", logging steps back
   const nextStepIsAction = status ? Boolean(status.action?.filled) : !upcoming;
   const greetingBlock = (
@@ -132,6 +159,7 @@ export default function HomeView() {
           </div>
           <EligibilityStatus status={status} />
         </section>
+        {labCard}
         {weightCard}
       </main>
     );
@@ -143,6 +171,7 @@ export default function HomeView() {
 
       <NextStepStrip upcoming={upcoming} stage={stage} now={now} />
 
+      {labCard}
       {weightCard}
 
       {stage === "before-consultation" ? (

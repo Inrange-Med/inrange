@@ -23,6 +23,7 @@ import formStyles from "@/components/ui/styles/FormControls.module.css";
 import type { LabBookingState, LabBookingStep } from "../useLabBookingFlow";
 import PackageTestsDetails from "./PackageTestsDetails";
 import styles from "../LabBookingFlow.module.css";
+import { fastingSentence, packageName } from "@/lib/format/labPackage";
 
 /** `beforePay`: the host's own summary, shown just above the pay button (onboarding: the BMI). */
 type Props = {
@@ -63,7 +64,7 @@ export default function ReviewAndPayStep({
     held?.holdExpiresAt && Date.parse(held.holdExpiresAt) > now ? held : null;
   const covered = !carePackage && labPackage.coveredByPlan;
   // a care package is billed at its own price, which covers the tests and the consultation
-  const billName = carePackage?.name ?? labPackage.name;
+  const billName = carePackage?.name ?? packageName(labPackage.name);
   const listedPrice = carePackage?.priceRupees ?? labPackage.price;
 
   const hold = async () => {
@@ -172,8 +173,8 @@ export default function ReviewAndPayStep({
         </div>
       </dl>
 
-      {labPackage.fastingNote && (
-        <p className={styles.fast}>{labPackage.fastingNote}</p>
+      {fastingSentence(labPackage.fastingNote) && (
+        <p className={styles.fast}>{fastingSentence(labPackage.fastingNote)}</p>
       )}
 
       {beforePay}

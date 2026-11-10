@@ -4,7 +4,7 @@
 //   GET  /payments               the patient's paid orders (invoices), newest first
 //   POST /webhooks/razorpay      X-Razorpay-Signature over the raw body; payment.captured / order.paid / payment.failed
 //                                (register ...?forceFunctionRegion=ap-south-1 in the Dashboard, Test and Live separately)
-//   POST /webhooks/redcliffe     x-redcliffe-secret header; moves lab bookings and eligibility along
+//   POST /webhooks/redcliffe     x-redcliffe-secret header or ?token=; moves lab bookings and eligibility along
 // Mock mode (no Razorpay keys): orders are "order_mock_..." with razorpayKeyId "rzp_mock"; verify accepts them unsigned.
 import { Hono } from "hono";
 import type { TransactionSql } from "postgres";
@@ -16,6 +16,7 @@ import { setEligibility } from "../lib/eligibility.ts";
 import { bookAppointment, holdSlot } from "../lib/booking.ts";
 import * as rzp from "../integrations/razorpay.ts";
 import { applyLabEvent, fulfilLabBooking, type LabEvent } from "./labs.ts";
+import * as rc from "../integrations/redcliffe.ts";
 
 export const paymentRoutes = new Hono();
 
@@ -234,10 +235,13 @@ paymentRoutes.post("/webhooks/razorpay", async (c) => {
 const REDCLIFFE_EVENTS: Record<string, LabEvent | null> = {
   phleboassigned: "COLLECTOR_ASSIGNED", pickup: "SAMPLE_COLLECTED", resample: "BOOKED",
   samplesync: "PROCESSING", partialreport: "PROCESSING", consolidatereport: "REPORT_READY", cancelled: "CANCELLED",
+  booking_created: null, reportvalues: null, pickup_hold: null,
 };
 
 paymentRoutes.post("/webhooks/redcliffe", async (c) => {
-  const secret = c.req.header("x-redcliffe-secret") ?? "";
+  // ponytail: Redcliffe's create-update-webhook drops auth_key/auth_value (staging, Nov 2026), so the secret
+  // also rides in the registered URL as ?token=. Prefer the header if they ever start sending it.
+  const secret = c.req.header("x-redcliffe-secret") ?? c.req.query("token") ?? "";
   if (!env.redcliffeWebhookSecret || !rzp.safeEqual(secret, env.redcliffeWebhookSecret))
     return c.json({ success: false, message: "Unauthorised" }, 401);
   const event = await body<{ webhook_type?: string; data?: { booking_id?: number; client_refid?: string | null; data?: Record<string, unknown> } }>(c);
@@ -247,12 +251,25 @@ paymentRoutes.post("/webhooks/redcliffe", async (c) => {
   if (!row) return c.json({ success: true });
   const type = String(event.webhook_type ?? "");
   await sql`insert into lab_booking_events (lab_booking_id, webhook_type, payload) values (${row.id}, ${type}, ${sql.json(event as never)})`;
+  // staging payloads carry: customer_status ("phlebo assigned"), phlebo_name, phlebo_contact,
+  // sample_collection_date, start_time, ref_booking_end_time
+  const d = event.data?.data ?? {};
+  const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
   if (type === "rescheduled") {
-    const d = event.data?.data ?? {};
-    const date = typeof d.collection_date === "string" ? d.collection_date : null;
-    if (date) await sql`update lab_bookings set slot_date = ${date}, updated_at = now() where id = ${row.id}`;
+    const date = str(d.sample_collection_date) ?? str(d.collection_date);
+    const start = str(d.start_time)?.slice(0, 5) ?? null;
+    const end = str(d.ref_booking_end_time)?.slice(0, 5) ?? null;
+    if (date) await sql`update lab_bookings set slot_date = ${date}, slot_start = coalesce(${start}, slot_start),
+      slot_time = coalesce(${start}, slot_time), slot_end = coalesce(${end}, slot_end), updated_at = now() where id = ${row.id}`;
   }
-  const mapped = REDCLIFFE_EVENTS[type];
-  if (mapped) await applyLabEvent(row.id, mapped);
+  const journey = type === "phlebo_started_journey" ? "ON_THE_WAY" : type === "phlebo_end_journey" ? "ARRIVED" : null;
+  if (str(d.phlebo_name) || journey) {
+    await sql`update lab_bookings set collector = coalesce(collector, '{"trackingUrl": null}'::jsonb) || ${sql.json({
+      ...(str(d.phlebo_name) ? { name: str(d.phlebo_name), phone: str(d.phlebo_contact) ?? "" } : {}),
+      ...(journey ? { journey } : {}),
+    })}, updated_at = now() where id = ${row.id}`;
+  }
+  const mapped = type in REDCLIFFE_EVENTS ? REDCLIFFE_EVENTS[type] : journey ? "COLLECTOR_ASSIGNED" : rc.stageFromWords(d.customer_status);
+  if (mapped) await applyLabEvent(row.id, mapped).catch((e) => console.error("redcliffe webhook event", row.id, type, e.message));
   return c.json({ success: true });
 });

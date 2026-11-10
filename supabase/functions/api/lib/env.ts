@@ -12,8 +12,6 @@ export const env = {
   appUrl: get("APP_URL") || "http://localhost:3001",
   /** Pilot: the code every number accepts while no SMS provider is configured. */
   pilotOtp: get("PILOT_OTP") || "123456",
-  /** Pilot: approve eligibility automatically when a report arrives (no back office yet). */
-  pilotAutoApprove: get("PILOT_AUTO_APPROVE") !== "false",
 
   /** Firebase phone sign-in: the Firebase project whose ID tokens are accepted (POST /api/auth/firebase). */
   firebaseProjectId: get("FIREBASE_PROJECT_ID"),

@@ -22,10 +22,15 @@ import { formatRupees } from "@/lib/format/money";
 import { errorMessage } from "@/lib/http/apiClient";
 import { getLabReportUrl } from "@/services/labTestService";
 import type { LabBooking } from "@/types/labTest";
-import { LAB_STATUS_WORDS, labCheckoutHref } from "./labBookingFormat";
+import {
+  LAB_STATUS_WORDS,
+  labCheckoutHref,
+  labStatusLine,
+} from "./labBookingFormat";
 import LabStatusTracker from "./LabStatusTracker";
 import formStyles from "@/components/ui/styles/FormControls.module.css";
 import styles from "../LabTestsPage.module.css";
+import { fastingSentence } from "@/lib/format/labPackage";
 
 /** Why the time cannot be changed, or null when it can. */
 function rescheduleBlock(booking: LabBooking) {
@@ -77,6 +82,9 @@ export default function LabBookingStatusCard({
   return (
     <Card title={LAB_STATUS_WORDS[booking.status]} className={styles.card}>
       <LabStatusTracker status={booking.status} />
+      {labStatusLine(booking) && (
+        <p className={styles.text}>{labStatusLine(booking)}</p>
+      )}
 
       {holdOpen && (
         <>
@@ -117,8 +125,8 @@ export default function LabBookingStatusCard({
 
       {booking.collector && changeable && (
         <div className={styles.fast}>
-          <strong>{booking.collector.name}</strong> from our partner lab will
-          collect your sample.{" "}
+          <strong>{booking.collector.name}</strong>, your collector from
+          Redcliffe Labs.{" "}
           <a
             href={`tel:${booking.collector.phone}`}
             className={formStyles.link}
@@ -140,10 +148,12 @@ export default function LabBookingStatusCard({
           </span>
         </a>
       )}
-      {booking.fastingNote &&
+      {fastingSentence(booking.fastingNote) &&
         (booking.status === "BOOKED" ||
           booking.status === "COLLECTOR_ASSIGNED" ||
-          holdOpen) && <p className={styles.fast}>{booking.fastingNote}</p>}
+          holdOpen) && (
+          <p className={styles.fast}>{fastingSentence(booking.fastingNote)}</p>
+        )}
 
       {booking.status === "REPORT_READY" && (
         <button

@@ -2,7 +2,7 @@
 //   GET  /labs/packages                         bookable packages
 //   GET  /labs/packages/:code                   what a package tests
 //   GET  /labs/locations/search?query=&latitude=&longitude=   area search (optional point to rank nearby first)
-//   GET  /labs/locations/reverse?latitude&longitude  the place at a point, for Use my current location (mock mode)
+//   GET  /labs/locations/reverse?latitude&longitude  the place at a point, for Use my current location
 //   GET  /labs/locations/:eloc                  a place's coordinates
 //   GET  /labs/serviceability?latitude&longitude
 //   GET  /labs/slots?date&addressId             collection windows at a saved address
@@ -19,7 +19,6 @@ import type { Sql, TransactionSql } from "postgres";
 import { sql } from "../lib/db.ts";
 import { body, fail, ok, todayIST } from "../lib/http.ts";
 import { requirePatient } from "../lib/auth.ts";
-import { env } from "../lib/env.ts";
 import { setEligibility } from "../lib/eligibility.ts";
 import { signedUrl, uploadFile } from "../lib/storage.ts";
 import * as rc from "../integrations/redcliffe.ts";
@@ -62,7 +61,7 @@ export function toLabBooking(r: Row) {
     partnerBookingId: r.provider_booking_id ?? null,
     status: r.status,
     packageCode: r.lab_package_code,
-    packageName: r.package_name ?? r.lab_package_code,
+    packageName: String(r.package_name ?? r.lab_package_code).replace(/\*+/g, "").trim(),
     fastingNote: r.fasting_note ?? "",
     collectionStartsAt: at(date, r.slot_start) ?? "",
     collectionEndsAt: at(date, r.slot_end),
@@ -78,6 +77,7 @@ export function toLabBooking(r: Row) {
     canReschedule: r.status === "BOOKED" && left > 0,
     canCancel: r.status === "PAYMENT_PENDING" || r.status === "BOOKED",
     collector: r.collector ?? null,
+    forEligibility: Boolean(r.care_package_code),
     tests: r.tests ?? [],
   };
 }
@@ -142,7 +142,6 @@ labRoutes.get("/labs/locations/search", async (c) => {
 // registered before /:eloc so that "reverse" is never read as an eloc
 labRoutes.get("/labs/locations/reverse", async (c) => {
   await requirePatient(c);
-  if (rc.redcliffeLive()) fail(404, "This feature is not available yet.");
   const place = await lab(rc.reversePlace(Number(c.req.query("latitude")), Number(c.req.query("longitude"))));
   if (!place) fail(422, "We could not find an address here. Search for it instead.");
   return ok(c, place);
@@ -254,11 +253,14 @@ labRoutes.get("/labs/bookings/:id", async (c) => {
   const me = await requirePatient(c);
   let row = await ownedBooking(me.id, c.req.param("id"));
   if (row.provider_booking_id && rc.redcliffeLive() && RANK[row.status] >= 1) {
+    // webhooks move the booking; this read is the fallback when one was missed
     const fresh = await rc.bookingStatus(row.provider_booking_id).catch((e) => (console.error("redcliffe refresh", e.message), null));
     if (fresh) {
-      await sql`update lab_bookings set collector = ${fresh.collector ? sql.json(fresh.collector) : null},
-        tests = ${sql.json(fresh.tests)}, updated_at = now() where id = ${row.id}`;
-      row = { ...row, collector: fresh.collector, tests: fresh.tests };
+      const collector = fresh.collector ? { ...fresh.collector, journey: row.collector?.journey ?? null } : row.collector ?? null;
+      await sql`update lab_bookings set collector = ${collector ? sql.json(collector) : null},
+        tests = ${sql.json(fresh.tests.length ? fresh.tests : row.tests ?? [])}, updated_at = now() where id = ${row.id}`;
+      if (fresh.stage) await applyLabEvent(row.id, fresh.stage).catch((e) => console.error("lab refresh event", row.id, e.message));
+      [row] = await bookingQuery(sql, row.id);
     }
   }
   return ok(c, toLabBooking(row));
@@ -285,7 +287,9 @@ labRoutes.post("/labs/bookings/:id/cancel", async (c) => {
   const row = await ownedBooking(me.id, c.req.param("id"));
   const { reason } = await body<{ reason?: string }>(c);
   if (row.status === "PAYMENT_PENDING") {
-    if (row.provider_booking_id) await lab(rc.confirmBooking(row.provider_booking_id, false));
+    // best effort: the lab drops an unconfirmed hold after 30 minutes anyway
+    if (row.provider_booking_id)
+      await rc.confirmBooking(row.provider_booking_id, false).catch((e) => console.error("release hold", row.id, e.message));
     const [e] = await sql`select lab_booking_id from eligibility where user_id = ${me.id}`;
     if (e?.lab_booking_id === row.id) await setEligibility(sql, me.id, { stage: "NOT_STARTED", lab_booking_id: null });
   } else if (row.status === "BOOKED") {
@@ -332,17 +336,28 @@ labRoutes.post("/labs/bookings/:id/simulate", async (c) => {
 
 export type LabEvent = "BOOKED" | "COLLECTOR_ASSIGNED" | "SAMPLE_COLLECTED" | "PROCESSING" | "REPORT_READY" | "CANCELLED";
 
-/** Moves a booking forward (never backwards, except a resample back to BOOKED) and updates eligibility. */
+/** Moves a booking forward (never backwards; a resample before the lab has the sample changes nothing) and updates eligibility. */
 export async function applyLabEvent(bookingId: string, event: LabEvent) {
   const [row] = await bookingQuery(sql, bookingId);
   if (!row) return;
   const current = RANK[row.status];
   if (current === undefined) return; // CANCELLED / EXPIRED stay put
-  if (event !== "CANCELLED" && event !== "BOOKED" && RANK[event] <= current) return;
-  await sql`update lab_bookings set status = ${event}, updated_at = now() where id = ${bookingId}`;
+  if (row.status === "PAYMENT_PENDING" && event !== "CANCELLED") return; // only a verified payment books a held time
+  if (event !== "CANCELLED" && RANK[event] <= current) return;
+  if (event === "BOOKED" && current > RANK.BOOKED && current < RANK.PROCESSING) return; // a resample before the lab has it changes nothing
   const forEligibility = Boolean(row.care_package_code);
+  // "report ready" only once the PDF is in hand: until the lab has a real link the booking stays at the lab
+  if (event === "REPORT_READY") {
+    try {
+      await attachReport(row, forEligibility);
+    } catch (e) {
+      console.error("lab report not attached", bookingId, (e as Error).message);
+      if (current < RANK.PROCESSING) await sql`update lab_bookings set status = 'PROCESSING', updated_at = now() where id = ${bookingId}`;
+      return;
+    }
+  }
+  await sql`update lab_bookings set status = ${event}, updated_at = now() where id = ${bookingId}`;
   if (event === "SAMPLE_COLLECTED" && forEligibility) await setEligibility(sql, row.user_id, { stage: "SAMPLE_COLLECTED" });
-  if (event === "REPORT_READY") await attachReport(row, forEligibility);
 }
 
 async function attachReport(row: Row, forEligibility: boolean) {
@@ -372,7 +387,7 @@ async function attachReport(row: Row, forEligibility: boolean) {
     insert into reports (user_id, purpose, source, title, file_path, file_name, mime_type, size_bytes, lab_booking_id, review_status, report_date)
     values (${row.user_id}, ${forEligibility ? "ELIGIBILITY" : "GENERAL"}, 'LAB', ${row.package_name ?? "Lab report"}, ${path},
       ${`${row.id}.pdf`}, 'application/pdf', ${pdf.byteLength}, ${row.id},
-      ${forEligibility ? (env.pilotAutoApprove ? "APPROVED" : "UNDER_REVIEW") : null}, ${todayIST()})`;
+      ${forEligibility ? "UNDER_REVIEW" : null}, ${todayIST()})`;
   if (forEligibility) await setEligibility(sql, row.user_id, { stage: "UNDER_REVIEW" });
 }
 
