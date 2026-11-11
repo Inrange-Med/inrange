@@ -49,7 +49,7 @@
   display: grid;
   gap: 1px;
   overflow: hidden;
-  border-radius: 10px;
+  border-radius: var(--r-media);
   background: var(--hair);
 }
 

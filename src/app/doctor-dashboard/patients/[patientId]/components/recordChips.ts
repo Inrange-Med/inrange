@@ -40,6 +40,7 @@ export function recordChips(
               : undefined,
           },
           { id: "plan", label: "Plan" },
+          { id: "programme", label: "Programme" },
           {
             id: "labs",
             label: "Labs",

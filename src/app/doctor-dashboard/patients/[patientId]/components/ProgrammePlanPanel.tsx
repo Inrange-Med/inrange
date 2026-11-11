@@ -7,7 +7,7 @@ import { useState } from "react";
 import { ArrowRight } from "@phosphor-icons/react";
 import Sheet from "@/components/ui/Sheet";
 import { useToast } from "@/components/ui/ToastProvider";
-import { longDate } from "@/lib/format/dateTime";
+import { inIndiaTime, shortDate } from "@/lib/format/dateTime";
 import { errorMessage } from "@/lib/http/apiClient";
 import {
   recommendPlan,
@@ -20,6 +20,14 @@ import clinicStyles from "@/app/doctor-dashboard/styles/ClinicSurfaces.module.cs
 import formStyles from "@/components/ui/styles/FormControls.module.css";
 import recordStyles from "../PatientRecordPage.module.css";
 import styles from "./ProgrammePlanPanel.module.css";
+
+/** "12 Feb", with the year when it is not this one ("12 Feb 2027") */
+function dayMonth(iso: string) {
+  const year = inIndiaTime(new Date(iso)).getUTCFullYear();
+  return year === inIndiaTime(new Date()).getUTCFullYear()
+    ? shortDate(iso)
+    : `${shortDate(iso)} ${year}`;
+}
 
 export default function ProgrammePlanPanel({
   patientId,
@@ -77,18 +85,31 @@ export default function ProgrammePlanPanel({
         </h2>
       </div>
       {record.activePlan ? (
-        <p className={`${styles.line} ${styles.plan}`}>
-          <strong>{record.activePlan.planName}</strong>, active until{" "}
-          {longDate(record.activePlan.endsAt)}
-        </p>
+        <div className={styles.plan}>
+          <div className={styles.rxHead}>
+            <strong>{record.activePlan.planName}</strong>
+            <span className={`${clinicStyles.pill} num`} data-tone="ok">
+              Active until {dayMonth(record.activePlan.endsAt)}
+            </span>
+          </div>
+        </div>
       ) : (
         <div className={styles.body}>
           {suggested ? (
-            <p className={`${styles.line} ${styles.plan}`} data-draft="true">
-              You suggested <strong>{suggested.planName}</strong> on{" "}
-              {longDate(suggested.recommendedAt)}.
-              {suggested.note && ` “${suggested.note}”`}
-            </p>
+            <div className={styles.plan} data-draft="true">
+              <div className={styles.rxHead}>
+                <strong>{suggested.planName}</strong>
+                <span className={`${clinicStyles.pill} num`} data-tone="draft">
+                  Suggested {dayMonth(suggested.recommendedAt)}
+                </span>
+              </div>
+              {suggested.note && (
+                <blockquote className={styles.quote}>
+                  <p>{suggested.note}</p>
+                  <cite>Your note to the patient</cite>
+                </blockquote>
+              )}
+            </div>
           ) : (
             <p className={clinicStyles.empty}>
               No plan yet. The patient sees your suggestion first on Plans.

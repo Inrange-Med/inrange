@@ -34,7 +34,12 @@ export default function EndConsultationSheet({
   };
 
   return (
-    <Sheet open={open} onClose={onClose} title="End this consultation?">
+    <Sheet
+      open={open}
+      onClose={onClose}
+      title="End this consultation?"
+      size="compact"
+    >
       <div className={styles.confirmSymbol} aria-hidden="true">
         <PhoneDisconnect size={25} />
       </div>

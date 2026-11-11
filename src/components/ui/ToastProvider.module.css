@@ -12,7 +12,7 @@
   right: 0;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
   width: fit-content;
   max-width: calc(100% - var(--gutter) * 2);
   margin-inline: auto;
@@ -51,7 +51,7 @@
 }
 .undo {
   min-height: 44px;
-  padding: 0 14px;
+  padding: 0 16px;
   border: 0;
   border-radius: 999px;
   background: rgb(236 237 239 / 0.08);

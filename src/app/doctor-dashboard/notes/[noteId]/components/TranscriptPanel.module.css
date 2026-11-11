@@ -141,6 +141,11 @@
   color: var(--signal-ink);
 }
 
+/* the count on the left, the controls flush right */
+.moments > :global(.num) {
+  margin-right: auto;
+}
+
 .moments .iconBtn {
   width: 36px;
   height: 36px;

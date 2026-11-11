@@ -137,7 +137,12 @@ export default function ReviewItem({
 
       {!waiting && (
         <>
-          {review.note && <p className={adminStyles.note}>{review.note}</p>}
+          {review.note && (
+            <blockquote className={adminStyles.quote}>
+              <p>{review.note}</p>
+              <cite>Note to the patient</cite>
+            </blockquote>
+          )}
           <p className={adminStyles.muted}>
             {[review.decidedBy, review.decidedAt && when(review.decidedAt)]
               .filter(Boolean)
@@ -147,9 +152,12 @@ export default function ReviewItem({
       )}
 
       {noteOpen && (
-        <div className={formStyles.field}>
-          <label className={formStyles.label} htmlFor={noteId}>
-            Note for the patient
+        <div className={adminStyles.reviewForm}>
+          <label className={adminStyles.label} htmlFor={noteId}>
+            Note for the patient{" "}
+            <span id={`${noteId}-hint`} className={adminStyles.muted}>
+              The patient reads this. Say what happens next.
+            </span>
           </label>
           <textarea
             id={noteId}
@@ -158,20 +166,17 @@ export default function ReviewItem({
             maxLength={500}
             value={note}
             aria-invalid={noteMissing}
-            aria-describedby={`${noteId}-hint`}
+            aria-describedby={noteMissing ? `${noteId}-error` : undefined}
             onChange={(event) => {
               setNote(event.target.value);
               setNoteMissing(false);
             }}
           />
-          <p
-            id={`${noteId}-hint`}
-            className={noteMissing ? formStyles.err : formStyles.hint}
-          >
-            {noteMissing
-              ? "Add a short note. The patient reads it."
-              : "The patient reads this. Say what happens next."}
-          </p>
+          {noteMissing && (
+            <p id={`${noteId}-error`} className={formStyles.err}>
+              Add a short note. The patient reads it.
+            </p>
+          )}
         </div>
       )}
 

@@ -5,16 +5,24 @@
 */
 
 .room {
+  /* the live call's edge: 18px, 12px from 900px down, 7px on the smallest phones */
+  --room-x: 18px;
+  --room-y: 18px;
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  padding: 0 18px 18px;
+  padding: 0 var(--room-x) var(--room-y);
   background: var(--bg);
   color: var(--ink);
 }
-/* in the call: exactly one screen tall, so the stage takes what the header leaves */
+/* in the call: exactly one screen tall, so the stage takes what the header leaves; on a phone the
+   notch and the home indicator never sit on the header or the stage */
 .room[data-live="true"] {
   height: 100dvh;
+  padding: env(safe-area-inset-top, 0px)
+    max(var(--room-x), env(safe-area-inset-right, 0px))
+    max(var(--room-y), env(safe-area-inset-bottom, 0px))
+    max(var(--room-x), env(safe-area-inset-left, 0px));
 }
 .header {
   height: 72px;
@@ -52,7 +60,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border-radius: 20px;
+  border-radius: var(--r-surface);
   background: var(--slate-950);
 }
 /* 100ms's page is dark and blank until it has loaded; say what is happening, centred on the video above the controls bar */
@@ -287,18 +295,24 @@
   font-weight: 560;
 }
 .ended h1 {
-  margin: 10px 0 26px;
+  margin: 10px 0 9px;
   font-family: var(--font-display);
   font-size: clamp(36px, 5vw, 56px);
   font-weight: 500;
   letter-spacing: -0.04em;
   line-height: 1.05;
 }
+.ended > p {
+  max-width: 420px;
+}
+.ended > a {
+  margin-top: 26px;
+}
 
 @media (max-width: 900px) {
   .room {
-    padding-inline: 12px;
-    padding-bottom: 12px;
+    --room-x: 12px;
+    --room-y: 12px;
   }
   /* phones and small tablets: a 70px bar, End and Leave side by side in the middle */
   .controls {
@@ -332,7 +346,7 @@
 }
 @media (max-width: 390px) {
   .room {
-    padding-inline: 7px;
+    --room-x: 7px;
   }
   .headerTitle {
     font-size: 13px;

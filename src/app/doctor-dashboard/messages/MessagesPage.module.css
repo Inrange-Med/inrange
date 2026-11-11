@@ -240,7 +240,7 @@
 
 .bubble[data-urgent="true"] {
   box-shadow:
-    inset 0 0 0 1px rgb(180 68 43 / 0.3),
+    inset 0 0 0 1px color-mix(in srgb, var(--alert) 30%, transparent),
     inset 3px 0 0 var(--alert);
 }
 

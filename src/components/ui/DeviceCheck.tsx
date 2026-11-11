@@ -35,11 +35,17 @@ function whereToAllow() {
   return "Click the icon to the left of the address bar, allow Camera and Microphone for this site, then try again.";
 }
 
-/** `seenBy` names who is on the other end ("your doctor" for a patient, "your patient" for a doctor). */
+/**
+ * `seenBy` names who is on the other end ("your doctor" for a patient, "your patient" for a doctor).
+ * `quiet` makes "Start the check" a ghost pill, for a screen whose one main action comes after it
+ * (Join the call).
+ */
 export default function DeviceCheck({
   seenBy = "your doctor",
+  quiet = false,
 }: {
   seenBy?: string;
+  quiet?: boolean;
 }) {
   const video = useRef<HTMLVideoElement>(null);
   const meter = useRef<HTMLSpanElement>(null);
@@ -181,27 +187,49 @@ export default function DeviceCheck({
               recorded, and both turn off when you close this.
             </p>
           )}
-          <button
-            type="button"
-            className={`btn ${formStyles.go}`}
-            onClick={start}
-            data-busy={state === "asking"}
-          >
-            <span>
-              {state === "denied"
-                ? "Try again"
-                : state === "asking"
-                  ? "Waiting for your browser"
-                  : "Start the check"}
-            </span>
-            <span className="well" aria-hidden="true">
+          {quiet ? (
+            <button
+              type="button"
+              className={`btn btn--ghost ${styles.quietStart}`}
+              onClick={start}
+              data-busy={state === "asking"}
+            >
               {state === "asking" ? (
-                <i className={formStyles.spin} />
+                <i className={formStyles.spin} aria-hidden="true" />
               ) : (
-                <ArrowRight size={18} />
+                <VideoCamera size={17} aria-hidden="true" />
               )}
-            </span>
-          </button>
+              <span>
+                {state === "denied"
+                  ? "Try again"
+                  : state === "asking"
+                    ? "Waiting for your browser"
+                    : "Start the check"}
+              </span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              className={`btn ${formStyles.go}`}
+              onClick={start}
+              data-busy={state === "asking"}
+            >
+              <span>
+                {state === "denied"
+                  ? "Try again"
+                  : state === "asking"
+                    ? "Waiting for your browser"
+                    : "Start the check"}
+              </span>
+              <span className="well" aria-hidden="true">
+                {state === "asking" ? (
+                  <i className={formStyles.spin} />
+                ) : (
+                  <ArrowRight size={18} />
+                )}
+              </span>
+            </button>
+          )}
         </>
       )}
     </div>

@@ -292,9 +292,59 @@
   cursor: not-allowed;
 }
 
+/* a disabled Sign stays still under the pointer: its well never slides or tilts */
+.signBtn:disabled :global(.well),
+.signBtn:disabled:hover :global(.well) {
+  transform: none;
+}
+
+/* signing: the button keeps its colour, the spinner in its well says it is working (no OS busy cursor) */
+.signBtn[data-busy="true"] {
+  opacity: 1;
+  cursor: default;
+}
+
 @media (hover: hover) and (pointer: fine) {
   .signBtn:disabled:hover {
     --btn-bg: var(--slate-900);
+  }
+}
+
+/* ---------- waiting: the note's own frame, breathing (still under reduced motion) ---------- */
+.ghost {
+  display: block;
+  background: var(--bg-2);
+  animation: ghostBreathe 1400ms var(--ease-out) infinite alternate;
+}
+
+.ghostBack {
+  width: 96px;
+  height: 32px;
+  margin-block: 6px;
+  border-radius: 7px;
+}
+
+.ghostFace {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+}
+
+.ghostTitle {
+  width: 60%;
+  height: 28px;
+  border-radius: 7px;
+}
+
+/* the safety facts' two cells, empty, at the height they take once filled */
+.ghostSafety > div {
+  min-height: 64px;
+}
+
+@keyframes ghostBreathe {
+  to {
+    opacity: 0.5;
   }
 }
 
@@ -383,6 +433,14 @@
   .page {
     padding-bottom: calc(150px + env(safe-area-inset-bottom));
   }
+  /* loading and error: Back alone, at the loaded bar's height */
+  .topBarBare {
+    min-height: calc(65px + env(safe-area-inset-top));
+  }
+  /* the top bar carries Back, so the page head's own back link steps aside */
+  .headInBars > a:first-child {
+    display: none;
+  }
   .backLink,
   .who > :first-child,
   .name,
@@ -439,6 +497,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .breath,
+  .ghost,
   .drawer {
     animation: none;
   }

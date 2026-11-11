@@ -8,6 +8,7 @@
 
 import { useState } from "react";
 import { ArrowCounterClockwise, Prohibit } from "@phosphor-icons/react";
+import Avatar from "@/components/ui/Avatar";
 import ErrorNotice from "@/components/ui/ErrorNotice";
 import { useToast } from "@/components/ui/ToastProvider";
 import formStyles from "@/components/ui/styles/FormControls.module.css";
@@ -52,43 +53,62 @@ export default function DoctorRow({
     }
   };
 
-  return (
-    <li className={adminStyles.item}>
-      <div className={adminStyles.itemHead}>
-        <strong className={adminStyles.name}>{doctor.fullName}</strong>
-        <span
-          className={adminStyles.pill}
-          data-tone={doctor.active ? "ok" : "pending"}
-        >
-          {doctor.active ? "Active" : "Inactive"}
-        </span>
-      </div>
-      <p className={adminStyles.facts}>
-        <span>{doctor.specialization || "Specialisation not set"}</span>
-        <span className="num">
-          Reg. no. {doctor.registrationNo || "not set"}
-        </span>
-        <a className="num" href={`tel:+91${doctor.mobile}`}>
-          {spacedMobile(doctor.mobile)}
-        </a>
-      </p>
-      {/* facts are text in the portal; pills are kept for status */}
-      <p className={`${adminStyles.facts} ${adminStyles.factsQuiet}`}>
-        <span className="num">
-          {doctor.consultationFeeRupees === null
-            ? "No fee set"
-            : `Fee ${formatRupees(doctor.consultationFeeRupees)}`}
-        </span>
-        <span>{doctor.usesDefaultHours ? "Default hours" : "Own hours"}</span>
-        <span className="num">
-          {upcoming} upcoming consultation{upcoming === 1 ? "" : "s"}
-        </span>
-      </p>
+  const tel = `tel:+91${doctor.mobile}`;
+  const hours = doctor.usesDefaultHours ? "Default hours" : "Own hours";
 
-      {error && <ErrorNotice message={error} />}
+  return (
+    <li className={adminStyles.prow}>
+      <span className={adminStyles.pwho}>
+        <Avatar name={doctor.fullName} size={36} />
+        <span>
+          <span className={adminStyles.pname}>
+            <strong>{doctor.fullName}</strong>
+            <span
+              className={adminStyles.pill}
+              data-tone={doctor.active ? "ok" : "pending"}
+            >
+              {doctor.active ? "Active" : "Inactive"}
+            </span>
+          </span>
+          <span>{doctor.specialization || "Specialisation not set"}</span>
+          {/* below the column layout: the facts in one quiet line (facts are text; pills are status) */}
+          <span className={`${adminStyles.pmuted} num`}>
+            <span>Reg. no. {doctor.registrationNo || "not set"}</span> ·{" "}
+            <a href={tel}>{spacedMobile(doctor.mobile)}</a> ·{" "}
+            <span>
+              {doctor.consultationFeeRupees === null
+                ? "No fee set"
+                : `Fee ${formatRupees(doctor.consultationFeeRupees)}`}
+            </span>{" "}
+            · <span>{hours}</span> ·{" "}
+            <span>
+              {upcoming} upcoming consultation{upcoming === 1 ? "" : "s"}
+            </span>
+          </span>
+        </span>
+      </span>
+      <span className={`${adminStyles.pcell} num`}>
+        {doctor.registrationNo || "Not set"}
+      </span>
+      <a className={`${adminStyles.pcell} num`} href={tel}>
+        {spacedMobile(doctor.mobile)}
+      </a>
+      <span className={`${adminStyles.pcell} num`}>
+        {doctor.consultationFeeRupees === null
+          ? "Not set"
+          : formatRupees(doctor.consultationFeeRupees)}
+      </span>
+      <span className={adminStyles.pcell}>{hours}</span>
+      <span className={`${adminStyles.pcell} num`}>{upcoming}</span>
+
+      {error && (
+        <div className={adminStyles.prowWide}>
+          <ErrorNotice message={error} />
+        </div>
+      )}
 
       {confirming ? (
-        <div className={adminStyles.confirm}>
+        <div className={`${adminStyles.confirm} ${adminStyles.prowWide}`}>
           <p>
             {doctor.active
               ? `Deactivate ${doctor.fullName}? Patients can no longer book them. Booked consultations stay; their open times are removed.`
@@ -127,7 +147,7 @@ export default function DoctorRow({
           </div>
         </div>
       ) : (
-        <div className={adminStyles.actions}>
+        <div className={`${adminStyles.actions} ${adminStyles.pactions}`}>
           <button
             type="button"
             className={adminStyles.textBtn}

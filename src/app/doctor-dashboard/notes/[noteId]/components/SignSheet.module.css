@@ -118,6 +118,12 @@
   font-weight: 560;
 }
 
+/* the time stamp steps back from the doctor's name */
+.sig > :global(.num) {
+  font-weight: 450;
+  color: var(--ink-3);
+}
+
 .sActions {
   display: flex;
   flex-wrap: wrap;

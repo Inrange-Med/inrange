@@ -60,6 +60,8 @@ export default function ConsultationRoom({
   }, [signedOut, signInHref, router]);
 
   const join = async () => {
+    // the pill keeps its colour while joining (no disabled), so a second tap is ignored here
+    if (joining) return;
     setJoining(true);
     setJoinError(null);
     try {

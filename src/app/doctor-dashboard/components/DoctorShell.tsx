@@ -12,7 +12,7 @@
 
   A loaded call note (/doctor-dashboard/notes/<id>) is a pushed screen: below a laptop it brings its
   own top and bottom bars and marks itself data-own-bars, so the shell's phone chrome steps aside
-  (DoctorShell.module.css). Its loading and error states keep the shell's bars.
+  (DoctorShell.module.css). Its loading and error states do the same, with a top bar of Back alone.
 */
 
 import { useEffect, type ReactNode } from "react";

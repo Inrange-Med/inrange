@@ -31,14 +31,13 @@ export default function PreJoin({
         <h2 id="prejoin-check-title" className={styles.prejoinTitle}>
           Camera and microphone
         </h2>
-        <DeviceCheck seenBy={seenBy} />
+        <DeviceCheck seenBy={seenBy} quiet />
       </section>
       {error && <ErrorNotice message={error} onRetry={onJoin} />}
       <button
         type="button"
         className={`btn ${formStyles.go}`}
         onClick={onJoin}
-        disabled={joining}
         data-busy={joining}
         aria-busy={joining}
       >

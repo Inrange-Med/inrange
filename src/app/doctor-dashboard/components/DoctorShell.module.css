@@ -145,6 +145,7 @@
   font-size: 0.8125rem;
   font-weight: 560;
   color: var(--ink-3);
+  white-space: nowrap;
   cursor: pointer;
   transition:
     background-color 180ms var(--ease-out),
@@ -160,6 +161,18 @@
   font-weight: 400;
 }
 
+.signOut svg {
+  flex: none;
+}
+/* the narrowest phones: the words alone, so the wordmark, the role chip and the avatar keep their room */
+@media (max-width: 389px) {
+  .signOut {
+    padding: 0 8px;
+  }
+  .signOut svg {
+    display: none;
+  }
+}
 .rail .signOut svg {
   display: none;
 }
@@ -312,8 +325,8 @@
 }
 
 /*
-  A pushed screen (a loaded call note, marked data-own-bars): below a laptop it brings its own top and
-  bottom bars, so the shell's step aside. Its loading and error states keep the shell's.
+  A pushed screen (a call note, marked data-own-bars): below a laptop it brings its own top and
+  bottom bars, so the shell's step aside. Its loading and error states bring a top bar with Back.
 */
 @media (max-width: 1023px) {
   .app:has([data-own-bars]) .top,

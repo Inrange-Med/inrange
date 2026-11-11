@@ -3,7 +3,6 @@
 /** /doctor-dashboard/notes: the scribe's drafts waiting to be signed, oldest first, and the last month's signed ones. */
 
 import ErrorNotice from "@/components/ui/ErrorNotice";
-import ClinicSkeleton from "@/app/doctor-dashboard/components/ClinicSkeleton";
 import PageHead from "@/components/ui/PageHead";
 import { useApiResource } from "@/hooks/useApiResource";
 import { listClinicalNotes } from "@/services/clinicalNoteService";
@@ -27,7 +26,18 @@ export default function NotesView() {
       {notes.error && !notes.data ? (
         <ErrorNotice message={notes.error} onRetry={notes.reload} />
       ) : notes.loading ? (
-        <ClinicSkeleton titled={false} />
+        <div className={styles.list} aria-busy="true" aria-label="Loading">
+          {[0, 1, 2, 3].map((row) => (
+            <span key={row} className={styles.ghostRow} aria-hidden="true">
+              <span className={styles.ghostFace} />
+              <span className={styles.ghostLines}>
+                <span style={{ width: "40%" }} />
+                <span style={{ width: "70%" }} />
+                <span style={{ width: "30%" }} />
+              </span>
+            </span>
+          ))}
+        </div>
       ) : notes.data ? (
         <NotesTabs notes={notes.data} snapshots={snapshots.data ?? []} />
       ) : (

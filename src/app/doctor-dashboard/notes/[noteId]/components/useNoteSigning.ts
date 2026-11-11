@@ -41,6 +41,8 @@ export function useNoteSigning({
 }) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [afterSigning, setAfterSigning] = useState<string | null>(null);
+  // true from the sheet's Sign until the call settles, so the Sign button can show it is working
+  const [signing, setSigning] = useState(false);
   const openSheet = useCallback(() => setSheetOpen(true), []);
   const closeSheet = useCallback(() => setSheetOpen(false), []);
 
@@ -53,6 +55,7 @@ export function useNoteSigning({
 
   const sign = (sendToApp: boolean) => {
     setSheetOpen(false);
+    setSigning(true);
     const hasText = sectionOf(note, "patient").current.length > 0;
     const at = queue.findIndex((queued) => queued.id === note.id);
     // the next note waiting after this one, else the first before it
@@ -68,7 +71,8 @@ export function useNoteSigning({
       })
       .catch((caught) =>
         toast(errorMessage(caught, "The note was not signed.")),
-      );
+      )
+      .finally(() => setSigning(false));
   };
 
   const addAddendum = async (text: string) => {
@@ -82,5 +86,13 @@ export function useNoteSigning({
     }
   };
 
-  return { sheetOpen, openSheet, closeSheet, sign, addAddendum, nextUp };
+  return {
+    sheetOpen,
+    openSheet,
+    closeSheet,
+    sign,
+    addAddendum,
+    nextUp,
+    signing,
+  };
 }

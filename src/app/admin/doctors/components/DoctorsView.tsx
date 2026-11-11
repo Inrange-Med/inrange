@@ -58,10 +58,10 @@ export default function DoctorsView() {
       ) : !doctors.data ? (
         <LoadingSkeleton />
       ) : (
-        <div className={adminStyles.stack}>
+        <div className={`${adminStyles.stack} ${adminStyles.stackWide}`}>
           {editing === "new" && (
             <section
-              className={adminStyles.panel}
+              className={`${adminStyles.panel} ${adminStyles.narrow}`}
               aria-labelledby="doctors-add-h"
             >
               <div className={adminStyles.panelHead}>
@@ -91,32 +91,43 @@ export default function DoctorsView() {
                 No doctors yet. Add the first one with Add a doctor.
               </p>
             ) : (
-              <ul className={adminStyles.list}>
-                {list.map((doctor) =>
-                  editing === doctor.id ? (
-                    <li
-                      key={doctor.id}
-                      className={`${adminStyles.item} ${adminStyles.editing}`}
-                    >
-                      <strong className={adminStyles.name}>
-                        Edit {doctor.fullName}
-                      </strong>
-                      <DoctorForm
+              <div className={adminStyles.roster}>
+                <div className={adminStyles.listHead} aria-hidden="true">
+                  <span>Doctor</span>
+                  <span>Reg. no.</span>
+                  <span>Mobile</span>
+                  <span>Fee</span>
+                  <span>Hours</span>
+                  <span>Upcoming</span>
+                  <span />
+                </div>
+                <ul className={adminStyles.plist}>
+                  {list.map((doctor) =>
+                    editing === doctor.id ? (
+                      <li
+                        key={doctor.id}
+                        className={`${adminStyles.item} ${adminStyles.editing}`}
+                      >
+                        <strong className={adminStyles.name}>
+                          Edit {doctor.fullName}
+                        </strong>
+                        <DoctorForm
+                          doctor={doctor}
+                          onSaved={saved}
+                          onCancel={() => setEditing(null)}
+                        />
+                      </li>
+                    ) : (
+                      <DoctorRow
+                        key={doctor.id}
                         doctor={doctor}
+                        onEdit={() => setEditing(doctor.id)}
                         onSaved={saved}
-                        onCancel={() => setEditing(null)}
                       />
-                    </li>
-                  ) : (
-                    <DoctorRow
-                      key={doctor.id}
-                      doctor={doctor}
-                      onEdit={() => setEditing(doctor.id)}
-                      onSaved={saved}
-                    />
-                  ),
-                )}
-              </ul>
+                    ),
+                  )}
+                </ul>
+              </div>
             )}
           </section>
         </div>

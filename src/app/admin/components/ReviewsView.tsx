@@ -7,7 +7,6 @@
   under way, so the team sees what is coming (their report joins Waiting by itself when it arrives).
 */
 
-import { CaretDown } from "@phosphor-icons/react";
 import { useState } from "react";
 import ErrorNotice from "@/components/ui/ErrorNotice";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
@@ -25,7 +24,6 @@ import type {
   EligibilityReview,
   ReviewDecision,
 } from "@/types/admin";
-import surfaceStyles from "@/components/ui/styles/CardSurface.module.css";
 import ReviewItem from "./ReviewItem";
 import adminStyles from "@/app/admin/styles/AdminSurfaces.module.css";
 
@@ -209,25 +207,32 @@ export default function ReviewsView() {
           )}
 
           {decided.length > 0 && (
-            <details className={`${adminStyles.history} ${surfaceStyles.card}`}>
-              <summary>
-                Recently decided
+            <section
+              className={adminStyles.panel}
+              aria-labelledby="reviews-decided-h"
+            >
+              <div className={adminStyles.panelHead}>
+                <h2 id="reviews-decided-h" className={adminStyles.h2}>
+                  Recently decided
+                </h2>
                 <span className={`${adminStyles.count} num`}>
                   {decided.length}
                 </span>
-                <CaretDown size={18} aria-hidden="true" />
-              </summary>
-              <ul className={adminStyles.queue}>
-                {decided.map((review) => (
-                  <ReviewItem
-                    key={review.patientId}
-                    review={review}
-                    now={now}
-                    onDecided={onDecided}
-                  />
-                ))}
-              </ul>
-            </details>
+              </div>
+              <details className={adminStyles.history}>
+                <summary className="num">Show {decided.length} decided</summary>
+                <ul className={adminStyles.queue}>
+                  {decided.map((review) => (
+                    <ReviewItem
+                      key={review.patientId}
+                      review={review}
+                      now={now}
+                      onDecided={onDecided}
+                    />
+                  ))}
+                </ul>
+              </details>
+            </section>
           )}
         </div>
       )}
