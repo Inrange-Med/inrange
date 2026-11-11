@@ -8,7 +8,13 @@
 */
 
 import { useState } from "react";
-import { ArrowSquareOut, FileText, Warning } from "@phosphor-icons/react";
+import {
+  ArrowRight,
+  ArrowSquareOut,
+  CheckCircle,
+  FileText,
+  Warning,
+} from "@phosphor-icons/react";
 import ErrorNotice from "@/components/ui/ErrorNotice";
 import FileOpenButton from "@/components/ui/FileOpenButton";
 import { useToast } from "@/components/ui/ToastProvider";
@@ -90,13 +96,13 @@ export default function ReviewItem({
   const showActions = waiting || changing;
 
   return (
-    <li className={adminStyles.item}>
+    <li className={adminStyles.review}>
       <div className={adminStyles.itemHead}>
         <strong className={adminStyles.name}>
           {review.name || "Name not given"}
         </strong>
         {waiting ? (
-          <span className={`${adminStyles.pill} num`} data-tone="pending">
+          <span className={`${adminStyles.when} num`}>
             Waiting {waitedFor(review.waitingSince, now)}
           </span>
         ) : (
@@ -177,15 +183,21 @@ export default function ReviewItem({
             <>
               <button
                 type="button"
-                className={`btn ${adminStyles.solid}`}
+                className="btn"
                 disabled={busy !== null}
                 data-busy={busy === "NOT_APPROVED"}
                 onClick={() => decide("NOT_APPROVED")}
               >
-                {busy === "NOT_APPROVED" && (
-                  <span className={formStyles.spin} aria-hidden="true" />
-                )}
-                {busy === "NOT_APPROVED" ? "Saving" : "Mark not approved"}
+                <span>
+                  {busy === "NOT_APPROVED" ? "Saving" : "Mark not approved"}
+                </span>
+                <span className="well" aria-hidden="true">
+                  {busy === "NOT_APPROVED" ? (
+                    <span className={formStyles.spin} />
+                  ) : (
+                    <ArrowRight size={18} />
+                  )}
+                </span>
               </button>
               <button
                 type="button"
@@ -204,15 +216,19 @@ export default function ReviewItem({
             <>
               <button
                 type="button"
-                className={`btn ${adminStyles.solid}`}
+                className="btn"
                 disabled={busy !== null}
                 data-busy={busy === "APPROVED"}
                 onClick={() => decide("APPROVED")}
               >
-                {busy === "APPROVED" && (
-                  <span className={formStyles.spin} aria-hidden="true" />
-                )}
-                {busy === "APPROVED" ? "Approving" : "Approve"}
+                <span>{busy === "APPROVED" ? "Approving" : "Approve"}</span>
+                <span className="well" aria-hidden="true">
+                  {busy === "APPROVED" ? (
+                    <span className={formStyles.spin} />
+                  ) : (
+                    <CheckCircle size={18} />
+                  )}
+                </span>
               </button>
               <button
                 type="button"

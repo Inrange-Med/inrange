@@ -46,7 +46,7 @@
   padding: 4px 8px;
   border-radius: 7px;
   background: var(--hover-wash);
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--slate-800);
 }
@@ -112,7 +112,7 @@
 }
 
 .me div span {
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   line-height: 1.35;
   color: var(--ink-3);
 }
@@ -129,7 +129,7 @@
   border-radius: 999px;
   background: none;
   font-family: inherit;
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   font-weight: 560;
   color: var(--ink-3);
   cursor: pointer;
@@ -138,15 +138,26 @@
     color 180ms var(--ease-out);
 }
 
+/* on the rail it is the prototype's .reset: a 36px line of small ink-3 text one rail gap under the name card */
 .rail .signOut {
-  align-self: center;
-  margin-top: -16px;
+  min-height: 36px;
+  padding: 0;
+  border-radius: 0;
+  font-weight: 400;
+}
+
+.rail .signOut svg {
+  display: none;
 }
 
 @media (hover: hover) and (pointer: fine) {
   .signOut:hover {
     background: var(--hover-wash);
     color: var(--ink);
+  }
+  .rail .signOut:hover {
+    background: none;
+    text-decoration: underline;
   }
 }
 
@@ -213,7 +224,7 @@
   gap: 2px;
   padding: 7px 0 6px;
   border-radius: 999px;
-  font-size: 0.8125rem;
+  font-size: 0.6875rem;
   font-weight: 560;
   color: var(--on-dark-3);
   text-decoration: none;
@@ -253,11 +264,10 @@
   outline-color: var(--signal-ink);
 }
 
-@media (min-width: 768px) {
-  .dock {
-    max-width: 280px;
-    margin-inline: auto;
-  }
+/* two places: a compact pill at every width, never stretched across the phone */
+.dock {
+  max-width: 280px;
+  margin-inline: auto;
 }
 
 /* the toast sits above the dock on a phone */

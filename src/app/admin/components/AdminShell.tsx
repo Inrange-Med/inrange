@@ -85,7 +85,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
               className={styles.brand}
               aria-label="inrange admin"
             >
-              <Wordmark height={24} />
+              <Wordmark height={34} />
               <span className={styles.portal}>Admin</span>
             </Link>
             <nav className={styles.nav} aria-label="Admin">
@@ -121,7 +121,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
               className={styles.brand}
               aria-label="inrange admin"
             >
-              <Wordmark height={22} />
+              <Wordmark height={34} />
               <span className={styles.portal}>Admin</span>
             </Link>
             <div className={styles.topMe}>

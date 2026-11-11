@@ -7,6 +7,7 @@
 */
 
 import { useState } from "react";
+import { ArrowCounterClockwise, Prohibit } from "@phosphor-icons/react";
 import ErrorNotice from "@/components/ui/ErrorNotice";
 import { useToast } from "@/components/ui/ToastProvider";
 import formStyles from "@/components/ui/styles/FormControls.module.css";
@@ -71,19 +72,18 @@ export default function DoctorRow({
           {spacedMobile(doctor.mobile)}
         </a>
       </p>
-      <div className={adminStyles.pills}>
-        <span className={`${adminStyles.pill} num`} data-tone="pending">
+      {/* facts are text in the portal; pills are kept for status */}
+      <p className={`${adminStyles.facts} ${adminStyles.factsQuiet}`}>
+        <span className="num">
           {doctor.consultationFeeRupees === null
             ? "No fee set"
             : `Fee ${formatRupees(doctor.consultationFeeRupees)}`}
         </span>
-        <span className={adminStyles.pill} data-tone="pending">
-          {doctor.usesDefaultHours ? "Default hours" : "Own hours"}
-        </span>
-        <span className={`${adminStyles.pill} num`} data-tone="pending">
+        <span>{doctor.usesDefaultHours ? "Default hours" : "Own hours"}</span>
+        <span className="num">
           {upcoming} upcoming consultation{upcoming === 1 ? "" : "s"}
         </span>
-      </div>
+      </p>
 
       {error && <ErrorNotice message={error} />}
 
@@ -97,13 +97,23 @@ export default function DoctorRow({
           <div className={adminStyles.actions}>
             <button
               type="button"
-              className={`btn ${adminStyles.solid}`}
+              className="btn"
               disabled={busy}
               data-busy={busy}
               onClick={toggleActive}
             >
-              {busy && <span className={formStyles.spin} aria-hidden="true" />}
-              {busy ? "Saving" : doctor.active ? "Deactivate" : "Reactivate"}
+              <span>
+                {busy ? "Saving" : doctor.active ? "Deactivate" : "Reactivate"}
+              </span>
+              <span className="well" aria-hidden="true">
+                {busy ? (
+                  <span className={formStyles.spin} />
+                ) : doctor.active ? (
+                  <Prohibit size={18} />
+                ) : (
+                  <ArrowCounterClockwise size={18} />
+                )}
+              </span>
             </button>
             <button
               type="button"
