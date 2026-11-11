@@ -22,7 +22,7 @@
   box-shadow: inset 0 0 0 2px var(--signal);
 }
 .phone[data-invalid="true"] {
-  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--alert) 72%, var(--paper));
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--alert) 38%, var(--paper));
 }
 .cc {
   position: relative;
@@ -141,6 +141,12 @@
   position: relative;
   color: var(--on-dark-2);
   text-underline-offset: 2px;
+}
+/* the base ring is ink, which vanishes on the dark plate */
+.legal a:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 2px;
+  border-radius: 7px;
 }
 @media (max-height: 600px) {
   .legal {

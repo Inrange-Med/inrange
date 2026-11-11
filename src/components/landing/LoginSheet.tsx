@@ -3,19 +3,23 @@
 /*
   The public site's sign-in: mobile number, then the 6-digit code, then the right home (a doctor's
   dashboard, onboarding for a new patient, else the patient dashboard). The flow and its calls are the
-  team's (authService, authSession); this file only gives it the site's look.
+  team's (authService, authSession); this file only gives it the site's look: the design repository's
+  sheet (a bottom sheet on phones, a centred panel from 768px) holding the /sign-in plate (the dark
+  plate with the isolines and the wordmark, the phone pill with its tick, the light action with its
+  arrow well, the six round code cells).
 
   It opens three ways: openLogin() from any button, the nav's "Sign in", and any link to ASSESSMENT_URL
   (every "Book consultation" on every public page). Without JavaScript those links still reach /assessment,
   which sends people to the /sign-in page.
 */
 
-import { ChangeEvent, FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { ChangeEvent, CSSProperties, FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { X } from "@phosphor-icons/react";
+import { ArrowLeft, ArrowRight, Check, WarningCircle, X } from "@phosphor-icons/react";
 import { sendOtp, verifyOtp } from "@/services/authService";
 import { homePathFor, saveSession } from "@/lib/session/authSession";
-import { ASSESSMENT_URL } from "./ui";
+import ContourField from "./ContourField";
+import { ASSESSMENT_URL, Wordmark } from "./ui";
 import s from "./LoginSheet.module.css";
 
 const OPEN_LOGIN_EVENT = "inrange:open-login";
@@ -201,6 +205,8 @@ export default function LoginSheet() {
 
   if (!loginOpen) return null;
 
+  const mobileReady = mobile.length === 10;
+
   return (
     <div
       className={s.overlay}
@@ -210,97 +216,143 @@ export default function LoginSheet() {
       }}
     >
       <div ref={panelRef} className={s.panel} role="dialog" aria-modal="true" aria-labelledby="auth-title">
-        <button type="button" className={s.close} aria-label="Close sign in" onClick={close} disabled={authLoading}>
-          <X size={18} weight="bold" />
-        </button>
-
-        <h2 id="auth-title" className={s.title}>
-          {authStep === "mobile" ? "Sign in or create an account" : "Enter the code"}
-        </h2>
-        <p className={s.lede}>
-          {authStep === "mobile" ? "Your mobile number is your account. We text you a code, no password." : `We sent a 6-digit code to +91 ${mobile}.`}
-        </p>
-
-        {authStep === "mobile" && (
-          <form className={s.form} onSubmit={handleSendOtp}>
-            <label htmlFor="login-mobile" className={s.label}>
-              Mobile number
-            </label>
-            <div className={s.field}>
-              <span className={s.prefix}>+91</span>
-              <input
-                ref={mobileRef}
-                id="login-mobile"
-                type="tel"
-                inputMode="numeric"
-                autoComplete="tel-national"
-                placeholder="98765 43210"
-                value={mobile}
-                onChange={handleMobileChange}
-                maxLength={10}
-                disabled={authLoading}
-                className={s.input}
-                aria-invalid={authError ? true : undefined}
-                aria-describedby={authError ? "login-error" : undefined}
-              />
-            </div>
-            {authError && (
-              <p id="login-error" className={s.error} role="alert">
-                {authError}
-              </p>
-            )}
-            <button type="submit" className={`btn ${s.go}`} disabled={authLoading || mobile.length !== 10}>
-              <span>{authLoading ? "Sending the code" : "Send code"}</span>
+        <ContourField className={s.field} density={10} lineAlpha={0.13} signalAlpha={0.42} seed={11} />
+        {/* back (on the code step), the wordmark, close: three columns so the wordmark stays dead centre */}
+        <div className={s.top}>
+          {authStep === "otp" ? (
+            <button type="button" className={s.round} onClick={handleBackToMobile} disabled={authLoading} aria-label="Change number">
+              <ArrowLeft size={18} />
             </button>
-            <p className={s.terms}>
-              By continuing you agree to the <a href="/terms">terms</a> and the <a href="/privacy">privacy policy</a>.
+          ) : (
+            <span className={s.slot} aria-hidden="true" />
+          )}
+          <span className={s.brand}>
+            <Wordmark height={34} />
+          </span>
+          <button type="button" className={s.round} aria-label="Close sign in" onClick={close} disabled={authLoading}>
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* each step arrives from the side it is going to: the code from the right, the number back from the left */}
+        <div key={authStep} className={s.step} style={{ "--dir": authStep === "mobile" && mobile ? -1 : 1 } as CSSProperties}>
+          <div className={s.head}>
+            <h2 id="auth-title" className={s.title}>
+              {authStep === "mobile" ? "Sign in or create an account" : "Enter the code"}
+            </h2>
+            <p className={s.lede}>
+              {authStep === "mobile" ? "Your mobile number is your account. We text you a code, no password." : `We sent a 6-digit code to +91 ${mobile}.`}
             </p>
-          </form>
-        )}
+          </div>
 
-        {authStep === "otp" && (
-          <form className={s.form} onSubmit={handleVerifyOtp}>
-            <label htmlFor="login-otp" className={s.label}>
-              6-digit code
-            </label>
-            <input
-              ref={otpRef}
-              id="login-otp"
-              type="text"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              placeholder="000000"
-              value={otp}
-              onChange={handleOtpChange}
-              maxLength={6}
-              disabled={authLoading}
-              className={`${s.input} ${s.code}`}
-              aria-invalid={authError ? true : undefined}
-              aria-describedby={authError ? "login-error" : authMessage ? "login-note" : undefined}
-            />
-            {authMessage && (
-              <p id="login-note" className={s.note} role="status">
-                {authMessage}
-              </p>
-            )}
-            {authError && (
-              <p id="login-error" className={s.error} role="alert">
-                {authError}
-              </p>
-            )}
-            <button type="submit" className={`btn ${s.go}`} disabled={authLoading || otp.length !== 6}>
-              <span>{authLoading ? "Checking" : "Continue"}</span>
-            </button>
-            <div className={s.links}>
-              <button type="button" onClick={handleBackToMobile} disabled={authLoading}>
-                Change number
+          {authStep === "mobile" && (
+            <form className={s.form} onSubmit={handleSendOtp}>
+              <div className={s.fieldGroup}>
+                <label htmlFor="login-mobile" className={s.label}>
+                  Mobile number
+                </label>
+                <div className={s.phone} data-invalid={!!authError}>
+                  <span className={s.prefix}>+91</span>
+                  <input
+                    ref={mobileRef}
+                    id="login-mobile"
+                    type="tel"
+                    inputMode="numeric"
+                    autoComplete="tel-national"
+                    placeholder="98765 43210"
+                    value={mobile}
+                    onChange={handleMobileChange}
+                    maxLength={10}
+                    disabled={authLoading}
+                    className={s.input}
+                    aria-invalid={authError ? true : undefined}
+                    aria-describedby={authError ? "login-error" : undefined}
+                  />
+                  <span className={s.tick} data-on={mobileReady} aria-hidden="true">
+                    <Check size={14} weight="bold" />
+                  </span>
+                </div>
+                {authError && (
+                  <p id="login-error" className={`${s.error} ${s.fieldError}`} role="alert">
+                    <WarningCircle size={16} aria-hidden="true" />
+                    {authError}
+                  </p>
+                )}
+              </div>
+              <div className={s.actions}>
+                <button type="submit" className={`btn btn--signal ${s.go}`} disabled={authLoading || mobile.length !== 10} data-busy={authLoading}>
+                  <span>{authLoading ? "Sending the code" : "Send code"}</span>
+                  <span className="well" aria-hidden="true">
+                    {authLoading ? <i className={s.spin} /> : <ArrowRight size={18} />}
+                  </span>
+                </button>
+                <p className={s.terms}>
+                  By continuing you agree to the <a href="/terms">terms</a> and the <a href="/privacy">privacy policy</a>.
+                </p>
+              </div>
+            </form>
+          )}
+
+          {authStep === "otp" && (
+            <form className={s.form} onSubmit={handleVerifyOtp}>
+              <div className={s.codeGroup}>
+                <label htmlFor="login-otp" className={s.label}>
+                  6-digit code
+                </label>
+                <div className={s.otp} data-state={authError ? "err" : undefined}>
+                  <input
+                    ref={otpRef}
+                    id="login-otp"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    placeholder="000000"
+                    value={otp}
+                    onChange={handleOtpChange}
+                    maxLength={6}
+                    disabled={authLoading}
+                    className={`${s.input} ${s.code}`}
+                    aria-invalid={authError ? true : undefined}
+                    aria-describedby={authError ? "login-error" : authMessage ? "login-note" : undefined}
+                  />
+                  {[0, 1, 2, 3, 4, 5].map((i) => {
+                    const active = !authLoading && otp.length < 6 && i === otp.length;
+                    return (
+                      <span key={i} className={s.cell} data-filled={i < otp.length} data-active={active} aria-hidden="true">
+                        <span key={otp[i] ?? ""} className={`${s.digit} num`}>
+                          {otp[i]}
+                        </span>
+                        {active && <i className={s.caret} />}
+                      </span>
+                    );
+                  })}
+                </div>
+                {authMessage && (
+                  <p id="login-note" className={s.note} role="status">
+                    {authMessage}
+                  </p>
+                )}
+                {authError && (
+                  <p id="login-error" className={s.error} role="alert">
+                    <WarningCircle size={16} aria-hidden="true" />
+                    {authError}
+                  </p>
+                )}
+              </div>
+              <button type="submit" className={`btn btn--signal ${s.go}`} disabled={authLoading || otp.length !== 6} data-busy={authLoading}>
+                <span>{authLoading ? "Checking" : "Continue"}</span>
+                <span className="well" aria-hidden="true">
+                  {authLoading ? <i className={s.spin} /> : <ArrowRight size={18} />}
+                </span>
               </button>
-              <button type="button" onClick={handleResendOtp} disabled={authLoading}>
-                Send a new code
-              </button>
-            </div>
-          </form>
-        )}
+              <div className={s.links}>
+                <button type="button" onClick={handleResendOtp} disabled={authLoading}>
+                  Send a new code
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
       </div>
     </div>
   );

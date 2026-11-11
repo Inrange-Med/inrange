@@ -1,228 +1,81 @@
 /*
-  The sign-in sheet: a bottom sheet on phones, a centred panel from 640px. Paper, the site's pill
-  fields and the one full-width action, the same parts as the signed-in screens.
+  The sign-in sheet, in the design repository's parts: its Sheet shell (account/Sheet.module.css: a
+  bottom sheet that rises on phones, a centred panel that settles in from 768px, the 0.42 scrim with no
+  blur) holding the /sign-in plate (account/AuthFlow.module.css, carried in the app as SignInPage,
+  PhoneStep and CodeStep: the slate plate with the isolines, the back / wordmark / close row, the paper
+  phone pill with its tick, the light action with its arrow well, six round code cells). The landing
+  page does not render inside .app-theme, so everything here reads the site tokens in globals.css.
 */
 
+/* ---------- the shell ---------- */
 .overlay {
   position: fixed;
   inset: 0;
   z-index: 200;
   display: grid;
   align-items: end;
-  background: rgb(10 11 10 / 0.46);
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
-  animation: fade 220ms var(--ease-out);
+}
+/* the scrim: a plain dim of the page, no blur (blur only on fixed chrome) */
+.overlay::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgb(10 11 12 / 0.42);
+  animation: fade 360ms var(--ease-out) both;
 }
 
+/* a phone: the plate rises from the bottom edge, where the thumb is */
 .panel {
   position: relative;
+  isolation: isolate;
+  display: grid;
+  gap: clamp(12px, 3vh, 28px);
   width: 100%;
-  max-height: calc(100dvh - 24px);
+  max-height: calc(100vh - 48px - env(safe-area-inset-top));
+  max-height: calc(100dvh - 48px - env(safe-area-inset-top));
+  overflow-x: hidden;
   overflow-y: auto;
-  padding: 32px var(--gutter) max(28px, env(safe-area-inset-bottom));
+  overscroll-behavior: contain;
+  padding: clamp(12px, 2.2vh, 22px) clamp(16px, 4.6vw, 32px)
+    calc(clamp(18px, 3.6vh, 36px) + env(safe-area-inset-bottom));
   border-radius: var(--r-surface) var(--r-surface) 0 0;
-  background: var(--paper);
-  color: var(--ink);
-  box-shadow: 0 -20px 60px -30px rgb(0 0 0 / 0.5);
-  animation: rise 420ms var(--ease-drawer);
+  background: var(--slate-950);
+  color: var(--on-dark);
+  text-align: center;
+  box-shadow: 0 -18px 48px -24px rgb(10 11 12 / 0.4);
+  animation: rise 480ms var(--ease-drawer) both;
 }
-
-.close {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--bg);
-  color: var(--ink-2);
-  cursor: pointer;
-  transition: background-color 180ms var(--ease-out), color 180ms var(--ease-out);
-}
-@media (hover: hover) and (pointer: fine) {
-  .close:hover {
-    background: var(--bg-2);
-    color: var(--ink);
-  }
-}
-.close:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-.title {
-  max-width: calc(100% - 48px);
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: 1.625rem;
-  font-weight: 500;
-  line-height: 1.15;
-  letter-spacing: -0.02em;
-}
-.lede {
-  margin: 10px 0 0;
-  font-size: 0.9375rem;
-  line-height: 1.5;
-  color: var(--ink-2);
-}
-
-.form {
-  display: grid;
-  gap: 10px;
-  margin-top: 28px;
-}
-.label {
-  font-size: 0.875rem;
-  font-weight: 560;
-}
-
-/* a pill field: paper, one hairline, a firmer line while typing; +91 sits inside it */
 .field {
-  display: flex;
-  align-items: center;
-  min-height: 56px;
-  padding-left: 22px;
-  border-radius: 999px;
-  background: var(--paper);
-  box-shadow: inset 0 0 0 1px var(--hair-2);
-  transition: box-shadow 180ms var(--ease-out);
-}
-.field:focus-within {
-  box-shadow: inset 0 0 0 1.5px var(--ink);
-}
-.prefix {
-  padding-right: 12px;
-  margin-right: 2px;
-  border-right: 1px solid var(--hair);
-  font-size: 1.0625rem;
-  color: var(--ink-2);
-  font-variant-numeric: tabular-nums;
-}
-.input {
+  position: absolute;
+  inset: 0;
   width: 100%;
-  min-width: 0;
-  min-height: 56px;
-  padding: 0 22px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--paper);
-  box-shadow: inset 0 0 0 1px var(--hair-2);
-  font: inherit;
-  font-size: 1.0625rem;
-  color: var(--ink);
-  font-variant-numeric: tabular-nums;
-  -webkit-appearance: none;
-  appearance: none;
-  transition: box-shadow 180ms var(--ease-out);
+  height: 100%;
+  z-index: -1;
 }
-.field .input {
-  padding-left: 12px;
-  background: transparent;
-  box-shadow: none;
-}
-.input::placeholder {
-  color: color-mix(in srgb, var(--ink-3) 70%, transparent);
-}
-.input:focus,
-.input:focus-visible {
-  outline: none;
-}
-.input:not(.field .input):focus {
-  box-shadow: inset 0 0 0 1.5px var(--ink);
-}
-.input[aria-invalid="true"],
-.field:has(.input[aria-invalid="true"]) {
-  box-shadow: inset 0 0 0 1.5px var(--alert);
-}
-.field .input[aria-invalid="true"] {
-  box-shadow: none;
-}
-.code {
-  text-align: center;
-  font-size: 1.5rem;
-  letter-spacing: 0.4em;
-  padding-left: calc(22px + 0.4em);
+/* every focus ring on the plate is the light signal; the site's ink ring would vanish on slate */
+.panel :focus-visible {
+  outline-color: var(--signal);
 }
 
-.note,
-.error {
-  margin: 2px 0 0;
-  font-size: 0.875rem;
-  line-height: 1.45;
-}
-.note {
-  color: var(--ink-2);
-}
-.error {
-  color: var(--alert);
-}
-
-/* the one action: the site's pill, stretched */
-.go {
-  justify-content: center;
-  width: 100%;
-  min-height: 56px;
-  margin-top: 10px;
-  font-size: 1rem;
-}
-.go:disabled {
-  opacity: 0.42;
-  cursor: default;
-  transform: none;
-}
-
-.terms {
-  margin: 6px 0 0;
-  font-size: 0.8125rem;
-  line-height: 1.5;
-  color: var(--ink-3);
-  text-align: center;
-}
-.terms a {
-  color: var(--ink-2);
-}
-
-.links {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  margin-top: 6px;
-}
-.links button {
-  min-height: 44px;
-  padding: 0;
-  border: 0;
-  background: none;
-  font: inherit;
-  font-size: 0.875rem;
-  font-weight: 560;
-  color: var(--ink-2);
-  text-decoration: underline;
-  text-decoration-color: var(--hair-2);
-  text-underline-offset: 0.25em;
-  cursor: pointer;
-}
-.links button:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-@media (min-width: 640px) {
+/* a laptop: the plate settles into the middle of the screen */
+@media (min-width: 768px) {
   .overlay {
     align-items: center;
     justify-items: center;
     padding: 24px;
   }
   .panel {
-    width: min(440px, 100%);
-    padding: 40px 36px 36px;
+    width: min(460px, 100%);
+    max-height: min(820px, calc(100vh - 48px));
+    max-height: min(820px, calc(100dvh - 48px));
+    padding-bottom: clamp(18px, 3.6vh, 36px);
     border-radius: var(--r-surface);
-    box-shadow: 0 30px 80px -30px rgb(0 0 0 / 0.55);
-    animation: pop 320ms var(--ease-out);
+    box-shadow:
+      0 30px 60px -30px rgb(10 11 12 / 0.45),
+      0 0 0 1px rgb(10 11 12 / 0.04);
+    animation:
+      settle 320ms var(--ease-out) both,
+      fade 220ms var(--ease-out) both;
   }
 }
 
@@ -233,18 +86,553 @@
 }
 @keyframes rise {
   from {
-    transform: translateY(100%);
+    transform: translate3d(0, 100%, 0);
   }
+}
+@keyframes settle {
+  from {
+    transform: translate3d(0, 12px, 0) scale(0.98);
+  }
+}
+
+/* ---------- the plate's top row ---------- */
+/* back (on the code step), the wordmark, close: three columns so the wordmark stays dead centre */
+.top {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  align-items: center;
+  justify-items: center;
+}
+.slot {
+  width: 44px;
+  height: 44px;
+}
+/* the wordmark is ink or paper only, never the accent */
+.brand {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--paper);
+}
+.round {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgb(236 237 239 / 0.08);
+  color: var(--on-dark);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform 160ms var(--ease-out),
+    background-color 200ms var(--ease-out),
+    opacity 200ms var(--ease-out);
+}
+.round:active:not(:disabled) {
+  transform: scale(0.94);
+}
+@media (hover: hover) and (pointer: fine) {
+  .round:not(:disabled):hover {
+    background: rgb(236 237 239 / 0.14);
+  }
+}
+.round:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 2px;
+}
+.round:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* ---------- a step ---------- */
+/* each step arrives from the side it is going to, and leaves nothing behind */
+.step {
+  display: grid;
+  gap: clamp(14px, 2.8vh, 24px);
+  width: 100%;
+  min-width: 0;
+  animation: arrive 460ms var(--ease-out) both;
+}
+@keyframes arrive {
+  from {
+    opacity: 0;
+    transform: translate3d(calc(var(--dir, 1) * 28px), 0, 0);
+  }
+}
+
+.head {
+  display: grid;
+  gap: clamp(6px, 1.2vh, 10px);
+  justify-items: center;
+}
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: min(clamp(1.75rem, 1.5rem + 1vw, 2.375rem), 5.2vh);
+  line-height: 1.06;
+  letter-spacing: -0.022em;
+  text-wrap: balance;
+  color: var(--on-dark);
+}
+.lede {
+  max-width: 34ch;
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--on-dark-2);
+  text-wrap: pretty;
+}
+
+.form {
+  display: grid;
+  gap: clamp(14px, 2.8vh, 24px);
+  min-width: 0;
+}
+.fieldGroup {
+  display: grid;
+  gap: 8px;
+  text-align: left;
+}
+.label {
+  padding-left: 22px;
+  font-size: 0.875rem;
+  font-weight: 560;
+  color: var(--on-dark-2);
+}
+
+/* ---------- the phone pill ---------- */
+/* on the dark plate the pill is paper; focus is a light ring, the plate's signal colour */
+.phone {
+  display: flex;
+  align-items: center;
+  min-height: clamp(52px, 8vh, 58px);
+  border-radius: 999px;
+  background: var(--paper);
+  box-shadow: none;
+  color: var(--ink);
+  transition: box-shadow 180ms var(--ease-out);
+}
+/* the ring is drawn inside the pill, so its edges line up with the action under it */
+.phone:focus-within {
+  box-shadow: inset 0 0 0 2px var(--signal);
+}
+.phone[data-invalid="true"] {
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--alert) 38%, var(--paper));
+}
+.prefix {
+  position: relative;
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  padding: 0 14px 0 22px;
+  font-size: 1.0625rem;
+  font-weight: 560;
+  font-variant-numeric: tabular-nums;
+}
+/* a hairline divider, inset from the pill's edges */
+.prefix::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 16px;
+  bottom: 16px;
+  width: 1px;
+  background: var(--hair-2);
+}
+.phone .input {
+  flex: 1;
+  width: 0;
+  min-width: 0;
+  height: clamp(52px, 8vh, 58px);
+  padding: 0 12px 0 16px;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--ink);
+  font-size: 1.1875rem;
+  letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.phone .input:focus,
+.phone .input:focus-visible {
+  outline: none;
+}
+.phone .input::placeholder {
+  color: color-mix(in srgb, var(--ink-3) 60%, transparent);
+}
+.phone .input:disabled {
+  opacity: 1;
+  color: var(--ink);
+  -webkit-text-fill-color: var(--ink);
+}
+/* a small tick the moment the number is complete */
+.tick {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  margin-right: 16px;
+  border-radius: 999px;
+  background: var(--signal-wash);
+  color: var(--signal-ink);
+  opacity: 0;
+  transform: scale(0.6);
+  transition:
+    opacity 180ms var(--ease-out),
+    transform 320ms var(--ease-out);
+}
+.tick[data-on="true"] {
+  opacity: 1;
+  transform: none;
+}
+/* a narrow phone: tighter insets and a step smaller (never under 16px, so iOS does not zoom) */
+@media (max-width: 359px) {
+  .prefix {
+    padding: 0 10px 0 18px;
+  }
+  .phone .input {
+    padding: 0 8px 0 12px;
+    font-size: 1.0625rem;
+  }
+  .tick {
+    width: 24px;
+    height: 24px;
+    margin-right: 12px;
+  }
+}
+
+/* the alert colour lifted towards paper, so an error still reads on the dark plate */
+.error {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  justify-content: center;
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: color-mix(in srgb, var(--alert) 38%, var(--paper));
+  animation: fade 200ms var(--ease-out) both;
+}
+.fieldError {
+  justify-content: flex-start;
+  padding-left: 22px;
+}
+.error svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+/* ---------- the action: the light pill with its arrow well ---------- */
+.actions {
+  display: grid;
+  gap: 10px;
+}
+.panel .go {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-height: clamp(52px, 8vh, 56px);
+  justify-content: space-between;
+  font-size: 1rem;
+  line-height: 1.25;
+  white-space: normal;
+  text-align: left;
+  transition:
+    transform 160ms var(--ease-out),
+    background-color 240ms var(--ease-out),
+    color 240ms var(--ease-out);
+}
+.go > span:first-child {
+  min-width: 0;
+  overflow-wrap: break-word;
+  text-wrap: balance;
+}
+.go :global(.well) {
+  flex: none;
+  transition:
+    transform 320ms var(--ease-out),
+    background-color 240ms var(--ease-out),
+    color 240ms var(--ease-out);
+}
+/* not ready yet (the number or the code is short): the plate's quiet tokens, never a dimmed pill */
+.go:disabled:not([data-busy="true"]) {
+  --btn-bg: rgb(236 237 239 / 0.1);
+  --btn-fg: var(--on-dark-2);
+  --well-bg: rgb(236 237 239 / 0.08);
+  --well-fg: var(--on-dark-2);
+  box-shadow: none;
+}
+.go:disabled {
+  cursor: default;
+}
+.go:disabled:active {
+  transform: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  .go:disabled:not([data-busy="true"]):hover {
+    --btn-bg: rgb(236 237 239 / 0.1);
+  }
+  .go:disabled:hover :global(.well) {
+    transform: none;
+  }
+}
+.go:focus-visible {
+  outline: 2px solid var(--signal-soft);
+  outline-offset: 3px;
+}
+/* waiting: a short arc turning inside the button's well */
+.spin {
+  display: block;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1.75px solid currentColor;
+  border-right-color: transparent;
+  animation: turn 700ms linear infinite;
+}
+@keyframes turn {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+.terms {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--on-dark-3);
+}
+/* links inside the sentence keep their size but take a 44px tap target */
+.terms a {
+  position: relative;
+  color: var(--on-dark-2);
+  text-underline-offset: 2px;
+}
+.terms a::after {
+  content: "";
+  position: absolute;
+  inset: -14px -6px;
+}
+.terms a:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 2px;
+  border-radius: 7px;
+}
+
+/* ---------- the code: one real input over six round cells ---------- */
+.codeGroup {
+  display: grid;
+  gap: 14px;
+}
+.codeGroup .label {
+  padding-left: 0;
+}
+.otp {
+  position: relative;
+  justify-self: center;
+  display: grid;
+  --c: min(54px, 11.5vw, 8vh);
+  grid-template-columns: repeat(6, var(--c));
+  gap: clamp(6px, 2vw, 10px);
+  width: fit-content;
+}
+/* the input covers the cells, so taps, paste and the keyboard's code suggestion all land in it */
+.otp .code {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  caret-color: transparent;
+  font-size: 16px;
+  letter-spacing: -0.5em;
+  cursor: text;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.otp .code:focus,
+.otp .code:focus-visible {
+  outline: none;
+}
+.otp .code::placeholder {
+  color: transparent;
+}
+.otp .code::selection {
+  background: transparent;
+}
+.cell {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: var(--c);
+  border-radius: 999px;
+  background: var(--paper);
+  box-shadow: inset 0 0 0 1px var(--hair-2);
+  color: var(--ink);
+  transition:
+    box-shadow 180ms var(--ease-out),
+    background-color 260ms var(--ease-out);
+}
+.cell[data-filled="true"] {
+  box-shadow: inset 0 0 0 1px var(--ink-3);
+}
+/* where the next digit goes: the same light ring as the focused phone pill */
+.otp:focus-within .cell[data-active="true"] {
+  box-shadow:
+    0 0 0 2px var(--signal),
+    inset 0 0 0 1px var(--hair-2);
+}
+.digit {
+  font-family: var(--font-display);
+  /* six cells are smaller than the prototype's four on a phone; the digit keeps the same share */
+  font-size: min(1.75rem, calc(var(--c) * 0.52));
+  font-weight: 520;
+  letter-spacing: -0.02em;
+}
+.digit:not(:empty) {
+  animation: pop 260ms var(--ease-out) both;
 }
 @keyframes pop {
   from {
     opacity: 0;
-    transform: translateY(12px) scale(0.98);
+    transform: translateY(6px) scale(0.9);
   }
 }
+.caret {
+  position: absolute;
+  width: 2px;
+  height: min(24px, calc(var(--c) * 0.45));
+  border-radius: 2px;
+  background: var(--ink);
+  opacity: 0;
+}
+.otp:focus-within .caret {
+  animation: blink 1100ms var(--ease-out) infinite;
+}
+@keyframes blink {
+  0%,
+  45% {
+    opacity: 1;
+  }
+  55%,
+  100% {
+    opacity: 0;
+  }
+}
+/* a wrong code turns every cell red, including the one with focus, and the row shakes once */
+.otp[data-state="err"] {
+  animation: shake 380ms var(--ease-out);
+}
+.otp[data-state="err"] .cell {
+  box-shadow: inset 0 0 0 1.5px var(--alert);
+}
+.otp[data-state="err"] .cell[data-active="true"] {
+  box-shadow: inset 0 0 0 2px var(--alert);
+}
+@keyframes shake {
+  20% {
+    transform: translateX(-7px);
+  }
+  40% {
+    transform: translateX(6px);
+  }
+  60% {
+    transform: translateX(-4px);
+  }
+  80% {
+    transform: translateX(2px);
+  }
+}
+.note {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--on-dark-2);
+}
+
+/* the resend line: a quiet text action on the plate */
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0 24px;
+  min-height: 44px;
+  margin-top: -8px;
+}
+.links button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 0.9375rem;
+  font-weight: 560;
+  color: var(--signal-soft);
+  text-decoration: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.links button:disabled {
+  color: var(--on-dark-3);
+  font-weight: 450;
+  cursor: default;
+}
+@media (hover: hover) and (pointer: fine) {
+  .links button:not(:disabled):hover {
+    text-decoration: underline;
+  }
+}
+.links button:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 2px;
+  border-radius: 7px;
+}
+
+/* very short screens: the gaps close up before anything is hidden */
+@media (max-height: 600px) {
+  .lede {
+    font-size: 0.875rem;
+  }
+  .terms {
+    line-height: 1.4;
+  }
+}
+
+/* reduced motion: the scrim and the plate fade, nothing travels */
 @media (prefers-reduced-motion: reduce) {
-  .overlay,
-  .panel {
+  .overlay::before {
+    animation-duration: 200ms;
+  }
+  .panel,
+  .step {
+    animation: fade 200ms var(--ease-out) both;
+  }
+  .otp[data-state="err"],
+  .digit:not(:empty) {
     animation: none;
+  }
+  .otp:focus-within .caret {
+    animation: none;
+    opacity: 1;
+  }
+  .spin {
+    animation-duration: 1600ms;
   }
 }

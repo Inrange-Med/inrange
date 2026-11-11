@@ -109,7 +109,7 @@
   align-items: center;
   min-height: 44px;
   /* the wordmark is ink or paper only, never the accent */
-  color: var(--on-dark);
+  color: var(--paper);
 }
 .brand:focus-visible {
   outline: 2px solid var(--signal);
@@ -206,7 +206,7 @@
   justify-content: center;
   font-size: 0.875rem;
   line-height: 1.45;
-  color: color-mix(in srgb, var(--alert) 72%, var(--paper));
+  color: color-mix(in srgb, var(--alert) 38%, var(--paper));
 }
 .field2 .err {
   justify-content: flex-start;
