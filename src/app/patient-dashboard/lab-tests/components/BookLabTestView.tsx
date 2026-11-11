@@ -45,21 +45,28 @@ export default function BookLabTestView() {
 
   return (
     <main className={`${layoutStyles.page} ${layoutStyles.narrow}`}>
-      {flow.isFirstStep ? (
-        <BackLink href="/patient-dashboard/lab-tests" label="Blood tests" />
-      ) : (
-        <button type="button" className={backControlClass} onClick={flow.back}>
-          <ArrowLeft size={14} weight="bold" aria-hidden="true" /> Back
-        </button>
-      )}
-      <PageHead
-        title={flow.title}
-        sub={
-          <span className="num">
-            Step {flow.stepNumber} of {flow.stepCount}
-          </span>
-        }
-      />
+      {/* the back control and the heading as one head: 6px between them, as PageHead lays out its own */}
+      <div className={styles.head}>
+        {flow.isFirstStep ? (
+          <BackLink href="/patient-dashboard/lab-tests" label="Blood tests" />
+        ) : (
+          <button
+            type="button"
+            className={backControlClass}
+            onClick={flow.back}
+          >
+            <ArrowLeft size={14} weight="bold" aria-hidden="true" /> Back
+          </button>
+        )}
+        <PageHead
+          title={flow.title}
+          sub={
+            <span className="num">
+              Step {flow.stepNumber} of {flow.stepCount}
+            </span>
+          }
+        />
+      </div>
       {flow.isFirstStep && booked && (
         <Link href={bookingPage(booked)} className={styles.alreadyBooked}>
           <span>

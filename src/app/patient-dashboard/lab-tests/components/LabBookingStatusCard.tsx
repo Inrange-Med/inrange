@@ -77,7 +77,7 @@ export default function LabBookingStatusCard({
           </p>
           <Link
             href={labCheckoutHref(booking)}
-            className={`btn ${formStyles.go}`}
+            className={`btn ${formStyles.go} ${styles.cta}`}
           >
             <span>Pay {formatRupees(booking.price.total)} and book</span>
             <span className="well" aria-hidden="true">
@@ -158,11 +158,11 @@ export default function LabBookingStatusCard({
         <div className={styles.actions}>
           {/* an action that is not possible is not shown; the line under it says why */}
           {(blocked === null || booking.canCancel) && (
-            <div className={styles.pair}>
+            <div className={styles.pillRow}>
               {blocked === null && (
                 <button
                   type="button"
-                  className={`btn btn--ghost ${styles.pill}`}
+                  className={`btn btn--ghost ${styles.pillSm}`}
                   onClick={onChangeTime}
                 >
                   Change time
@@ -171,7 +171,7 @@ export default function LabBookingStatusCard({
               {booking.canCancel && (
                 <button
                   type="button"
-                  className={`btn btn--ghost ${styles.pill}`}
+                  className={`btn btn--ghost ${styles.pillSm}`}
                   onClick={onCancel}
                 >
                   Cancel test

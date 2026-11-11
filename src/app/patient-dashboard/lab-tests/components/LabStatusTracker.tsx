@@ -30,5 +30,11 @@ export default function LabStatusTracker({
 }) {
   const index = STEP_OF[status];
   if (index === undefined) return null;
-  return <StatusTracker steps={LAB_STEPS} currentIndex={index} />;
+  return (
+    <StatusTracker
+      steps={LAB_STEPS}
+      currentIndex={index}
+      label="Blood test status"
+    />
+  );
 }

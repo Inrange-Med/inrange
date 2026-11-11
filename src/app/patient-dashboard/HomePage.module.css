@@ -524,3 +524,41 @@
       "weight dose";
   }
 }
+
+/* a paid home blood test under way (OngoingLabCard on Home): one of Home's cards, with its own place
+   in the laptop grid (without one, the grid dropped it beside the greeting) */
+.labText {
+  font-size: 0.9375rem;
+  line-height: 1.4;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+.labActions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  margin-top: calc(var(--g) * 0.2);
+}
+.labActions > :global(.btn) {
+  flex: 1;
+}
+@media (min-width: 1024px) {
+  .card.lab {
+    grid-area: lab;
+  }
+  .home:has(> .lab) {
+    grid-template-areas:
+      "hello ."
+      "weight strip"
+      "weight lab"
+      "weight dose";
+    grid-template-rows: auto auto auto minmax(0, 1fr);
+  }
+  .home.withStatus:has(> .lab) {
+    grid-template-areas:
+      "hello ."
+      "weight lab"
+      "weight dose";
+    grid-template-rows: auto auto minmax(0, 1fr);
+  }
+}

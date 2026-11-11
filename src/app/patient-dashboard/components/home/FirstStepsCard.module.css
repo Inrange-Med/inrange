@@ -100,11 +100,30 @@
   }
 }
 
-/* a link inside a step of a card that is itself a link: it sits above the card's own link */
+/* a link inside a step of a card that is itself a link: it sits above the card's own link, never
+   underlined (Arhaan Home: nothing on Home is underlined), with a 44px target that adds no height */
 .stepLink {
   position: relative;
   z-index: 1;
+  display: inline-block;
+  padding-block: 10px;
+  margin-block: -10px;
   color: inherit;
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  text-decoration: none;
+}
+.stepCaret {
+  margin-left: 2px;
+  vertical-align: -2px;
+  color: var(--slate-700);
+}
+/* the inline way in under a step: Arhaan Home .metaLink */
+.stepDetail .stepLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 44px;
+  padding-block: 0;
+  margin-block: -11.5px;
+  font-weight: 600;
+  color: var(--slate-800);
 }

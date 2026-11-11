@@ -10,7 +10,7 @@
 
 import { useCallback } from "react";
 import ErrorNotice from "@/components/ui/ErrorNotice";
-import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
+import PageGhosts from "@/app/patient-dashboard/components/PageGhosts";
 import { useToast } from "@/components/ui/ToastProvider";
 import { useApiResource } from "@/hooks/useApiResource";
 import { useNow } from "@/hooks/useNow";
@@ -96,7 +96,7 @@ export default function HomeView() {
         {home.error ? (
           <ErrorNotice message={home.error} onRetry={reload} />
         ) : (
-          <LoadingSkeleton />
+          <PageGhosts title heights={[120, 180]} />
         )}
       </main>
     );
@@ -120,7 +120,12 @@ export default function HomeView() {
         !(status && b.id === data.labBooking?.id),
     ) ?? null;
   const labCard = labUnderWay && (
-    <OngoingLabCard booking={labUnderWay} now={now} />
+    <OngoingLabCard
+      booking={labUnderWay}
+      now={now}
+      onHome
+      className={styles.lab}
+    />
   );
   // one filled button per screen: when the next step is a dark "do this", logging steps back
   const nextStepIsAction = status ? Boolean(status.action?.filled) : !upcoming;

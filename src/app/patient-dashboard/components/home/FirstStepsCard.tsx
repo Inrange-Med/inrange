@@ -44,6 +44,7 @@ export default function FirstStepsCard({
       detail: (
         <Link href="/patient-dashboard/reports" className={styles.stepLink}>
           Or upload a recent report
+          <CaretRight size={14} aria-hidden="true" />
         </Link>
       ),
     },
@@ -85,6 +86,11 @@ export default function FirstStepsCard({
               {step.href ? (
                 <Link href={step.href} className={styles.stepLink}>
                   {step.label}
+                  <CaretRight
+                    size={14}
+                    aria-hidden="true"
+                    className={styles.stepCaret}
+                  />
                 </Link>
               ) : (
                 step.label

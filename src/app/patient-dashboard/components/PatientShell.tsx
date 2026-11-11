@@ -120,17 +120,21 @@ export default function PatientShell({ children }: { children: ReactNode }) {
 
   return (
     <AppTheme>
-      <ToastProvider className={bare ? styles.toastChat : styles.toastUp}>
+      <ToastProvider
+        className={bare ? styles.toastChat : tabs ? styles.toastUp : ""}
+      >
         <div className={`${styles.app} ${tabs ? styles.withTabs : ""}`}>
           {!bare && (
             <header className={styles.bar} data-scrolled={scrolled}>
-              <div className={`${styles.barInner} ${styles.barTabs}`}>
+              <div
+                className={`${styles.barInner} ${tabs ? styles.barTabs : ""}`}
+              >
                 <Link
                   href="/patient-dashboard"
                   className={styles.brand}
                   aria-label="inrange, home"
                 >
-                  <Wordmark height={24} />
+                  <Wordmark height={34} />
                 </Link>
                 {tabs && (
                   <nav className={styles.tabs} aria-label="Sections">

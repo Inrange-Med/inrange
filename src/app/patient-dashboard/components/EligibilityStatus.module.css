@@ -1,9 +1,11 @@
-/* The status before the first consultation: headline, line, tracker, action, on one measured stack. */
+/* The status before the first consultation: headline, line, steps, action, on Home's card rhythm
+   (Arhaan Home.module.css: .doseTitle, .quietLine, .doseActions, .taken, .metaLink). The step nodes
+   come from FirstStepsCard.module.css. --g and --tap come from Home; the fallbacks serve the Book page. */
 
 .status {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 16px;
+  gap: calc(var(--g, 16px) * 0.6);
   min-width: 0;
 }
 .words {
@@ -13,7 +15,7 @@
 }
 .title {
   font-family: var(--font-display);
-  font-size: clamp(1.25rem, 3vh, 1.5rem);
+  font-size: clamp(1.25rem, 3vh, 1.375rem);
   font-weight: 500;
   line-height: 1.2;
   letter-spacing: -0.014em;
@@ -22,31 +24,52 @@
 }
 .text {
   font-size: 0.9375rem;
-  line-height: 1.45;
+  line-height: 1.4;
+  /* ink-2 (the team's), not the design's ink-3: this line carries the status itself */
   color: var(--ink-2);
   text-wrap: pretty;
   overflow-wrap: anywhere;
 }
-.link {
-  justify-self: start;
-  /* the 44px tap target, without adding air under the tracker */
-  margin-block: -10px;
+/* the one big action on the card; it keeps the kit's 56px height (the design lets it shrink to 44px
+   on short phones) */
+.actions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  margin-top: calc(var(--g, 16px) * 0.2);
 }
-/* the StatusTracker stacks on a phone with room under every step; the last needs none here */
-@media (max-width: 559px) {
-  .status > ol > li:last-child {
-    padding-bottom: 0;
-  }
+.actions > :global(.btn) {
+  flex: 1;
+}
+/* a trailing in-card link: a full 44px target, pulled back so the line keeps its height */
+.link {
+  position: relative;
+  z-index: 1;
+  justify-self: start;
+  gap: 2px;
+  min-height: 44px;
+  margin-block: -11.5px;
+  font-weight: 600;
+  color: var(--slate-800);
 }
 
 @media (min-width: 1024px) {
   .status {
-    gap: 20px;
+    gap: 16px;
   }
   .title {
-    font-size: 1.75rem;
+    font-size: 2rem;
   }
-  .text {
-    font-size: 1.0625rem;
+  /* in a stretched card the action settles at the foot */
+  .status {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  .status > :last-child:is(a, div) {
+    margin-top: auto;
+  }
+  .link {
+    align-self: flex-start;
   }
 }

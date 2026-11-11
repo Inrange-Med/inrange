@@ -42,6 +42,37 @@
 .pill svg {
   flex: none;
 }
+/* a booked test's actions: 44px pills in a row that wraps, each taking its share (Arhaan
+   Appointments .actions, .pill) */
+.pillRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.pillSm {
+  flex: 1 1 auto;
+  justify-content: center;
+  gap: 8px;
+  /* the team's 48px target (the design's pills are 44px) */
+  min-height: 48px;
+  padding: 6px 14px;
+  font-size: 0.9375rem;
+}
+.pillSm[data-busy="true"] {
+  cursor: default;
+}
+/* the two answers in the cancel sheet keep the team's 56px height */
+.confirmPill {
+  min-height: 56px;
+}
+/* a full-width primary on a phone, at its own width from 560px (Arhaan Care .cta) */
+@media (min-width: 560px) {
+  .cta {
+    justify-self: start;
+    width: auto;
+  }
+}
 .pair {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(172px, 1fr));
@@ -117,6 +148,12 @@
   -webkit-tap-highlight-color: transparent;
   transition: transform 160ms var(--ease-out);
 }
+.people > li:first-child .row {
+  padding-top: 0;
+}
+.people > li:last-child .row {
+  padding-bottom: 0;
+}
 .row:active {
   transform: scale(0.985);
 }
@@ -164,25 +201,25 @@
 .facts > .wide {
   grid-column: 1 / -1;
 }
+/* the tests in a booking: each name over its status, hairlines between (Arhaan Care .items) */
 .tests {
   display: grid;
+  border-top: 1px solid var(--hair);
 }
 .tests li {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 16px;
+  display: grid;
+  gap: 1px;
   padding: 10px 0;
-  border-bottom: 1px solid var(--hair);
   font-size: 1rem;
+  font-weight: 600;
 }
-.tests li:last-child {
-  border-bottom: 0;
+.tests li + li {
+  border-top: 1px solid var(--hair);
 }
 .tests li span {
-  flex: none;
-  font-size: 0.875rem;
-  color: var(--ink-3);
+  font-size: 0.9375rem;
+  font-weight: 400;
+  color: var(--ink-2);
 }
 .actions {
   display: grid;
@@ -202,6 +239,7 @@
 
 /* booking another test: a quiet line about the one already booked, a link, never a blocker */
 .alreadyBooked {
+  transition: transform 160ms var(--ease-out);
   display: flex;
   align-items: center;
   gap: 12px;
@@ -231,4 +269,37 @@
 .alreadyBooked svg {
   flex: none;
   color: var(--ink-3);
+}
+/* a tappable plate presses like one (Arhaan Care .packet), and on a mouse its title underlines as
+   rows do (the plate is already tinted, so it keeps its ground) */
+.alreadyBooked:active {
+  transform: scale(0.985);
+}
+@media (hover: hover) and (pointer: fine) {
+  .alreadyBooked:hover strong {
+    text-decoration: underline;
+    text-decoration-color: var(--hair-2);
+    text-underline-offset: 3px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .alreadyBooked {
+    transition: none;
+  }
+}
+
+/* booking: the back control and the heading as one head, the control where the head starts and 6px
+   above the title (as PageHead lays out its own back link) */
+.head {
+  display: grid;
+}
+.head > :first-child {
+  margin-top: clamp(4px, 1.5vh, 16px);
+}
+.head > :first-child + div {
+  padding-top: 6px;
+}
+/* the page head's way to book: a text link with the team's 48px target */
+.headLink {
+  min-height: 48px;
 }

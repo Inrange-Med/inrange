@@ -6,7 +6,6 @@
  */
 
 import { useState } from "react";
-import { ArrowRight } from "@phosphor-icons/react";
 import ErrorNotice from "@/components/ui/ErrorNotice";
 import Sheet from "@/components/ui/Sheet";
 import { errorMessage } from "@/lib/http/apiClient";
@@ -62,29 +61,27 @@ export default function CancelSheet({
           />
         </label>
         {error && <ErrorNotice message={error} />}
-        <button
-          type="button"
-          className={`btn ${formStyles.go}`}
-          onClick={cancel}
-          data-busy={busy}
-          aria-busy={busy}
-        >
-          <span>{busy ? "Cancelling" : "Cancel the test"}</span>
-          <span className="well" aria-hidden="true">
-            {busy ? (
-              <i className={formStyles.spin} />
-            ) : (
-              <ArrowRight size={18} />
-            )}
-          </span>
-        </button>
-        <button
-          type="button"
-          className={`btn btn--ghost ${styles.pill}`}
-          onClick={onClose}
-        >
-          Keep it
-        </button>
+        {/* keeping it comes first; cancelling is a plain solid pill, never the forward arrow
+            (Arhaan Appointments test cancel) */}
+        <div className={styles.pillRow}>
+          <button
+            type="button"
+            className={`btn btn--ghost ${styles.pillSm} ${styles.confirmPill}`}
+            onClick={onClose}
+          >
+            Keep it
+          </button>
+          <button
+            type="button"
+            className={`btn ${styles.pillSm} ${styles.confirmPill}`}
+            onClick={cancel}
+            data-busy={busy}
+            aria-busy={busy}
+          >
+            {busy && <i className={formStyles.spin} aria-hidden="true" />}
+            <span>{busy ? "Cancelling" : "Cancel the test"}</span>
+          </button>
+        </div>
       </div>
     </Sheet>
   );
