@@ -95,11 +95,10 @@ export default function PlanChooser({
 
         <div className={styles.chosen} aria-live="polite">
           <p className={styles.planName}>{plan.name}</p>
-          <p className={styles.meta}>
-            <span className="num">{plan.durationMonths}</span>{" "}
-            {monthsWord(plan.durationMonths)}
-            {plan.id === recommendedPlan?.id && ", recommended by your doctor"}
-          </p>
+          {/* the length is already in the switch and the name; only the doctor's pick adds a line */}
+          {plan.id === recommendedPlan?.id && (
+            <p className={styles.meta}>Recommended by your doctor</p>
+          )}
         </div>
 
         {plan.perks.length > 0 && (

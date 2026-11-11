@@ -16,9 +16,9 @@
 
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
-import BackLink from "@/components/ui/BackLink";
 import ErrorNotice from "@/components/ui/ErrorNotice";
 import PageGhosts from "@/app/patient-dashboard/components/PageGhosts";
+import { useShellFocus } from "@/app/patient-dashboard/components/shellFocus";
 import PageHead from "@/components/ui/PageHead";
 import { useApiResource } from "@/hooks/useApiResource";
 import { takePendingConsultationReason } from "@/lib/consultations/pendingConsultationReason";
@@ -47,7 +47,7 @@ const PURPOSE_WORDS: Record<
   { title: string; sub: string | null; paid: string }
 > = {
   PLAN: {
-    title: "Checkout",
+    title: "Pay for your plan",
     sub: null,
     paid: "Your plan is active. Your care team will be in touch about your next review.",
   },
@@ -117,6 +117,13 @@ export default function CheckoutFlow() {
     null,
   );
   const [paid, setPaid] = useState<PaidOrder | null>(null);
+  // the shell's focus bar: its Close is the page's Back (same place, same name); once paid there is
+  // no Back, so no Close
+  useShellFocus({
+    title: "Checkout",
+    closeHref: paid ? undefined : back.href,
+    closeLabel: back.label,
+  });
 
   const confirm = async (
     current: PaymentOrder,
@@ -223,10 +230,9 @@ export default function CheckoutFlow() {
 
   return (
     <>
-      {/* one grid row, as on the lab booking page: the back control sits right above the heading.
-          Once paid there is no Back: the order is closed, and Continue on the receipt moves on. */}
+      {/* Back is the focus bar's Close (same place, named for screen readers); the bar says
+          Checkout, so the page's heading names what is being paid for */}
       <div className={pageStyles.head}>
-        {!paid && <BackLink href={back.href} label={back.label} />}
         <PageHead
           title={paid ? "Payment received" : words.title}
           sub={isComplete && !paid ? words.sub : null}

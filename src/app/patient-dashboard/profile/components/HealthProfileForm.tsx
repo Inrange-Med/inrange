@@ -127,18 +127,23 @@ export default function HealthProfileForm({ profile, onSaved }: Props) {
         placeholder="For example, type 2 diabetes"
       />
 
+      {/* each measure's label shares a row with its unit switch (Arhaan App.module.css .segRow) */}
       <div className={formStyles.field}>
-        <SegmentedControl
-          label="Weight unit"
-          value={units.weight}
-          onChange={switchWeightUnit}
-          options={[
-            { value: "kg", label: "kg" },
-            { value: "lb", label: "lb" },
-          ]}
-        />
+        <div className={styles.segRow}>
+          <span className={formStyles.label}>Weight</span>
+          <SegmentedControl
+            label="Weight unit"
+            value={units.weight}
+            onChange={switchWeightUnit}
+            options={[
+              { value: "kg", label: "kg" },
+              { value: "lb", label: "lb" },
+            ]}
+          />
+        </div>
         <ProfileField
           label={`Weight in ${units.weight}`}
+          labelHidden
           inputMode="decimal"
           value={weight}
           onValueChange={setWeight}
@@ -147,18 +152,22 @@ export default function HealthProfileForm({ profile, onSaved }: Props) {
       </div>
 
       <div className={formStyles.field}>
-        <SegmentedControl
-          label="Height unit"
-          value={units.height}
-          onChange={switchHeightUnit}
-          options={[
-            { value: "ftin", label: "ft, in" },
-            { value: "cm", label: "cm" },
-          ]}
-        />
+        <div className={styles.segRow}>
+          <span className={formStyles.label}>Height</span>
+          <SegmentedControl
+            label="Height unit"
+            value={units.height}
+            onChange={switchHeightUnit}
+            options={[
+              { value: "ftin", label: "ft, in" },
+              { value: "cm", label: "cm" },
+            ]}
+          />
+        </div>
         {units.height === "cm" ? (
           <ProfileField
             label="Height in cm"
+            labelHidden
             inputMode="numeric"
             pattern="[0-9]*"
             value={height.cm}

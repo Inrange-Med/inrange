@@ -78,6 +78,18 @@ export default function ChatScreen({ doctorId }: { doctorId: string }) {
     if (atEnd.current) toEnd();
     else setNewBelow(true);
   }, [messages.length]);
+  // the thread shrinks when the composer grows (more lines, the 112 warning), or its content grows
+  // (a notice, a longer intro): a reader at the end stays at the end
+  useEffect(() => {
+    const el = scroller.current;
+    if (!el) return;
+    const observer = new ResizeObserver(() => {
+      if (atEnd.current) toEnd();
+    });
+    observer.observe(el);
+    if (el.firstElementChild) observer.observe(el.firstElementChild);
+    return () => observer.disconnect();
+  }, []);
 
   // keep the composer above the on-screen keyboard: iOS keeps the layout viewport tall and scrolls it
   useEffect(() => {

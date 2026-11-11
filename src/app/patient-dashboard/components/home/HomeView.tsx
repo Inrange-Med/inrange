@@ -92,7 +92,7 @@ export default function HomeView() {
 
   if (!data) {
     return (
-      <main className={layoutStyles.page}>
+      <main className={layoutStyles.page} aria-busy={!home.error}>
         {home.error ? (
           <ErrorNotice message={home.error} onRetry={reload} />
         ) : (

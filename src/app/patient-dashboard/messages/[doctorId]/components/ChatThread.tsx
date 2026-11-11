@@ -46,7 +46,14 @@ export default function ChatThread({
       nextAt - at > GROUP_GAP_MS ||
       !sameDay(nextAt, at);
     return (
-      <Fragment key={`${message.sentAt}-${i}`}>
+      // stable keys (as uniqueMessages dedupes), so rows never remount and replay their arrival
+      <Fragment
+        key={
+          message.id != null
+            ? `id:${message.id}`
+            : `${message.senderUserId}:${message.sentAt}:${message.messageText}`
+        }
+      >
         {newDay && <p className={styles.day}>{dayLabel(at, now)}</p>}
         <div
           className={styles.row}

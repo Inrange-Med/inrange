@@ -3,15 +3,16 @@
 /*
   One guide or video inside the app (Arhaan Guides.tsx GuidePage): the video at the top, its
   presenter, then the written version. A guide with no video shows its summary in the left column
-  instead. The first injection's walk-through opens in place, one step a screen. A guide only for
+  instead. The first injection's walk-through opens in place, one step a screen, in the shell's
+  focus mode (its name in the bar, Close back to the guide, no dock). A guide only for
   someone prescribed a pen opens only when it has a video, as in Arhaan's design for a patient with
   no pen on record (the backend does not expose prescriptions yet).
 */
 
 import { useState } from "react";
-import { X } from "@phosphor-icons/react";
 import Avatar from "@/components/ui/Avatar";
 import PageHead from "@/components/ui/PageHead";
+import { useShellFocus } from "@/app/patient-dashboard/components/shellFocus";
 import { GUIDES, PRESENTERS, type Guide } from "../content/guideContent";
 import GuideArticle from "./GuideArticle";
 import GuidePlayer from "./GuidePlayer";
@@ -32,6 +33,13 @@ export default function GuideView({ slug }: { slug: string }) {
     (candidate) =>
       candidate.slug === slug && (!candidate.pen || !!candidate.video),
   );
+  const inWalkThrough = !!guide && walkThrough;
+  // the walk-through owns the screen: the shell's focus bar carries its name and the Close
+  useShellFocus(
+    inWalkThrough
+      ? { title: "First injection", onClose: () => setWalkThrough(false) }
+      : null,
+  );
 
   if (guide && walkThrough) {
     return (
@@ -39,19 +47,6 @@ export default function GuideView({ slug }: { slug: string }) {
         className={`${layoutStyles.page} ${styles.readPage}`}
         data-focus="true"
       >
-        <PageHead
-          title="First injection"
-          action={
-            <button
-              type="button"
-              className={formStyles.round}
-              onClick={() => setWalkThrough(false)}
-              aria-label="Close"
-            >
-              <X size={18} />
-            </button>
-          }
-        />
         <section className={`${surfaceStyles.card} ${styles.focusCard}`}>
           <InjectionStepper />
         </section>

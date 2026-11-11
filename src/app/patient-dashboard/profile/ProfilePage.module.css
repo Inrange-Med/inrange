@@ -87,7 +87,9 @@
   height: 24px;
   border-radius: 999px;
   background: var(--hair-2);
-  transition: background-color 200ms var(--ease-out);
+  transition:
+    background-color 200ms var(--ease-out),
+    opacity 200ms var(--ease-out);
 }
 .switch i::after {
   content: "";
@@ -115,6 +117,10 @@
   .switch i::after {
     transition: none;
   }
+}
+/* a switch whose change is still saving: the knob dims until the save settles (no busy cursor) */
+.toggleRow[data-busy="true"] .switch i {
+  opacity: 0.6;
 }
 /* a switch that cannot move while reminders are off: it says so, instead of looking merely off */
 .switch input:disabled + i {
@@ -374,6 +380,13 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 16px;
+}
+.segRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
 }
 .pairFields {
   display: grid;
