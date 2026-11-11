@@ -42,7 +42,7 @@
 }
 
 .tile > span {
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   color: var(--ink-3);
 }
 
@@ -54,7 +54,7 @@
 }
 
 .tile em {
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   font-style: normal;
   color: var(--ink-3);
 }
@@ -77,7 +77,7 @@
 .voiceBy {
   display: block;
   margin-top: 4px;
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   color: var(--ink-3);
 }
 
@@ -98,9 +98,4 @@
   .tiles > :last-child:nth-child(odd) {
     grid-column: 1 / -1;
   }
-}
-
-/* the kit weight chart's axis labels are 11px; the record reads them at 13px */
-.full svg text {
-  font-size: 13px;
 }

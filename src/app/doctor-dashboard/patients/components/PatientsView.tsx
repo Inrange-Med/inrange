@@ -10,7 +10,7 @@
 import { useMemo, useState } from "react";
 import { MagnifyingGlass } from "@phosphor-icons/react";
 import ErrorNotice from "@/components/ui/ErrorNotice";
-import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
+import ClinicSkeleton from "@/app/doctor-dashboard/components/ClinicSkeleton";
 import PageHead from "@/components/ui/PageHead";
 import { useApiResource } from "@/hooks/useApiResource";
 import {
@@ -80,7 +80,7 @@ export default function PatientsView() {
   if (!patients.data) {
     return (
       <main className={clinicStyles.page}>
-        <LoadingSkeleton />
+        <ClinicSkeleton />
       </main>
     );
   }
@@ -142,10 +142,12 @@ export default function PatientsView() {
         }
       />
       {appointments.error && (
-        <ErrorNotice
-          message={appointments.error}
-          onRetry={appointments.reload}
-        />
+        <div className={styles.notice}>
+          <ErrorNotice
+            message={appointments.error}
+            onRetry={appointments.reload}
+          />
+        </div>
       )}
 
       <div className={styles.tools}>

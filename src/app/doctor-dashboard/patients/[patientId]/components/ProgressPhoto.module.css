@@ -64,4 +64,36 @@
   .cap strong {
     font-size: 1rem;
   }
+  .cap > span {
+    font-size: 0.9375rem;
+  }
+}
+
+/* while the picture is on its way the plate breathes; the picture fades in when it lands */
+.pic:not(.none):not(:has(img)) {
+  animation: breathe 1400ms var(--ease-out) infinite alternate;
+}
+.pic > img {
+  animation: appear 320ms var(--ease-out);
+}
+@keyframes breathe {
+  to {
+    opacity: 0.5;
+  }
+}
+@keyframes appear {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pic > img,
+  .pic > svg {
+    transition: none;
+    animation: none;
+  }
+  .pic:not(.none):not(:has(img)) {
+    animation: none;
+  }
 }

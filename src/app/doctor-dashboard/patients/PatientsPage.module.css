@@ -143,7 +143,7 @@
 
 .pmuted {
   display: block;
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   color: var(--ink-3);
 }
 
@@ -159,7 +159,7 @@
   .listHead {
     padding: 0 4px 8px;
     border-bottom: 1px solid var(--hair);
-    font-size: 0.8125rem;
+    font-size: 0.75rem;
     color: var(--ink-3);
   }
   .pcell {
@@ -211,4 +211,9 @@
       transparent
     );
   }
+}
+
+/* a failed load sits between the head and the search pill without touching it */
+.notice {
+  margin-bottom: 16px;
 }

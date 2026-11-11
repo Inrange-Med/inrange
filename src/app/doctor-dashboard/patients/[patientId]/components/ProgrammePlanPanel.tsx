@@ -18,6 +18,7 @@ import type { PatientRecord } from "@/types/patientRecord";
 import type { SubscriptionPlan } from "@/types/subscription";
 import clinicStyles from "@/app/doctor-dashboard/styles/ClinicSurfaces.module.css";
 import formStyles from "@/components/ui/styles/FormControls.module.css";
+import recordStyles from "../PatientRecordPage.module.css";
 import styles from "./ProgrammePlanPanel.module.css";
 
 export default function ProgrammePlanPanel({
@@ -67,7 +68,7 @@ export default function ProgrammePlanPanel({
   return (
     <section
       id="programme"
-      className={clinicStyles.panel}
+      className={`${clinicStyles.panel} ${recordStyles.full}`}
       aria-labelledby="programme-heading"
     >
       <div className={clinicStyles.panelHead}>
@@ -76,14 +77,14 @@ export default function ProgrammePlanPanel({
         </h2>
       </div>
       {record.activePlan ? (
-        <p className={styles.line}>
+        <p className={`${styles.line} ${styles.plan}`}>
           <strong>{record.activePlan.planName}</strong>, active until{" "}
           {longDate(record.activePlan.endsAt)}
         </p>
       ) : (
         <div className={styles.body}>
           {suggested ? (
-            <p className={styles.line}>
+            <p className={`${styles.line} ${styles.plan}`} data-draft="true">
               You suggested <strong>{suggested.planName}</strong> on{" "}
               {longDate(suggested.recommendedAt)}.
               {suggested.note && ` “${suggested.note}”`}
@@ -100,7 +101,7 @@ export default function ProgrammePlanPanel({
             {suggested && (
               <button
                 type="button"
-                className={formStyles.link}
+                className={clinicStyles.textBtn}
                 disabled={busy}
                 onClick={() =>
                   run(

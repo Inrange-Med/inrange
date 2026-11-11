@@ -13,7 +13,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import ErrorNotice from "@/components/ui/ErrorNotice";
-import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
+import ClinicSkeleton from "@/app/doctor-dashboard/components/ClinicSkeleton";
 import PageHead from "@/components/ui/PageHead";
 import { useToast } from "@/components/ui/ToastProvider";
 import { useApiResource } from "@/hooks/useApiResource";
@@ -121,7 +121,7 @@ export default function PatientRecordView({
   if (!patients.data || (record.loading && !record.data)) {
     return (
       <main className={clinicStyles.page}>
-        <LoadingSkeleton />
+        <ClinicSkeleton />
       </main>
     );
   }
