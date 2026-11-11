@@ -384,6 +384,7 @@ span.flow {
 }
 .totalK small {
   display: block;
+  white-space: nowrap;
   margin-top: 2px;
   font-family: var(--font-text);
   font-size: 0.8125rem;
@@ -409,6 +410,17 @@ span.flow {
   font-weight: 500;
   letter-spacing: -0.012em;
   color: var(--signal);
+}
+/* MRP, struck through, before the price offered */
+.mrp {
+  display: block;
+  margin-bottom: 2px;
+  text-align: right;
+  font-size: 0.875rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--on-dark-3);
+  text-decoration-thickness: 1px;
 }
 .totalNote {
   margin-top: -12px;

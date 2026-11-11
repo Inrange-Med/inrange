@@ -22,7 +22,7 @@ inrange's free tools and guides use the thresholds set for Asian Indians: a BMI 
 ## Programmes
 ${PROGRAMMES.map((x) => `- [${x.name}](${SITE}${programmeHref(x)})${x.live ? "" : " (opening soon)"}: ${x.line}`).join("\n")}
 - [Doctors](${SITE}/doctors): the registered doctors on the care team, how they work and what the first consultation covers.
-- [Pricing](${SITE}/pricing): a free eligibility check, the first step (tests and a doctor consultation), then one plan for 1, 4, 6 or 12 months, paid after the doctor's review; indicative prices; medicine, only if prescribed, billed separately.
+- [Pricing](${SITE}/pricing): a free eligibility check, the first step (tests and a doctor consultation), then one plan for 3, 6, 9 or 12 months, paid after the doctor's review; indicative prices; medicine, only if prescribed, billed separately.
 
 ## Free tools
 

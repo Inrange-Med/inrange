@@ -15,7 +15,7 @@ export const QA = [
   },
   {
     q: "How much does it cost?",
-    a: "Your check is free. Your first step, blood tests at home and a doctor consultation, is ₹1,499, or ₹999 if you upload a recent report, shown before you pay. If your doctor recommends a plan, you choose 1, 4, 6 or 12 months, paid upfront, and see the full price, itemised, before you pay. The plan covers reviews, blood tests at home, your nutrition plan, the app and delivery.",
+    a: "Your check is free. Your first step, blood tests at home and a doctor consultation, is ₹1,499, or ₹999 if you upload a recent report, shown before you pay. If your doctor recommends a plan, you choose 3, 6, 9 or 12 months, paid upfront, and see the full price, itemised, before you pay. The plan covers reviews, blood tests at home, your nutrition plan, the app and delivery.",
   },
   {
     q: "Am I talking to a person or to AI?",
@@ -31,7 +31,7 @@ export const QA = [
   },
   {
     q: "What happens if I want to stop?",
-    a: "Plans are paid upfront for 1, 4, 6 or 12 months, so you choose the length with your doctor at the start. Whenever you stop, your doctor helps you do it safely, and your records stay yours.",
+    a: "Plans are paid upfront for 3, 6, 9 or 12 months, so you choose the length with your doctor at the start. Whenever you stop, your doctor helps you do it safely, and your records stay yours.",
   },
   {
     q: "How is my health information protected?",

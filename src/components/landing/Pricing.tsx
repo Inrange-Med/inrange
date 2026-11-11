@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { ArrowRight } from "@phosphor-icons/react";
 import { ASSESSMENT_URL, Art, Cta, Mask, Tag } from "./ui";
-import { INCLUDED, inr, PLANS } from "./plans";
+import { includedIn, inr, PLANS } from "./plans";
 import s from "./Pricing.module.css";
 
 /* One package, four prepaid lengths, from plans.ts (shared with the patient app). A doctor review
@@ -80,7 +80,7 @@ export function Planner() {
   const label = (l: (typeof LENGTHS)[number]) => (
     <>
       <span className={s.segNum}>{l.months}</span>
-      <span className={s.segUnit}>{l.months === 1 ? "month" : "months"}</span>
+      <span className={s.segUnit}>months</span>
       <span className={s.segPrice}>
         {l.months > 1 && <span className={s.perMo}>about </span>}
         {inr(l.price / l.months)}
@@ -131,10 +131,14 @@ export function Planner() {
         {/* the price for the chosen length sits with the choice, on the first screen */}
         <div className={s.total} aria-live="polite">
           <p className={s.totalK}>
-            {plan.months} {plan.months === 1 ? "month" : "months"}
+            {plan.months} months
             <small>{perMonth(plan)} a month</small>
           </p>
           <p key={plan.price} className={s.totalV}>
+            <s className={s.mrp}>
+              <span className="sr-only">MRP </span>
+              {inr(plan.mrp)}
+            </s>
             {inr(plan.price)}
           </p>
         </div>
@@ -184,7 +188,7 @@ export function Planner() {
 
       <div className={s.side}>
         <ul className={s.items}>
-          {INCLUDED.map(([a, b]) => (
+          {includedIn(plan).map(([a, b]) => (
             <li key={a}>
               <span className={s.itemName}>{a}</span>
               <span className={s.val} data-kind={b}>
