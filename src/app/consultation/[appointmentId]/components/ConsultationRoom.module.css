@@ -55,18 +55,18 @@
   border-radius: 20px;
   background: var(--slate-950);
 }
-/* 100ms's page is dark and blank until it has loaded; say what is happening */
+/* 100ms's page is dark and blank until it has loaded; say what is happening, centred on the video above the controls bar */
 .frameWait {
   position: absolute;
-  inset: 0;
+  inset: 0 0 78px;
   display: grid;
   place-items: center;
   padding: 24px;
   font-size: 0.9375rem;
   line-height: 1.5;
   text-align: center;
-  color: var(--paper);
-  opacity: 0.72;
+  text-wrap: balance;
+  color: var(--on-dark-2);
   pointer-events: none;
 }
 .frame {
