@@ -24,6 +24,7 @@ import { signInHrefFor } from "@/lib/navigation/signInReturn";
 import { homePathFor } from "@/lib/session/authSession";
 import Wordmark from "@/components/ui/Wordmark";
 import ErrorNotice from "@/components/ui/ErrorNotice";
+import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import PreJoin from "./PreJoin";
 import EndConsultationSheet from "./EndConsultationSheet";
 import CallEnded from "./CallEnded";
@@ -84,31 +85,10 @@ export default function ConsultationRoom({
     <main className={styles.room} data-live={live}>
       <header className={styles.header}>
         <div className={styles.brand}>
-          <Wordmark height={23} />
+          <Wordmark height={34} />
           <span className={styles.divider} aria-hidden="true" />
           <span className={styles.headerTitle}>Consultation</span>
         </div>
-        {live && (
-          <div className={styles.headerActions}>
-            {stage.room.role === "doctor" && (
-              <button
-                type="button"
-                className={styles.endButton}
-                onClick={() => setConfirmingEnd(true)}
-              >
-                <PhoneDisconnect size={18} aria-hidden="true" /> End
-                consultation
-              </button>
-            )}
-            <button
-              type="button"
-              className={styles.secondaryButton}
-              onClick={() => router.push(home)}
-            >
-              <SignOut size={18} aria-hidden="true" /> Leave
-            </button>
-          </div>
-        )}
       </header>
 
       {signedOut && (
@@ -118,6 +98,12 @@ export default function ConsultationRoom({
           <Link href={signInHref} className={styles.secondaryButton}>
             Sign in
           </Link>
+        </div>
+      )}
+
+      {!status && (
+        <div className={styles.prejoin}>
+          <LoadingSkeleton />
         </div>
       )}
 
@@ -139,6 +125,31 @@ export default function ConsultationRoom({
             src={stage.room.joinLink}
             allow="camera; microphone; display-capture; autoplay; fullscreen; clipboard-write"
           />
+          {/* the app's own call controls, in a carbon bar under the video (the design's .controls) */}
+          <div className={styles.controls}>
+            <span className={styles.controlsSide} aria-hidden="true" />
+            <div className={styles.controlsCenter}>
+              {stage.room.role === "doctor" && (
+                <button
+                  type="button"
+                  className={styles.endButton}
+                  onClick={() => setConfirmingEnd(true)}
+                >
+                  <PhoneDisconnect size={18} aria-hidden="true" /> End
+                  consultation
+                </button>
+              )}
+            </div>
+            <div className={styles.controlsSideRight}>
+              <button
+                type="button"
+                className={styles.leaveButton}
+                onClick={() => router.push(home)}
+              >
+                <SignOut size={18} aria-hidden="true" /> Leave
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

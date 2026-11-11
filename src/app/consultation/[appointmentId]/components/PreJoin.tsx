@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { ArrowRight } from "@phosphor-icons/react";
-import Card from "@/components/ui/Card";
 import DeviceCheck from "@/components/ui/DeviceCheck";
 import ErrorNotice from "@/components/ui/ErrorNotice";
 import formStyles from "@/components/ui/styles/FormControls.module.css";
+import surfaceStyles from "@/components/ui/styles/CardSurface.module.css";
 import styles from "./ConsultationRoom.module.css";
 
 export default function PreJoin({
@@ -24,9 +24,15 @@ export default function PreJoin({
   return (
     <div className={styles.prejoin}>
       <h1 className="sr-only">Join your consultation</h1>
-      <Card title="Camera and microphone" className={styles.prejoinCard}>
+      <section
+        className={`${surfaceStyles.card} ${styles.prejoinCard}`}
+        aria-labelledby="prejoin-check-title"
+      >
+        <h2 id="prejoin-check-title" className={styles.prejoinTitle}>
+          Camera and microphone
+        </h2>
         <DeviceCheck seenBy={seenBy} />
-      </Card>
+      </section>
       {error && <ErrorNotice message={error} onRetry={onJoin} />}
       <button
         type="button"
