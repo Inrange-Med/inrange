@@ -81,7 +81,7 @@ export default function LabPackageStep({
                 </span>
                 {/* the lab's description is sales copy ("Free Doctor's Consultation"); the facts and
                     "What is tested" on the next screens say what matters */}
-                <span className={`${styles.facts} num`}>
+                <span className={`${styles.packetFacts} num`}>
                   {packageFacts(item).map((fact) => (
                     <span key={fact}>{fact}</span>
                   ))}

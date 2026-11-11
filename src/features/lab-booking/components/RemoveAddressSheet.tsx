@@ -6,6 +6,7 @@
  */
 
 import { useState } from "react";
+import { Trash, WarningCircle } from "@phosphor-icons/react";
 import { errorMessage } from "@/lib/http/apiClient";
 import { deleteAddress } from "@/services/addressService";
 import type { Address } from "@/types/address";
@@ -54,7 +55,8 @@ export default function RemoveAddressSheet({
       </p>
       {error && (
         <p className={formStyles.err} role="alert">
-          {error}
+          <WarningCircle size={16} weight="fill" aria-hidden="true" />
+          <span>{error}</span>
         </p>
       )}
       <button
@@ -66,7 +68,7 @@ export default function RemoveAddressSheet({
       >
         <span>{busy ? "Removing" : "Remove address"}</span>
         <span className="well" aria-hidden="true">
-          {busy ? <i className={formStyles.spin} /> : null}
+          {busy ? <i className={formStyles.spin} /> : <Trash size={18} />}
         </span>
       </button>
     </Sheet>

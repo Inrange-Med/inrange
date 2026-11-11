@@ -76,13 +76,20 @@
 .packet:disabled {
   cursor: default;
 }
+/* the hover follows the surface: --bg-2 on the page tint inside a card or sheet; the onboarding
+   page sets --plate-hover for rows on paper */
 @media (hover: hover) and (pointer: fine) {
   .packet:not(:disabled):hover {
-    background: var(--bg-2);
+    background: var(--plate-hover, var(--bg-2));
   }
 }
+/* matches what the doctor or the plan asked for */
 .packet[data-suggested] {
   box-shadow: inset 0 0 0 1.5px var(--signal-ink);
+}
+/* the answer already chosen: the signal wash, as a chosen answer in onboarding */
+.packet[data-chosen] {
+  background: var(--signal-wash);
 }
 .packetText {
   display: grid;
@@ -157,29 +164,37 @@
   display: grid;
   gap: 14px;
   min-width: 0;
-  padding: 20px;
+  padding: 22px 20px 20px;
   border-radius: var(--r-surface);
   background: var(--paper);
   box-shadow: 0 0 0 1px var(--hair);
 }
+@media (min-width: 768px) {
+  .carePackage {
+    padding: 28px 28px 24px;
+  }
+}
 .carePackage .packetHead strong {
   font-family: var(--font-display);
-  font-size: 1.25rem;
+  font-size: 1.1875rem;
   font-weight: 520;
+  letter-spacing: -0.01em;
   line-height: 1.2;
 }
 .carePackage .packetPrice {
   font-family: var(--font-display);
-  font-size: 1.25rem;
+  font-size: 1.1875rem;
+  font-weight: 520;
+  letter-spacing: -0.01em;
 }
 .includes {
   display: grid;
-  gap: 8px;
+  gap: 12px;
 }
 .includes li {
   display: grid;
   grid-template-columns: 12px minmax(0, 1fr);
-  gap: 10px;
+  gap: 12px;
   font-size: 0.9375rem;
   line-height: 1.5;
   color: var(--ink-2);
@@ -334,6 +349,28 @@
   color: var(--ink-2);
 }
 
+/* the pay action stays in reach while the bill scrolls */
+.payDock {
+  position: sticky;
+  bottom: var(--pay-dock-bottom, var(--dock-clearance, 0px));
+  z-index: 2;
+  margin-top: 6px;
+  box-shadow: 0 -12px 12px -12px var(--surface-bg, var(--bg));
+}
+
+/* an error arrives with a short fade, never a jump */
+.flow [role="alert"] {
+  animation: fade 200ms var(--ease-out) both;
+}
+.flow [role="alert"] svg {
+  margin-top: 0.2em;
+}
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .packet,
   .tested summary svg {
@@ -352,17 +389,26 @@
   padding-inline: 8px;
 }
 
-/* "Remove" under a saved address: a quiet link with a full tap target, right-aligned under its row */
+/* a saved address and its "Remove" on one line: the quiet link sized to its word, beside the row,
+   so no row grows; a problem with the address runs under both */
+.addressRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+.addressRow > p {
+  grid-column: 1 / -1;
+}
 .removeAddress {
-  display: block;
-  margin: 2px 0 0 auto;
   min-height: 44px;
+  margin: 0;
   padding: 0 4px;
   font-size: 0.875rem;
 }
 
 /* a package's facts on one line: "87 tests · Report next day · 12 hours fasting"; wraps whole facts */
-.facts {
+.packetFacts {
   display: flex;
   flex-wrap: wrap;
   gap: 0 6px;
@@ -370,7 +416,7 @@
   line-height: 1.45;
   color: var(--ink-3);
 }
-.facts > span + span::before {
+.packetFacts > span + span::before {
   content: "\00B7";
   margin-right: 6px;
 }

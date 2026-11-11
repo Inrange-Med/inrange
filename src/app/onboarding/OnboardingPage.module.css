@@ -526,31 +526,38 @@
 .screen {
   --plate-bg: var(--paper);
   --plate-ring: 0 0 0 1px var(--hair);
+  /* rows on paper hover with a breath of the page tint, as the answer rows do */
+  --plate-hover: color-mix(in srgb, var(--bg) 60%, var(--paper));
+  /* no sheet padding under the page: the pay action clears the screen's edge */
+  --pay-dock-bottom: max(12px, env(safe-area-inset-bottom));
   grid-template-rows: auto;
   padding-bottom: calc(40px + env(safe-area-inset-bottom));
 }
+/* fields follow the screen height, as the question fields do */
+.screen :global(input:not([type="range"]):not([type="checkbox"])) {
+  min-height: clamp(48px, 7.4vh, 56px);
+}
+/* on a laptop the one action is sized to its words, as Continue is on the questions */
+@media (min-width: 768px) {
+  .screen :global(.btn):not(:global(.btn--ghost)) {
+    justify-self: start;
+    width: auto;
+    min-width: 232px;
+  }
+}
 /* the BMI on the last screen of either path: the same paper plate as the rulers */
 .bmiCard {
-  padding: 20px;
+  padding: 22px 20px 20px;
   border-radius: var(--r-surface);
   background: var(--paper);
   box-shadow: 0 0 0 1px var(--hair);
 }
+@media (min-width: 768px) {
+  .bmiCard {
+    padding: 28px 28px 24px;
+  }
+}
 .bmiCard .bmi {
   padding-top: 0;
   border-top: 0;
-}
-
-/* ---------- readable small type: nothing under 13px, hints and labels near 14px ---------- */
-/* doubled classes outrank the kit's own (.tag, the form hint and the "saved as you go" line) */
-.step .tag {
-  font-size: 0.875rem;
-}
-.bmi .bmiHint {
-  font-size: 0.875rem;
-}
-/* the BMI track's cut-off numbers (BandTrack draws them at 13px) */
-.bmi [aria-hidden="true"] > :last-child {
-  height: 20px;
-  font-size: 0.875rem;
 }

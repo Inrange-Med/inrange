@@ -112,11 +112,11 @@ export default function CollectionAddressStep({
       </p>
       <ul className={styles.packets}>
         {list.map((address) => (
-          <li key={address.id}>
+          <li key={address.id} className={styles.addressRow}>
             <button
               type="button"
               className={styles.packet}
-              data-suggested={address.id === chosenId || undefined}
+              data-chosen={address.id === chosenId || undefined}
               onClick={() => choose(address)}
               aria-busy={checkingId === address.id}
             >
@@ -154,7 +154,7 @@ export default function CollectionAddressStep({
             </button>
             {problem?.id === address.id && (
               <p className={formStyles.err} role="alert">
-                <WarningCircle size={16} weight="bold" aria-hidden="true" />
+                <WarningCircle size={16} weight="fill" aria-hidden="true" />
                 <span>{problem.message}</span>
               </p>
             )}

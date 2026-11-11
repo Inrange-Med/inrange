@@ -21,9 +21,6 @@
   padding: clamp(10px, 2vh, 20px) 0 max(12px, env(safe-area-inset-bottom));
   background: var(--bg);
 }
-.dock > p {
-  font-size: 0.875rem;
-}
 @media (min-width: 768px) {
   .dock {
     grid-template-columns: auto minmax(0, 1fr);

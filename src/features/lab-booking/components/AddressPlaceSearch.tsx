@@ -78,12 +78,11 @@ export default function AddressPlaceSearch({
       )}
       {matches && matches.length > 0 && (
         <ul className={styles.packets}>
-          {matches.map((match, index) => (
+          {matches.map((match) => (
             <li key={match.eloc}>
               <button
                 type="button"
                 className={styles.packet}
-                data-suggested={index === 0 || undefined}
                 onClick={() => onPick(match)}
                 aria-busy={checkingEloc === match.eloc}
               >
@@ -110,7 +109,7 @@ export default function AddressPlaceSearch({
       )}
       {error && (
         <p className={formStyles.err} role="alert">
-          <WarningCircle size={16} weight="bold" aria-hidden="true" />
+          <WarningCircle size={16} weight="fill" aria-hidden="true" />
           <span>{error}</span>
         </p>
       )}

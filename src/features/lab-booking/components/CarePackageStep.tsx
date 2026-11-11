@@ -94,7 +94,7 @@ export default function CarePackageStep({ onChoose }: Props) {
           <PackageTestsDetails code={care.labPackageCode!} />
           {problem?.code === care.code && (
             <p className={formStyles.err} role="alert">
-              <WarningCircle size={16} weight="bold" aria-hidden="true" />
+              <WarningCircle size={16} weight="fill" aria-hidden="true" />
               <span>{problem.message}</span>
             </p>
           )}

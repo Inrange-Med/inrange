@@ -9,7 +9,7 @@
  * say how far the profile got. The answer lists come from the backend (or the bundled copy).
  */
 
-import { useEffect } from "react";
+import { useEffect, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import ErrorNotice from "@/components/ui/ErrorNotice";
 import { useApiResource } from "@/hooks/useApiResource";
@@ -116,7 +116,10 @@ export default function OnboardingFlow() {
     return (
       <main className={styles.page}>
         <div className={styles.stage}>
-          <ErrorNotice message={start.error} onRetry={start.reload} />
+          {/* arrives like every other screen */}
+          <div className={styles.step} style={{ "--dir": 1 } as CSSProperties}>
+            <ErrorNotice message={start.error} onRetry={start.reload} />
+          </div>
         </div>
       </main>
     );

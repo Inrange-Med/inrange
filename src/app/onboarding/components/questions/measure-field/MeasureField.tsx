@@ -53,32 +53,6 @@ function graduations(span: number) {
   return { "--major": span / (minor * 5), "--minor": span / minor };
 }
 
-/**
- * Labelled marks under the ruler at round values ("50 kg", "5 ft"), at most five; marks too close to
- * an end are left out so their text never runs past the ruler.
- */
-function scaleMarks(
-  min: number,
-  max: number,
-  every: number,
-  text: (value: number) => string,
-) {
-  const marks: { at: number; text: string }[] = [];
-  for (
-    let value = Math.ceil(min / every) * every;
-    value <= max;
-    value += every
-  ) {
-    const at = (value - min) / (max - min);
-    if (at >= 0.06 && at <= 0.94) marks.push({ at, text: text(value) });
-  }
-  return marks;
-}
-
-/** A round interval that gives at most five labelled marks. */
-const roundStep = (span: number) =>
-  [1, 2, 5, 10, 20, 25, 50, 100, 200].find((step) => span / step <= 5) ?? 500;
-
 export default function MeasureField({
   kind,
   label,
@@ -201,16 +175,15 @@ export default function MeasureField({
   }
 
   const clamped = Math.min(slider.max, Math.max(slider.min, slider.value));
-  // feet and inches: a mark at every whole foot (the slider runs in inches)
-  const marks =
+  // the two end values under the ruler, as in the design repository's tools kit (feet and inches
+  // read as 4′7″; the slider runs in inches)
+  const ends =
     slider.unit === "ft"
-      ? scaleMarks(slider.min, slider.max, 12, (inches) => `${inches / 12} ft`)
-      : scaleMarks(
-          slider.min,
-          slider.max,
-          roundStep(slider.max - slider.min),
-          (mark) => `${mark} ${slider.unit}`,
-        );
+      ? [
+          formatHeight(slider.min * CM_PER_INCH, "ftin"),
+          formatHeight(slider.max * CM_PER_INCH, "ftin"),
+        ]
+      : [String(slider.min), String(slider.max)];
   return (
     <div className={styles.field}>
       <div className={styles.fieldHead}>
@@ -241,16 +214,9 @@ export default function MeasureField({
           className={styles.range}
         />
       </div>
-      <div className={styles.scaleMarks} aria-hidden="true">
-        {marks.map((mark) => (
-          <span
-            key={mark.text}
-            className="num"
-            style={{ "--at": mark.at } as CSSProperties}
-          >
-            {mark.text}
-          </span>
-        ))}
+      <div className={styles.scaleEnds} aria-hidden="true">
+        <span className="num">{ends[0]}</span>
+        <span className="num">{ends[1]}</span>
       </div>
     </div>
   );
