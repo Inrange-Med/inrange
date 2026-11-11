@@ -32,7 +32,7 @@ export const STEP_QUESTIONS: Record<number, { question: string; why: string }> =
     },
     3: {
       question: "How old are you?",
-      why: "InRange is for adults 18 and over. Age also guides which blood tests your doctor asks for.",
+      why: "inrange is for adults 18 and over. Age also guides which blood tests your doctor asks for.",
     },
     4: {
       question: "How tall are you?",
@@ -120,7 +120,7 @@ const CONSENTS: ConsentText[] = [
   {
     type: "TERMS",
     title: "Terms of service",
-    line: "How InRange works, what it costs and how to cancel.",
+    line: "How inrange works, what it costs and how to cancel.",
     more: "You are 18 or over and the details you give are yours and true. Plans are paid only after your doctor's review, with an itemised price before you pay.",
     required: true,
   },
@@ -142,7 +142,7 @@ const CONSENTS: ConsentText[] = [
     type: "TELECONSULT",
     title: "Consultation by video",
     line: "Under India's Telemedicine Practice Guidelines 2020.",
-    more: "Your doctor may decide a video consultation is not enough and ask you to see someone in person. InRange is not for emergencies: call 112.",
+    more: "Your doctor may decide a video consultation is not enough and ask you to see someone in person. inrange is not for emergencies: call 112.",
     required: true,
   },
   {

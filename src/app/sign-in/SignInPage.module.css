@@ -108,7 +108,8 @@
   display: inline-flex;
   align-items: center;
   min-height: 44px;
-  color: var(--glacier-hi);
+  /* the wordmark is ink or paper only, never the accent */
+  color: var(--on-dark);
 }
 .brand:focus-visible {
   outline: 2px solid var(--signal);

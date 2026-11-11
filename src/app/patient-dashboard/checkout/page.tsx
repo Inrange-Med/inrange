@@ -11,7 +11,7 @@ import layoutStyles from "@/components/ui/styles/PageLayout.module.css";
 import CheckoutFlow from "./components/CheckoutFlow";
 import styles from "./CheckoutPage.module.css";
 
-export const metadata: Metadata = { title: "Checkout | InRange" };
+export const metadata: Metadata = { title: "Checkout | inrange" };
 
 export default function CheckoutPage() {
   return (

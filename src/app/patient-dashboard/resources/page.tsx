@@ -3,7 +3,7 @@
 import type { Metadata } from "next";
 import ResourcesView from "./components/ResourcesView";
 
-export const metadata: Metadata = { title: "Resources | InRange" };
+export const metadata: Metadata = { title: "Resources | inrange" };
 
 export default function ResourcesPage() {
   return <ResourcesView />;

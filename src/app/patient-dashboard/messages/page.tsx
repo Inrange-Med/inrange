@@ -3,7 +3,7 @@
 import type { Metadata } from "next";
 import MessagesView from "./components/MessagesView";
 
-export const metadata: Metadata = { title: "Messages | InRange" };
+export const metadata: Metadata = { title: "Messages | inrange" };
 
 export default function MessagesPage() {
   return <MessagesView />;

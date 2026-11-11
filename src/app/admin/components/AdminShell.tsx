@@ -1,7 +1,7 @@
 "use client";
 
 /*
-  The InRange team's workspace around every /admin page, built like the doctor's shell: a quiet rail
+  The inrange team's workspace around every /admin page, built like the doctor's shell: a quiet rail
   of two places on a laptop (Reviews, Doctors), a top bar and a dock on a phone, and the toast. Sign
   out sits under the admin's name on the rail and beside the avatar in the phone top bar.
   Only signed-in admins get past it: anyone signed out goes to /sign-in (?next= brings them back to
@@ -62,7 +62,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
     );
   }
 
-  const name = user?.fullName || "InRange team";
+  const name = user?.fullName || "inrange team";
   const signOutButton = (
     <button
       type="button"
@@ -83,7 +83,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
             <Link
               href="/admin"
               className={styles.brand}
-              aria-label="InRange admin"
+              aria-label="inrange admin"
             >
               <Wordmark height={24} />
               <span className={styles.portal}>Admin</span>
@@ -109,7 +109,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
               <Avatar name={name} size={36} />
               <div>
                 <strong>{name}</strong>
-                <span>InRange team</span>
+                <span>inrange team</span>
               </div>
             </div>
             {signOutButton}
@@ -119,7 +119,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
             <Link
               href="/admin"
               className={styles.brand}
-              aria-label="InRange admin"
+              aria-label="inrange admin"
             >
               <Wordmark height={22} />
               <span className={styles.portal}>Admin</span>

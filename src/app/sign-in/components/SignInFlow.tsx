@@ -71,7 +71,7 @@ export default function SignInFlow({
           ) : (
             <span className={styles.slot} aria-hidden="true" />
           )}
-          <Link href="/" className={styles.brand} aria-label="InRange home">
+          <Link href="/" className={styles.brand} aria-label="inrange home">
             <Wordmark height={34} />
           </Link>
           <Link

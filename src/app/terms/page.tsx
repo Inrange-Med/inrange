@@ -2,13 +2,13 @@
 import type { Metadata } from "next";
 import PilotLegalPage from "@/components/ui/PilotLegalPage";
 
-export const metadata: Metadata = { title: "Terms of use | InRange" };
+export const metadata: Metadata = { title: "Terms of use | inrange" };
 
 export default function TermsPage() {
   return (
     <PilotLegalPage
       title="Terms of use"
-      intro="These terms cover the InRange pilot, which is open to invited people only."
+      intro="These terms cover the inrange pilot, which is open to invited people only."
       sections={[
         {
           heading: "Who can use it",
@@ -19,7 +19,7 @@ export default function TermsPage() {
         {
           heading: "Not emergency care",
           body: [
-            "InRange is not an emergency service. For chest pain, trouble breathing or any emergency, call 112 or go to the nearest hospital.",
+            "inrange is not an emergency service. For chest pain, trouble breathing or any emergency, call 112 or go to the nearest hospital.",
           ],
         },
         {

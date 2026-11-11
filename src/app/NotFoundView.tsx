@@ -53,7 +53,7 @@ export default function NotFoundView() {
           lineAlpha={0.12}
           signalAlpha={0.5}
         />
-        <Link href="/" className={styles.brand} aria-label="InRange home">
+        <Link href="/" className={styles.brand} aria-label="inrange home">
           <Wordmark height={26} />
         </Link>
 

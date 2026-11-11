@@ -1,7 +1,7 @@
 /**
  * Firebase phone sign-in (https://firebase.google.com/docs/auth/web/phone-auth), used when the API's
  * send-otp answers provider "firebase". Firebase texts the code after an invisible reCAPTCHA check;
- * confirming it gives a Firebase ID token, which the API trades for an InRange session
+ * confirming it gives a Firebase ID token, which the API trades for an inrange session
  * (POST /api/auth/firebase). The Firebase SDK loads only here, on first use.
  */
 
@@ -63,7 +63,7 @@ export async function sendFirebaseCode(mobile: string): Promise<void> {
       confirm: async (code) => {
         const { user } = await sent.confirm(code);
         const idToken = await user.getIdToken();
-        // the InRange session is the one that matters; Firebase keeps none in this browser
+        // the inrange session is the one that matters; Firebase keeps none in this browser
         await signOut(auth).catch(() => undefined);
         return idToken;
       },

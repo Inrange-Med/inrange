@@ -38,7 +38,7 @@ export default function SafetyStrip({
         </strong>
       </div>
       <div>
-        <span className={styles.safetyLabel}>On InRange prescription</span>
+        <span className={styles.safetyLabel}>On inrange prescription</span>
         <strong>
           {signed
             ? signed.items

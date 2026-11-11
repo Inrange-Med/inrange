@@ -9,7 +9,7 @@ import { Suspense } from "react";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import MessagesView from "./components/MessagesView";
 
-export const metadata: Metadata = { title: "Messages | InRange" };
+export const metadata: Metadata = { title: "Messages | inrange" };
 
 export default function MessagesPage() {
   return (

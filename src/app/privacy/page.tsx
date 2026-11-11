@@ -2,13 +2,13 @@
 import type { Metadata } from "next";
 import PilotLegalPage from "@/components/ui/PilotLegalPage";
 
-export const metadata: Metadata = { title: "Privacy notice | InRange" };
+export const metadata: Metadata = { title: "Privacy notice | inrange" };
 
 export default function PrivacyPage() {
   return (
     <PilotLegalPage
       title="Privacy notice"
-      intro="InRange is a doctor-led programme for weight and type 2 diabetes. This notice says what the pilot stores about you, where it is kept and who can see it."
+      intro="inrange is a doctor-led programme for weight and type 2 diabetes. This notice says what the pilot stores about you, where it is kept and who can see it."
       sections={[
         {
           heading: "What we keep",

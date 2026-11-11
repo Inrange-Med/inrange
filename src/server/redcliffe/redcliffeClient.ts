@@ -2,12 +2,12 @@ import "server-only";
 
 /**
  * Redcliffe Labs API v2 client (home blood tests). Server only: it sends the secret key. Backend routes
- * call one function per Redcliffe endpoint; docs/backend/lab-tests-redcliffe.md maps each InRange
+ * call one function per Redcliffe endpoint; docs/backend/lab-tests-redcliffe.md maps each inrange
  * route to its function. Field names are exactly Redcliffe's, typos included (see the comments).
  * Every function validates what the doc constrains before sending, and every failure (our validation,
  * or any of Redcliffe's failure shapes) is thrown as one RedcliffeError carrying the doc's message.
  *
- * Intentionally not wrapped (not in InRange's journey): drop-off create/update, camp booking, imaging
+ * Intentionally not wrapped (not in inrange's journey): drop-off create/update, camp booking, imaging
  * and centre-visit (package data, providers, provider slots, booking), open-add-member,
  * center-update-is-credit, open-set-package, mock-b2b-webhook (staging test trigger).
  *
@@ -322,7 +322,7 @@ export async function listTimeSlots(
   return body.results ?? body.data ?? [];
 }
 
-/** GET /api/external/v2/center-package-data/?search= : the packages enabled for InRange, 20 a page (production only). */
+/** GET /api/external/v2/center-package-data/?search= : the packages enabled for inrange, 20 a page (production only). */
 export async function getPackageData(
   search = "",
   page?: number,
@@ -477,7 +477,7 @@ export async function updateBooking(
 /**
  * GET /api/external/v2/center-get-booking?booking_id=&client_ref_id=&booking_status=&booking_date=&collection_date= :
  * bookings and their latest status. At least one filter is required: with none Redcliffe returns
- * every booking on InRange's account. (Note the filter is client_ref_id; create sends client_refid.)
+ * every booking on inrange's account. (Note the filter is client_ref_id; create sends client_refid.)
  */
 export async function getBookings(
   filters: RedcliffeBookingFilters,
@@ -556,7 +556,7 @@ export async function getDigitalReport(
 
 // ---------- webhooks (set once per environment) ----------
 
-/** POST /api/v1/webhook/create-update-webhook/ : registers InRange's webhook URL for the given triggers. */
+/** POST /api/v1/webhook/create-update-webhook/ : registers inrange's webhook URL for the given triggers. */
 export async function setWebhook(
   setup: RedcliffeWebhookSetup,
 ): Promise<{ status: string; message: string }> {
@@ -576,7 +576,7 @@ export async function setWebhook(
   );
 }
 
-/** GET /api/v1/webhook/list-added-webhooks/ : the webhook URLs Redcliffe has for InRange. */
+/** GET /api/v1/webhook/list-added-webhooks/ : the webhook URLs Redcliffe has for inrange. */
 export async function listWebhooks(): Promise<RedcliffeWebhook[]> {
   const body = await redcliffe<{ results?: RedcliffeWebhook[] }>(
     "GET",

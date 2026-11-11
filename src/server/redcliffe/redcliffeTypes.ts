@@ -1,7 +1,7 @@
 /**
  * Redcliffe Labs API v2 shapes, named exactly as Redcliffe names them (snake_case, its own spellings).
  * Inputs are what redcliffeClient.ts sends; responses are the fields the doc's examples show (the
- * backend maps them to InRange's shapes in src/types/labTest.ts). Type-only: no runtime code here.
+ * backend maps them to inrange's shapes in src/types/labTest.ts). Type-only: no runtime code here.
  */
 
 export type RedcliffeGender = "male" | "female";
@@ -94,9 +94,9 @@ export type RedcliffeNewBooking = {
   pincode: string;
   customer_latitude: number;
   customer_longitude: number;
-  /** true: InRange collects the payment (prepaid); false: Redcliffe collects cash (COD) */
+  /** true: inrange collects the payment (prepaid); false: Redcliffe collects cash (COD) */
   is_credit: boolean;
-  /** InRange's own booking id: webhooks and center-get-booking find the booking by it */
+  /** inrange's own booking id: webhooks and center-get-booking find the booking by it */
   client_refid?: string;
   reference_data?: string;
   center_discount?: number;
@@ -338,7 +338,7 @@ export type RedcliffeWebhook = {
   hook_type: number;
 };
 
-/** What Redcliffe POSTs to InRange's webhook URL. */
+/** What Redcliffe POSTs to inrange's webhook URL. */
 export type RedcliffeWebhookEvent = {
   webhook_type: RedcliffeWebhookType;
   data: {

@@ -111,7 +111,7 @@ export default function BookAppointmentView() {
     <main className={`${layoutStyles.page} ${styles.page}`}>
       <PageHead
         title="Book a consultation"
-        sub="A 30-minute video consultation with an InRange doctor."
+        sub="A 30-minute video consultation with an inrange doctor."
         back={{
           href: "/patient-dashboard/appointments",
           label: "Appointments",

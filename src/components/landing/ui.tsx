@@ -1,6 +1,6 @@
 import { Fragment, type CSSProperties, type ReactNode } from "react";
 import { ArrowRight } from "@phosphor-icons/react/dist/ssr";
-import { LOGO_BODY_PATH, LOGO_DOT_PATH, LOGO_H, LOGO_PLUS_PATH, LOGO_VIEWBOX, LOGO_W } from "./logo-paths";
+import { LOGO_BODY_PATH, LOGO_DOT_PATH, LOGO_H, LOGO_PLUS_PATH, LOGO_VIEWBOX, LOGO_W } from "@/components/ui/wordmarkPaths";
 
 /** The clinical assessment, built by the product team. Set NEXT_PUBLIC_ASSESSMENT_URL once it is live. */
 export const ASSESSMENT_URL = process.env.NEXT_PUBLIC_ASSESSMENT_URL || "/assessment";

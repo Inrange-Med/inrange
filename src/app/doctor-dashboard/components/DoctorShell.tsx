@@ -163,7 +163,7 @@ export default function DoctorShell({ children }: { children: ReactNode }) {
             <Link
               href="/doctor-dashboard"
               className={styles.brand}
-              aria-label="InRange clinician portal"
+              aria-label="inrange clinician portal"
             >
               <Wordmark height={24} />
               <span className={styles.portal}>Clinician</span>
@@ -205,7 +205,7 @@ export default function DoctorShell({ children }: { children: ReactNode }) {
             <Link
               href="/doctor-dashboard"
               className={styles.brand}
-              aria-label="InRange clinician portal"
+              aria-label="inrange clinician portal"
             >
               <Wordmark height={22} />
               <span className={styles.portal}>Clinician</span>

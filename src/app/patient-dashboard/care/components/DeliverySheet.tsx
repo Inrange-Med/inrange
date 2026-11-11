@@ -11,15 +11,15 @@ import styles from "./DeliverySheet.module.css";
 
 function statusSentence(order: MedicineOrder) {
   if (order.status === "DELIVERED")
-    return `Delivered ${shortDate(reachedAt(order, "DELIVERED") ?? order.placedAt)} from InRange's pharmacy.`;
+    return `Delivered ${shortDate(reachedAt(order, "DELIVERED") ?? order.placedAt)} from inrange's pharmacy.`;
   if (order.status === "DISPATCHED") {
     const sent = reachedAt(order, "DISPATCHED") ?? order.placedAt;
-    return `From InRange's pharmacy. Handed to the courier ${shortDate(sent)}${order.expectedAt ? `, due ${shortDate(order.expectedAt)}` : ""}.`;
+    return `From inrange's pharmacy. Handed to the courier ${shortDate(sent)}${order.expectedAt ? `, due ${shortDate(order.expectedAt)}` : ""}.`;
   }
   const lastNote = order.history.at(-1)?.note;
   return lastNote
-    ? `From InRange's pharmacy. ${lastNote}.`
-    : "From InRange's pharmacy.";
+    ? `From inrange's pharmacy. ${lastNote}.`
+    : "From inrange's pharmacy.";
 }
 
 export default function DeliverySheet({ order }: { order: MedicineOrder }) {

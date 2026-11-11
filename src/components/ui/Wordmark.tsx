@@ -1,15 +1,15 @@
-/** The InRange wordmark (geometry in wordmarkPaths). Black or white only: it draws in currentColor. */
+/**
+ * The inrange wordmark (brand guidelines v1.1): outlined from Jost Medium, with the drawn dot and the
+ * plus (geometry in wordmarkPaths). Ink or paper only: it draws in currentColor, and the plus is never red.
+ */
 
 import {
-  LOGO_ASPECT,
-  LOGO_BASELINE,
-  LOGO_DOT,
-  LOGO_FONT_SIZE,
-  LOGO_STEM,
-  LOGO_TEXT,
-  LOGO_TEXT_LENGTH,
-  LOGO_TEXT_X,
+  LOGO_BODY_PATH,
+  LOGO_DOT_PATH,
+  LOGO_H,
+  LOGO_PLUS_PATH,
   LOGO_VIEWBOX,
+  LOGO_W,
 } from "./wordmarkPaths";
 
 export default function Wordmark({
@@ -19,49 +19,22 @@ export default function Wordmark({
 }: {
   className?: string;
   height?: number;
-  /** the landing page's rising-dot sting */
+  /** a class on the dot alone, for a rising-dot animation */
   dotClassName?: string;
 }) {
   return (
     <svg
       className={className}
       height={height}
-      width={height * LOGO_ASPECT}
+      width={(height * LOGO_W) / LOGO_H}
       viewBox={LOGO_VIEWBOX}
       role="img"
-      aria-label="InRange"
+      aria-label="inrange"
       style={{ display: "block", overflow: "visible" }}
     >
-      <rect
-        x={LOGO_STEM.x}
-        y={LOGO_STEM.top}
-        width={LOGO_STEM.width}
-        height={LOGO_BASELINE - LOGO_STEM.top}
-        fill="currentColor"
-      />
-      <circle
-        cx={LOGO_DOT.cx}
-        cy={LOGO_DOT.cy}
-        r={LOGO_DOT.r}
-        fill="currentColor"
-        className={dotClassName}
-      />
-      <text
-        x={LOGO_TEXT_X}
-        y={LOGO_BASELINE}
-        fontSize={LOGO_FONT_SIZE}
-        textLength={LOGO_TEXT_LENGTH}
-        lengthAdjust="spacingAndGlyphs"
-        fill="currentColor"
-        aria-hidden="true"
-        style={{
-          fontFamily: "var(--font-display)",
-          fontWeight: 500,
-          letterSpacing: "-0.02em",
-        }}
-      >
-        {LOGO_TEXT}
-      </text>
+      <path d={LOGO_BODY_PATH} fill="currentColor" />
+      <path d={LOGO_DOT_PATH} fill="currentColor" className={dotClassName} />
+      <path d={LOGO_PLUS_PATH} fill="currentColor" />
     </svg>
   );
 }

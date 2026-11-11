@@ -3,7 +3,7 @@
 /*
   Resources (Arhaan Resources.tsx): the video for this point in care, the rest of the videos, then
   short reads. What shows depends on whether the patient's programme is running (from their
-  profile). Before it: how InRange works, how the medicine works, blood tests and when to call us.
+  profile). Before it: how inrange works, how the medicine works, blood tests and when to call us.
   Once it runs: every guide that does not need a prescribed pen, since the backend does not say yet
   which pen, if any, is prescribed.
 */
@@ -62,7 +62,7 @@ export default function ResourcesView() {
   const active = profile.data?.planStatus.trim().toLowerCase() === "active";
   const pin = pinnedFor(active);
   const top = VIDEOS.find((guide) => guide.slug === pin.slug) ?? VIDEOS[0];
-  // once a plan is running, how InRange works has done its job
+  // once a plan is running, how inrange works has done its job
   const rest = VIDEOS.filter(
     (guide) =>
       guide !== top &&

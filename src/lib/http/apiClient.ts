@@ -1,5 +1,5 @@
 /**
- * The HTTP client for the InRange backend.
+ * The HTTP client for the inrange backend.
  *
  * The ONLY file that calls fetch(). Services in src/services/ call apiRequest(); pages and
  * components call services. This keeps the base URL, auth header and error handling in one place.
@@ -144,7 +144,7 @@ export async function apiRequest<TBody = ApiEnvelope<unknown>>(
   } catch (networkError) {
     if ((networkError as Error).name === "AbortError") throw networkError;
     throw new ApiError(
-      "Cannot reach InRange. Check your connection and try again.",
+      "Cannot reach inrange. Check your connection and try again.",
       0,
       null,
     );
@@ -243,7 +243,7 @@ export async function apiFile(path: string): Promise<Blob> {
     response = await fetch(buildUrl(path), { headers, cache: "no-store" });
   } catch {
     throw new ApiError(
-      "Cannot reach InRange. Check your connection and try again.",
+      "Cannot reach inrange. Check your connection and try again.",
       0,
       null,
     );

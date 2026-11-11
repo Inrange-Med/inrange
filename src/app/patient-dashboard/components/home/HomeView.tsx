@@ -129,7 +129,7 @@ export default function HomeView() {
       <h1 className={styles.h1}>
         {greeting(new Date(now).getHours())}, {firstName}.
       </h1>
-      <p className={styles.sub}>Welcome to InRange</p>
+      <p className={styles.sub}>Welcome to inrange</p>
     </header>
   );
   const weightCard = (

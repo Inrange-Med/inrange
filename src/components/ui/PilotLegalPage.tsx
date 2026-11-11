@@ -21,7 +21,7 @@ export default function PilotLegalPage({
   return (
     <AppTheme>
       <main className={styles.page}>
-        <Link href="/" aria-label="InRange home" className={styles.home}>
+        <Link href="/" aria-label="inrange home" className={styles.home}>
           <Wordmark />
         </Link>
         <h1 className={styles.title}>{title}</h1>

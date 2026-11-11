@@ -69,7 +69,7 @@ export default function HelpAndSupport() {
     <div className={styles.acct}>
       <div className={styles.sos}>
         <p>
-          {RED_FLAGS}: go to the nearest hospital. InRange is not an emergency
+          {RED_FLAGS}: go to the nearest hospital. inrange is not an emergency
           service.
         </p>
         <a href="tel:112" className={styles.sosCall}>

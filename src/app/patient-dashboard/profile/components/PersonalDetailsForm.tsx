@@ -45,7 +45,7 @@ export default function PersonalDetailsForm({ profile, onSaved }: Props) {
         : "",
     age:
       form.age && (!Number.isInteger(age) || age < 18 || age > 100)
-        ? "InRange is for adults aged 18 and over."
+        ? "inrange is for adults aged 18 and over."
         : "",
   };
   const invalid = Object.values(errors).some(Boolean);

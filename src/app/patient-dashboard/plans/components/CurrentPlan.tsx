@@ -19,7 +19,7 @@ export default function CurrentPlan({
         <div>
           <dt>Programme</dt>
           <dd>
-            {/* plan names already carry the length ("InRange 4 months") */}
+            {/* plan names already carry the length ("inrange 4 months") */}
             {plan ? plan.name : "Active"}
           </dd>
         </div>

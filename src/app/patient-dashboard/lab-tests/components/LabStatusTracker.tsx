@@ -1,6 +1,6 @@
 /**
  * A home blood test's progress, in Arhaan's lab steps (care.ts LAB_STEPS) without the doctor-review
- * step, which InRange does not track for a booked test. Renders nothing for a booking that is not
+ * step, which inrange does not track for a booked test. Renders nothing for a booking that is not
  * moving (waiting for payment, cancelled, not paid in time): the page says those in words.
  */
 

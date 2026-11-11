@@ -7,7 +7,7 @@ import type { Metadata } from "next";
 import SignInFlow from "./components/SignInFlow";
 
 export const metadata: Metadata = {
-  title: "Sign in | InRange",
+  title: "Sign in | inrange",
   robots: { index: false, follow: false },
 };
 

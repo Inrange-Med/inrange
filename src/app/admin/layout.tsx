@@ -1,6 +1,6 @@
 /*
   The admin layout: every /admin page renders inside AdminShell, which checks the session (the
-  InRange team only), applies the design tokens and draws the rail, the dock and the toast. The
+  inrange team only), applies the design tokens and draws the rail, the dock and the toast. The
   whole area stays out of search engines.
 */
 
@@ -9,7 +9,7 @@ import type { ReactNode } from "react";
 import AdminShell from "./components/AdminShell";
 
 export const metadata: Metadata = {
-  title: "Admin | InRange",
+  title: "Admin | inrange",
   robots: { index: false, follow: false },
 };
 

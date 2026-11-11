@@ -1,5 +1,5 @@
 /**
- * The InRange team's admin area (role ADMIN only). Doc: supabase/functions/api/routes/admin.ts
+ * The inrange team's admin area (role ADMIN only). Doc: supabase/functions/api/routes/admin.ts
  *   GET   /api/admin/reviews               waiting reviews (oldest first), the last 20 decided, and patients waiting on a home test
  *   POST  /api/admin/reviews/:patientId    { decision, note? }: note required for NOT_APPROVED, shown to the patient
  *   POST  /api/admin/lab-bookings/:id/simulate  dry runs only { event: SAMPLE_COLLECTED | REPORT_READY }

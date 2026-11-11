@@ -26,7 +26,7 @@ repository (Arhaan's prototype) and is carried here by the design kit in `src/co
 | Env values                                                                | `src/config/env.ts` (public); `.env.example` lists every variable                                                                                                                                                                                                           |
 | Redcliffe Labs reference client (for the backend; the app never calls it) | `src/server/redcliffe/redcliffeClient.ts` (+ `redcliffeTypes.ts`, `redcliffeClient.check.mjs`, run by `npm run check:redcliffe`)                                                                                                                                            |
 | Payments                                                                  | `src/services/paymentService.ts`, `src/lib/payments/razorpayCheckout.ts`, `src/lib/payments/checkoutHref.ts` (every link to the checkout), `src/app/patient-dashboard/checkout/`, `docs/backend/payments-razorpay.md`                                                       |
-| The public homepage (frozen)                                              | `src/components/landing/`, `src/app/page.tsx`                                                                                                                                                                                                                               |
+| The public site (from the design repository)                              | `src/components/landing/` (sections, `LoginSheet`, `pages/`, `tools/`), `src/app/page.tsx` and the public routes `programmes`, `tools`, `guides`, `doctors`, `editorial-standards`                                                                                          |
 
 ## 1. The layers
 
@@ -36,7 +36,8 @@ src/
   components/
     ui/           The design kit: shared, presentational, used by more than one area.
                   Its README.md lists every component and stylesheet in one line each.
-    landing/      The public homepage. Frozen: it keeps its own globals.css, ui.tsx and
+    landing/      The public site, ported from the design repository (change it there first).
+                  It keeps its own globals.css, ui.tsx and
                   ContourField. Dashboards never import from it.
   features/       A whole flow used by more than one area (lab-booking: onboarding and the
                   dashboard both run it). Components plus their hook; may call services.
@@ -148,21 +149,21 @@ applies the dashboard design tokens. The landing page does not.
 
 ## 4. Single sources of truth
 
-| Thing                                                   | Lives in                                                                                                                                         | Never                                                        |
-| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------ |
-| Colours, radii, easing, type                            | `src/components/ui/styles/appTheme.css` (dashboards)                                                                                             | hex values in a component                                    |
-| Backend URL and env values                              | `src/config/env.ts` (exceptions: server secrets in `src/server/`; the frozen landing page's `ASSESSMENT_URL` in `src/components/landing/ui.tsx`) | `process.env` anywhere else                                  |
-| Access token and signed-in user                         | `src/lib/session/authSession.ts`                                                                                                                 | `localStorage` anywhere else (lint)                          |
-| Who is signed in, in a component                        | `useSessionUser()` (`src/hooks/useSessionUser.ts`)                                                                                               | reading the session during render                            |
-| Sending a signed-out visitor to sign in and back        | `signInHrefFor`, `pathAfterSignIn` in `src/lib/navigation/signInReturn.ts`                                                                       | a bare `/sign-in` from a guard                               |
-| A link to the checkout                                  | `checkoutHref()` in `src/lib/payments/checkoutHref.ts`                                                                                           | a hand-built `/patient-dashboard/checkout?...`               |
-| Date and time wording, always India time (Asia/Kolkata) | `src/lib/format/dateTime.ts` (`spokenDay`, `monthAndYear`...)                                                                                    | `toLocaleDateString` or `Intl.DateTimeFormat` in a component |
-| API dates and slot times                                | `toApiDate`, `combineDateAndTime` in `dateTime.ts` (India time)                                                                                  | the device's local date                                      |
-| Money wording                                           | `src/lib/format/money.ts`                                                                                                                        | hand-built `₹` strings                                       |
-| Kg/lb, cm/ft units                                      | `src/lib/units/measurementUnits.ts`                                                                                                              | unit maths in a component                                    |
-| A data shape                                            | `src/types/<domain>.ts`                                                                                                                          | redeclaring a type in a page or a service                    |
-| Icons                                                   | `@phosphor-icons/react`                                                                                                                          | any other icon library (lint)                                |
-| Confirmations                                           | `useToast()` or a `Sheet`                                                                                                                        | `alert()` / `confirm()` (lint)                               |
+| Thing                                                   | Lives in                                                                                                                                 | Never                                                        |
+| ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| Colours, radii, easing, type                            | `src/components/ui/styles/appTheme.css` (dashboards)                                                                                     | hex values in a component                                    |
+| Backend URL and env values                              | `src/config/env.ts` (exceptions: server secrets in `src/server/`; the public site's `ASSESSMENT_URL` in `src/components/landing/ui.tsx`) | `process.env` anywhere else                                  |
+| Access token and signed-in user                         | `src/lib/session/authSession.ts`                                                                                                         | `localStorage` anywhere else (lint)                          |
+| Who is signed in, in a component                        | `useSessionUser()` (`src/hooks/useSessionUser.ts`)                                                                                       | reading the session during render                            |
+| Sending a signed-out visitor to sign in and back        | `signInHrefFor`, `pathAfterSignIn` in `src/lib/navigation/signInReturn.ts`                                                               | a bare `/sign-in` from a guard                               |
+| A link to the checkout                                  | `checkoutHref()` in `src/lib/payments/checkoutHref.ts`                                                                                   | a hand-built `/patient-dashboard/checkout?...`               |
+| Date and time wording, always India time (Asia/Kolkata) | `src/lib/format/dateTime.ts` (`spokenDay`, `monthAndYear`...)                                                                            | `toLocaleDateString` or `Intl.DateTimeFormat` in a component |
+| API dates and slot times                                | `toApiDate`, `combineDateAndTime` in `dateTime.ts` (India time)                                                                          | the device's local date                                      |
+| Money wording                                           | `src/lib/format/money.ts`                                                                                                                | hand-built `₹` strings                                       |
+| Kg/lb, cm/ft units                                      | `src/lib/units/measurementUnits.ts`                                                                                                      | unit maths in a component                                    |
+| A data shape                                            | `src/types/<domain>.ts`                                                                                                                  | redeclaring a type in a page or a service                    |
+| Icons                                                   | `@phosphor-icons/react`                                                                                                                  | any other icon library (lint)                                |
+| Confirmations                                           | `useToast()` or a `Sheet`                                                                                                                | `alert()` / `confirm()` (lint)                               |
 
 ## 5. Before you open a pull request
 

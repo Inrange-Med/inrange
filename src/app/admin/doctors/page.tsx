@@ -3,7 +3,7 @@
 import type { Metadata } from "next";
 import DoctorsView from "./components/DoctorsView";
 
-export const metadata: Metadata = { title: "Doctors | InRange" };
+export const metadata: Metadata = { title: "Doctors | inrange" };
 
 export default function DoctorsPage() {
   return <DoctorsView />;
