@@ -10,8 +10,10 @@
  */
 
 import { useEffect, type CSSProperties } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ErrorNotice from "@/components/ui/ErrorNotice";
+import Wordmark from "@/components/ui/Wordmark";
 import { useApiResource } from "@/hooks/useApiResource";
 import { signInHrefFor } from "@/lib/navigation/signInReturn";
 import {
@@ -37,6 +39,7 @@ import {
 } from "../onboardingOptions";
 import CurrentOnboardingScreen from "./CurrentOnboardingScreen";
 import styles from "../OnboardingPage.module.css";
+import barStyles from "./OnboardingTopBar.module.css";
 
 type Start =
   | { redirectTo: string }
@@ -115,6 +118,19 @@ export default function OnboardingFlow() {
   if (start.error) {
     return (
       <main className={styles.page}>
+        {/* the top bar's brand, so the page keeps its frame; Back and Save and exit need the loaded
+            profile, so they wait for it (the wordmark shows from 768px, as on every other screen) */}
+        <header className={barStyles.bar}>
+          <div className={barStyles.barStart}>
+            <Link
+              href="/"
+              className={barStyles.brand}
+              aria-label="inrange home"
+            >
+              <Wordmark height={34} />
+            </Link>
+          </div>
+        </header>
         <div className={styles.stage}>
           {/* arrives like every other screen */}
           <div className={styles.step} style={{ "--dir": 1 } as CSSProperties}>

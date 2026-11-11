@@ -175,6 +175,11 @@
 :where(.app-theme) :focus-visible {
   outline: 2px solid var(--signal-ink);
   outline-offset: 3px;
+}
+
+/* The ring follows the control's own radius: the 6px corner adds no weight, so a pill or a
+   rounded card keeps its shape when focused, whatever order the stylesheets load in. */
+:where(.app-theme :focus-visible) {
   border-radius: 6px;
 }
 

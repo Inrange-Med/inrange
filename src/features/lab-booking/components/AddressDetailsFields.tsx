@@ -37,7 +37,8 @@ export default function AddressDetailsFields({
   error: string | null;
   onSave: () => void;
 }) {
-  const [editingPin, setEditingPin] = useState(!/^\d{6}$/.test(pincode));
+  const [pinStartsOpen] = useState(() => !/^\d{6}$/.test(pincode));
+  const [editingPin, setEditingPin] = useState(pinStartsOpen);
   return (
     <>
       <p className={styles.place}>
@@ -72,20 +73,23 @@ export default function AddressDetailsFields({
             placeholder="For example, near the metro station"
           />
         </label>
+        {/* the PIN code drops in when Edit opens it (the details as a whole already arrive) */}
         {editingPin ? (
-          <label className={formStyles.field}>
-            <span className={formStyles.label}>PIN code</span>
-            <input
-              className={`${formStyles.input} num`}
-              value={pincode}
-              inputMode="numeric"
-              maxLength={6}
-              onChange={(event) =>
-                onPincode(event.target.value.replace(/\D/g, ""))
-              }
-              autoComplete="postal-code"
-            />
-          </label>
+          <div className={pinStartsOpen ? undefined : styles.drop}>
+            <label className={formStyles.field}>
+              <span className={formStyles.label}>PIN code</span>
+              <input
+                className={`${formStyles.input} num`}
+                value={pincode}
+                inputMode="numeric"
+                maxLength={6}
+                onChange={(event) =>
+                  onPincode(event.target.value.replace(/\D/g, ""))
+                }
+                autoComplete="postal-code"
+              />
+            </label>
+          </div>
         ) : (
           <p className={styles.place}>
             <span>

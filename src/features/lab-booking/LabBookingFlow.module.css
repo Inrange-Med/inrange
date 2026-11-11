@@ -468,3 +468,26 @@
 .tested .testGroups p {
   padding-bottom: 0;
 }
+
+/* adding an address: the search, the details and the PIN code each drop in as they swap in place
+   (the design's reveal). .swap lays a view out as the flow lays out its own children. */
+.swap {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
+  min-width: 0;
+}
+.drop {
+  animation: drop 360ms var(--ease-out) backwards;
+}
+@keyframes drop {
+  from {
+    opacity: 0;
+    transform: translate3d(0, -6px, 0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .drop {
+    animation: fade 200ms var(--ease-out) backwards;
+  }
+}

@@ -23,6 +23,8 @@ import { ASSESSMENT_URL, Wordmark } from "./ui";
 import s from "./LoginSheet.module.css";
 
 const OPEN_LOGIN_EVENT = "inrange:open-login";
+/** how long "Your code is on its way." stays before the line settles on the expiry, as a text would arrive */
+const CODE_ARRIVES_AFTER_MS = 1100;
 
 /** Opens the sign-in sheet from anywhere on the public site. */
 export function openLogin() {
@@ -49,6 +51,19 @@ export default function LoginSheet() {
   const panelRef = useRef<HTMLDivElement>(null);
   const topRef = useRef<HTMLDivElement>(null);
   const returnTo = useRef<HTMLElement | null>(null);
+  // the hint under the code cells: "on its way" while the text arrives, then the expiry. Every send sets
+  // authMessage afresh (it is cleared first), so a new message starts it again.
+  const [codeArrived, setCodeArrived] = useState(false);
+  const [hintFor, setHintFor] = useState("");
+  if (authMessage !== hintFor) {
+    setHintFor(authMessage);
+    if (authMessage) setCodeArrived(false);
+  }
+  useEffect(() => {
+    if (!authMessage || codeArrived) return;
+    const timer = window.setTimeout(() => setCodeArrived(true), CODE_ARRIVES_AFTER_MS);
+    return () => window.clearTimeout(timer);
+  }, [authMessage, codeArrived]);
 
   const reset = () => {
     setAuthStep("mobile");
@@ -256,6 +271,8 @@ export default function LoginSheet() {
   if (!loginOpen) return null;
 
   const mobileReady = mobile.length === 10;
+  // "We sent a 6-digit code to ..." already is the lede; under the cells it gives way to the arrival hint
+  const noteRepeatsLede = authMessage === `We sent a 6-digit code to +91 ${mobile}`;
 
   return (
     <div
@@ -391,7 +408,16 @@ export default function LoginSheet() {
                 </div>
                 {authMessage && (
                   <p id="login-note" className={s.note} role="status">
-                    {authMessage}
+                    {!noteRepeatsLede ? (
+                      authMessage
+                    ) : codeArrived ? (
+                      "It expires in 5 minutes."
+                    ) : (
+                      <span className="on-way">
+                        <i aria-hidden="true" />
+                        Your code is on its way.
+                      </span>
+                    )}
                   </p>
                 )}
                 {authError && (

@@ -1,5 +1,6 @@
 /** The second step: the 6-digit code, one real input under six round cells, and resend. */
 
+import { useEffect, useState } from "react";
 import type { CSSProperties, RefObject } from "react";
 import { WarningCircle } from "@phosphor-icons/react";
 import formStyles from "@/components/ui/styles/FormControls.module.css";
@@ -31,6 +32,9 @@ const CELLS = Array.from({ length: CODE_LENGTH }, (_, i) => i);
 const minutesSeconds = (seconds: number) =>
   `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 
+/** how long "Your code is on its way." stays before the line settles on the expiry, as a text would arrive */
+const ARRIVES_AFTER_MS = 1100;
+
 export default function CodeStep({
   direction,
   digits,
@@ -47,6 +51,20 @@ export default function CodeStep({
   onEditNumber,
   onResend,
 }: Props) {
+  // the pulsing "on its way" line gives way to the expiry once the text has had time to land; a new
+  // code (the resend countdown jumps back up) starts it again
+  const [arrived, setArrived] = useState(false);
+  const [lastCountdown, setLastCountdown] = useState(resendInSeconds);
+  if (resendInSeconds !== lastCountdown) {
+    setLastCountdown(resendInSeconds);
+    if (resendInSeconds > lastCountdown) setArrived(false);
+  }
+  useEffect(() => {
+    if (arrived) return;
+    const timer = setTimeout(() => setArrived(true), ARRIVES_AFTER_MS);
+    return () => clearTimeout(timer);
+  }, [arrived]);
+
   return (
     <form
       className={pageStyles.step}
@@ -143,12 +161,15 @@ export default function CodeStep({
           ) : busy ? (
             "Checking the code"
           ) : (
-            (pilotHint ?? (
+            (pilotHint ??
+            (arrived ? (
+              "It expires in 5 minutes."
+            ) : (
               <span className={styles.onWay}>
                 <i aria-hidden="true" />
                 Your code is on its way.
               </span>
-            ))
+            )))
           )}
         </p>
       </div>

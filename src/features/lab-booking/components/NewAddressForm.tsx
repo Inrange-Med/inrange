@@ -6,9 +6,11 @@
  * street, a landmark and the PIN code, saved with the place's map location (useNewAddressForm).
  */
 
+import { useState } from "react";
 import { useNewAddressForm } from "../useNewAddressForm";
 import AddressDetailsFields from "./AddressDetailsFields";
 import AddressPlaceSearch from "./AddressPlaceSearch";
+import styles from "../LabBookingFlow.module.css";
 
 export default function NewAddressForm({
   isFirst,
@@ -20,37 +22,48 @@ export default function NewAddressForm({
   onCancel?: () => void;
 }) {
   const form = useNewAddressForm(isFirst, onSaved);
+  // keyed by the view, so the search and the details each drop in as they swap. With no saved address
+  // the form is the step itself, so its first view arrives with the step instead.
+  const [stillView] = useState(
+    isFirst ? (form.place ? "details" : "search") : null,
+  );
+  const viewClass = (view: "search" | "details") =>
+    view === stillView ? styles.swap : `${styles.swap} ${styles.drop}`;
 
   if (!form.place)
     return (
-      <AddressPlaceSearch
-        query={form.query}
-        onQuery={form.changeQuery}
-        matches={form.matches}
-        searching={form.searching}
-        locating={form.locating}
-        onLocate={form.locate}
-        checkingEloc={form.checkingEloc}
-        onPick={form.pick}
-        error={form.error}
-        onCancel={onCancel}
-      />
+      <div key="search" className={viewClass("search")}>
+        <AddressPlaceSearch
+          query={form.query}
+          onQuery={form.changeQuery}
+          matches={form.matches}
+          searching={form.searching}
+          locating={form.locating}
+          onLocate={form.locate}
+          checkingEloc={form.checkingEloc}
+          onPick={form.pick}
+          error={form.error}
+          onCancel={onCancel}
+        />
+      </div>
     );
 
   return (
-    <AddressDetailsFields
-      placeAddress={form.place.address}
-      onChangePlace={form.changePlace}
-      line={form.line}
-      onLine={form.setLine}
-      landmark={form.landmark}
-      onLandmark={form.setLandmark}
-      pincode={form.pincode}
-      onPincode={form.setPincode}
-      complete={form.complete}
-      saving={form.saving}
-      error={form.error}
-      onSave={form.save}
-    />
+    <div key="details" className={viewClass("details")}>
+      <AddressDetailsFields
+        placeAddress={form.place.address}
+        onChangePlace={form.changePlace}
+        line={form.line}
+        onLine={form.setLine}
+        landmark={form.landmark}
+        onLandmark={form.setLandmark}
+        pincode={form.pincode}
+        onPincode={form.setPincode}
+        complete={form.complete}
+        saving={form.saving}
+        error={form.error}
+        onSave={form.save}
+      />
+    </div>
   );
 }
