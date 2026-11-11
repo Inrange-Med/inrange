@@ -38,28 +38,61 @@
   letter-spacing: 0.01em;
 }
 
-/* the doctor's recommendation: the first thing in the card, on a quiet plate */
+/* the doctor's recommendation: who recommends it as a quiet line with their face (Arhaan Care .by),
+   and their own words on the note plate (Arhaan Care .note) */
 .recommended {
   display: grid;
-  gap: 6px;
-  padding: 14px 16px;
-  border-radius: var(--r-media);
-  background: var(--signal-wash);
+  gap: 10px;
   min-width: 0;
 }
-.recommendedTitle {
-  font-size: 1rem;
-  font-weight: 600;
-  line-height: 1.4;
-  color: var(--ink);
-  overflow-wrap: anywhere;
-}
-.recommendedNote {
+.by {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
   font-size: 0.9375rem;
-  line-height: 1.5;
+  line-height: 1.4;
   color: var(--ink-2);
   overflow-wrap: anywhere;
+}
+.by > :first-child {
+  flex: none;
+}
+.note {
+  margin: 0;
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border-radius: var(--r-media);
+  background: var(--signal-wash);
+}
+.note p {
+  font-size: 1rem;
+  line-height: 1.55;
+  color: var(--ink);
+  overflow-wrap: anywhere;
   white-space: pre-line;
+}
+
+/* what the plan includes: a checklist; the bill below it is for money only (Arhaan Care .incl) */
+.incl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.incl li {
+  display: flex;
+  gap: 10px;
+  font-size: 1rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.incl svg {
+  flex: none;
+  margin-top: 3px;
+  color: var(--signal-ink);
 }
 
 .chosen {
@@ -84,7 +117,30 @@
   color: var(--ink-3);
   text-wrap: pretty;
 }
+/* the action and its note: the button at its own width from 560px, the note beside it on a laptop
+   (Arhaan Care .startRow, .cta) */
 .action {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
+}
+@media (min-width: 560px) {
+  .cta {
+    justify-self: start;
+    width: auto;
+  }
+}
+@media (min-width: 1024px) {
+  .action {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 18px;
+  }
+  .action > .cta {
+    flex: none;
+  }
+  .action > .foot {
+    flex: 1 1 180px;
+  }
 }

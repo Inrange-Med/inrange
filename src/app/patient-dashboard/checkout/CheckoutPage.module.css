@@ -3,4 +3,19 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 16px;
+  /* as wide as Arhaan's pay sheet (560px) */
+  width: 100%;
+  max-width: 560px;
+  margin-inline: auto;
+}
+/* the back plate and the heading as one head: the plate where the head starts, 6px above the title
+   (as PageHead lays out its own back link) */
+.head {
+  display: grid;
+}
+.head > a {
+  margin-top: clamp(4px, 1.5vh, 16px);
+}
+.head > a + div {
+  padding-top: 6px;
 }

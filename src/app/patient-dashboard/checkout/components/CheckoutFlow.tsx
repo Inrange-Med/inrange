@@ -18,7 +18,7 @@ import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import BackLink from "@/components/ui/BackLink";
 import ErrorNotice from "@/components/ui/ErrorNotice";
-import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
+import PageGhosts from "@/app/patient-dashboard/components/PageGhosts";
 import PageHead from "@/components/ui/PageHead";
 import { useApiResource } from "@/hooks/useApiResource";
 import { takePendingConsultationReason } from "@/lib/consultations/pendingConsultationReason";
@@ -39,6 +39,7 @@ import {
 import CheckoutMessage from "./CheckoutMessage";
 import OrderReview, { type CheckoutNotice } from "./OrderReview";
 import PaymentReceived, { type PaidOrder } from "./PaymentReceived";
+import pageStyles from "../CheckoutPage.module.css";
 
 /** The page's own words per purpose; what is bought and its price always come from the order. */
 const PURPOSE_WORDS: Record<
@@ -196,7 +197,7 @@ export default function CheckoutFlow() {
       );
     if (order.error)
       return <ErrorNotice message={order.error} onRetry={order.reload} />;
-    if (order.loading) return <LoadingSkeleton />;
+    if (order.loading) return <PageGhosts heights={[300]} />;
     if (!order.data)
       return (
         <CheckoutMessage
@@ -224,7 +225,7 @@ export default function CheckoutFlow() {
     <>
       {/* one grid row, as on the lab booking page: the back control sits right above the heading.
           Once paid there is no Back: the order is closed, and Continue on the receipt moves on. */}
-      <div>
+      <div className={pageStyles.head}>
         {!paid && <BackLink href={back.href} label={back.label} />}
         <PageHead
           title={paid ? "Payment received" : words.title}

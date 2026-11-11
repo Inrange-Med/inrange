@@ -58,20 +58,14 @@ export default function OrderReview({
           }))}
           total={{ label: "To pay now", amount: total }}
         />
-        <p className={styles.secure}>
-          <LockSimple size={16} weight="bold" aria-hidden="true" />
-          <span>
-            Pay by UPI, card, net banking or wallet. Payments are processed
-            securely by Razorpay.
-          </span>
-        </p>
+        {/* standing conditions on a quiet plate (Arhaan Care .fast) */}
         {pilotPayment && (
-          <p className={styles.calm} role="status">
+          <p className={styles.fast} role="status">
             Pilot test payment. Nothing is charged.
           </p>
         )}
         {!paymentReady && (
-          <p className={styles.calm} role="status">
+          <p className={styles.fast} role="status">
             Online payment is not switched on yet. Nothing has been charged.
           </p>
         )}
@@ -85,7 +79,7 @@ export default function OrderReview({
           ))}
         <button
           type="button"
-          className={`btn ${formStyles.go}`}
+          className={`btn ${formStyles.go} ${styles.payDock}`}
           data-busy={busyLabel !== null}
           aria-busy={busyLabel !== null}
           disabled={!paymentReady}
@@ -110,6 +104,14 @@ export default function OrderReview({
             )}
           </span>
         </button>
+        {/* the honest line under the action (Arhaan Onboarding a.demo) */}
+        <p className={`${formStyles.demo} ${styles.secure}`}>
+          <LockSimple size={13} aria-hidden="true" />
+          <span>
+            Pay by UPI, card, net banking or wallet. Payments are processed
+            securely by Razorpay.
+          </span>
+        </p>
       </div>
     </Card>
   );

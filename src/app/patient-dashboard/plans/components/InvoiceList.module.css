@@ -8,23 +8,26 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px 0;
+  padding: 10px 0;
   border-top: 1px solid var(--hair);
 }
 .invoices li:first-child {
   padding-top: 0;
   border-top: 0;
 }
+/* min-width: 0, so a long title never pushes View off the card on a phone */
 .invoices li > div {
   display: grid;
   gap: 2px;
+  min-width: 0;
 }
 .invoices strong {
-  font-size: 0.9375rem;
+  font-size: 1rem;
   font-weight: 560;
 }
-.invoices span {
-  font-size: 0.8125rem;
+/* only the line under the title (the amount keeps its own size and colour) */
+.invoices li > div > span {
+  font-size: 0.875rem;
   color: var(--ink-3);
 }
 

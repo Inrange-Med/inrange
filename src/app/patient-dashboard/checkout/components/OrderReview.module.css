@@ -4,21 +4,42 @@
   grid-template-columns: minmax(0, 1fr);
   gap: 18px;
 }
-/* the secure-payment line, set like Arhaan's pack-verification note: icon, then small text */
-.secure {
-  display: flex;
-  gap: 10px;
+/* the secure-payment line under the button: the kit's .demo (13px lock, small ink-3 text); the lock
+   sits on the first line when the text wraps */
+.review .secure {
   align-items: flex-start;
+  margin-top: -6px;
+  /* the team's 13px floor (the kit's .demo is 12px) */
   font-size: 0.8125rem;
+}
+.secure svg {
+  margin-top: 2px;
+}
+/* a standing condition (pilot, payments not switched on): Arhaan Care .fast */
+.fast {
+  padding: 12px 14px;
+  border-radius: var(--r-media);
+  background: var(--bg);
+  font-size: 0.9375rem;
   line-height: 1.5;
   color: var(--ink-2);
 }
-.secure svg {
-  flex: none;
-  color: var(--slate-700);
-}
+/* a passing note (closed without paying): kept at the team's size and ink-2, so a status the person
+   must read keeps its contrast */
 .calm {
   font-size: 0.9375rem;
   line-height: 1.5;
   color: var(--ink-2);
+}
+/* a phone: the pay button stays in reach at the bottom of the screen while the bill scrolls (Arhaan
+   Care .payDock); paper fades the content into it. Only the button's shadow changes: its colour
+   (--btn-bg) stays solid, since it is passed to Razorpay as the window's theme. */
+@media (max-width: 767px) {
+  .payDock {
+    position: sticky;
+    bottom: max(16px, calc(12px + env(safe-area-inset-bottom)));
+    z-index: 2;
+    margin-top: 6px;
+    box-shadow: 0 -12px 12px -12px var(--paper);
+  }
 }
