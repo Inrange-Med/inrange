@@ -46,6 +46,7 @@
 
 /* the video stage: carbon, a surface radius, the call's iframe edge to edge above the controls bar */
 .stage {
+  position: relative;
   flex: 1;
   min-height: 0;
   display: flex;
@@ -53,6 +54,20 @@
   overflow: hidden;
   border-radius: 20px;
   background: var(--slate-950);
+}
+/* 100ms's page is dark and blank until it has loaded; say what is happening */
+.frameWait {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  text-align: center;
+  color: var(--paper);
+  opacity: 0.72;
+  pointer-events: none;
 }
 .frame {
   display: block;

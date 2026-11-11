@@ -49,6 +49,7 @@ export default function ConsultationRoom({
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
   const [confirmingEnd, setConfirmingEnd] = useState(false);
+  const [loadedLink, setLoadedLink] = useState<string | null>(null);
   const home = homePathFor(isDoctor ? "DOCTOR" : "PATIENT");
   // each dashboard's first section: the doctor's Today, the patient's Home
   const homeLabel = isDoctor ? "Today" : "Home";
@@ -119,10 +120,16 @@ export default function ConsultationRoom({
 
       {live && (
         <div className={styles.stage}>
+          {loadedLink !== stage.room.joinLink && (
+            <p className={styles.frameWait} role="status">
+              Opening the video room. This can take a few seconds.
+            </p>
+          )}
           <iframe
             className={styles.frame}
             title="Video consultation"
             src={stage.room.joinLink}
+            onLoad={() => setLoadedLink(stage.room.joinLink)}
             allow="camera; microphone; display-capture; autoplay; fullscreen; clipboard-write"
           />
           {/* the app's own call controls, in a carbon bar under the video (the design's .controls) */}
