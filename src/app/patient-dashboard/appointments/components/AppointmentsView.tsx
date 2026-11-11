@@ -9,7 +9,7 @@
 import { useState } from "react";
 import DeviceCheck from "@/components/ui/DeviceCheck";
 import ErrorNotice from "@/components/ui/ErrorNotice";
-import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
+import PageGhosts from "@/app/patient-dashboard/components/PageGhosts";
 import PageHead from "@/components/ui/PageHead";
 import Sheet from "@/components/ui/Sheet";
 import { useApiResource } from "@/hooks/useApiResource";
@@ -44,7 +44,9 @@ export default function AppointmentsView() {
         back={{ href: "/patient-dashboard/care", label: "Care" }}
       />
 
-      {appointments.loading && !appointments.data && <LoadingSkeleton />}
+      {appointments.loading && !appointments.data && (
+        <PageGhosts heights={[196, 140]} />
+      )}
       {appointments.error && (
         <ErrorNotice
           message={appointments.error}

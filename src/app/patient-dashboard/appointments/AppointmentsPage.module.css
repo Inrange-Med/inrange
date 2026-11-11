@@ -97,6 +97,8 @@
   font-weight: 600;
 }
 .pastBy {
+  /* the date reads as the title's subline, 2px under it (Arhaan Appointments .pastBy) */
+  margin-top: -4px;
   font-size: 0.875rem;
   color: var(--ink-3);
 }
