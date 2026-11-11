@@ -10,15 +10,17 @@ export const PLANS = [
 ] as const;
 export type Plan = (typeof PLANS)[number];
 
-/** The assessment (counsellor screening, blood tests if needed, the doctor's first consultation). Dummy. */
-export const ASSESSMENT_PRICE = 1999;
+/** The first step, as the app sells it (its care packages, Nov 2026): home blood tests with the first doctor
+    consultation, or the consultation alone for someone who uploads a report from the last three months.
+    Keep in step with the app's packages. */
+export const FIRST_STEP = { withTests: 1499, withReport: 999 } as const;
 
 export const inr = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
 export const planOf = (months: number) => PLANS.find((p) => p.months === months) ?? PLANS[2];
 
 /** What the one package holds, in order, with how each line is charged. Read by the pricing section, /pricing and the programme pages. */
 export const INCLUDED: [string, string][] = [
-  ["Your assessment, paid once: counsellor, blood tests if needed, doctor", inr(ASSESSMENT_PRICE)],
+  [`Your first step, paid once: blood tests at home and your doctor consultation (${inr(FIRST_STEP.withReport)} with a recent report)`, inr(FIRST_STEP.withTests)],
   ["A one-minute check-in every week", "Included"],
   ["A doctor review every month", "Included"],
   ["Blood tests at home", "Included"],

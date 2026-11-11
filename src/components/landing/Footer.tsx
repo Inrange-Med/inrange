@@ -61,7 +61,7 @@ export default function Footer({
         <div className={s.ctaSide} suppressHydrationWarning data-reveal="rise" style={{ "--d": "200ms" } as React.CSSProperties}>
           <p>
             {close?.text ??
-              "Answer a few questions and a doctor reads them. Then book your assessment, with its fee shown first."}
+              "Answer a few questions in the app. Then come your blood tests and your doctor, with every fee shown first."}
           </p>
           {close?.action ?? <Cta variant="light" />}
         </div>

@@ -67,7 +67,9 @@ export default function LoginSheet() {
     const onClick = (event: MouseEvent) => {
       if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
       const link = (event.target as Element | null)?.closest?.("a");
-      if (!link || link.getAttribute("href") !== ASSESSMENT_URL) return;
+      // "/assessment", "/assessment/" and "/assessment?plan=4" all count
+      const path = (link?.getAttribute("href") ?? "").split(/[?#]/)[0].replace(/\/$/, "");
+      if (!link || path !== ASSESSMENT_URL.replace(/\/$/, "")) return;
       event.preventDefault();
       open();
     };

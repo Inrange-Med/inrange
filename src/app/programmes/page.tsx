@@ -203,7 +203,7 @@ export default function ProgrammesPage() {
                 style={{ "--d": "160ms" } as React.CSSProperties}
               >
                 Start with the free check. Your doctor confirms the right one at
-                your assessment.
+                your first consultation.
               </p>
             </div>
             <div className={`${p.tableWrap} ${v.chooseWrap}`}>

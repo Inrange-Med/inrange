@@ -130,7 +130,7 @@ export const PAGES: Record<ProgrammeKey, ProgrammePage> = {
       },
       {
         q: "Will I be prescribed medication?",
-        a: "Only if your doctor judges it clinically appropriate, after your assessment and blood tests. Not everyone is prescribed medication. If you are, it is billed separately.",
+        a: "Only if your doctor judges it clinically appropriate, after your blood tests and consultation. Not everyone is prescribed medication. If you are, it is billed separately.",
       },
       {
         q: "Motapa kam karne ke liye doctor kya karta hai?",

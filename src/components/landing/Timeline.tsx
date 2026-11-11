@@ -12,17 +12,17 @@ const EVENTS = [
   {
     when: "Two minutes, free",
     title: "An eligibility check",
-    body: "Your weight history, health conditions, medicines and goals. A doctor reads every answer, and it costs nothing.",
+    body: "Your weight history, health conditions, medicines and goals, in the app. It costs nothing.",
   },
   {
-    when: "A short call",
-    title: "A call with your counsellor",
-    body: "The first part of your assessment. A counsellor checks the programme suits you and briefs your doctor, so your consultation starts where it matters.",
-  },
-  {
-    when: "Only if you need them",
+    when: "First",
     title: "Blood tests at home",
-    body: "If you have no blood tests from the last 90 days, a lab collects samples at home. Recent reports you upload count too.",
+    body: "Upload a report from the last three months, or a lab collects samples at your door. Your results are the first thing your doctor needs.",
+  },
+  {
+    when: "Before you book",
+    title: "A review by our medical team",
+    body: "Our medical team reads your report and confirms the programme suits you, so your consultation starts where it matters.",
   },
   {
     when: "30 minutes, by video",

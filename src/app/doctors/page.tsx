@@ -42,7 +42,7 @@ export const metadata: Metadata = {
 const CONSULT = [
   {
     name: "Before",
-    text: "A counsellor takes your history, and a lab comes home for blood tests if you have none from the last 90 days. Your doctor reads both before you meet.",
+    text: "You upload a report from the last three months, or a lab comes home for blood tests. Our medical team reviews it, and your doctor reads it before you meet.",
   },
   {
     name: "Thirty minutes",
@@ -69,7 +69,7 @@ const QA = [
   },
   {
     q: "Who prescribes medicine?",
-    a: "Only a doctor on your care team, and only if they judge it clinically appropriate after your assessment and blood tests. Not everyone is prescribed medication, and doctors are never paid per prescription.",
+    a: "Only a doctor on your care team, and only if they judge it clinically appropriate after your blood tests and consultation. Not everyone is prescribed medication, and doctors are never paid per prescription.",
   },
   {
     q: "Are consultations only by video?",

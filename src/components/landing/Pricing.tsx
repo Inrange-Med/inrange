@@ -139,7 +139,7 @@ export function Planner() {
           </p>
         </div>
         <p className={s.totalNote}>
-          <span className={s.indicative}>Indicative</span> You see the final, itemised price after your assessment, and pay nothing
+          <span className={s.indicative}>Indicative</span> You see the final, itemised price after your consultation, and pay nothing
           for the plan until then.
         </p>
         <Cta href={`${ASSESSMENT_URL}?plan=${plan.months}`} variant="light" className={s.cta}>
@@ -207,7 +207,7 @@ export default function Pricing() {
           <Mask id="pricing-title" className="h2" lines={["One plan.", "Four lengths."]} soft={1} join />
           <p className="lede" suppressHydrationWarning data-reveal="rise" style={{ "--d": "160ms" } as React.CSSProperties}>
             Reviews, blood tests, your nutrition plan, the app and delivery in one package. The check is free, the
-            assessment is one fee, and medicine, only if prescribed, is billed separately.
+            first step has its own fee, and medicine, only if prescribed, is billed separately.
           </p>
         </div>
 

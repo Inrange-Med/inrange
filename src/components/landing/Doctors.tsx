@@ -24,7 +24,7 @@ export const FACTS = [
   {
     icon: HouseLine,
     lead: "Blood tests at home.",
-    text: "If you have none from the last 90 days, a lab collects samples at your door. Results go straight to your doctor.",
+    text: "Upload a report from the last three months, or a lab collects samples at your door. Results go straight to your doctor.",
   },
 ];
 

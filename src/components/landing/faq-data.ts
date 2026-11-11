@@ -3,7 +3,7 @@
 export const QA = [
   {
     q: "Will I be prescribed medication?",
-    a: "Only if your doctor decides it is clinically appropriate after your assessment and blood tests. Many plans start with food, activity and sleep alone, and not everyone is prescribed medication. Your doctor explains the reasons and risks of anything in your plan.",
+    a: "Only if your doctor decides it is clinically appropriate after your blood tests and consultation. Many plans start with food, activity and sleep alone, and not everyone is prescribed medication. Your doctor explains the reasons and risks of anything in your plan.",
   },
   {
     q: "Who is the programme for?",
@@ -11,11 +11,11 @@ export const QA = [
   },
   {
     q: "How do consultations work?",
-    a: "By secure video, from anywhere in India. A counsellor calls first to check the programme suits you and passes your history to your doctor. If you have no blood tests from the last 90 days, a lab collects samples at home. Then you have a 30-minute consultation. After that your doctor reviews your plan every month, and your care team is in the app and on WhatsApp in between.",
+    a: "By secure video, from anywhere in India. First come your blood tests: upload a report from the last three months, or a lab collects samples at home. Our medical team reads them and confirms the programme suits you. Then you have a 30-minute consultation with your doctor. After that your doctor reviews your plan every month, and your care team is in the app and on WhatsApp in between.",
   },
   {
     q: "How much does it cost?",
-    a: "Your check is free. The assessment (a counsellor call, blood tests if you need them and a doctor consultation) has one fee, shown before you book. If your doctor recommends a plan, you choose 1, 4, 6 or 12 months, paid upfront, and see the full price, itemised, before you pay. The plan covers reviews, blood tests at home, your nutrition plan, the app and delivery.",
+    a: "Your check is free. Your first step, blood tests at home and a doctor consultation, is ₹1,499, or ₹999 if you upload a recent report, shown before you pay. If your doctor recommends a plan, you choose 1, 4, 6 or 12 months, paid upfront, and see the full price, itemised, before you pay. The plan covers reviews, blood tests at home, your nutrition plan, the app and delivery.",
   },
   {
     q: "Am I talking to a person or to AI?",

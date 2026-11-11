@@ -11,7 +11,7 @@ import WaitlistButton from "../Waitlist";
 import DoctorBench from "../DoctorBench";
 import { LISTED_DOCTORS } from "../doctor-data";
 import { Art, Cta, Mask, Tag } from "../ui";
-import { ASSESSMENT_PRICE, INCLUDED, inr, PLANS } from "../plans";
+import { FIRST_STEP, INCLUDED, inr, PLANS } from "../plans";
 import { Planner } from "../Pricing";
 import { PROGRAMMES, programmeHref, type Programme } from "../programme-data";
 import { SITE, find } from "../tools/catalog";
@@ -24,14 +24,14 @@ export const UPDATED = "2026-10-16";
 const UPDATED_LABEL = "16 October 2026";
 
 const LIVE_STEPS = [
-  { name: "Eligibility check", text: "Two minutes online. A doctor reads your answers before anything is booked." },
-  { name: "Assessment", text: "A counsellor call, home blood tests if you need them, then 30 minutes by video with your doctor." },
+  { name: "Eligibility check", text: "Two minutes online, before anything is booked." },
+  { name: "First step", text: "Blood tests at home or a recent report, a review by our medical team, then 30 minutes by video with your doctor." },
   { name: "Your plan", text: "Food, strength, sleep and, only if clinically appropriate, medicine. You pay only once your doctor recommends it." },
   { name: "Every month", text: "Your doctor reviews your readings and adjusts the plan. A one-minute check-in each week keeps it on track." },
 ];
 const SOON_STEPS = [
   { name: "Join the waitlist", text: "Your name, mobile and city. We use them only to tell you when the programme opens." },
-  { name: "Assessment", text: "A counsellor call, home blood tests, then a private video consultation with a doctor." },
+  { name: "First step", text: "Blood tests at home, a review by our medical team, then a private video consultation with a doctor." },
   { name: "Your plan", text: "Agreed with your doctor, with the tests and follow-up it needs, priced before you pay." },
   { name: "Follow-up", text: "Monthly reviews with the same doctor, and your care team in the app and on WhatsApp." },
 ];
@@ -128,7 +128,7 @@ export default function ProgrammeView({ programme }: { programme: Programme }) {
               {(live
                 ? [
                     ["Plans from", `${inr(from.price / from.months)} a month`],
-                    ["Assessment", `${inr(ASSESSMENT_PRICE)}, once`],
+                    ["First step", `${inr(FIRST_STEP.withTests)}, once`],
                     ["Your doctor", "Every month"],
                     ["Blood tests", "At home"],
                   ]
@@ -213,7 +213,7 @@ export default function ProgrammeView({ programme }: { programme: Programme }) {
               <Tag>Who it is for</Tag>
               <Mask id="who-title" className="h2" lines={d.heads.who} soft={1} />
               <p className="lede" suppressHydrationWarning data-reveal="rise" style={{ "--d": "160ms" } as React.CSSProperties}>
-                Your doctor confirms it at your assessment, before you pay for a plan.
+                Your doctor confirms it at your first consultation, before you pay for a plan.
               </p>
             </div>
             <div className={v.who}>
