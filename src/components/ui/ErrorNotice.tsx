@@ -13,7 +13,7 @@ export default function ErrorNotice({
 }) {
   return (
     <p className={formStyles.err} role="alert">
-      <WarningCircle size={16} weight="bold" aria-hidden="true" />
+      <WarningCircle size={16} aria-hidden="true" />
       <span>{message}</span>
       {onRetry && (
         <button

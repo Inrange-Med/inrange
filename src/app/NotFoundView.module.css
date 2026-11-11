@@ -13,7 +13,7 @@
   gap: 32px;
   padding: max(24px, env(safe-area-inset-top)) var(--gutter)
     max(32px, env(safe-area-inset-bottom));
-  background-color: var(--slate-900);
+  background-color: var(--slate-800);
   background-image: var(--sheen), var(--carbon);
   color: var(--on-dark);
 }
@@ -31,7 +31,7 @@
   display: inline-flex;
   min-height: 44px;
   align-items: center;
-  color: #fff;
+  color: var(--paper);
   text-decoration: none;
 }
 
@@ -101,7 +101,6 @@
 
 .back {
   gap: 8px;
-  min-height: 48px;
 }
 
 /* phones: the actions stack, full width, primary first */

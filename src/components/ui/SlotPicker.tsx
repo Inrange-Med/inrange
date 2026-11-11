@@ -236,7 +236,7 @@ export default function SlotPicker({
                 </div>
               ))}
             {slots !== null && groups.length === 0 && (
-              <p className={formStyles.hint}>
+              <p className={styles.empty}>
                 No open times on this day. Try another day.
               </p>
             )}

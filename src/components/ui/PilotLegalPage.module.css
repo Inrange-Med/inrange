@@ -1,76 +1,94 @@
-/* The pilot legal pages: one readable column on the app canvas. */
+/*
+  The pilot legal pages, set in the design repository's legal page (LegalDraft + ToolPage): the head
+  (home link, title, the pilot plate, the answer), then the reading column of questions and prose.
+  Type comes from the site's .h2 and .h3 (globals.css), the rest from ToolPage's values.
+*/
 .page {
-  max-width: 720px;
-  margin: 0 auto;
-  padding: 32px 16px 80px;
+  max-width: calc(980px + var(--gutter) * 2);
+  margin-inline: auto;
+  padding: clamp(24px, 6vh, 56px) var(--gutter) var(--section);
   color: var(--ink);
-  font-family: var(--font-text);
+}
+
+.head {
+  display: grid;
+  gap: 18px;
+  padding-bottom: 36px;
 }
 
 .home {
   display: inline-flex;
+  justify-self: start;
+  margin-bottom: 22px;
   color: var(--ink);
-  margin-bottom: 40px;
 }
 
 .title {
-  font-family: var(--font-display);
-  font-weight: 500;
-  letter-spacing: -0.02em;
-  font-size: clamp(30px, 6vw, 40px);
-  line-height: 1.1;
-  margin: 0 0 12px;
+  max-width: 14em;
 }
 
+/* the pilot notice: a quiet plate that says plainly this is not the final text */
 .pilot {
-  display: inline-block;
-  margin: 0 0 24px;
-  padding: 8px 12px;
-  border-radius: 7px;
-  background: var(--bg-2);
+  max-width: 36em;
+  padding: 16px 20px;
+  border: 1px solid var(--hair-2);
+  border-radius: var(--r-surface);
+  background: var(--paper);
+  font-size: 0.9375rem;
+  line-height: 1.5;
   color: var(--ink-2);
-  font-size: 14px;
 }
 
 .intro {
-  font-size: 17px;
-  line-height: 1.6;
+  max-width: 36em;
+  font-family: var(--font-display);
+  font-size: clamp(1.15rem, 1.05rem + 0.4vw, 1.35rem);
+  font-weight: 450;
+  line-height: 1.45;
+  letter-spacing: -0.008em;
   color: var(--ink-2);
-  margin: 0 0 8px;
+  text-wrap: pretty;
+}
+
+.body {
+  display: grid;
+  gap: 56px;
+  padding-top: 28px;
+}
+.body > * {
+  max-width: 760px;
 }
 
 .section {
-  border-top: 1px solid var(--hair);
-  margin-top: 28px;
-  padding-top: 20px;
+  display: grid;
+  gap: 16px;
 }
 
 .section h2 {
-  font-family: var(--font-display);
-  font-weight: 500;
-  font-size: 20px;
-  margin: 0 0 10px;
+  max-width: 30em;
 }
 
-.section p {
-  margin: 0 0 10px;
-  font-size: 16px;
-  line-height: 1.6;
+.prose {
+  display: grid;
+  gap: 14px;
   color: var(--ink-2);
+  font-size: 1.0625rem;
+  line-height: 1.65;
+}
+.prose p {
+  max-width: 38em;
 }
 
 .contact {
-  margin-top: 36px;
-  font-size: 15px;
-  color: var(--ink-2);
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  color: var(--ink-3);
 }
 
 .contact a {
-  color: var(--ink);
-}
-
-@media (min-width: 768px) {
-  .page {
-    padding-top: 48px;
-  }
+  color: var(--signal-ink);
+  font-weight: 560;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--signal-ink) 35%, transparent);
+  text-underline-offset: 3px;
 }

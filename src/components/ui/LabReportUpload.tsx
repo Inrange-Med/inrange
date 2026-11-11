@@ -7,7 +7,7 @@
  */
 
 import { useRef, useState } from "react";
-import { ArrowRight, FileArrowUp, XCircle } from "@phosphor-icons/react";
+import { ArrowRight, FileArrowUp, WarningCircle } from "@phosphor-icons/react";
 import { errorMessage } from "@/lib/http/apiClient";
 import type { NewReport } from "@/types/report";
 import formStyles from "./styles/FormControls.module.css";
@@ -77,6 +77,7 @@ export default function LabReportUpload({
       <button
         type="button"
         className={styles.zone}
+        data-chosen={!!file}
         onClick={() => fileInput.current?.click()}
       >
         <FileArrowUp size={28} aria-hidden="true" />
@@ -90,7 +91,7 @@ export default function LabReportUpload({
 
       {error && (
         <p className={formStyles.err} role="alert">
-          <XCircle size={16} weight="bold" aria-hidden="true" />
+          <WarningCircle size={16} aria-hidden="true" />
           <span>{error}</span>
         </p>
       )}

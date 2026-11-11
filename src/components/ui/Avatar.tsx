@@ -34,10 +34,7 @@ export default function Avatar({
         unoptimized
       />
     );
-  const fontSize = Math.max(
-    10,
-    Math.min(size * 0.4, Math.max(14, size * 0.34)),
-  );
+  const fontSize = Math.max(14, size * 0.34);
   return (
     <span
       className={styles.initials}

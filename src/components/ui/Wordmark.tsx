@@ -1,6 +1,9 @@
 /**
  * The inrange wordmark (brand guidelines v1.1): outlined from Jost Medium, with the drawn dot and the
  * plus (geometry in wordmarkPaths). Ink or paper only: it draws in currentColor, and the plus is never red.
+ * Keep it at least 120px wide (height 34); below that the guidelines ask for the dot icon instead.
+ * With `sting`, the guidelines' animated logo plays once (keyframes in src/app/globals.css): the letters
+ * fade in, the dot rises, the plus pops in.
  */
 
 import {
@@ -14,14 +17,19 @@ import {
 
 export default function Wordmark({
   className,
-  height = 30,
+  height = 34,
   dotClassName,
+  sting = false,
 }: {
   className?: string;
   height?: number;
   /** a class on the dot alone, for a rising-dot animation */
   dotClassName?: string;
+  sting?: boolean;
 }) {
+  const dotClass =
+    [sting ? "sting" : "", dotClassName ?? ""].filter(Boolean).join(" ") ||
+    undefined;
   return (
     <svg
       className={className}
@@ -32,9 +40,17 @@ export default function Wordmark({
       aria-label="inrange"
       style={{ display: "block", overflow: "visible" }}
     >
-      <path d={LOGO_BODY_PATH} fill="currentColor" />
-      <path d={LOGO_DOT_PATH} fill="currentColor" className={dotClassName} />
-      <path d={LOGO_PLUS_PATH} fill="currentColor" />
+      <path
+        d={LOGO_BODY_PATH}
+        fill="currentColor"
+        className={sting ? "sting-word" : undefined}
+      />
+      <path d={LOGO_DOT_PATH} fill="currentColor" className={dotClass} />
+      <path
+        d={LOGO_PLUS_PATH}
+        fill="currentColor"
+        className={sting ? "sting-plus" : undefined}
+      />
     </svg>
   );
 }

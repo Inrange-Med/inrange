@@ -21,26 +21,33 @@ export default function PilotLegalPage({
   return (
     <AppTheme>
       <main className={styles.page}>
-        <Link href="/" aria-label="inrange home" className={styles.home}>
-          <Wordmark />
-        </Link>
-        <h1 className={styles.title}>{title}</h1>
-        <p className={styles.pilot}>
-          Pilot version, for invited people. Counsel reviews this text and
-          replaces it before public launch.
-        </p>
-        <p className={styles.intro}>{intro}</p>
-        {sections.map((section) => (
-          <section key={section.heading} className={styles.section}>
-            <h2>{section.heading}</h2>
-            {section.body.map((line) => (
-              <p key={line}>{line}</p>
-            ))}
-          </section>
-        ))}
-        <p className={styles.contact}>
-          Questions: <a href="mailto:care@inrangemed.com">care@inrangemed.com</a>
-        </p>
+        <header className={styles.head}>
+          <Link href="/" aria-label="inrange home" className={styles.home}>
+            <Wordmark />
+          </Link>
+          <h1 className={`h2 ${styles.title}`}>{title}</h1>
+          <p className={styles.pilot} role="note">
+            Pilot version, for invited people. Counsel reviews this text and
+            replaces it before public launch.
+          </p>
+          <p className={styles.intro}>{intro}</p>
+        </header>
+        <div className={styles.body}>
+          {sections.map((section) => (
+            <section key={section.heading} className={styles.section}>
+              <h2 className="h3">{section.heading}</h2>
+              <div className={styles.prose}>
+                {section.body.map((line) => (
+                  <p key={line}>{line}</p>
+                ))}
+              </div>
+            </section>
+          ))}
+          <p className={styles.contact}>
+            Questions:{" "}
+            <a href="mailto:care@inrangemed.com">care@inrangemed.com</a>
+          </p>
+        </div>
       </main>
     </AppTheme>
   );
