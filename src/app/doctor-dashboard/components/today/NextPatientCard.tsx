@@ -63,9 +63,11 @@ export default function NextPatientCard({
         {appointment.patientName}
         <span className={styles.visitKind}>
           {" "}
-          {appointment.consultationType === "Clinic"
-            ? "clinic visit"
-            : "video consultation"}
+          {appointment.visitType === "FIRST"
+            ? "first consultation"
+            : appointment.visitType === "FOLLOW_UP"
+              ? "follow-up"
+              : "video consultation"}
         </span>
       </h2>
       {appointment.reason && (

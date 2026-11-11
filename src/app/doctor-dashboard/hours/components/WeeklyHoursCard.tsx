@@ -275,21 +275,27 @@ export default function WeeklyHoursCard({
         })}
       </ul>
 
-      {error && <ErrorNotice message={error} />}
+      <div className={styles.saveRow}>
+        {error && <ErrorNotice message={error} />}
 
-      <button
-        type="button"
-        className={`btn ${formStyles.go} ${styles.save}`}
-        onClick={save}
-        disabled={!changed && !busy}
-        data-busy={busy}
-        aria-busy={busy}
-      >
-        <span>{busy ? "Saving" : "Save hours"}</span>
-        <span className="well" aria-hidden="true">
-          {busy ? <i className={formStyles.spin} /> : <ArrowRight size={18} />}
-        </span>
-      </button>
+        <button
+          type="button"
+          className="btn"
+          onClick={save}
+          disabled={!changed && !busy}
+          data-busy={busy}
+          aria-busy={busy}
+        >
+          <span>{busy ? "Saving" : "Save hours"}</span>
+          <span className="well" aria-hidden="true">
+            {busy ? (
+              <i className={formStyles.spin} />
+            ) : (
+              <ArrowRight size={18} />
+            )}
+          </span>
+        </button>
+      </div>
     </section>
   );
 }

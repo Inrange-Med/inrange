@@ -29,7 +29,6 @@ import {
 import AppTheme from "@/components/ui/AppTheme";
 import Avatar from "@/components/ui/Avatar";
 import Wordmark from "@/components/ui/Wordmark";
-import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import ToastProvider from "@/components/ui/ToastProvider";
 import { useApiResource } from "@/hooks/useApiResource";
 import { useOnline } from "@/hooks/useOnline";
@@ -39,6 +38,7 @@ import { signInHrefFor } from "@/lib/navigation/signInReturn";
 import { getMyDoctorProfile } from "@/services/doctorPortalService";
 import { getWorkCounts } from "@/services/patientRecordService";
 import type { DoctorWorkCounts } from "@/types/patientRecord";
+import ClinicSkeleton from "./ClinicSkeleton";
 import SignOutButton from "./SignOutButton";
 import clinicStyles from "@/app/doctor-dashboard/styles/ClinicSurfaces.module.css";
 import styles from "./DoctorShell.module.css";
@@ -140,12 +140,30 @@ export default function DoctorShell({ children }: { children: ReactNode }) {
     if (role === "ADMIN") router.replace("/admin");
   }, [role, router]);
 
+  // while the session is checked the frame is already up (the brand only: no places, no name), and the
+  // page breathes inside it, so nothing pops in once the role is known
   if (!isDoctor) {
     return (
       <AppTheme>
-        <main className={clinicStyles.page}>
-          <LoadingSkeleton />
-        </main>
+        <div className={styles.app}>
+          <aside className={styles.rail}>
+            <span className={styles.brand}>
+              <Wordmark height={34} />
+              <span className={styles.portal}>Clinician</span>
+            </span>
+          </aside>
+          <header className={styles.top}>
+            <span className={styles.brand}>
+              <Wordmark height={34} />
+              <span className={styles.portal}>Clinician</span>
+            </span>
+          </header>
+          <div className={styles.main}>
+            <main className={clinicStyles.page}>
+              <ClinicSkeleton />
+            </main>
+          </div>
+        </div>
       </AppTheme>
     );
   }
@@ -165,7 +183,7 @@ export default function DoctorShell({ children }: { children: ReactNode }) {
               className={styles.brand}
               aria-label="inrange clinician portal"
             >
-              <Wordmark height={24} />
+              <Wordmark height={34} />
               <span className={styles.portal}>Clinician</span>
             </Link>
             <nav className={styles.nav} aria-label="Clinician">
@@ -207,7 +225,7 @@ export default function DoctorShell({ children }: { children: ReactNode }) {
               className={styles.brand}
               aria-label="inrange clinician portal"
             >
-              <Wordmark height={22} />
+              <Wordmark height={34} />
               <span className={styles.portal}>Clinician</span>
             </Link>
             <div className={styles.topMe}>

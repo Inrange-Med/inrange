@@ -46,7 +46,7 @@
   padding: 4px 8px;
   border-radius: 7px;
   background: var(--hover-wash);
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--slate-800);
 }
@@ -98,7 +98,7 @@
   background: var(--slate-900);
   color: var(--signal);
   font-family: var(--font-text);
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   font-weight: 600;
   text-align: center;
 }
@@ -125,7 +125,7 @@
 }
 
 .me div span {
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   line-height: 1.35;
   color: var(--ink-3);
 }
@@ -142,7 +142,7 @@
   border-radius: 999px;
   background: none;
   font-family: inherit;
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   font-weight: 560;
   color: var(--ink-3);
   cursor: pointer;
@@ -151,15 +151,26 @@
     color 180ms var(--ease-out);
 }
 
+/* on the rail it is the prototype's .reset: a 36px line of small ink-3 text one rail gap under the name card */
 .rail .signOut {
-  align-self: center;
-  margin-top: -16px;
+  min-height: 36px;
+  padding: 0;
+  border-radius: 0;
+  font-weight: 400;
+}
+
+.rail .signOut svg {
+  display: none;
 }
 
 @media (hover: hover) and (pointer: fine) {
   .signOut:hover {
     background: var(--hover-wash);
     color: var(--ink);
+  }
+  .rail .signOut:hover {
+    background: none;
+    text-decoration: underline;
   }
 }
 
@@ -226,7 +237,7 @@
   gap: 2px;
   padding: 7px 0 6px;
   border-radius: 999px;
-  font-size: 0.8125rem;
+  font-size: 0.6875rem;
   font-weight: 560;
   color: var(--on-dark-3);
   text-decoration: none;
@@ -263,7 +274,7 @@
   border-radius: 999px;
   background: var(--signal);
   color: var(--slate-950);
-  font-size: 0.8125rem;
+  font-size: 0.625rem;
   font-style: normal;
   font-weight: 700;
   line-height: 1.4;
@@ -295,7 +306,7 @@
 /* five places in the dock: the smallest phones take a smaller label */
 @media (max-width: 359px) {
   .dockTab {
-    font-size: 0.8125rem;
+    font-size: 0.625rem;
   }
 }
 

@@ -21,10 +21,11 @@
   background: rgb(10 11 12 / 0.6);
 }
 .brief span {
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   color: var(--on-dark-3);
 }
 .brief strong {
+  align-self: end;
   font-size: 0.875rem;
   font-weight: 560;
   color: var(--on-dark);

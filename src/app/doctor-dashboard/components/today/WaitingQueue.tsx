@@ -5,6 +5,7 @@
   keeps that order. `items` is null while the backend has no queue endpoint, undefined while loading.
 */
 
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { timeAgo } from "@/lib/format/dateTime";
 import type { WaitingItem } from "@/types/patientRecord";
@@ -24,10 +25,13 @@ export default function WaitingQueue({
   items,
   now,
   className,
+  notice,
 }: {
   items: WaitingItem[] | null | undefined;
   now: number;
   /** where the panel sits in the Today grid */ className: string;
+  /** a load error, shown inside the panel so the grid never shifts */
+  notice?: ReactNode;
 }) {
   return (
     <section
@@ -42,11 +46,21 @@ export default function WaitingQueue({
           <span className={`${clinicStyles.count} num`}>{items.length}</span>
         )}
       </div>
-      {items === undefined ? null : items === null ? (
-        <p className={clinicStyles.empty}>
-          Not available yet. Flagged symptoms, messages for you, new reports,
-          call notes and drafts to sign will appear here.
-        </p>
+      {notice}
+      {items === undefined ? (
+        // while the queue loads, three rows breathe where it will be
+        <ul className={styles.queue} aria-busy="true" aria-label="Loading">
+          {[0, 1, 2].map((ghost) => (
+            <li key={ghost} className={styles.ghost} />
+          ))}
+        </ul>
+      ) : items === null ? (
+        notice ? null : (
+          <p className={clinicStyles.empty}>
+            Not available yet. Flagged symptoms, messages for you, new reports,
+            call notes and drafts to sign will appear here.
+          </p>
+        )
       ) : items.length ? (
         <ul className={styles.queue}>
           {byPatient(items).map((group) => {

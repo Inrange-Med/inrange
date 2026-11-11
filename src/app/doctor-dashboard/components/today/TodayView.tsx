@@ -11,7 +11,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { ArrowRight } from "@phosphor-icons/react";
 import ErrorNotice from "@/components/ui/ErrorNotice";
-import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import PageHead from "@/components/ui/PageHead";
 import { useApiResource } from "@/hooks/useApiResource";
 import { useNow } from "@/hooks/useNow";
@@ -26,6 +25,7 @@ import {
   listWaitingItems,
 } from "@/services/patientRecordService";
 import AppointmentRow, { appointmentListClass } from "../AppointmentRow";
+import ClinicSkeleton from "../ClinicSkeleton";
 import { flagsByPatient } from "../waitingWords";
 import NextPatientCard from "./NextPatientCard";
 import WaitingQueue from "./WaitingQueue";
@@ -68,6 +68,7 @@ export default function TodayView() {
   if (day.error && !day.data) {
     return (
       <main className={clinicStyles.page}>
+        <PageHead className={clinicStyles.pageHead} title="Today" />
         <ErrorNotice message={day.error} onRetry={day.reload} />
       </main>
     );
@@ -75,7 +76,8 @@ export default function TodayView() {
   if (!day.data) {
     return (
       <main className={clinicStyles.page}>
-        <LoadingSkeleton />
+        <PageHead className={clinicStyles.pageHead} title="Today" />
+        <ClinicSkeleton titled={false} />
       </main>
     );
   }
@@ -105,9 +107,6 @@ export default function TodayView() {
           </>
         }
       />
-      {queue.error && (
-        <ErrorNotice message={queue.error} onRetry={queue.reload} />
-      )}
 
       <div className={styles.todayGrid} data-quiet={!next}>
         {/* when the day's consultations are done, the plate steps aside and the queue leads */}
@@ -126,6 +125,11 @@ export default function TodayView() {
           items={queue.loading && !queue.data ? undefined : waiting}
           now={now}
           className={styles.queuePanel}
+          notice={
+            queue.error ? (
+              <ErrorNotice message={queue.error} onRetry={queue.reload} />
+            ) : null
+          }
         />
 
         <section
