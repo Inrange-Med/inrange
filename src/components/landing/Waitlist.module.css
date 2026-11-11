@@ -1,0 +1,294 @@
+.well {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: var(--on-dark);
+  color: var(--slate-900);
+  transition: transform 240ms var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  button:hover > .well {
+    transform: translateX(2px);
+  }
+}
+
+/* ---------------------------------------------------------------
+   The sheet: rises from the bottom on phones, a centred panel from 768
+---------------------------------------------------------------- */
+.dialog {
+  width: 100%;
+  max-width: 100%;
+  max-height: 100dvh;
+  margin: auto 0 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  overflow: visible;
+}
+.dialog::backdrop {
+  background: rgb(10 11 12 / 0.52);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+.dialog[open] {
+  animation: sheet-in 420ms var(--ease-drawer) both;
+}
+.dialog[open]::backdrop {
+  animation: dim-in 320ms var(--ease-out) both;
+}
+@keyframes sheet-in {
+  from {
+    transform: translateY(32px);
+    opacity: 0;
+  }
+}
+@keyframes dim-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.panel {
+  position: relative;
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 28px var(--gutter) calc(24px + env(safe-area-inset-bottom));
+  border-radius: var(--r-surface) var(--r-surface) 0 0;
+  background: var(--paper);
+  box-shadow: 0 -1px 0 var(--hair);
+}
+
+.close {
+  position: absolute;
+  top: 20px;
+  right: max(14px, calc(var(--gutter) - 6px));
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: background 200ms var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .close:hover {
+    background: var(--bg-2);
+  }
+}
+
+.form,
+.done {
+  display: grid;
+  gap: 16px;
+}
+.title {
+  margin-top: 2px;
+  padding-right: 52px;
+  font-family: var(--font-display);
+  font-weight: 520;
+  font-size: clamp(1.6rem, 1.3rem + 1vw, 2rem);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+.text {
+  color: var(--ink-2);
+  font-size: 0.9875rem;
+  line-height: 1.55;
+  max-width: 34em;
+  text-wrap: pretty;
+}
+
+.covers {
+  display: grid;
+  gap: 2px;
+  padding: 12px 0;
+  border-block: 1px solid var(--hair);
+  color: var(--ink);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+.covers span {
+  color: var(--ink-3);
+  font-size: 0.8125rem;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  font-size: 0.875rem;
+  font-weight: 560;
+  color: var(--ink);
+}
+.field small {
+  font-weight: 400;
+  font-size: 0.8125rem;
+  color: var(--ink-3);
+}
+.field input,
+.phone {
+  height: 50px;
+  border-radius: var(--r-media);
+  background: var(--bg);
+  box-shadow: inset 0 0 0 1px var(--hair-2);
+  transition: box-shadow 200ms var(--ease-out);
+}
+.field input {
+  width: 100%;
+  min-width: 0;
+  padding: 0 14px;
+  border: 0;
+  font-size: 1rem;
+  font-weight: 400;
+  caret-color: var(--signal-ink);
+}
+.phone {
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+.phone > span {
+  padding: 0 4px 0 14px;
+  color: var(--ink-3);
+  font-weight: 400;
+  font-size: 1rem;
+}
+.phone input {
+  height: 100%;
+  padding-left: 6px;
+  background: transparent;
+  box-shadow: none;
+}
+.field input:focus-visible,
+.phone:focus-within {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--slate-800);
+}
+.phone input:focus-visible {
+  box-shadow: none;
+}
+
+.consent {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  margin-top: 4px;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.consent input {
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  accent-color: var(--slate-800);
+  cursor: pointer;
+}
+.consent a {
+  color: var(--ink);
+}
+
+.error {
+  padding: 12px 14px;
+  border-radius: var(--r-media);
+  background: color-mix(in srgb, var(--alert) 8%, var(--paper));
+  color: var(--alert);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+.error a {
+  color: inherit;
+}
+
+.submit {
+  justify-self: stretch;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+.doneBtn {
+  justify-self: start;
+  padding-inline: 28px;
+}
+.submit:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+.fine {
+  color: var(--ink-3);
+  font-size: 0.8125rem;
+}
+
+.tick {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
+  background: var(--signal-wash);
+  color: var(--signal-ink);
+}
+
+/* short phones: the whole form, submit included, fits above the fold */
+@media (max-height: 780px) {
+  .form {
+    gap: 10px;
+  }
+  .title {
+    font-size: 1.5rem;
+  }
+  .covers {
+    padding: 8px 0;
+  }
+  .field input,
+  .phone {
+    height: 44px;
+  }
+  /* the consent line already states the purpose; on a short screen the intro gives way so submit stays in view */
+  .text {
+    display: none;
+  }
+  .panel {
+    padding-top: 20px;
+  }
+  .close {
+    top: 12px;
+  }
+}
+
+@media (min-width: 768px) {
+  .close {
+    top: 28px;
+    right: 28px;
+  }
+  .dialog {
+    width: min(520px, calc(100vw - 80px));
+    margin: auto;
+  }
+  .panel {
+    padding: 36px 36px 32px;
+    border-radius: var(--r-surface);
+    box-shadow:
+      0 0 0 1px var(--hair),
+      0 24px 64px -24px rgb(10 11 12 / 0.4);
+  }
+  .submit {
+    justify-self: start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dialog[open],
+  .dialog[open]::backdrop {
+    animation: none;
+  }
+}

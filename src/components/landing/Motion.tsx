@@ -23,7 +23,7 @@ export default function Motion() {
     let lenis: Lenis | null = null;
     const tick = (t: number) => lenis?.raf(t * 1000);
     if (fine && !reduce) {
-      lenis = new Lenis({ lerp: 0.11, wheelMultiplier: 0.95 });
+      lenis = new Lenis({ lerp: 0.14, wheelMultiplier: 1 });
       lenis.on("scroll", ScrollTrigger.update);
       gsap.ticker.add(tick);
       gsap.ticker.lagSmoothing(0);

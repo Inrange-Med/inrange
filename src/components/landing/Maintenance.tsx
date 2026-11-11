@@ -3,8 +3,9 @@ import ContourField from "./ContourField";
 import { Mask, Tag } from "./ui";
 import s from "./Maintenance.module.css";
 
-/* Check-in rhythm, not an outcome: weekly while the plan is active,
-   then fortnightly and monthly once you and your doctor move to maintenance. */
+/* Check-in rhythm, not an outcome: check-ins weekly while the plan is active, then fortnightly
+   and monthly in maintenance. Doctor reviews come about every 30 days in the active plan, and
+   further apart in maintenance. */
 /* The strip spans the full column (0 to 600), so its edge, the labels and
    the legend share the heading's left edge. Labels start where their phase
    starts. The first and last marks sit 32 units inside the strip. */
@@ -15,14 +16,15 @@ const active = Array.from({ length: 9 }, (_, i) => X0 + 12 + i * 26);
 // spacing doubles from weekly (26) to fortnightly (48) to monthly (96)
 const fortnight = Array.from({ length: 3 }, (_, i) => SPLIT + 28 + i * 48);
 const monthly = Array.from({ length: 2 }, (_, i) => fortnight[2] + 96 * (i + 1));
-const reviews = [active[1], active[3], active[5], active[7], fortnight[2], monthly[1]];
+// reviews about every four weeks while active (weeks 4 and 8), then further apart
+const reviews = [active[3], active[7], fortnight[2], monthly[1]];
 
 export default function Maintenance() {
   return (
     <section className={s.maint} aria-labelledby="maint-title">
-      <figure className={s.photo} data-reveal="wipe">
+      <figure className={s.photo} suppressHydrationWarning data-reveal="wipe">
         <Image
-          src="/img/lodhi-morning.jpg"
+          src="/img/lodhi-morning-c.jpg"
           alt="Two people walking on a clear morning past a Mughal tomb in Lodhi Garden, New Delhi"
           fill
           sizes="100vw"
@@ -34,14 +36,14 @@ export default function Maintenance() {
         <div className={`wrap ${s.grid}`}>
           <div className={s.copy}>
             <Tag dark>After the first months</Tag>
-            <Mask id="maint-title" className={`h2 ${s.title}`} lines={["Maintenance is part", "of the plan."]} />
-            <p className={s.lede} data-reveal="rise" style={{ "--d": "180ms" } as React.CSSProperties}>
-              Staying on track needs different support from the early months. When you and your doctor agree you are ready,{" "}
-              <span style={{ whiteSpace: "nowrap" }}>check-ins</span> become lighter and the same doctor stays involved.
+            <Mask id="maint-title" className={`h2 ${s.title}`} lines={["Maintenance is", "part of the plan."]} soft={1} />
+            <p className={s.lede} suppressHydrationWarning data-reveal="rise" style={{ "--d": "180ms" } as React.CSSProperties}>
+              When you and your doctor agree you are ready, <span style={{ whiteSpace: "nowrap" }}>check-ins</span> get lighter
+              and the same doctor stays with you.
             </p>
           </div>
 
-          <figure className={s.chart} data-reveal="draw">
+          <figure className={s.chart} suppressHydrationWarning data-reveal="draw">
             <svg viewBox="0 0 600 176" aria-hidden="true">
               {/* one strip for the whole timeline; the maintenance phase is its tinted second half */}
               <defs>

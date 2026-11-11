@@ -1,128 +1,35 @@
-.bannerWrapper {
-  width: 100%;
-  /* Website ke dark teal/black shade ke sath blend */
-  background: #081719;
-  color: #ffffff;
-  /* Top aur down padding bilkul kam kar di (margin 0) */
-  padding: 3px 16px;
-  margin: 0;
-  position: relative;
-  z-index: 50;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  font-family: inherit;
-  line-height: 1.2;
+/* The combo band under the hero: mist ground, one line of words, the site's pill. */
+.band {
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--hair);
 }
-
-.container {
-  max-width: 1280px;
+.inner {
+  display: grid;
+  gap: 16px;
+  max-width: var(--max);
   margin: 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  flex-wrap: wrap;
+  padding: 22px var(--gutter);
 }
-
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: rgba(52, 211, 153, 0.12);
-  border: 1px solid rgba(52, 211, 153, 0.35);
-  color: #6ee7b7;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  padding: 2px 10px;
-  border-radius: 9999px;
-}
-
-.pulseDot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background-color: #34d399;
-}
-
 .text {
   margin: 0;
-  font-size: 13px;
-  color: #cbd5e1;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--ink-2);
 }
-
 .text strong {
-  color: #ffffff;
-  font-weight: 600;
+  font-weight: 560;
+  color: var(--ink);
 }
-
-.price {
-  color: #5eead4;
-  font-weight: 700;
+.inner :global(.btn) {
+  justify-self: start;
 }
-
-.actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.ctaBtn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  /* Website ke mint CTA button (#5eead4 / #34d399) ke jaisa */
-  background: #5eead4;
-  color: #042f2e;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 3px 14px;
-  border-radius: 9999px;
-  text-decoration: none;
-  transition: all 0.2s ease;
-}
-
-.ctaBtn:hover {
-  background: #2dd4bf;
-  transform: translateY(-1px);
-}
-
-.closeBtn {
-  background: transparent;
-  border: none;
-  color: #94a3b8;
-  cursor: pointer;
-  font-size: 14px;
-  padding: 1px 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0.7;
-  transition: opacity 0.2s;
-}
-
-.closeBtn:hover {
-  opacity: 1;
-  color: #ffffff;
-}
-
-@media (max-width: 640px) {
-  .bannerWrapper {
-    padding: 4px 12px;
+@media (min-width: 768px) {
+  .inner {
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 32px;
   }
-
-  .container {
-    gap: 8px;
-    font-size: 12px;
-    text-align: center;
-  }
-
   .text {
-    font-size: 12px;
-  }
-
-  .ctaBtn {
-    font-size: 11px;
-    padding: 3px 10px;
+    font-size: 1rem;
   }
 }

@@ -2,7 +2,8 @@
   position: relative;
   isolation: isolate;
   overflow: clip;
-  background: var(--teal-800);
+  background: var(--slate-800);
+  background-image: var(--sheen), var(--carbon);
   color: var(--on-dark);
   padding-block: var(--section);
 }
@@ -15,9 +16,18 @@
   pointer-events: none;
 }
 
+/* phones: the words, the list, then the phone, in one column */
+.head {
+  --stack-gap: 20px;
+  display: grid;
+  gap: 20px;
+}
 .grid {
   display: grid;
-  gap: 56px;
+  gap: 40px;
+}
+.phoneWrap {
+  margin-top: 16px;
 }
 
 .copy {
@@ -28,12 +38,13 @@
 }
 .title {
   color: var(--on-dark);
+  --head-soft: var(--head-soft-dark);
 }
 .lede {
   font-size: clamp(1.06rem, 0.98rem + 0.32vw, 1.25rem);
   line-height: 1.55;
   color: var(--on-dark-2);
-  max-width: 30em;
+  max-width: 40em;
   text-wrap: pretty;
 }
 .facts {
@@ -57,7 +68,7 @@
   width: 12px;
   height: 2px;
   transform: translateY(-5px);
-  background: var(--mint);
+  background: var(--signal);
 }
 
 /* iPhone 17 Pro, drawn in CSS. 402 x 874 pt screen, so the device is
@@ -76,7 +87,7 @@
   border-radius: 58px;
   /* titanium band: light catches the top-left edge and the lower-right corner */
   background:
-    linear-gradient(148deg, #8a9698 0%, #3b4648 18%, #273133 46%, #3e4a4c 72%, #6f7b7d 100%);
+    linear-gradient(148deg, #8b8e93 0%, #3b3d41 18%, #27282b 46%, #3e4044 72%, #6e7176 100%);
   box-shadow:
     0 0 0 0.5px rgb(255 255 255 / 0.18),
     0 50px 90px -40px rgb(0 0 0 / 0.55),
@@ -94,7 +105,7 @@
   height: 100%;
   border-radius: 46px;
   overflow: hidden;
-  background: #eef2f1;
+  background: #eff0f1;
   color: var(--ink);
   display: flex;
   flex-direction: column;
@@ -115,7 +126,7 @@
   position: absolute;
   width: 3px;
   border-radius: 2px;
-  background: linear-gradient(90deg, #5a6668, #2a3436);
+  background: linear-gradient(90deg, #5a5d62, #2a2b2e);
 }
 .action,
 .volUp,
@@ -187,7 +198,7 @@
   height: 9px;
   margin-top: -4.5px;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #2b3a55 0 20%, #0c1220 45%, #050607 75%);
+  background: radial-gradient(circle at 35% 35%, #2b2d31 0 20%, #0d0e10 45%, #050607 75%);
   box-shadow: 0 0 0 1px rgb(255 255 255 / 0.04);
 }
 .sys {
@@ -207,7 +218,7 @@
   height: 5px;
   margin-left: -18%;
   border-radius: 999px;
-  background: rgb(15 28 30 / 0.88);
+  background: rgb(14 15 16 / 0.88);
 }
 
 .bar {
@@ -274,7 +285,7 @@
 }
 .me {
   align-self: flex-end;
-  background: var(--teal-800);
+  background: var(--slate-800);
   color: var(--on-dark);
   border-bottom-right-radius: 6px;
 }
@@ -290,15 +301,15 @@
   gap: 5px;
   font-size: 0.6875rem;
   font-weight: 600;
-  color: var(--mint-ink);
+  color: var(--signal-ink);
   margin-bottom: 2px;
 }
 /* the assistant always labels itself, as the in-app UI would */
 .ai {
   padding: 1px 4px;
   border-radius: 4px;
-  box-shadow: inset 0 0 0 1px rgb(11 118 87 / 0.4);
-  font-size: 0.5625rem;
+  box-shadow: inset 0 0 0 1px rgb(24 25 27 / 0.4);
+  font-size: 0.6875rem;
   font-weight: 650;
   letter-spacing: 0.04em;
   line-height: 1.3;
@@ -314,8 +325,8 @@
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: var(--mint);
-  color: var(--teal-950);
+  background: var(--signal);
+  color: var(--slate-950);
 }
 .wave {
   display: flex;
@@ -327,7 +338,7 @@
   display: block;
   width: 2px;
   border-radius: 2px;
-  background: rgb(234 242 240 / 0.75);
+  background: rgb(236 237 239 / 0.75);
 }
 .len {
   font-size: 0.6875rem;
@@ -336,7 +347,7 @@
 .transcript {
   margin-top: 6px;
   padding-top: 6px;
-  border-top: 1px solid rgb(234 242 240 / 0.14);
+  border-top: 1px solid rgb(236 237 239 / 0.14);
   font-size: 0.75rem;
   color: var(--on-dark-2);
 }
@@ -348,7 +359,7 @@
   align-self: stretch;
   max-width: none;
   background: var(--paper);
-  box-shadow: 0 0 0 1.5px rgb(11 118 87 / 0.45);
+  box-shadow: 0 0 0 1.5px rgb(24 25 27 / 0.45);
   border-radius: 16px;
   padding: 12px;
 }
@@ -410,8 +421,8 @@
   gap: 5px;
   padding: 4px 10px;
   border-radius: 999px;
-  background: var(--mint-wash);
-  color: var(--mint-ink);
+  background: var(--signal-wash);
+  color: var(--signal-ink);
   font-size: 0.6875rem;
   font-weight: 560;
 }
@@ -437,7 +448,7 @@
   margin-left: auto;
   padding: 5px 12px;
   border-radius: 999px;
-  background: var(--teal-900);
+  background: var(--slate-900);
   color: var(--on-dark);
   font-size: 0.6875rem;
 }
@@ -446,7 +457,7 @@
   right: 12px;
   bottom: 7px;
   display: flex;
-  color: var(--mint);
+  color: var(--signal);
 }
 .read svg + svg {
   margin-left: -6px;
@@ -455,10 +466,6 @@
   padding-right: 30px;
 }
 
-.caption {
-  font-size: 0.8125rem;
-  color: var(--on-dark-2);
-}
 
 /* Messages arrive in order once the phone is on screen */
 :global(.js) .device .msg,
@@ -496,13 +503,32 @@
   }
 }
 
+/* laptops: the heading and the list share the left column and read as one block, the list straight
+   under the lede (client, 19 Oct 2026); the phone stands beside them from the tag down */
 @media (min-width: 1024px) {
   .grid {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: clamp(48px, 7vw, 120px);
-    align-items: center;
+    grid-template-rows: auto 1fr;
+    column-gap: clamp(48px, 7vw, 120px);
+    row-gap: 44px;
   }
-  .device {
-    --w: 350px;
+  .head {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .copy {
+    grid-column: 1;
+    grid-row: 2;
+    align-self: start;
+  }
+  .phoneWrap {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: start;
+    margin-top: 0;
+  }
+  .facts li {
+    padding-block: 24px;
+    font-size: 1.125rem;
   }
 }

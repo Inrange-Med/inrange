@@ -36,9 +36,9 @@ function sealPath() {
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (on(x, y)) d += `M${x} ${y}h1v1h-1z`;
   return d;
 }
-const SEAL = sealPath();
+export const SEAL = sealPath();
 
-/* What a patient sees after scanning the seal on a pack from InRange’s pharmacy. Illustrative values. */
+/* What a patient sees after scanning the seal on a pack from inrange’s pharmacy. Illustrative values. */
 function Verify() {
   const rows: [string, string][] = [
     ["Source", "Licensed distributor"],
@@ -47,9 +47,9 @@ function Verify() {
     ["Custody", "Logged to your door"],
   ];
   return (
-    <div className={s.verify} data-reveal="draw">
+    <div className={s.verify} suppressHydrationWarning data-reveal="draw">
       <div className={s.finder}>
-        <p className={s.flabel}>Illustrative scan</p>
+        <p className={s.flabel}>What your scan shows</p>
         {/* the genuine-product sticker from the brand kit, as it sits on the pack */}
         <div className={s.sticker} aria-hidden="true">
           <Wordmark height={34} className={s.stickerMark} />
@@ -99,24 +99,23 @@ function Verify() {
 
 export default function Pharmacy() {
   return (
-    <section className={`section ${s.pharmacy}`} aria-labelledby="pharmacy-title">
+    <section id="pharmacy" className={`section ${s.pharmacy}`} aria-labelledby="pharmacy-title">
       <div className="wrap">
         <div className={s.head}>
           <div className={s.titleCol}>
             <Tag>If medicine is prescribed</Tag>
-            <Mask id="pharmacy-title" className={`h2 ${s.title}`} lines={["Our pharmacy, or yours."]} />
+            <Mask id="pharmacy-title" className={`h2 ${s.title}`} lines={[<>Our pharmacy, <span className="soft">or yours.</span></>]} />
           </div>
-          <p className="lede" data-reveal="rise" style={{ "--d": "160ms" } as React.CSSProperties}>
-            Not everyone is prescribed medicine. If you are, InRange&rsquo;s own licensed pharmacy dispenses it and delivers it
-            to your door, or you can fill it at any licensed pharmacy you prefer. Every pack we send carries a coded seal: scan
-            it in the app to see its source and batch record before you open it.
+          <p className="lede" suppressHydrationWarning data-reveal="rise" style={{ "--d": "160ms" } as React.CSSProperties}>
+            Not everyone is prescribed medicine. If you are, our licensed pharmacy sends it in a sealed pack. Scan the seal to
+            check its batch, expiry and source, or use any licensed pharmacy you prefer.
           </p>
         </div>
 
         <div className={s.specimen}>
-          <figure className={s.photo} data-reveal="wipe">
+          <figure className={s.photo} suppressHydrationWarning data-reveal="wipe">
             <Image
-              src="/img/pharmacy-pack.jpg"
+              src="/img/pharmacy-pack-c.jpg"
               alt="A sealed white pharmacy box with a coded seal, in a grey felt envelope"
               fill
               sizes="(max-width: 1023px) 100vw, 46vw"

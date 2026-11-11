@@ -1,52 +1,3 @@
-.check {
-  background: var(--bg);
-  isolation: isolate;
-}
-/* graduations hang from the section's top edge and run off the right side */
-.art {
-  z-index: -1;
-  top: 0;
-  right: 0;
-  width: min(62vw, 300px);
-}
-/* wide screens: isolines rise from the bottom-left corner into the space under the introduction */
-.arcs {
-  display: none;
-}
-@media (min-width: 1100px) {
-  .art {
-    display: none;
-  }
-  .arcs {
-    display: block;
-    z-index: -1;
-    left: 0;
-    bottom: 0;
-    width: clamp(300px, 27vw, 420px);
-  }
-}
-
-.grid {
-  display: grid;
-  gap: 40px;
-}
-
-.intro {
-  --stack-gap: 20px;
-  display: grid;
-  gap: 20px;
-  align-content: start;
-}
-
-.source {
-  font-size: 0.8125rem;
-  line-height: 1.55;
-  color: var(--ink-3);
-  max-width: 40ch;
-  padding-top: 16px;
-  border-top: 1px solid var(--hair);
-}
-
 .instrument {
   border-radius: var(--r-surface);
   background: var(--paper);
@@ -112,8 +63,14 @@
 }
 .fieldHead {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
+  gap: 12px;
+}
+/* if the label and the number cannot share a line, the number keeps to the right on its own */
+.fieldHead > :last-child {
+  margin-left: auto;
 }
 .fieldHead label {
   font-size: 0.9375rem;
@@ -160,9 +117,11 @@
   left: 0;
   top: 21px;
   height: 2px;
-  width: calc(var(--inset) + (100% - var(--inset) * 2) * var(--fill));
+  /* the filled line stops at the thumb's outer ring, so it reads as running behind the thumb
+     and never crosses its face */
+  width: max(0px, calc((100% - var(--inset) * 2) * var(--fill) - 5px));
   border-radius: 2px;
-  background: var(--teal-700);
+  background: var(--slate-700);
   pointer-events: none;
 }
 .range {
@@ -196,7 +155,7 @@
   height: 26px;
   margin-top: -12px;
   border-radius: 50%;
-  background: radial-gradient(circle, var(--mint) 0 3.5px, var(--teal-900) 4px);
+  background: radial-gradient(circle, var(--signal) 0 3.5px, var(--slate-900) 4px);
   box-shadow:
     0 0 0 4px var(--paper),
     0 0 0 5px var(--hair-2);
@@ -207,7 +166,7 @@
   height: 26px;
   border: 0;
   border-radius: 50%;
-  background: radial-gradient(circle, var(--mint) 0 3.5px, var(--teal-900) 4px);
+  background: radial-gradient(circle, var(--signal) 0 3.5px, var(--slate-900) 4px);
   box-shadow:
     0 0 0 4px var(--paper),
     0 0 0 5px var(--hair-2);
@@ -221,7 +180,7 @@
 .range:focus-visible::-webkit-slider-thumb {
   box-shadow:
     0 0 0 4px var(--paper),
-    0 0 0 6px var(--mint-ink);
+    0 0 0 6px var(--signal-ink);
 }
 
 .scaleEnds {
@@ -323,26 +282,26 @@
   transition: background-color 300ms ease, box-shadow 300ms ease;
 }
 .band[data-level="0"] {
-  background: #dfe6e5;
+  background: var(--hair);
 }
 .band[data-level="1"] {
   background: var(--paper);
 }
 .band[data-level="2"] {
-  background: #b9cfcd;
+  background: color-mix(in srgb, var(--slate-600) 30%, var(--paper));
 }
 .band[data-level="3"] {
-  background: #7fa2a1;
+  background: color-mix(in srgb, var(--slate-600) 55%, var(--paper));
   border-right: 0;
 }
 .band[data-on="true"][data-level="1"] {
-  background: var(--mint-wash);
+  background: var(--signal-wash);
 }
 .band[data-on="true"][data-level="2"] {
-  background: #8fb8b2;
+  background: color-mix(in srgb, var(--slate-600) 70%, var(--paper));
 }
 .band[data-on="true"][data-level="3"] {
-  background: var(--teal-700);
+  background: var(--slate-700);
 }
 
 .trackWrap {
@@ -430,7 +389,7 @@
   border-radius: 999px;
   background: var(--paper);
   box-shadow: inset 0 0 0 1px var(--hair);
-  color: var(--mint-ink);
+  color: var(--signal-ink);
 }
 
 @media (min-width: 768px) {
@@ -461,14 +420,80 @@
   }
 }
 
-@media (min-width: 1100px) {
-  .grid {
-    grid-template-columns: minmax(0, 6fr) minmax(0, 6fr);
-    gap: clamp(48px, 6vw, 96px);
-    align-items: start;
+/* tool pages: inputs beside the result, so the answer sits above the fold; the inputs stay in view
+   while a long result scrolls (clip, not hidden, so sticky still works) */
+@media (min-width: 1024px) {
+  .instrument {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+    overflow: clip;
   }
-  .intro {
-    gap: 24px;
-    --stack-gap: 24px;
+  .controls {
+    grid-template-columns: 1fr;
+    align-content: start;
+    position: sticky;
+    top: calc(var(--nav-h) + 24px);
+    align-self: start;
   }
+  .readout {
+    border-top: 0;
+    border-left: 1px solid var(--hair);
+  }
+  .go {
+    width: 100%;
+    min-width: 0;
+  }
+  .assure {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* BMI tool: the band name beside the number, the link to the homepage calculator */
+.bandName {
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-weight: 520;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: var(--ink);
+}
+.bandName[data-level="1"] {
+  color: var(--signal-ink);
+}
+.toCalc {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  min-height: 44px;
+  font-size: 0.9375rem;
+  font-weight: 540;
+  color: var(--slate-800);
+  text-decoration: underline;
+  text-decoration-color: var(--hair-2);
+  text-underline-offset: 0.28em;
+}
+@media (hover: hover) and (pointer: fine) {
+  .toCalc:hover {
+    text-decoration-color: currentColor;
+  }
+}
+.toCalc:focus-visible {
+  outline: 2px solid var(--signal-ink);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* the BMI tool's three bands: healthy in the wash, the active band one clear step darker */
+.chart .band[data-level="1"] {
+  background: var(--signal-wash);
+}
+.chart .band[data-on="true"][data-level="1"] {
+  background: color-mix(in srgb, var(--slate-600) 26%, var(--paper));
+}
+.chart .band[data-on="true"][data-level="2"] {
+  background: color-mix(in srgb, var(--slate-600) 45%, var(--paper));
+}
+.chart .band[data-level="2"] {
+  border-right: 0;
 }

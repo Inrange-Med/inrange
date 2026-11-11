@@ -55,7 +55,8 @@
   display: grid;
   place-items: center;
   padding: 40px 20px 28px;
-  background: var(--teal-950);
+  background: var(--slate-950);
+  background-image: var(--sheen), var(--carbon);
 }
 /* faint graduations along the viewfinder edges, the brand's measuring edge */
 .finder::before,
@@ -65,7 +66,7 @@
   top: 16px;
   bottom: 16px;
   width: 8px;
-  background: repeating-linear-gradient(to bottom, rgb(238 241 240 / 0.22) 0 1px, transparent 1px 8px);
+  background: repeating-linear-gradient(to bottom, rgb(238 239 240 / 0.22) 0 1px, transparent 1px 8px);
 }
 .finder::before {
   left: 14px;
@@ -115,7 +116,7 @@
   position: absolute;
   width: 14px;
   height: 14px;
-  border: 0 solid var(--mint-ink);
+  border: 0 solid var(--signal-ink);
 }
 .tl {
   top: 0;
@@ -152,8 +153,9 @@
   top: 6px;
   height: 2px;
   border-radius: 2px;
-  background: var(--mint);
-  box-shadow: 0 0 12px 1px rgb(70 216 173 / 0.55);
+  /* reads dark over the white seal and light over its black modules */
+  background: var(--paper);
+  mix-blend-mode: difference;
   opacity: 0;
 }
 :global(.js) .verify:global(.in) .scanLine {
@@ -204,7 +206,7 @@
 }
 .ok {
   flex: none;
-  color: var(--mint-ink);
+  color: var(--signal-ink);
   margin-top: 1px;
 }
 .vTitle {
@@ -250,7 +252,7 @@
   font-weight: 520;
 }
 .intact {
-  color: var(--mint-ink);
+  color: var(--signal-ink);
 }
 :global(.js) .vRows > div {
   opacity: 0;
@@ -301,11 +303,13 @@
 }
 
 @media (min-width: 1024px) {
+  /* the heading on one line, its lede straight under it */
   .head {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    column-gap: 64px;
-    align-items: end;
     margin-bottom: 56px;
+  }
+  .head > .lede,
+  .head > :global(.lede) {
+    max-width: 40em;
   }
   .specimen {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);

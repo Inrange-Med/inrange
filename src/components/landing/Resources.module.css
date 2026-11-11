@@ -1,0 +1,36 @@
+.resources {
+  background: var(--bg);
+  border-top: 1px solid var(--hair);
+}
+.grid {
+  display: grid;
+  gap: 40px;
+}
+.intro {
+  display: grid;
+  gap: 18px;
+  align-content: start;
+}
+.intro p {
+  max-width: 30em;
+}
+.all {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  width: fit-content;
+  font-weight: 560;
+  color: var(--signal-ink);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--signal-ink) 35%, transparent);
+  text-underline-offset: 3px;
+}
+/* the heading on one line with its lede below, then the list across the full column */
+@media (min-width: 1024px) {
+  .grid {
+    gap: 48px;
+  }
+  .intro p {
+    max-width: 40em;
+  }
+}

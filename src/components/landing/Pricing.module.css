@@ -5,8 +5,9 @@
 
 .head {
   display: grid;
-  gap: 18px;
-  margin-bottom: 32px;
+  --stack-gap: 20px;
+  gap: 20px;
+  margin-bottom: 48px;
 }
 /* every service in the plan runs into one line: one package */
 span.flow {
@@ -26,7 +27,8 @@ span.flow {
   gap: 28px;
   padding: 22px 20px 24px;
   border-radius: var(--r-surface);
-  background: var(--teal-800);
+  background: var(--slate-800);
+  background-image: var(--sheen), var(--carbon);
   color: var(--on-dark);
 }
 .tool {
@@ -38,12 +40,13 @@ span.flow {
 /* segmented length control: number over unit, a light thumb that slides */
 .seg {
   position: relative;
+  container-type: inline-size;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   padding: 4px;
   border-radius: 999px;
-  background: rgb(238 241 240 / 0.06);
-  box-shadow: inset 0 0 0 1px rgb(238 241 240 / 0.1);
+  background: rgb(238 239 240 / 0.06);
+  box-shadow: inset 0 0 0 1px rgb(238 239 240 / 0.1);
 }
 .thumb {
   position: absolute;
@@ -80,7 +83,7 @@ span.flow {
   z-index: 2;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  color: var(--teal-950);
+  color: var(--slate-950);
   pointer-events: none;
   clip-path: inset(0 calc((3 - var(--at)) * 25%) 0 calc(var(--at) * 25%) round 999px);
   transition: clip-path 420ms var(--ease-drawer);
@@ -92,7 +95,7 @@ span.flow {
   gap: 1px;
 }
 .segBtn:focus-visible {
-  outline: 2px solid var(--mint);
+  outline: 2px solid var(--signal);
   outline-offset: 2px;
 }
 .segNum {
@@ -103,9 +106,32 @@ span.flow {
   line-height: 1;
 }
 .segUnit {
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   line-height: 1.2;
   letter-spacing: 0.01em;
+}
+/* the monthly equivalent, so all four plans compare at a glance */
+.segPrice {
+  margin-top: 3px;
+  font-size: 0.75rem;
+  font-weight: 560;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  opacity: 0.8;
+}
+/* narrow controls keep the 12px floor and win the width back by dropping "about" and "/mo" */
+@container (max-width: 479px) {
+  .perMo {
+    display: none;
+  }
+}
+/* narrow phones: each length shows only its number and unit, so two lines sit well inside the pill;
+   the chosen length's monthly figure is right below in the total */
+@container (max-width: 399px) {
+  .segPrice {
+    display: none;
+  }
 }
 @media (hover: hover) and (pointer: fine) {
   .segBtn {
@@ -135,6 +161,7 @@ span.flow {
   border-left: 1px solid var(--hair-dark);
 }
 .readout dt {
+  text-wrap: balance;
   font-size: 0.8125rem;
   color: var(--on-dark-2);
 }
@@ -149,7 +176,7 @@ span.flow {
   gap: 8px;
 }
 .note {
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   line-height: 1.5;
   color: var(--on-dark-2);
   max-width: 40em;
@@ -186,7 +213,7 @@ span.flow {
   overflow: hidden;
 }
 .base {
-  stroke: rgb(238 241 240 / 0.16);
+  stroke: rgb(238 239 240 / 0.16);
   stroke-width: 1.5;
 }
 .mark {
@@ -203,18 +230,18 @@ span.flow {
   transition-delay: 0ms;
 }
 .month {
-  stroke: rgb(238 241 240 / 0.3);
+  stroke: rgb(238 239 240 / 0.3);
   stroke-width: 1.5;
   stroke-linecap: round;
 }
 /* sizes change on the same curve and duration as the spacing, so marks never close in mid-change */
 .checkin {
-  fill: var(--mint);
+  fill: var(--signal);
   transition: r 640ms var(--ease-drawer);
 }
 .review {
   fill: none;
-  stroke: rgb(238 241 240 / 0.75);
+  stroke: rgb(238 239 240 / 0.75);
   stroke-width: 1.5;
   transition: r 640ms var(--ease-drawer);
 }
@@ -271,14 +298,14 @@ span.flow {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--mint);
+  background: var(--signal);
 }
 .kReview {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: radial-gradient(circle, var(--mint) 0 2.5px, transparent 3px);
-  box-shadow: inset 0 0 0 1.5px rgb(238 241 240 / 0.75);
+  background: radial-gradient(circle, var(--signal) 0 2.5px, transparent 3px);
+  box-shadow: inset 0 0 0 1.5px rgb(238 239 240 / 0.75);
 }
 @media (prefers-reduced-motion: reduce) {
   .thumb,
@@ -287,7 +314,8 @@ span.flow {
   .mark[data-on="false"] {
     transition: none;
   }
-  .num {
+  .num,
+  .totalV {
     animation: none;
   }
 }
@@ -326,7 +354,7 @@ span.flow {
   white-space: nowrap;
 }
 .val[data-kind="Free"] {
-  color: var(--mint);
+  color: var(--signal);
   font-weight: 560;
 }
 .items li::before {
@@ -335,7 +363,7 @@ span.flow {
   width: 12px;
   height: 2px;
   transform: translateY(-4px);
-  background: var(--mint);
+  background: var(--signal);
 }
 /* the total line: the ledger closes on the price promise */
 .total {
@@ -344,7 +372,7 @@ span.flow {
   align-items: baseline;
   gap: 16px;
   padding-top: 14px;
-  border-top: 1px solid rgb(238 241 240 / 0.55);
+  border-top: 1px solid rgb(238 239 240 / 0.55);
   /* sits exactly on the ledger's last rule: one stronger line closes the list */
   margin-top: -23px;
 }
@@ -354,12 +382,33 @@ span.flow {
   font-weight: 500;
   letter-spacing: -0.012em;
 }
+.totalK small {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--font-text);
+  font-size: 0.8125rem;
+  letter-spacing: 0;
+  color: var(--on-dark-2);
+  font-variant-numeric: tabular-nums;
+}
+.indicative {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid rgb(238 239 240 / 0.3);
+  font-size: 0.75rem;
+  font-weight: 560;
+  color: var(--on-dark);
+}
 .totalV {
   font-family: var(--font-display);
-  font-size: 1.125rem;
+  font-size: 1.75rem;
+  font-variant-numeric: tabular-nums;
+  animation: num-in 520ms var(--ease-drawer) both;
   font-weight: 500;
   letter-spacing: -0.012em;
-  color: var(--mint);
+  color: var(--signal);
 }
 .totalNote {
   margin-top: -12px;
@@ -372,32 +421,88 @@ span.flow {
   width: 100%;
 }
 
+.more {
+  margin-top: 20px;
+}
+.more a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  color: var(--ink);
+  font-weight: 560;
+  font-size: 0.9375rem;
+  text-decoration: underline;
+  text-decoration-color: var(--hair-2);
+  text-underline-offset: 4px;
+  transition: text-decoration-color 220ms var(--ease-out);
+}
+.more a svg {
+  flex: none;
+  transition: transform 240ms var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .more a:hover {
+    text-decoration-color: currentColor;
+  }
+  .more a:hover svg {
+    transform: translateX(2px);
+  }
+}
+
 .fine {
-  margin-top: 28px;
+  margin-top: 20px;
 }
 
 @media (min-width: 900px) {
+  /* left: the choice, its price and the action; right: what the plan holds. The figures and the
+     ruler then share one bottom row across both columns, so neither column ends in an empty corner */
   .planner {
     grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
-    gap: 56px;
+    grid-template-rows: auto auto auto 1fr auto;
+    column-gap: 56px;
+    row-gap: 28px;
     padding: 40px 40px 44px;
     align-items: start;
   }
-  .side {
-    padding-top: 2px;
-  }
-  /* the choice and its figures stay together; the ruler sits level with the action */
   .tool {
-    align-self: stretch;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    gap: 26px;
+    display: contents;
+  }
+  .seg {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .tool .total {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .tool .totalNote {
+    grid-column: 1;
+    grid-row: 3;
+    margin-top: -16px;
   }
   .cta {
+    grid-column: 1;
+    grid-row: 4;
     width: auto;
-    align-self: flex-start;
+    align-self: start;
+    justify-self: start;
     min-width: 280px;
+  }
+  .figures {
+    grid-column: 1;
+    grid-row: 5;
+    align-self: end;
+  }
+  .rulerWrap {
+    grid-column: 2;
+    grid-row: 5;
+    align-self: end;
+  }
+  .side {
+    grid-column: 2;
+    grid-row: 1 / span 4;
+    padding-top: 2px;
   }
 }
 @media (min-width: 1024px) {
@@ -411,7 +516,7 @@ span.flow {
   }
   .planner {
     padding: 48px 48px 52px;
-    gap: clamp(56px, 6vw, 96px);
+    column-gap: clamp(56px, 6vw, 96px);
   }
 }
 
@@ -425,4 +530,41 @@ span.flow {
 }
 :global(.js) .planner[data-touched="true"] .mark {
   transition-delay: 0ms;
+}
+
+/* phones: running text stays at 16px (rule 50) */
+@media (max-width: 767px) {
+  .items {
+    font-size: 1rem;
+  }
+}
+
+/* the total under the figures, divided from them by a rule */
+.tool .total {
+  margin-top: 0;
+  padding-top: 20px;
+  border-top: 1px solid var(--hair-dark);
+}
+.tool .totalNote {
+  margin-top: -12px;
+}
+
+/* phones, homepage only: the care rhythm is already drawn in How it works, so the plan keeps its
+   weeks and reviews readout and drops the third copy of the ruler (/pricing keeps it) */
+@media (max-width: 767px) {
+  .pricing .rulerWrap,
+  .pricing .note {
+    display: none;
+  }
+}
+
+/* phones: a long item gives its value its own line instead of folding into a narrow column */
+@media (max-width: 479px) {
+  .items li {
+    flex-wrap: wrap;
+  }
+  .val[data-kind="Billed separately"] {
+    flex-basis: 100%;
+    padding-left: 26px;
+  }
 }

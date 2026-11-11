@@ -1,0 +1,486 @@
+/* Shared parts for the free tools. Same language as the homepage instruments. */
+
+.segBlock {
+  display: grid;
+  gap: 8px;
+  grid-column: 1 / -1;
+}
+.segLabel {
+  font-size: 0.8125rem;
+  color: var(--ink-3);
+}
+.seg {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--n), minmax(0, 1fr));
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--bg-2);
+  isolation: isolate;
+}
+.thumb {
+  position: absolute;
+  z-index: -1;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc((100% - 8px) / var(--n));
+  border-radius: 999px;
+  background: var(--paper);
+  box-shadow:
+    0 1px 2px rgb(14 15 16 / 0.08),
+    0 0 0 1px var(--hair);
+  transform: translateX(calc(var(--at) * 100%));
+  transition: transform 420ms var(--ease-drawer);
+}
+.segBtn {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 1px;
+  min-height: 48px;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  font-size: 0.875rem;
+  font-weight: 560;
+  line-height: 1.2;
+  color: var(--ink-3);
+  text-align: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 200ms var(--ease-out);
+}
+.segBtn[aria-checked="true"] {
+  color: var(--ink);
+}
+.segSub {
+  font-size: 0.6875rem;
+  font-weight: 450;
+  color: var(--ink-3);
+}
+@media (prefers-reduced-motion: reduce) {
+  .thumb {
+    transition: none;
+  }
+}
+
+/* typeable value beside a ruler */
+.typeWrap {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+}
+/* 44px tall to tap, pulled back so the row keeps its height */
+.type {
+  width: 4.2ch;
+  min-height: 44px;
+  margin-block: -6px;
+  padding: 6px 0;
+  border: 0;
+  border-bottom: 1px dashed var(--hair-2);
+  background: none;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 520;
+  letter-spacing: -0.02em;
+  text-align: right;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.type::-webkit-outer-spin-button,
+.type::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.type:focus-visible {
+  outline: 2px solid var(--signal-ink);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+.typeUnit {
+  font-size: 0.75rem;
+  color: var(--ink-3);
+}
+
+/* banded track with a gliding marker */
+.trackWrap {
+  display: grid;
+  gap: 8px;
+}
+.track {
+  position: relative;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--paper);
+  overflow: visible;
+}
+.band {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-right: 1px solid var(--bg-2);
+}
+.band:first-child {
+  border-radius: 999px 0 0 999px;
+}
+.band:nth-last-child(2) {
+  border-right: 0;
+  border-radius: 0 999px 999px 0;
+}
+.band[data-tone="0"] {
+  background: var(--hair);
+}
+.band[data-tone="1"] {
+  background: var(--signal-wash);
+}
+.band[data-tone="2"] {
+  background: color-mix(in srgb, var(--slate-600) 30%, var(--paper));
+}
+.band[data-tone="3"] {
+  background: color-mix(in srgb, var(--slate-600) 55%, var(--paper));
+}
+.slide {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transform: translateX(var(--x));
+  transition: transform 420ms var(--ease-drawer);
+}
+.marker {
+  position: absolute;
+  top: -6px;
+  bottom: -6px;
+  left: -1.5px;
+  width: 3px;
+  border-radius: 3px;
+  background: var(--ink);
+  box-shadow: 0 0 0 2px var(--bg-2);
+}
+@media (prefers-reduced-motion: reduce) {
+  .slide {
+    transition: none;
+  }
+}
+.axis {
+  position: relative;
+  height: 16px;
+  font-size: 0.75rem;
+  color: var(--ink-3);
+}
+.axis span {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+}
+@media (max-width: 389px) {
+  .axis {
+    font-size: 0.6875rem;
+    letter-spacing: -0.02em;
+  }
+}
+
+/* the reading itself */
+.readingRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+}
+.reading {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 2.4rem + 2.6vw, 4.4rem);
+  font-weight: 500;
+  line-height: 0.92;
+  letter-spacing: -0.03em;
+  font-variant-numeric: proportional-nums lining-nums;
+}
+.readingUnit {
+  font-family: var(--font-text);
+  font-size: 0.9375rem;
+  font-weight: 450;
+  letter-spacing: 0;
+  color: var(--ink-3);
+}
+.side {
+  display: grid;
+  justify-items: end;
+  gap: 4px;
+  text-align: right;
+  font-size: 0.8125rem;
+  color: var(--ink-3);
+}
+.side strong {
+  font-family: var(--font-display);
+  font-size: 1.375rem;
+  font-weight: 520;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: var(--ink);
+}
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  padding: 6px 12px 6px 10px;
+  border-radius: 7px;
+  font-size: 0.875rem;
+  font-weight: 560;
+  background: var(--paper);
+  box-shadow: inset 0 0 0 1px var(--hair);
+}
+/* a ruler tick in the reading's colour, the same mark as the section tags */
+.status i {
+  width: 2px;
+  height: 12px;
+  border-radius: 1px;
+  background: var(--status, var(--signal-ink));
+}
+/* teal for the ordinary range; one muted alert colour, only for readings that need action */
+.status[data-tone="1"] {
+  --status: var(--signal-ink);
+}
+.status[data-tone="2"] {
+  --status: var(--slate-600);
+}
+.status[data-tone="3"] {
+  --status: var(--slate-900);
+}
+.status[data-alert="true"] {
+  --status: var(--alert);
+}
+.explain {
+  font-size: 1rem;
+  line-height: 1.55;
+  color: var(--ink);
+  text-wrap: pretty;
+  min-height: 7.75em;
+}
+/* safety: calm, specific, never alarming for its own sake */
+.safety {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border-radius: var(--r-media);
+  background: var(--paper);
+  box-shadow: inset 0 0 0 1px var(--hair-2);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+.safety strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+@media (min-width: 768px) {
+  .explain {
+    min-height: 4.65em;
+  }
+}
+
+/* label with its unit switch; the switch's 44px targets are pulled back so the row keeps its height */
+.labelRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.units {
+  position: relative;
+  display: inline-flex;
+  margin-block: -12px;
+  isolation: isolate;
+}
+.units::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 11px 0;
+  border-radius: 999px;
+  background: var(--bg-2);
+}
+.unitBtn {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 0.8125rem;
+  font-weight: 560;
+  color: var(--ink-2);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 180ms var(--ease-out);
+}
+.units::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: 13px;
+  bottom: 13px;
+  left: 2px;
+  width: calc(50% - 4px);
+  border-radius: 999px;
+  background: var(--paper);
+  box-shadow:
+    0 1px 2px rgb(14 15 16 / 0.08),
+    0 0 0 1px var(--hair);
+  transform: translateX(calc(var(--at) * (100% + 4px)));
+  transition: transform 320ms var(--ease-drawer);
+}
+.unitBtn[aria-checked="true"] {
+  color: var(--ink);
+}
+.unitBtn:focus-visible {
+  outline: 2px solid var(--signal-ink);
+  outline-offset: -6px;
+  border-radius: 999px;
+}
+.typeShort {
+  width: 2.2ch;
+}
+
+/* a grouped list of longer choices */
+.choice {
+  display: grid;
+  border-radius: var(--r-media);
+  background: var(--paper);
+  box-shadow: 0 0 0 1px var(--hair);
+  overflow: hidden;
+}
+.choiceBtn {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 10px 14px;
+  border: 0;
+  background: none;
+  text-align: left;
+  font-size: 0.9375rem;
+  line-height: 1.35;
+  color: var(--ink-2);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background-color 180ms var(--ease-out),
+    color 180ms var(--ease-out);
+}
+.choiceBtn + .choiceBtn {
+  box-shadow: inset 0 1px 0 var(--hair);
+}
+.choiceBtn[aria-checked="true"] {
+  background: var(--signal-wash);
+  color: var(--ink);
+}
+.choiceBtn:focus-visible {
+  outline: 2px solid var(--signal-ink);
+  outline-offset: -3px;
+}
+.choiceMark {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px var(--hair-2);
+  background: var(--paper);
+  transition:
+    box-shadow 200ms var(--ease-out),
+    background 200ms var(--ease-out);
+}
+.choiceBtn[aria-checked="true"] .choiceMark {
+  background: radial-gradient(circle, var(--signal) 0 3px, var(--slate-900) 3.5px);
+  box-shadow: none;
+}
+.choiceText {
+  display: grid;
+  gap: 2px;
+}
+.choiceSub {
+  font-size: 0.8125rem;
+  color: var(--ink-3);
+}
+
+/* portions: minus, count, plus */
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.stepper button {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--ink);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  isolation: isolate;
+  position: relative;
+}
+.stepper button::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 6px;
+  border-radius: 999px;
+  background: var(--paper);
+  box-shadow: 0 0 0 1px var(--hair-2);
+  transition: transform 160ms var(--ease-out);
+}
+.stepper button:active::before {
+  transform: scale(0.92);
+}
+.stepper button:disabled {
+  color: var(--ink-3);
+  opacity: 0.45;
+  cursor: default;
+}
+.stepper button:focus-visible {
+  outline: 2px solid var(--signal-ink);
+  outline-offset: -4px;
+}
+.stepper output {
+  min-width: 1.6ch;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 540;
+}
+@media (prefers-reduced-motion: reduce) {
+  .units::after,
+  .choiceMark,
+  .stepper button::before {
+    transition: none;
+  }
+}
+/* feet and inches: a 44px wide hit area, digits still right-aligned */
+.typeShort {
+  width: 44px;
+  padding-left: calc(44px - 2.2ch);
+}
+
+/* a bare slider: no graduations, a shorter row */
+.plainRange::before {
+  display: none;
+}
+
+/* the narrowest phones: feet and inches keep their row on one line */
+@media (max-width: 374px) {
+  .typeShort {
+    padding-left: calc(44px - 2ch);
+  }
+}

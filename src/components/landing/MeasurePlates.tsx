@@ -262,3 +262,65 @@ export function GlucosePlate() {
     </svg>
   );
 }
+
+/* ------------------------------------------------------------------ */
+/* Protein: one day's target, built meal by meal from food already on the table. */
+
+const PX = (g: number) => 40 + g * 3.75;
+const PROTEIN_TARGET = 70;
+// meal, what it was, grams
+const PLATES: [string, string, number][] = [
+  ["Breakfast", "besan chilla", 16],
+  ["Lunch", "dal and paneer", 26],
+  ["Snack", "curd", 8],
+  ["Dinner", "chicken or rajma", 22],
+];
+const PROTEIN_ROWS = PLATES.reduce<{ name: string; food: string; g: number; from: number; y: number }[]>((rows, [name, food, g], i) => {
+  const from = i ? rows[i - 1].from + rows[i - 1].g : 0;
+  return [...rows, { name, food, g, from, y: 52 + i * 46 }];
+}, []);
+const PROTEIN_TOTAL = PLATES.reduce((a, p) => a + p[2], 0);
+
+export function ProteinPlate() {
+  const totalY = 236;
+  return (
+    <svg
+      viewBox="0 0 360 300"
+      className={s.plate}
+      role="img"
+      aria-label={`One day of protein built across four meals, besan chilla, dal and paneer, curd, and chicken or rajma, reaching a daily target of ${PROTEIN_TARGET} grams`}
+    >
+      <line x1={PX(PROTEIN_TARGET)} x2={PX(PROTEIN_TARGET)} y1="30" y2={totalY + 20} className={s.limit} />
+      <text x={PX(PROTEIN_TARGET) + 6} y="20" textAnchor="end" className={`${s.txtOn} ${s.label}`} style={style({ "--dl": "1500ms" })}>
+        Daily target, {PROTEIN_TARGET} g
+      </text>
+      {PROTEIN_ROWS.map((r, i) => (
+        <g key={r.name}>
+          {i > 0 && (
+            <line x1={PX(r.from)} x2={PX(r.from)} y1={r.y - 34} y2={r.y + 12} className={`${s.stem} ${s.fade}`} style={style({ "--dl": `${250 + i * 160}ms` })} />
+          )}
+          {/* drawn after the leader line, with a halo of the plate's surface, so the line passes behind the words */}
+          <text x="40" y={r.y - 9} className={`${s.txt} ${s.label} ${s.halo}`} style={style({ "--dl": `${300 + i * 160}ms` })}>
+            {r.name} <tspan className={s.axis}>· {r.food}</tspan>
+          </text>
+          <rect x={PX(r.from)} y={r.y} width={r.g * 3.75} height="12" rx="6" className={`${s.dot} ${s.grow}`} style={style({ "--dl": `${300 + i * 160}ms` })} />
+          <text x={PX(r.from + r.g) + 8} y={r.y + 10.5} className={`${s.axis} ${s.label}`} style={style({ "--dl": `${600 + i * 160}ms` })}>
+            {r.g} g
+          </text>
+        </g>
+      ))}
+      <rect x={PX(0)} y={totalY} width={PROTEIN_TOTAL * 3.75} height="12" rx="6" className={`${s.signal} ${s.grow}`} style={style({ "--dl": "1100ms" })} />
+      <text x="40" y={totalY - 9} className={`${s.txtOn} ${s.label}`} style={style({ "--dl": "1300ms" })}>
+        Across the day, {PROTEIN_TOTAL} g
+      </text>
+      {[0, 20, 40, 60, 80].map((g) => (
+        <g key={g}>
+          <line x1={PX(g)} x2={PX(g)} y1={totalY + 24} y2={totalY + 30} className={s.rule} />
+          <text x={PX(g)} y={totalY + 48} textAnchor="middle" className={s.axis}>
+            {g ? g : "0 g"}
+          </text>
+        </g>
+      ))}
+    </svg>
+  );
+}

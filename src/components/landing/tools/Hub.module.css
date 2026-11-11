@@ -1,0 +1,139 @@
+.page {
+  background: var(--bg);
+  padding-bottom: var(--section);
+}
+.head {
+  display: grid;
+  gap: 18px;
+  padding-top: calc(var(--nav-h) + 72px + env(safe-area-inset-top));
+  padding-bottom: 48px;
+  --stack-gap: 18px;
+}
+.head :global(.lede) {
+  max-width: 36em;
+}
+
+/* an index of tools, read like a ledger rather than a grid of cards */
+.list {
+  border-top: 1px solid var(--hair-2);
+}
+.row {
+  position: relative;
+  display: grid;
+  gap: 6px;
+  padding: 26px 48px 26px 0;
+  border-bottom: 1px solid var(--hair);
+  text-decoration: none;
+  color: var(--ink);
+}
+.name {
+  font-family: var(--font-display);
+  font-size: clamp(1.4rem, 1.2rem + 0.9vw, 2rem);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+.asks {
+  font-size: 1rem;
+  color: var(--signal-ink);
+  font-weight: 520;
+}
+.what {
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--ink-2);
+  max-width: 40em;
+}
+.go {
+  position: absolute;
+  right: 0;
+  top: 28px;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: var(--paper);
+  box-shadow: inset 0 0 0 1px var(--hair);
+  color: var(--ink);
+  transition:
+    transform 240ms var(--ease-out),
+    background-color 240ms ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .row:hover .go {
+    transform: translate(3px, -3px);
+    background: var(--slate-900);
+    color: var(--on-dark);
+  }
+}
+.row:active .go {
+  transform: scale(0.96);
+}
+/* the last row's rule already closes the list */
+.fine {
+  margin-top: 36px;
+  padding-top: 0;
+  border-top: 0;
+}
+
+@media (min-width: 1024px) {
+  .head {
+    padding-top: calc(var(--nav-h) + 104px);
+    padding-bottom: 64px;
+  }
+  .row {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+    column-gap: 48px;
+    row-gap: 8px;
+    padding: 32px 64px 32px 0;
+    align-items: baseline;
+  }
+  .name {
+    grid-row: 1 / span 2;
+  }
+  .go {
+    top: 50%;
+    margin-top: -20px;
+  }
+}
+
+/* a second list on the same hub: tools link to guides and guides to tools */
+.also {
+  display: grid;
+  gap: 20px;
+  margin-top: clamp(64px, 9vw, 112px);
+}
+/* the second list opens like any other section: tag, two-tone heading, and its link */
+.alsoHead {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px 32px;
+  margin-bottom: 12px;
+}
+.alsoTitle {
+  display: grid;
+  gap: 24px;
+  --stack-gap: 24px;
+}
+.alsoHead a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-weight: 560;
+  color: var(--signal-ink);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--signal-ink) 35%, transparent);
+  text-underline-offset: 3px;
+}
+.fine a {
+  display: inline-block;
+  padding-block: 12px;
+  margin-block: -12px;
+  color: var(--ink-2);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

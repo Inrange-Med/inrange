@@ -1,6 +1,6 @@
-import type { CSSProperties, ReactNode } from "react";
+import { Fragment, type CSSProperties, type ReactNode } from "react";
 import { ArrowRight } from "@phosphor-icons/react/dist/ssr";
-import AppWordmark from "@/components/ui/Wordmark";
+import { LOGO_BODY_PATH, LOGO_DOT_PATH, LOGO_H, LOGO_PLUS_PATH, LOGO_VIEWBOX, LOGO_W } from "./logo-paths";
 
 /** The clinical assessment, built by the product team. Set NEXT_PUBLIC_ASSESSMENT_URL once it is live. */
 export const ASSESSMENT_URL = process.env.NEXT_PUBLIC_ASSESSMENT_URL || "/assessment";
@@ -12,19 +12,30 @@ export function Mask({
   className,
   delay = 0,
   id,
+  soft,
+  join = true,
 }: {
   as?: "h1" | "h2" | "h3" | "p";
   lines: ReactNode[];
   className?: string;
   delay?: number;
   id?: string;
+  /** lines from this index on take the softer heading tone: the payoff, read second */
+  soft?: number;
+  /** phrases share one line wherever it fits and wrap only at a phrase boundary (Arhaan, 16 Oct 2026:
+      a heading is one line with its subhead below). false keeps one phrase per line, for the hero. */
+  join?: boolean;
 }) {
   return (
-    <Tag className={className} data-reveal="mask" id={id} style={{ "--d": `${delay}ms` } as CSSProperties}>
+    <Tag className={`${className ?? ""}${join ? " join" : ""}`} suppressHydrationWarning data-reveal="mask" id={id} style={{ "--d": `${delay}ms` } as CSSProperties}>
       {lines.map((l, i) => (
-        <span className="ln" key={i} style={{ "--i": i } as CSSProperties}>
-          <span>{l}</span>
-        </span>
+        <Fragment key={i}>
+          {/* a real space between phrases, so the heading reads as words to search and screen readers */}
+          {i > 0 && " "}
+          <span className="ln" style={{ "--i": i } as CSSProperties}>
+            <span className={soft !== undefined && i >= soft ? "soft" : undefined}>{l}</span>
+          </span>
+        </Fragment>
       ))}
     </Tag>
   );
@@ -32,17 +43,17 @@ export function Mask({
 
 export function Cta({
   href = ASSESSMENT_URL,
-  children = "Start free check",
+  children = "Book consultation",
   variant,
   className = "",
 }: {
   href?: string;
   children?: ReactNode;
-  variant?: "mint";
+  variant?: "light";
   className?: string;
 }) {
   return (
-    <a href={href} className={`btn ${variant === "mint" ? "btn--mint" : ""} ${className}`}>
+    <a href={href} className={`btn ${variant === "light" ? "btn--signal" : ""} ${className}`}>
       <span>{children}</span>
       <span className="well" aria-hidden="true">
         <ArrowRight size={18} weight="regular" />
@@ -61,17 +72,33 @@ export function Dot({ size = 18 }: { size?: number }) {
 }
 
 /**
- * The InRange wordmark (the app's Wordmark, one source). Black or white only (brand kit).
- * With `sting`, the dot starts seated on the stem like a normal i and rises into place, once.
+ * The inrange wordmark, outlined from Jost Medium to the brand guidelines (v1.1). Ink or paper only:
+ * never recoloured, never retyped as live text. Keep it at least 120px wide (height 34); below that
+ * the guidelines ask for the dot icon instead.
+ * With `sting`, the guidelines' animated logo plays once: the letters fade in, the dot rises, the plus pops in.
  */
-export function Wordmark({ className, height = 30, sting = false }: { className?: string; height?: number; sting?: boolean }) {
-  return <AppWordmark className={className} height={height} dotClassName={sting ? "sting" : undefined} />;
+export function Wordmark({ className, height = 34, sting = false }: { className?: string; height?: number; sting?: boolean }) {
+  return (
+    <svg
+      className={className}
+      height={height}
+      width={(height * LOGO_W) / LOGO_H}
+      viewBox={LOGO_VIEWBOX}
+      role="img"
+      aria-label="inrange"
+      style={{ display: "block", overflow: "visible" }}
+    >
+      <path d={LOGO_BODY_PATH} fill="currentColor" className={sting ? "sting-word" : undefined} />
+      <path d={LOGO_DOT_PATH} fill="currentColor" className={sting ? "sting" : undefined} />
+      <path d={LOGO_PLUS_PATH} fill="currentColor" className={sting ? "sting-plus" : undefined} />
+    </svg>
+  );
 }
 
 /** Section tag: a short, plain name for what the section covers, on a tinted plate. */
 export function Tag({ children, dark = false, delay = 0 }: { children: ReactNode; dark?: boolean; delay?: number }) {
   return (
-    <p className={`tag${dark ? " tag--dark" : ""}`} data-reveal="rise" style={{ "--d": `${delay}ms` } as CSSProperties}>
+    <p className={`tag${dark ? " tag--dark" : ""}`} suppressHydrationWarning data-reveal="rise" style={{ "--d": `${delay}ms` } as CSSProperties}>
       <svg width="9" height="11" viewBox="0 0 9 11" shapeRendering="crispEdges" aria-hidden="true">
         <path d="M1.5 1v9M4.5 1v4.5M7.5 1v6.5" stroke="currentColor" strokeWidth="1" fill="none" />
       </svg>
@@ -113,7 +140,7 @@ export function Art({ kind, className = "" }: { kind: ArtKind; className?: strin
   }
   // the wrapper is observed; only the drawing inside it is clipped, so the reveal always fires
   return (
-    <span className={`art art--${kind} ${className}`} data-reveal="draw" aria-hidden="true">
+    <span className={`art art--${kind} ${className}`} suppressHydrationWarning data-reveal="draw" aria-hidden="true">
       <svg viewBox={vb} preserveAspectRatio={kind === "converge" ? "none" : "xMaxYMin meet"}>
         {paths.map((d, i) => (
           <path key={i} d={d} />

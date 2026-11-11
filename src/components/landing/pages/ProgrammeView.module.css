@@ -1,0 +1,662 @@
+/* ---------------------------------------------------------------
+   Programme page: the hero (answer and person), the basics, then the shared page anatomy.
+---------------------------------------------------------------- */
+
+.hero {
+  display: grid;
+  gap: 32px;
+  padding-top: calc(var(--nav-h) + 56px + env(safe-area-inset-top));
+  padding-bottom: 56px;
+}
+.heroHead {
+  display: grid;
+  gap: 18px;
+  --stack-gap: 18px;
+}
+.heroCopy {
+  display: grid;
+  gap: 18px;
+  align-content: start;
+  --stack-gap: 18px;
+}
+
+.heroPhoto {
+  position: relative;
+  margin: 0;
+  aspect-ratio: 4 / 4.6;
+  border-radius: var(--r-media);
+  overflow: hidden;
+  background: var(--slate-900);
+  --wipe: var(--bg);
+}
+.heroPhoto img {
+  object-fit: cover;
+}
+@media (min-width: 768px) {
+  .heroPhoto {
+    aspect-ratio: 16 / 11;
+  }
+}
+@media (min-width: 1024px) {
+  .hero {
+    grid-template-columns: minmax(0, 6fr) minmax(0, 5fr);
+    column-gap: clamp(48px, 6vw, 96px);
+    row-gap: 40px;
+    /* the answer starts level with the photo, and the photo ends with the copy */
+    align-items: stretch;
+    padding-top: calc(var(--nav-h) + 72px);
+    padding-bottom: 88px;
+  }
+  .heroHead {
+    grid-column: 1 / -1;
+  }
+  .heroPhoto {
+    aspect-ratio: auto;
+    height: 100%;
+    min-height: 440px;
+  }
+}
+
+/* the value at a glance, in the hero */
+.facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 20px;
+  margin: 10px 0 0;
+  border-top: 1px solid var(--hair-2);
+}
+.facts > div {
+  padding: 13px 0 12px;
+  border-bottom: 1px solid var(--hair);
+}
+.facts dt {
+  font-size: 0.8125rem;
+  color: var(--ink-3);
+}
+.facts dd {
+  margin: 3px 0 0;
+  font-family: var(--font-display);
+  font-size: 1.0625rem;
+  font-weight: 520;
+  letter-spacing: -0.008em;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.factsNote {
+  margin-top: -6px;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--ink-3);
+  max-width: 44em;
+}
+@media (min-width: 1200px) {
+  .facts {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* the basics: the searched question small, the answer set large as the editorial moment */
+/* the question as the section heading, one line; the answer set large beneath it */
+.explain {
+  display: grid;
+  gap: 28px;
+}
+
+.explainHead {
+  display: grid;
+  gap: 20px;
+  align-content: start;
+  --stack-gap: 20px;
+}
+.explainHead h2 {
+  max-width: none;
+}
+.prose {
+  display: grid;
+  gap: 20px;
+  color: var(--ink-2);
+  font-size: 1.0625rem;
+  line-height: 1.65;
+  max-width: 46em;
+}
+.prose p {
+  text-wrap: pretty;
+}
+.prose > p:first-child {
+  font-family: var(--font-display);
+  font-size: clamp(1.375rem, 1rem + 1.2vw, 1.875rem);
+  font-weight: 450;
+  line-height: 1.35;
+  letter-spacing: -0.012em;
+  color: var(--ink-2);
+  max-width: 28em;
+}
+/* emphasis is the full ink at the same weight, as on carbon: a darker word, never a bold one */
+.prose strong {
+  color: var(--ink);
+  font-weight: inherit;
+}
+.prose > div {
+  margin-top: 8px;
+}
+.cite {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--ink-3);
+}
+.wrapCell {
+  white-space: normal !important;
+  min-width: 7rem;
+}
+
+
+/* who it is for: two short lists side by side */
+.who {
+  display: grid;
+  gap: 40px;
+}
+.whoK {
+  margin-bottom: 14px;
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 520;
+  letter-spacing: -0.008em;
+}
+.ticks,
+.dashes {
+  display: grid;
+  list-style: none;
+  margin: 0 0 4px;
+  padding: 0;
+  border-top: 1px solid var(--hair-2);
+}
+.ticks li,
+.dashes li {
+  position: relative;
+  padding: 14px 0 14px 30px;
+  border-bottom: 1px solid var(--hair);
+  color: var(--ink);
+  font-size: 1rem;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+/* the brand's dot for what fits; a short rule for what needs a conversation first */
+.ticks li::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 21px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--signal-ink);
+}
+.dashes li {
+  color: var(--ink-2);
+}
+.dashes li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 24px;
+  width: 13px;
+  height: 1.5px;
+  background: var(--ink-3);
+}
+@media (min-width: 900px) {
+  .who {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: clamp(40px, 5vw, 80px);
+  }
+}
+
+/* the tests table reads as three columns from 768; on phones each row stacks */
+.checks th[scope="row"] {
+  white-space: normal;
+  min-width: 9rem;
+}
+@media (max-width: 767px) {
+  .checks thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .checks,
+  .checks tbody,
+  .checks tr,
+  .checks th,
+  .checks td {
+    display: block;
+    min-width: 0;
+  }
+  .checks tr {
+    padding: 16px 0;
+    border-bottom: 1px solid var(--hair);
+  }
+  .checks th,
+  .checks td {
+    padding: 0;
+    border: 0;
+  }
+  .checks td {
+    margin-top: 4px;
+  }
+  .checks td:last-child {
+    margin-top: 6px;
+    font-size: 0.875rem;
+  }
+  .checks {
+    display: flex;
+    flex-direction: column;
+  }
+  .checks caption {
+    order: 2;
+    display: block;
+    width: auto;
+    padding-top: 14px;
+  }
+}
+@media (min-width: 768px) {
+  .checks th[scope="row"] {
+    width: 30%;
+  }
+  .checks td:last-child {
+    width: 28%;
+  }
+}
+
+/* built for Indian life: the one dark band */
+.life {
+  padding-block: var(--section);
+  background: var(--slate-950);
+  background-image: var(--sheen), var(--carbon);
+  color: var(--on-dark);
+}
+.lifeGrid {
+  display: grid;
+  gap: 40px;
+}
+.lifePhoto {
+  position: relative;
+  margin: 0;
+  aspect-ratio: 4 / 4.4;
+  border-radius: var(--r-media);
+  overflow: hidden;
+  background: var(--slate-900);
+  --wipe: var(--slate-950);
+}
+.lifePhoto img {
+  object-fit: cover;
+}
+.lifeHead {
+  display: grid;
+  gap: 20px;
+  --stack-gap: 20px;
+}
+.lifeCopy {
+  display: grid;
+  align-content: stretch;
+}
+.lifeTitle {
+  color: var(--on-dark);
+  --head-soft: var(--head-soft-dark);
+}
+@media (min-width: 768px) {
+  .lifePhoto {
+    aspect-ratio: 16 / 11;
+  }
+}
+@media (min-width: 1024px) {
+  .lifeGrid {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+    column-gap: clamp(48px, 6vw, 96px);
+    row-gap: 48px;
+    align-items: stretch;
+  }
+  .lifeHead {
+    grid-column: 1 / -1;
+  }
+  /* the list's first and last rules meet the photo's top and bottom edges */
+  .lifeList {
+    height: 100%;
+    grid-template-rows: repeat(3, 1fr);
+  }
+  .lifeList li {
+    align-content: center;
+  }
+  .lifePhoto {
+    aspect-ratio: 4 / 4.4;
+  }
+}
+.lifeList {
+  display: grid;
+  gap: 0;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--hair-dark);
+}
+.lifeList li {
+  display: grid;
+  gap: 8px;
+  padding: 22px 0;
+  border-bottom: 1px solid var(--hair-dark);
+}
+.lifeName {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 520;
+  letter-spacing: -0.01em;
+}
+.lifeList p {
+  color: var(--on-dark-2);
+  font-size: 1rem;
+  line-height: 1.6;
+  max-width: 30em;
+  text-wrap: pretty;
+}
+
+
+/* the package, compact */
+.inc {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--hair-2);
+}
+.inc li {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 20px;
+  padding: 15px 0;
+  border-bottom: 1px solid var(--hair);
+  font-size: 1rem;
+  line-height: 1.45;
+}
+/* a short list reads as two calm columns instead of one line stretched across the page */
+@media (min-width: 1024px) {
+  .incSoon {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 64px;
+  }
+}
+.incVal {
+  flex: none;
+  font-size: 0.875rem;
+  font-weight: 560;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.incVal[data-kind="Included"] {
+  color: var(--signal-ink);
+}
+
+/* sources and related pages */
+.ref {
+  background: var(--bg);
+}
+.refGrid {
+  display: grid;
+  gap: 56px;
+}
+.refK {
+  margin-bottom: 18px;
+}
+@media (min-width: 1024px) {
+  .refGrid {
+    grid-template-columns: minmax(0, 6fr) minmax(0, 5fr);
+    column-gap: clamp(48px, 6vw, 96px);
+  }
+}
+
+/* the other three programmes, small photo cards */
+.others {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.other {
+  display: grid;
+  gap: 4px;
+  color: var(--ink);
+  text-decoration: none;
+}
+.otherPhoto {
+  position: relative;
+  display: block;
+  aspect-ratio: 4 / 5;
+  margin-bottom: 10px;
+  border-radius: var(--r-media);
+  overflow: hidden;
+  background: var(--slate-900);
+}
+.otherPhoto img {
+  object-fit: cover;
+  transition: transform 700ms var(--ease-out);
+}
+.otherName {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 520;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+.otherState {
+  font-size: 0.8125rem;
+  color: var(--ink-3);
+}
+.otherState[data-live] {
+  color: var(--signal-ink);
+}
+@media (hover: hover) and (pointer: fine) {
+  .other:hover .otherPhoto img {
+    transform: scale(1.035);
+  }
+}
+@media (min-width: 768px) {
+  .others {
+    gap: 20px;
+  }
+  .otherPhoto {
+    aspect-ratio: 4 / 3;
+  }
+  .otherName {
+    font-size: 1.125rem;
+  }
+}
+
+/* the programme chooser: four columns from 900; on phones each programme reads as its own block */
+.vh {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.choose thead th a {
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 1.0625rem;
+  font-weight: 520;
+  text-decoration: underline;
+  text-decoration-color: var(--hair-2);
+  text-underline-offset: 4px;
+}
+.choose tbody th {
+  font-family: var(--font-text);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--ink-3);
+  width: 9rem;
+}
+@media (min-width: 900px) {
+  .choose {
+    table-layout: fixed;
+  }
+  .choose thead th:first-child {
+    width: 12%;
+  }
+}
+.choose td {
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+.open {
+  color: var(--signal-ink);
+  font-weight: 560;
+}
+.chooseList {
+  display: grid;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--hair-2);
+}
+.chooseList > li {
+  padding: 20px 0 16px;
+  border-bottom: 1px solid var(--hair);
+}
+.chooseName {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  margin-top: -10px;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 520;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+}
+.chooseList dl {
+  display: grid;
+  gap: 10px;
+  margin: 4px 0 0;
+}
+.chooseList dl > div {
+  display: grid;
+  grid-template-columns: 6.5rem minmax(0, 1fr);
+  gap: 12px;
+}
+.chooseList dt {
+  font-size: 0.8125rem;
+  color: var(--ink-3);
+  padding-top: 2px;
+}
+.chooseList dd {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+@media (max-width: 899px) {
+  .chooseWrap {
+    display: none;
+  }
+}
+@media (min-width: 900px) {
+  .chooseList {
+    display: none;
+  }
+}
+
+/* phones: running text stays at 16px (rule 50) */
+@media (max-width: 767px) {
+  .choose td,
+  .chooseList dd {
+    font-size: 1rem;
+  }
+}
+
+/* ---------------------------------------------------------------
+   The hero on the brand's dark ground, under the isolines, as on the homepage
+---------------------------------------------------------------- */
+.heroBand {
+  position: relative;
+  isolation: isolate;
+  overflow: clip;
+  background: var(--slate-800);
+  background-image: var(--sheen), var(--carbon);
+  color: var(--on-dark);
+}
+.field {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  pointer-events: none;
+}
+.heroBand .hero {
+  padding-bottom: 64px;
+}
+.heroBand .title {
+  color: var(--on-dark);
+  --head-soft: var(--head-soft-dark);
+}
+.heroBand .heroPhoto {
+  --wipe: var(--slate-800);
+  background: var(--slate-900);
+}
+/* the facts read on the dark ground, on a calm plate so the isolines stop at its edge */
+.heroBand .facts {
+  border-top-color: var(--hair-dark);
+  background: var(--slate-800);
+  background-image: var(--sheen), var(--carbon);
+  background-position: 0 0, calc(-1 * var(--gutter)) 0;
+}
+.heroBand .facts > div {
+  border-bottom-color: var(--hair-dark);
+}
+.heroBand .facts dt {
+  color: var(--on-dark-3);
+}
+.heroBand .facts dd {
+  color: var(--on-dark);
+}
+.heroBand .factsNote {
+  color: var(--on-dark-3);
+}
+@media (min-width: 1024px) {
+  .heroBand .hero {
+    padding-bottom: 96px;
+  }
+}
+
+/* the basics: the answer and its drawn instrument side by side from 1024 */
+@media (min-width: 1024px) {
+  .explain {
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    column-gap: clamp(48px, 6vw, 96px);
+    align-items: start;
+  }
+  .explainHead {
+    grid-column: 1 / -1;
+  }
+}
+
+/* no single word left alone at the end of a table cell */
+.checks td {
+  text-wrap: pretty;
+}
+
+/* phones: the other programmes go by their short names, so three tiles keep one baseline */
+.brief {
+  display: none;
+}
+@media (max-width: 479px) {
+  .long {
+    display: none;
+  }
+  .brief {
+    display: inline;
+  }
+}
