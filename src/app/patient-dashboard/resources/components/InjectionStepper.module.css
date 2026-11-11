@@ -166,7 +166,8 @@
 }
 .stepNav {
   position: sticky;
-  bottom: 0;
+  /* above the shell's dock on a phone (the shell sets the clearance; 0 on a laptop) */
+  bottom: var(--dock-clearance, 0px);
   z-index: 2;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);

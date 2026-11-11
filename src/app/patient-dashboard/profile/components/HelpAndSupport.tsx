@@ -142,7 +142,12 @@ export default function HelpAndSupport() {
             )}
           </label>
           {sendError && <ErrorNotice message={sendError} />}
-          <SaveButton busy={busy} label="Send message" busyLabel="Sending" />
+          <SaveButton
+            busy={busy}
+            label="Send message"
+            busyLabel="Sending"
+            quiet
+          />
         </form>
       </section>
 

@@ -236,6 +236,49 @@
   max-width: 440px;
   margin: 10px auto 2px;
 }
+/* a connection or history error: the calm plate of an ordinary note (Arhaan Chat .away), centred;
+   red stays for the 112 safety lines */
+.notice {
+  align-self: center;
+  max-width: 440px;
+  margin: 10px auto 2px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--paper);
+  box-shadow: inset 0 0 0 1px var(--hair);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--ink-2);
+  text-align: left;
+}
+
+/* the bar while the care team loads: a soft face and name, so the bar never changes person */
+.ghostFace {
+  display: block;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: var(--bg-2);
+}
+.ghostTitle {
+  display: block;
+  width: 9em;
+  max-width: 100%;
+  height: 1.2em;
+  border-radius: 7px;
+  background: var(--bg-2);
+  animation: breathe 1400ms var(--ease-out) infinite alternate;
+}
+@keyframes breathe {
+  to {
+    opacity: 0.5;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ghostTitle {
+    animation: none;
+  }
+}
 
 /* new messages arrive from below, quickly */
 .row {
@@ -337,6 +380,15 @@
 }
 .field::placeholder {
   color: var(--ink-3);
+}
+/* waiting for the chat to open: quiet text and a plain hairline, never iOS's own grey fill */
+.field:disabled {
+  opacity: 1;
+  -webkit-text-fill-color: var(--ink-3);
+  cursor: default;
+}
+.box:has(.field:disabled) {
+  box-shadow: inset 0 0 0 1px var(--hair);
 }
 .send {
   display: grid;

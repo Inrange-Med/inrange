@@ -17,7 +17,7 @@ import {
   ShieldCheck,
 } from "@phosphor-icons/react";
 import ErrorNotice from "@/components/ui/ErrorNotice";
-import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
+import PageGhosts from "@/app/patient-dashboard/components/PageGhosts";
 import PageHead from "@/components/ui/PageHead";
 import Sheet from "@/components/ui/Sheet";
 import { useApiResource } from "@/hooks/useApiResource";
@@ -77,7 +77,7 @@ export default function ProfileView() {
         {resource.error ? (
           <ErrorNotice message={resource.error} onRetry={resource.reload} />
         ) : (
-          <LoadingSkeleton />
+          <PageGhosts title heights={[180, 180]} />
         )}
       </main>
     );

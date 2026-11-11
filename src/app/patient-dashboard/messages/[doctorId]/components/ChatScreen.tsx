@@ -48,6 +48,8 @@ export default function ChatScreen({ doctorId }: { doctorId: string }) {
 
   const doctor = team.data?.find((member) => member.doctorId === doctorId);
   const doctorName = doctor?.name ?? "Your doctor";
+  // while the care team loads, the bar holds soft placeholders instead of a stand-in person
+  const teamWaiting = team.loading && !team.data;
   const messages = uniqueMessages([...(history.data ?? []), ...live]);
   const isMine = (message: ChatMessage) => message.senderRole === user?.role;
 
@@ -127,10 +129,22 @@ export default function ChatScreen({ doctorId }: { doctorId: string }) {
         </Link>
         <div className={styles.who}>
           <span className={styles.faces} aria-hidden="true">
-            <Avatar name={doctorName} src={doctor?.photoUrl} size={30} />
+            {teamWaiting ? (
+              <span className={styles.ghostFace} />
+            ) : (
+              <Avatar name={doctorName} src={doctor?.photoUrl} size={30} />
+            )}
           </span>
           <span className={styles.whoText}>
-            <h1 className={styles.title}>{doctorName}</h1>
+            <h1 className={styles.title}>
+              {teamWaiting ? (
+                <span className={styles.ghostTitle}>
+                  <span className="sr-only">Loading</span>
+                </span>
+              ) : (
+                doctorName
+              )}
+            </h1>
             {doctor?.specialization && (
               <span className={styles.sub}>{doctor.specialization}</span>
             )}
@@ -179,7 +193,7 @@ export default function ChatScreen({ doctorId }: { doctorId: string }) {
           {[session.error, history.error, socketError]
             .filter(Boolean)
             .map((message) => (
-              <p key={message} className={styles.system} role="alert">
+              <p key={message} className={styles.notice} role="alert">
                 <span>{message}</span>
               </p>
             ))}

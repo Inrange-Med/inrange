@@ -116,6 +116,29 @@
     transition: none;
   }
 }
+/* a switch that cannot move while reminders are off: it says so, instead of looking merely off */
+.switch input:disabled + i {
+  opacity: 0.4;
+}
+.toggleRow:has(input:disabled),
+.toggleRow:has(input:disabled) .switch {
+  cursor: default;
+}
+.toggleRow:has(input:disabled) strong {
+  color: var(--ink-3);
+}
+
+/* the second submit in a sheet: the ghost pill across it (Arhaan App.module.css .wide) */
+.wide {
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  /* the team's 56px target (the design's .wide is 48px) */
+  min-height: 56px;
+}
+.wide:disabled {
+  cursor: default;
+}
 
 /* ---------- profile ---------- */
 /* the avatar is the brand's dot: an ink dot on white (brand kit) */
@@ -500,6 +523,19 @@
   }
   .foot .outAsk {
     grid-column: 1;
+  }
+}
+/* laptops: body text one step up for reading at arm's length (Arhaan Profile.module.css) */
+@media (min-width: 1024px) {
+  .rowText strong {
+    font-size: 1.125rem;
+  }
+  .rowText > span,
+  .dl div,
+  .faq p,
+  .sos p,
+  .planNone > p:first-of-type {
+    font-size: 1.0625rem;
   }
 }
 

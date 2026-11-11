@@ -12,7 +12,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { CaretDown, CaretRight, Play } from "@phosphor-icons/react";
 import ContourField from "@/components/ui/ContourField";
-import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
+import PageGhosts from "@/app/patient-dashboard/components/PageGhosts";
 import PageHead from "@/components/ui/PageHead";
 import { useApiResource } from "@/hooks/useApiResource";
 import { getMyProfile } from "@/services/patientProfileService";
@@ -53,7 +53,7 @@ export default function ResourcesView() {
   if (profile.loading && !profile.data) {
     return (
       <main className={layoutStyles.page}>
-        <LoadingSkeleton />
+        <PageGhosts title heights={[200, 180]} />
       </main>
     );
   }
