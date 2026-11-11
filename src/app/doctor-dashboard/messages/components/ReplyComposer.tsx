@@ -115,7 +115,7 @@ export default function ReplyComposer({
         )}
         <div className={styles.boxFoot}>
           <span className={styles.as}>
-            <Avatar name={doctorName || "Doctor"} size={28} /> As{" "}
+            <Avatar name={doctorName || "Doctor"} size={20} /> As{" "}
             {doctorName || "you"}. Arrives in the app.
           </span>
           <span className={styles.actions}>

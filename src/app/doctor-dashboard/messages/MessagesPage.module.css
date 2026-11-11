@@ -173,7 +173,7 @@
 .day {
   align-self: center;
   margin: 14px 0 4px;
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   font-weight: 560;
   color: var(--ink-3);
 }
@@ -203,7 +203,7 @@
 
 .name {
   margin: 0 4px 4px;
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--ink-2);
 }
@@ -263,6 +263,18 @@
   font-size: 0.8125rem;
   font-weight: 560;
   color: var(--ink-2);
+  text-decoration: underline;
+  text-decoration-color: var(--hair-2);
+  text-underline-offset: 3px;
+  transition: text-decoration-color 160ms var(--ease-out);
+}
+
+/* the attachment opens the file, so it reads as a link: the underline darkens under the pointer */
+@media (hover: hover) and (pointer: fine) {
+  .photoNote:hover {
+    text-decoration-color: var(--ink-3);
+    color: var(--ink);
+  }
 }
 
 .meta {
@@ -270,7 +282,7 @@
   flex-wrap: wrap;
   gap: 4px;
   margin: 4px 4px 0;
-  font-size: 0.8125rem;
+  font-size: 0.6875rem;
   color: var(--ink-3);
 }
 
@@ -342,7 +354,7 @@
   align-items: center;
   gap: 6px;
   min-width: 0;
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   color: var(--ink-3);
 }
 
@@ -400,9 +412,18 @@
   inset: -12px -8px;
 }
 
-/* below a laptop (touch): quick replies are full 44px taps */
+/* below a laptop (touch): quick replies stay 34px chips with an invisible 44px tap area */
 @media (max-width: 1023px) {
+  .quick {
+    padding-block: 5px;
+    margin-block: -5px;
+  }
   .quick button {
-    min-height: 44px;
+    position: relative;
+  }
+  .quick button::after {
+    content: "";
+    position: absolute;
+    inset: -5px 0;
   }
 }

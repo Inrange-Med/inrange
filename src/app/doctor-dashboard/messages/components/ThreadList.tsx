@@ -4,7 +4,12 @@
   message, how long the patient has waited, and their care week or programme.
 */
 
-import { Check, Paperclip, WarningCircle } from "@phosphor-icons/react";
+import {
+  ChatsCircle,
+  Check,
+  Paperclip,
+  WarningCircle,
+} from "@phosphor-icons/react";
 import Avatar from "@/components/ui/Avatar";
 import SegmentedControl from "@/components/ui/SegmentedControl";
 import { clockTime, shortDate } from "@/lib/format/dateTime";
@@ -81,6 +86,7 @@ export default function ThreadList({
       </div>
       {sessions === null ? (
         <div className={conversationStyles.empty}>
+          <ChatsCircle size={22} aria-hidden="true" />
           <p>Your patient chats are not available here yet.</p>
         </div>
       ) : sessions.length ? (
@@ -177,6 +183,7 @@ export default function ThreadList({
         </div>
       ) : (
         <div className={conversationStyles.empty}>
+          <ChatsCircle size={22} aria-hidden="true" />
           <p>No patient has written yet.</p>
         </div>
       )}

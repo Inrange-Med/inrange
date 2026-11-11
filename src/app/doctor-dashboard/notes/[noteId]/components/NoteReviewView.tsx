@@ -10,7 +10,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import ErrorNotice from "@/components/ui/ErrorNotice";
-import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
+import ClinicSkeleton from "@/app/doctor-dashboard/components/ClinicSkeleton";
 import PageHead from "@/components/ui/PageHead";
 import { useApiResource } from "@/hooks/useApiResource";
 import type { BackDestination } from "@/lib/navigation/backDestination";
@@ -77,7 +77,7 @@ export default function NoteReviewView({ noteId }: { noteId: string }) {
   )
     return (
       <main className={clinicStyles.page}>
-        <LoadingSkeleton />
+        <ClinicSkeleton />
       </main>
     );
   if (!note.data)
