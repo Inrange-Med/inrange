@@ -9,7 +9,7 @@
   stroke-width: 1;
 }
 .axis {
-  font-size: 11px;
+  font-size: 0.8125rem;
   fill: var(--ink-3);
   font-variant-numeric: tabular-nums;
 }

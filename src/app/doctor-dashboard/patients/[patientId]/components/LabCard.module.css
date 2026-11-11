@@ -55,7 +55,7 @@
 }
 
 .table thead th {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   color: var(--ink-3);
 }
@@ -89,7 +89,7 @@
 .quote cite {
   display: block;
   margin-top: 4px;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-style: normal;
   color: var(--ink-3);
 }
@@ -155,7 +155,7 @@
   }
   .refUnder {
     display: block;
-    font-size: 0.75rem;
+    font-size: 0.8125rem;
     font-weight: 400;
     color: var(--ink-3);
   }

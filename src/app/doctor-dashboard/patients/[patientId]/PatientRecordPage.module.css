@@ -42,7 +42,7 @@
 }
 
 .tile > span {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   color: var(--ink-3);
 }
 
@@ -54,7 +54,7 @@
 }
 
 .tile em {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-style: normal;
   color: var(--ink-3);
 }
@@ -77,7 +77,7 @@
 .voiceBy {
   display: block;
   margin-top: 4px;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   color: var(--ink-3);
 }
 

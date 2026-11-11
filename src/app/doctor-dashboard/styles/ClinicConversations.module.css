@@ -59,7 +59,7 @@
 
 .itemWhen {
   flex: none;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   color: var(--ink-3);
 }
 
@@ -103,7 +103,7 @@
   height: 22px;
   padding: 0 8px;
   border-radius: 999px;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 560;
 }
 

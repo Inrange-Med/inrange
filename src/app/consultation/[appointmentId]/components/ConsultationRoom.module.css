@@ -95,7 +95,7 @@
   color: var(--on-dark);
   background: transparent;
   font: inherit;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   white-space: nowrap;
   cursor: pointer;
   transition:
@@ -142,7 +142,7 @@
   padding: 0 15px;
   border-radius: 999px;
   font: inherit;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   white-space: nowrap;
   text-decoration: none;
@@ -216,7 +216,7 @@
   color: var(--paper);
   background: var(--alert);
   font: inherit;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 650;
   cursor: pointer;
   transition:
@@ -268,7 +268,7 @@
 }
 .endedLabel {
   color: var(--ink-3);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 560;
 }
 .ended h1 {

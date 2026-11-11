@@ -58,7 +58,7 @@
 .axis {
   position: relative;
   height: 16px;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   color: var(--ink-3);
 }
 .axis span {
@@ -68,7 +68,7 @@
 }
 @media (max-width: 389px) {
   .axis {
-    font-size: 0.6875rem;
+    font-size: 0.8125rem;
     letter-spacing: -0.02em;
   }
 }

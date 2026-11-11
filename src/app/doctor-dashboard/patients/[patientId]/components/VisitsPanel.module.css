@@ -60,7 +60,7 @@
 /* what the doctor told the patient, set apart from the doctor's own note */
 .toldLabel {
   margin-top: 4px;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   color: var(--ink-3);
 }
@@ -88,7 +88,7 @@
 }
 .visitAssess span {
   margin-right: 4px;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   color: var(--ink-3);
 }

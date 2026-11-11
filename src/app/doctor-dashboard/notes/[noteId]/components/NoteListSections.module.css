@@ -20,7 +20,7 @@
   margin-top: 1px;
   padding: 3px 8px;
   border-radius: 7px;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   white-space: nowrap;
 }
@@ -179,7 +179,7 @@
 }
 
 .owner {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   color: var(--ink-3);
   white-space: nowrap;
 }
