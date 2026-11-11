@@ -79,9 +79,77 @@
   }
 }
 
+/* closing: the scrim lifts and the plate sinks back to the bottom edge; a pull is let go of smoothly */
+.panel {
+  transition: translate 480ms var(--ease-drawer);
+}
+.overlay[data-leaving="true"] {
+  pointer-events: none;
+}
+.overlay[data-leaving="true"]::before {
+  animation: fadeOut 360ms var(--ease-out) both;
+}
+.overlay[data-leaving="true"] .panel {
+  animation: sink 360ms var(--ease-drawer) both;
+}
+@media (min-width: 768px) {
+  .overlay[data-leaving="true"]::before {
+    animation-duration: 220ms;
+  }
+  .overlay[data-leaving="true"] .panel {
+    animation:
+      unsettle 220ms var(--ease-out) both,
+      fadeOut 220ms var(--ease-out) both;
+  }
+}
+/* on a phone the handle and the top row are the grip: a pull there is a drag, not a scroll */
+.handle {
+  position: absolute;
+  top: 7px;
+  left: 50%;
+  width: 40px;
+  height: 5px;
+  border-radius: 999px;
+  background: rgb(236 237 239 / 0.24);
+  translate: -50% 0;
+}
+/* a larger grip than the bar it draws */
+.handle::before {
+  content: "";
+  position: absolute;
+  inset: -8px -32px;
+}
+@media (max-width: 767px) {
+  .handle,
+  .top {
+    touch-action: none;
+    cursor: grab;
+  }
+}
+@media (min-width: 768px) {
+  .handle {
+    display: none;
+  }
+}
+
 @keyframes fade {
   from {
     opacity: 0;
+  }
+}
+@keyframes fadeOut {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes sink {
+  to {
+    transform: translate3d(0, 100%, 0);
+  }
+}
+@keyframes unsettle {
+  to {
+    transform: translate3d(0, 12px, 0) scale(0.98);
   }
 }
 @keyframes rise {
@@ -623,6 +691,10 @@
   .panel,
   .step {
     animation: fade 200ms var(--ease-out) both;
+  }
+  .overlay[data-leaving="true"]::before,
+  .overlay[data-leaving="true"] .panel {
+    animation: fadeOut 200ms var(--ease-out) both;
   }
   .otp[data-state="err"],
   .digit:not(:empty) {

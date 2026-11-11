@@ -13,7 +13,7 @@
   which sends people to the /sign-in page.
 */
 
-import { ChangeEvent, CSSProperties, FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { ChangeEvent, CSSProperties, FormEvent, PointerEvent, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Check, WarningCircle, X } from "@phosphor-icons/react";
 import { sendOtp, verifyOtp } from "@/services/authService";
@@ -34,6 +34,10 @@ type AuthStep = "mobile" | "otp";
 export default function LoginSheet() {
   const router = useRouter();
   const [loginOpen, setLoginOpen] = useState(false);
+  // closing: the plate sinks (or fades) away before the sheet unmounts, as the app's Sheet does
+  const [leaving, setLeaving] = useState(false);
+  const leaveTimer = useRef<number | undefined>(undefined);
+  const drag = useRef<{ startY: number; time: number; offset: number; velocity: number } | null>(null);
   const [authStep, setAuthStep] = useState<AuthStep>("mobile");
   const [mobile, setMobile] = useState("");
   const [otp, setOtp] = useState("");
@@ -43,6 +47,7 @@ export default function LoginSheet() {
   const mobileRef = useRef<HTMLInputElement>(null);
   const otpRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const topRef = useRef<HTMLDivElement>(null);
   const returnTo = useRef<HTMLElement | null>(null);
 
   const reset = () => {
@@ -54,16 +59,61 @@ export default function LoginSheet() {
   };
 
   const open = useCallback(() => {
+    window.clearTimeout(leaveTimer.current);
+    setLeaving(false);
     returnTo.current = document.activeElement as HTMLElement | null;
     reset();
     setLoginOpen(true);
   }, []);
 
+  useEffect(() => () => window.clearTimeout(leaveTimer.current), []);
+
   const close = () => {
-    if (authLoading) return;
-    setLoginOpen(false);
-    reset();
-    returnTo.current?.focus();
+    if (authLoading || leaving) return;
+    setLeaving(true);
+    returnTo.current?.focus({ preventScroll: true });
+    const phone = !window.matchMedia("(min-width: 768px)").matches;
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    leaveTimer.current = window.setTimeout(
+      () => {
+        setLoginOpen(false);
+        setLeaving(false);
+        reset();
+      },
+      still ? 200 : phone ? 360 : 220,
+    );
+  };
+
+  // on a phone the plate follows the finger from its top row and closes on a flick or a long pull
+  const onDragStart = (event: PointerEvent<HTMLDivElement>) => {
+    // the handle and the top row are the grip; the form below scrolls and types as normal
+    const grip = topRef.current?.getBoundingClientRect().bottom ?? 0;
+    if (window.matchMedia("(min-width: 768px)").matches || event.clientY > grip || (event.target as HTMLElement).closest("button") || authLoading || leaving) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    drag.current = { startY: event.clientY, time: performance.now(), offset: 0, velocity: 0 };
+    if (panelRef.current) panelRef.current.style.transition = "none";
+  };
+  const onDragMove = (event: PointerEvent<HTMLDivElement>) => {
+    const current = drag.current;
+    if (!current || !panelRef.current) return;
+    const now = performance.now();
+    const pulled = event.clientY - current.startY;
+    // upwards it resists, the further the harder; downwards it follows the finger exactly
+    const offset = pulled < 0 ? -((-pulled * 0.55 * 80) / (80 + 0.55 * -pulled)) : pulled;
+    current.velocity = (offset - current.offset) / Math.max(1, now - current.time);
+    current.offset = offset;
+    current.time = now;
+    panelRef.current.style.translate = `0 ${offset}px`;
+  };
+  const onDragEnd = () => {
+    const released = drag.current;
+    drag.current = null;
+    const panel = panelRef.current;
+    if (!released || !panel) return;
+    panel.style.transition = "";
+    panel.style.translate = "";
+    // a quick flick closes it even when short; a slow pull closes it past a third of its height
+    if (released.velocity > 0.5 || released.offset > panel.offsetHeight / 3) close();
   };
 
   // openLogin() and every booking link open the sheet
@@ -117,11 +167,11 @@ export default function LoginSheet() {
     };
     // close reads the latest authLoading through its own closure on each render
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loginOpen, authLoading]);
+  }, [loginOpen, authLoading, leaving]);
 
   useEffect(() => {
     if (!loginOpen) return;
-    const timer = window.setTimeout(() => (authStep === "mobile" ? mobileRef : otpRef).current?.focus(), 100);
+    const timer = window.setTimeout(() => (authStep === "mobile" ? mobileRef : otpRef).current?.focus({ preventScroll: true }), 60);
     return () => window.clearTimeout(timer);
   }, [loginOpen, authStep]);
 
@@ -210,15 +260,27 @@ export default function LoginSheet() {
   return (
     <div
       className={s.overlay}
+      data-leaving={leaving}
       role="presentation"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) close();
       }}
     >
-      <div ref={panelRef} className={s.panel} role="dialog" aria-modal="true" aria-labelledby="auth-title">
+      <div
+        ref={panelRef}
+        className={s.panel}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="auth-title"
+        onPointerDown={onDragStart}
+        onPointerMove={onDragMove}
+        onPointerUp={onDragEnd}
+        onPointerCancel={onDragEnd}
+      >
+        <span className={s.handle} aria-hidden="true" />
         <ContourField className={s.field} density={10} lineAlpha={0.13} signalAlpha={0.42} seed={11} />
         {/* back (on the code step), the wordmark, close: three columns so the wordmark stays dead centre */}
-        <div className={s.top}>
+        <div ref={topRef} className={s.top}>
           {authStep === "otp" ? (
             <button type="button" className={s.round} onClick={handleBackToMobile} disabled={authLoading} aria-label="Change number">
               <ArrowLeft size={18} />
