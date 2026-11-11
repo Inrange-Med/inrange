@@ -1,21 +1,29 @@
 "use client";
 
 /*
-  One eligibility review: who, how they reached review, their reports, and the decision. Waiting, it
+  One eligibility review: who, how they reached review, their reports (each with what the file itself
+  says and any reason to look closely), and the decision. Waiting, it
   shows Approve and Not approved; Not approved asks for a note first (the patient sees it). Decided,
   it shows the decision, the note, who and when, and Change decision opens the same two actions.
 */
 
 import { useState } from "react";
-import { ArrowSquareOut, FileText } from "@phosphor-icons/react";
+import { ArrowSquareOut, FileText, Warning } from "@phosphor-icons/react";
 import ErrorNotice from "@/components/ui/ErrorNotice";
+import FileOpenButton from "@/components/ui/FileOpenButton";
 import { useToast } from "@/components/ui/ToastProvider";
 import formStyles from "@/components/ui/styles/FormControls.module.css";
 import { clockTime, shortDate } from "@/lib/format/dateTime";
 import { spacedMobile } from "@/lib/format/phone";
 import { errorMessage } from "@/lib/http/apiClient";
 import { decideReview } from "@/services/adminService";
-import type { EligibilityReview, ReviewDecision } from "@/types/admin";
+import { getFile } from "@/services/fileService";
+import type {
+  EligibilityReview,
+  ReviewDecision,
+  ReviewReport,
+} from "@/types/admin";
+import { reportChecks } from "./reportChecks";
 import adminStyles from "@/app/admin/styles/AdminSurfaces.module.css";
 
 const PATH_LABEL = { OWN_REPORT: "Own report", LAB_TEST: "Home lab test" };
@@ -109,21 +117,12 @@ export default function ReviewItem({
       {review.reports.length > 0 ? (
         <ul className={adminStyles.reports} aria-label="Reports">
           {review.reports.map((report) => (
-            <li key={report.id}>
-              {report.url ? (
-                <a href={report.url} target="_blank" rel="noopener noreferrer">
-                  <FileText size={18} aria-hidden="true" />
-                  {report.title}, {shortDate(report.uploadedAt)}
-                  <ArrowSquareOut size={14} aria-hidden="true" />
-                  <span className="sr-only">(opens in a new tab)</span>
-                </a>
-              ) : (
-                <span>
-                  <FileText size={18} aria-hidden="true" />
-                  {report.title}: the file could not be opened
-                </span>
-              )}
-            </li>
+            <ReportEntry
+              key={report.id}
+              report={report}
+              isNew={report.reviewStatus === "UNDER_REVIEW"}
+              earlier={review.reports.length > 1}
+            />
           ))}
         </ul>
       ) : (
@@ -249,6 +248,73 @@ export default function ReviewItem({
         >
           Change decision
         </button>
+      )}
+    </li>
+  );
+}
+
+/** One report: open it, what the file says about itself, and any reason to look closely. */
+function ReportEntry({
+  report,
+  isNew,
+  earlier,
+}: {
+  report: ReviewReport;
+  isNew: boolean;
+  /** the patient has more than one report here, so new and earlier are marked */
+  earlier: boolean;
+}) {
+  const { facts, warnings } = reportChecks(report);
+  const file = report.file;
+  return (
+    <li className={adminStyles.report}>
+      <div className={adminStyles.reportHead}>
+        {file ? (
+          <FileOpenButton
+            className={adminStyles.reportOpen}
+            load={() => getFile(file)}
+          >
+            {(opening) => (
+              <>
+                <FileText size={18} aria-hidden="true" />
+                {opening ? "Opening" : report.title}
+                <ArrowSquareOut size={14} aria-hidden="true" />
+                <span className="sr-only">(opens in a new tab)</span>
+              </>
+            )}
+          </FileOpenButton>
+        ) : (
+          <span className={adminStyles.reportMissing}>
+            <FileText size={18} aria-hidden="true" />
+            {report.title}: the file is missing
+          </span>
+        )}
+        {earlier && (
+          <span
+            className={adminStyles.pill}
+            data-tone={isNew ? "new" : "pending"}
+          >
+            {isNew
+              ? "New"
+              : report.reviewStatus === "NOT_APPROVED"
+                ? "Earlier, not approved"
+                : "Earlier"}
+          </span>
+        )}
+      </div>
+      <p className={`${adminStyles.muted} num`}>
+        {report.source === "LAB" ? "Received " : "Uploaded "}
+        {when(report.uploadedAt)}, {facts.join(", ")}
+      </p>
+      {warnings.length > 0 && (
+        <ul className={adminStyles.warnings} aria-label="Look closely">
+          {warnings.map((warning) => (
+            <li key={warning}>
+              <Warning size={16} weight="bold" aria-hidden="true" />
+              <span>{warning}</span>
+            </li>
+          ))}
+        </ul>
       )}
     </li>
   );

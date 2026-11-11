@@ -61,7 +61,7 @@ const patientName = (r: Row) =>
   r.full_name || [r.first_name, r.last_name].filter(Boolean).join(" ") || `Patient ${r.patient_id ?? r.id}`;
 
 /** The doctor's patients: anyone with an appointment with them, or whose care-team doctor they are. */
-const treatedIds = (doctorId: number) => sql`
+export const treatedIds = (doctorId: number) => sql`
   select patient_id from appointments where doctor_id = ${doctorId}
   union select user_id from patient_profiles where care_team_doctor_id = ${doctorId}`;
 
@@ -437,7 +437,8 @@ doctorRoutes.get("/doctor/patients/:patientId/record", async (c) => {
     labs: await Promise.all(labs.map(async (r) => ({
       id: String(r.id),
       source: r.source === "LAB" ? "LAB" : "UPLOAD",
-      fileUrl: await signedUrl("reports", r.file_path),
+      file: r.file_path ? `/api/files/reports/${r.id}` : null,
+      fileUrl: await signedUrl("reports", r.file_path), // ponytail: until the web app opens `file`; then delete
       packageName: r.title || (r.source === "LAB" ? "Lab report" : r.file_name || "Uploaded report"),
       collectedAt: ist(r.report_date ?? r.uploaded_at), reportedAt: ist(r.uploaded_at),
       status: r.status === "REVIEWED" ? "REVIEWED" : "DOCTOR_REVIEW_PENDING",
@@ -477,8 +478,11 @@ doctorRoutes.get("/doctor/patients/:patientId/photos", async (c) => {
   if (!rows.length) fail(403, "This patient is not sharing progress photos.");
   await audit(patientId, doctor, "Listed the progress photos");
   return ok(c, await Promise.all(rows.map(async (r) => ({
-    id: String(r.id), takenAt: ist(r.taken_at), frontUrl: await signedUrl("photos", r.front_path, 300),
-    sideUrl: await signedUrl("photos", r.side_path, 300), weightKg: r.weight_kg ?? null,
+    id: String(r.id), takenAt: ist(r.taken_at), weightKg: r.weight_kg ?? null,
+    front: r.front_path ? `/api/files/photos/${r.id}/front` : null,
+    side: r.side_path ? `/api/files/photos/${r.id}/side` : null,
+    // ponytail: the signed links stay until the web app that opens front/side is live; then delete them
+    frontUrl: await signedUrl("photos", r.front_path, 300), sideUrl: await signedUrl("photos", r.side_path, 300),
   }))));
 });
 

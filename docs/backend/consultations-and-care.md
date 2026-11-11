@@ -113,8 +113,9 @@ On 404 the screens use the doctors from `GET /api/appointments/patient`.
 
 ### GET `/api/care/prescription/current` (PROPOSED)
 
-The latest SIGNED prescription, or `data: null` when there is none. `pdfUrl` should be a
-short-lived signed URL; `version` above 1 shows "updated after your follow-up".
+The latest SIGNED prescription, or `data: null` when there is none. `pdf` is the API path that
+streams the signed PDF to the patient or a treating doctor (`GET /api/files/prescriptions/:id`,
+never a shareable link); `version` above 1 shows "updated after your follow-up".
 
 ```json
 {
@@ -126,7 +127,7 @@ short-lived signed URL; `version` above 1 shows "updated after your follow-up".
     "doctorRegistrationNo": "DMC/R/12345",
     "signedAt": "2026-10-02T11:20:00+05:30",
     "version": 2,
-    "pdfUrl": "https://files.inrange.co/rx/rx_118.pdf",
+    "pdf": "/api/files/prescriptions/118",
     "items": [
       {
         "medicineName": "Metformin",

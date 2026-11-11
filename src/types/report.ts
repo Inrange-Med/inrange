@@ -8,12 +8,11 @@ export type ReportSource = "UPLOADED" | "LAB_BOOKING";
 export type MedicalReport = {
   id: string;
   title: string;
-  /** the date printed on the report, "YYYY-MM-DD" */
-  reportDate: string;
   source: ReportSource;
-  /** the file, for uploads; lab reports fetch a fresh link through their booking instead */
-  fileUrl: string | null;
+  /** the API path that streams the file (fileService.getFile) */
+  file: string | null;
   labBookingId: string | null;
+  /** when it was uploaded, or when the lab's report arrived (ISO) */
   addedAt: string;
   /** the back office's review, for reports that decide eligibility; null for other reports */
   reviewStatus: "UNDER_REVIEW" | "APPROVED" | "NOT_APPROVED" | null;
@@ -23,7 +22,6 @@ export type MedicalReport = {
 /** POST /api/reports (multipart). */
 export type NewReport = {
   file: File;
-  reportDate: string;
   title: string;
   /** ELIGIBILITY: the report a new patient uploads at the end of onboarding, sent for review */
   purpose?: "ELIGIBILITY";

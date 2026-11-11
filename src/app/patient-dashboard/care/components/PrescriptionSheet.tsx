@@ -7,7 +7,9 @@
 
 import { useState } from "react";
 import { CaretDown, DownloadSimple } from "@phosphor-icons/react";
+import FileOpenButton from "@/components/ui/FileOpenButton";
 import { shortDate } from "@/lib/format/dateTime";
+import { getFile } from "@/services/fileService";
 import type { Prescription } from "@/types/carePlan";
 import formalDoctorName from "./formalDoctorName";
 import pageStyles from "../CarePage.module.css";
@@ -107,18 +109,20 @@ export default function PrescriptionSheet({
           </li>
         ))}
       </ul>
-      {prescription.pdfUrl && (
+      {prescription.pdf && (
         <ul className={styles.links}>
           <li>
-            <a
-              href={prescription.pdfUrl}
+            <FileOpenButton
               className={styles.linkRow}
-              target="_blank"
-              rel="noopener noreferrer"
+              load={() => getFile(prescription.pdf ?? "")}
             >
-              Download the signed PDF{" "}
-              <DownloadSimple size={16} aria-hidden="true" />
-            </a>
+              {(opening) => (
+                <>
+                  {opening ? "Opening" : "Open the signed PDF"}{" "}
+                  <DownloadSimple size={16} aria-hidden="true" />
+                </>
+              )}
+            </FileOpenButton>
           </li>
         </ul>
       )}

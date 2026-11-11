@@ -3,11 +3,10 @@
 /**
  * The head of one home blood test: where it is (Arhaan's lab steps), how long an unpaid slot is
  * held and the way to pay, the collector and their live tracking link once assigned, the report
- * when it is ready (GET its fresh link from labTestService), and Change time / Cancel test while
+ * when it is ready (opened through the signed-in API), and Change time / Cancel test while
  * they are possible.
  */
 
-import { useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -16,11 +15,10 @@ import {
   Phone,
 } from "@phosphor-icons/react";
 import Card from "@/components/ui/Card";
-import { useToast } from "@/components/ui/ToastProvider";
+import FileOpenButton from "@/components/ui/FileOpenButton";
 import { clockTime, timeUntil } from "@/lib/format/dateTime";
 import { formatRupees } from "@/lib/format/money";
-import { errorMessage } from "@/lib/http/apiClient";
-import { getLabReportUrl } from "@/services/labTestService";
+import { getFile } from "@/services/fileService";
 import type { LabBooking } from "@/types/labTest";
 import {
   LAB_STATUS_WORDS,
@@ -52,9 +50,6 @@ export default function LabBookingStatusCard({
   onChangeTime: () => void;
   onCancel: () => void;
 }) {
-  const toast = useToast();
-  const [opening, setOpening] = useState(false);
-
   const holdOpen =
     booking.status === "PAYMENT_PENDING" &&
     booking.holdExpiresAt !== null &&
@@ -62,22 +57,6 @@ export default function LabBookingStatusCard({
   const changeable =
     booking.status === "BOOKED" || booking.status === "COLLECTOR_ASSIGNED";
   const blocked = rescheduleBlock(booking);
-
-  const openReport = async () => {
-    // open the tab inside the tap, so the browser does not block it, then point it at the fresh link
-    const tab = window.open("", "_blank");
-    setOpening(true);
-    try {
-      const url = await getLabReportUrl(booking.id);
-      if (tab) tab.location.href = url;
-      else window.location.assign(url);
-    } catch (caught) {
-      tab?.close();
-      toast(errorMessage(caught));
-    } finally {
-      setOpening(false);
-    }
-  };
 
   return (
     <Card title={LAB_STATUS_WORDS[booking.status]} className={styles.card}>
@@ -155,23 +134,24 @@ export default function LabBookingStatusCard({
           <p className={styles.fast}>{fastingSentence(booking.fastingNote)}</p>
         )}
 
-      {booking.status === "REPORT_READY" && (
-        <button
-          type="button"
+      {booking.status === "REPORT_READY" && booking.reportFile && (
+        <FileOpenButton
           className={`btn ${formStyles.go}`}
-          onClick={openReport}
-          data-busy={opening}
-          aria-busy={opening}
+          load={() => getFile(booking.reportFile ?? "")}
         >
-          <span>{opening ? "Opening" : "Download report"}</span>
-          <span className="well" aria-hidden="true">
-            {opening ? (
-              <i className={formStyles.spin} />
-            ) : (
-              <DownloadSimple size={18} />
-            )}
-          </span>
-        </button>
+          {(opening) => (
+            <>
+              <span>{opening ? "Opening" : "Open report"}</span>
+              <span className="well" aria-hidden="true">
+                {opening ? (
+                  <i className={formStyles.spin} />
+                ) : (
+                  <DownloadSimple size={18} />
+                )}
+              </span>
+            </>
+          )}
+        </FileOpenButton>
       )}
 
       {changeable && (

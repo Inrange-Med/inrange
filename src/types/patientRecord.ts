@@ -23,8 +23,8 @@ export type LabReport = {
   status: "PROCESSING" | "DOCTOR_REVIEW_PENDING" | "REVIEWED";
   /** UPLOAD: the patient's own report; LAB: from the partner lab */
   source: "UPLOAD" | "LAB";
-  /** short-lived link to the report file; results stay empty until values are parsed from it */
-  fileUrl: string | null;
+  /** the API path that streams the report file (fileService.getFile); results stay empty until values are parsed from it */
+  file: string | null;
   results: LabResult[];
   doctorComment: string | null;
   reviewedAt: string | null;
@@ -171,8 +171,9 @@ export type PatientSnapshot = {
 export type ProgressPhotoSet = {
   id: string;
   takenAt: string;
-  frontUrl: string | null;
-  sideUrl: string | null;
+  /** API paths that stream each photo (fileService.getFile) */
+  front: string | null;
+  side: string | null;
   /** the weight the patient logged nearest the photos, if any */
   weightKg: number | null;
 };

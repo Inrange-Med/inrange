@@ -1,7 +1,8 @@
 /**
  * The InRange team's admin area (role ADMIN only). Doc: supabase/functions/api/routes/admin.ts
- *   GET   /api/admin/reviews               waiting reviews (oldest first) and the last 20 decided
+ *   GET   /api/admin/reviews               waiting reviews (oldest first), the last 20 decided, and patients waiting on a home test
  *   POST  /api/admin/reviews/:patientId    { decision, note? }: note required for NOT_APPROVED, shown to the patient
+ *   POST  /api/admin/lab-bookings/:id/simulate  dry runs only { event: SAMPLE_COLLECTED | REPORT_READY }
  *   GET   /api/admin/doctors               every doctor, active first
  *   POST  /api/admin/doctors               a new doctor -> the doctor (409 with a message if the number is taken)
  *   PATCH /api/admin/doctors/:id           any field but the mobile, and { active } -> the doctor
@@ -21,7 +22,20 @@ export async function listReviews(): Promise<ReviewQueue> {
   return {
     waiting: body.data?.waiting ?? [],
     decided: body.data?.decided ?? [],
+    awaitingLab: body.data?.awaitingLab ?? [],
+    labSimulation: Boolean(body.data?.labSimulation),
   };
+}
+
+/** Dry runs only: walks a paid home test to the next lab step, as if the lab had sent it. */
+export async function simulateLabStep(
+  bookingId: string,
+  event: "SAMPLE_COLLECTED" | "REPORT_READY",
+): Promise<void> {
+  await apiRequest(`/api/admin/lab-bookings/${bookingId}/simulate`, {
+    method: "POST",
+    body: { event },
+  });
 }
 
 export async function decideReview(

@@ -1,7 +1,8 @@
 /**
  * Lab reports in the patient's record. Doc: docs/backend/reports.md
  *   GET  /api/reports   PROPOSED. Uploaded reports and Redcliffe reports, newest first
- *   POST /api/reports   PROPOSED. Uploads one, multipart: file, reportDate ("YYYY-MM-DD"), title, purpose? ("ELIGIBILITY")
+ *   POST /api/reports   PROPOSED. Uploads one, multipart: file, title, purpose? ("ELIGIBILITY"). No date: the admin
+ *                       reads the date printed on the report itself.
  */
 
 import { ApiError, apiRequest, listFrom } from "@/lib/http/apiClient";
@@ -14,6 +15,7 @@ type RawReport = Omit<MedicalReport, "id" | "labBookingId"> & {
 
 const toReport = (raw: RawReport): MedicalReport => ({
   ...raw,
+  file: raw.file ?? null,
   reviewStatus: raw.reviewStatus ?? null,
   reviewNote: raw.reviewNote ?? null,
   id: String(raw.id),
@@ -37,7 +39,6 @@ export async function listMyReports(): Promise<MedicalReport[] | null> {
 export async function uploadReport(report: NewReport): Promise<MedicalReport> {
   const form = new FormData();
   form.append("file", report.file);
-  form.append("reportDate", report.reportDate);
   form.append("title", report.title);
   if (report.purpose) form.append("purpose", report.purpose);
   try {

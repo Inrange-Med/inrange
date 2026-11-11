@@ -1,6 +1,8 @@
 // The InRange team's admin area. Mounted at /api. Every route: role ADMIN.
-//   GET   /admin/reviews                      waiting eligibility reviews (oldest first) and the last 20 decided
+//   GET   /admin/reviews                      waiting eligibility reviews (oldest first), the last 20 decided, and
+//                                             patients still waiting on a home blood test (awaitingLab)
 //   POST  /admin/reviews/:patientId           { decision: "APPROVED" | "NOT_APPROVED", note? }
+//   POST  /admin/lab-bookings/:id/simulate    { event: SAMPLE_COLLECTED | REPORT_READY } dry runs only (labSimulation)
 //   GET   /admin/doctors                      every doctor, with their mobile, status and hours
 //   POST  /admin/doctors                      { mobile, fullName, specialization, qualification, registrationNo,
 //                                               experience?, languages?, about?, consultationFeeRupees? }
@@ -13,6 +15,9 @@ import { body, fail, intParam, ok, todayIST } from "../lib/http.ts";
 import { requireUser } from "../lib/auth.ts";
 import { setEligibility } from "../lib/eligibility.ts";
 import { signedUrl } from "../lib/storage.ts";
+import { bookingQuery, refreshFromLab, simulateLab, toLabBooking } from "./labs.ts";
+import { env } from "../lib/env.ts";
+import { redcliffeLive } from "../integrations/redcliffe.ts";
 
 export const adminRoutes = new Hono();
 
@@ -29,6 +34,7 @@ const ist = (d: unknown): string | null =>
 
 adminRoutes.get("/admin/reviews", async (c) => {
   await requireAdmin(c);
+  await refreshWaitingLabs();
   const rows = await sql`
     select e.user_id, e.path, e.stage, e.review_note, e.lab_booking_id, e.updated_at, e.reviewed_at,
       u.mobile, coalesce(nullif(trim(concat_ws(' ', pp.first_name, pp.last_name)), ''), u.full_name) as name,
@@ -42,7 +48,13 @@ adminRoutes.get("/admin/reviews", async (c) => {
     limit 120`;
   const ids = rows.map((r) => r.user_id);
   const reports = ids.length ? await sql`
-    select r.id, r.user_id, r.title, r.file_name, r.file_path, r.source, r.lab_booking_id, r.uploaded_at
+    select r.id, r.user_id, r.title, r.file_name, r.file_path, r.mime_type, r.size_bytes, r.source, r.lab_booking_id,
+      r.uploaded_at, r.review_status, r.file_meta,
+      -- the same file anywhere else: under another patient it is a warning; under this one, a repeat
+      (select coalesce(json_agg(json_build_object('mobile', ou.mobile, 'samePatient', o.user_id = r.user_id,
+          'status', o.review_status, 'uploadedAt', o.uploaded_at) order by o.uploaded_at), '[]')
+        from reports o join users ou on ou.id = o.user_id
+        where r.sha256 is not null and o.sha256 = r.sha256 and o.id <> r.id) as same_file
     from reports r join eligibility e on e.user_id = r.user_id
     where r.user_id in ${sql(ids)} and (r.purpose = 'ELIGIBILITY' or (r.lab_booking_id is not null and r.lab_booking_id = e.lab_booking_id))
     order by r.uploaded_at desc` : [];
@@ -53,16 +65,83 @@ adminRoutes.get("/admin/reviews", async (c) => {
   });
   const withReports = await Promise.all(rows.map(async (r) => ({
     ...toReview(r),
-    reports: await Promise.all(reports.filter((x) => x.user_id === r.user_id).slice(0, 3).map(async (x) => ({
-      id: x.id, title: x.title ?? x.file_name ?? "Report", source: x.source, uploadedAt: ist(x.uploaded_at),
+    // newest first; enough to compare a new upload with the ones before it
+    reports: await Promise.all(reports.filter((x) => x.user_id === r.user_id).slice(0, 6).map(async (x) => ({
+      id: x.id, title: x.title ?? x.file_name ?? "Report", source: x.source === "LAB" ? "LAB" : "UPLOAD",
+      kind: x.mime_type === "application/pdf" ? "pdf" : "image", fileName: x.file_name ?? null, sizeBytes: x.size_bytes ?? null,
+      uploadedAt: ist(x.uploaded_at), reviewStatus: x.review_status ?? null,
+      file: x.file_path ? `/api/files/reports/${x.id}` : null,
+      // ponytail: the signed link stays until the web app that opens `file` is live; then delete it
       url: await signedUrl("reports", x.file_path),
+      facts: {
+        producer: x.file_meta?.producer ?? null, creator: x.file_meta?.creator ?? null,
+        created: x.file_meta?.created ?? null, modified: x.file_meta?.modified ?? null,
+        encrypted: Boolean(x.file_meta?.encrypted), read: Boolean(x.file_meta),
+      },
+      sameFile: (x.same_file ?? []).map((o: Record<string, unknown>) => ({
+        mobile: o.mobile, samePatient: o.samePatient, reviewStatus: o.status ?? null, uploadedAt: ist(o.uploadedAt),
+      })),
     }))),
   })));
   return ok(c, {
     waiting: withReports.filter((r) => r.stage === "UNDER_REVIEW"),
     decided: withReports.filter((r) => r.stage !== "UNDER_REVIEW").slice(0, 20),
+    awaitingLab: await awaitingLab(),
+    labSimulation: labSimulation(),
   });
 });
+
+const LAB_STAGES = ["LAB_SCHEDULED", "SAMPLE_COLLECTED"];
+
+/**
+ * Patients whose eligibility waits on a home blood test, so the admin sees what is coming. Their
+ * report joins the review list by itself once the lab sends it (webhook, or the refresh below).
+ */
+async function awaitingLab() {
+  const rows = await sql`
+    select e.user_id, e.stage, u.mobile, coalesce(nullif(trim(concat_ws(' ', pp.first_name, pp.last_name)), ''), u.full_name) as name,
+      b.id as booking_id, b.status, to_char(b.slot_date, 'YYYY-MM-DD') as slot_date, b.slot_start, b.slot_end,
+      b.package_name, b.needs_attention, b.updated_at
+    from eligibility e join users u on u.id = e.user_id
+    left join patient_profiles pp on pp.user_id = e.user_id
+    left join lab_bookings b on b.id = e.lab_booking_id
+    where e.stage in ${sql(LAB_STAGES)}
+    order by b.slot_date nulls last, b.slot_start
+    limit 60`;
+  return rows.map((r) => ({
+    patientId: r.user_id, name: r.name ?? "", mobile: r.mobile, bookingId: r.booking_id ?? null, status: r.status ?? null,
+    slotDate: r.slot_date ?? null, slotStart: r.slot_start ?? null, slotEnd: r.slot_end ?? null,
+    packageName: r.package_name ?? null, needsAttention: Boolean(r.needs_attention), updatedAt: ist(r.updated_at),
+  }));
+}
+
+/** Dry runs: the lab path can be walked by hand (mock mode, or PILOT_LAB_SIMULATION=1 with Redcliffe on). */
+const labSimulation = () => !redcliffeLive() || env.pilotLabSimulation;
+
+adminRoutes.post("/admin/lab-bookings/:id/simulate", async (c) => {
+  await requireAdmin(c);
+  if (!labSimulation()) fail(404, "This feature is not available.");
+  const [row] = await bookingQuery(sql, c.req.param("id"));
+  if (!row) fail(404, "That lab booking was not found.");
+  const { event } = await body<{ event?: string }>(c);
+  return ok(c, toLabBooking(await simulateLab(row, event)), "Simulated");
+});
+
+/**
+ * Asks Redcliffe about collected samples not heard from in 3 minutes: a missed webhook must not leave a
+ * ready report unseen. Bounded, so the page stays quick; a failure only means older status.
+ */
+async function refreshWaitingLabs() {
+  const rows = await sql`
+    select b.id from eligibility e join lab_bookings b on b.id = e.lab_booking_id
+    where e.stage in ${sql(LAB_STAGES)} and b.status in ('SAMPLE_COLLECTED', 'PROCESSING')
+      and b.updated_at < now() - interval '3 minutes'
+    order by b.updated_at limit 8`;
+  await Promise.allSettled(rows.map(async ({ id }) => {
+    const [row] = await bookingQuery(sql, id);
+    if (row) await refreshFromLab(row);
+  }));
+}
 
 adminRoutes.post("/admin/reviews/:patientId", async (c) => {
   const me = await requireAdmin(c);

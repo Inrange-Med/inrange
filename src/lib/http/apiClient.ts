@@ -229,3 +229,44 @@ export async function nullWhenMissing<T>(
     throw caught;
   }
 }
+
+/**
+ * A stored file (report, prescription, photo) as a Blob. The backend checks who is asking and streams
+ * the file itself, so no shareable link exists: the Blob lives only in this tab's memory.
+ */
+export async function apiFile(path: string): Promise<Blob> {
+  const token = getAccessToken();
+  const headers: Record<string, string> = { "x-region": "ap-south-1" };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  let response: Response;
+  try {
+    response = await fetch(buildUrl(path), { headers, cache: "no-store" });
+  } catch {
+    throw new ApiError(
+      "Cannot reach InRange. Check your connection and try again.",
+      0,
+      null,
+    );
+  }
+  if (response.ok) return response.blob();
+  const text = await response.text();
+  let parsed: unknown = text;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    // a plain-text reason is still shown
+  }
+  if (response.status === 401 || isNotAuthorisedBody(parsed)) {
+    if (token) clearSession();
+    throw new ApiError(
+      "Your session has ended. Please sign in again.",
+      401,
+      parsed,
+    );
+  }
+  throw new ApiError(
+    messageFrom(parsed, response.status),
+    response.status,
+    parsed,
+  );
+}

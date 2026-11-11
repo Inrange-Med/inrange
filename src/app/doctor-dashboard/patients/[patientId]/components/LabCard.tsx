@@ -13,9 +13,11 @@ import {
   ArrowUp,
   Certificate,
 } from "@phosphor-icons/react";
+import FileOpenButton from "@/components/ui/FileOpenButton";
 import { useToast } from "@/components/ui/ToastProvider";
 import { shortDate } from "@/lib/format/dateTime";
 import { errorMessage } from "@/lib/http/apiClient";
+import { getFile } from "@/services/fileService";
 import { reviewLabReport } from "@/services/patientRecordService";
 import type { LabReport } from "@/types/patientRecord";
 import LabResultStatus from "./LabResultStatus";
@@ -98,15 +100,13 @@ export default function LabCard({
       ) : !lab.results.length ? (
         <p className={clinicStyles.muted}>
           The values are in the report file.{" "}
-          {lab.fileUrl && (
-            <a
-              className={clinicStyles.textLink}
-              href={lab.fileUrl}
-              target="_blank"
-              rel="noreferrer"
+          {lab.file && (
+            <FileOpenButton
+              className={clinicStyles.textBtn}
+              load={() => getFile(lab.file ?? "")}
             >
-              Open the report
-            </a>
+              {(opening) => (opening ? "Opening" : "Open the report")}
+            </FileOpenButton>
           )}
         </p>
       ) : (

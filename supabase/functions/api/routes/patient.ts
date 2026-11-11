@@ -13,10 +13,11 @@
 import { Hono } from "hono";
 import type { Context } from "hono";
 import { sql } from "../lib/db.ts";
-import { body, fail, intParam, ok, todayIST } from "../lib/http.ts";
+import { body, fail, intParam, ok } from "../lib/http.ts";
 import { requirePatient } from "../lib/auth.ts";
 import { setEligibility } from "../lib/eligibility.ts";
 import { signedUrl, uploadFile } from "../lib/storage.ts";
+import { checkFile, MIME, sha256 } from "../lib/fileCheck.ts";
 
 export const patientRoutes = new Hono();
 
@@ -441,16 +442,19 @@ patientRoutes.get("/care-packages", async (c) => {
 
 // ---------- reports ----------
 
-const REPORT_TYPES: Record<string, string> = { "application/pdf": "pdf", "image/png": "png", "image/jpeg": "jpg" };
 const MAX_REPORT_BYTES = 10 * 1024 * 1024;
 
+// The patient gives only the file: a typed "date on the report" could be anything, so the admin reads
+// the date printed on the report itself, with the facts lib/fileCheck.ts reads from the file.
 async function toReport(r: Record<string, unknown>) {
   return {
     id: r.id,
     title: r.title ?? "Report",
-    reportDate: r.report_day ?? "",
     source: r.source === "LAB" ? "LAB_BOOKING" : "UPLOADED",
+    file: r.file_path ? `/api/files/reports/${r.id}` : null,
+    // ponytail: the signed link stays until the web app that opens `file` is live; then delete it
     fileUrl: r.source === "LAB" ? null : await signedUrl("reports", r.file_path as string | null),
+    reportDate: r.report_day ?? "",
     labBookingId: r.lab_booking_id ?? null,
     addedAt: r.uploaded_at,
     reviewStatus: r.review_status ?? null,
@@ -459,18 +463,13 @@ async function toReport(r: Record<string, unknown>) {
 }
 
 const REPORT_COLUMNS = () => sql`id, title, source, file_path, lab_booking_id, uploaded_at, review_status, review_note,
-  to_char(report_date, 'YYYY-MM-DD') as report_day`;
+  to_char(coalesce(report_date, (uploaded_at at time zone 'Asia/Kolkata')::date), 'YYYY-MM-DD') as report_day`;
 
 patientRoutes.get("/reports", async (c) => {
   const me = await requirePatient(c);
-  const rows = await sql`select ${REPORT_COLUMNS()} from reports where user_id = ${me.id}
-                         order by report_date desc nulls last, uploaded_at desc`;
+  const rows = await sql`select ${REPORT_COLUMNS()} from reports where user_id = ${me.id} order by uploaded_at desc`;
   return ok(c, await Promise.all(rows.map(toReport)));
 });
-
-function daysBetween(fromIso: string, toIso: string) {
-  return Math.round((Date.parse(toIso) - Date.parse(fromIso)) / 86_400_000);
-}
 
 patientRoutes.post("/reports", async (c: Context) => {
   const me = await requirePatient(c);
@@ -482,26 +481,26 @@ patientRoutes.post("/reports", async (c: Context) => {
   }
   const file = form.file;
   if (!(file instanceof File)) return fail(422, "Choose a report file to upload.");
-  const ext = REPORT_TYPES[file.type];
-  if (!ext) fail(422, "Upload a PDF, PNG or JPEG file.");
   if (file.size > MAX_REPORT_BYTES) fail(422, "The file is over 10 MB. Upload a smaller copy.");
-  const reportDate = String(form.reportDate ?? "");
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(reportDate) || Number.isNaN(Date.parse(reportDate)))
-    fail(422, "Enter the date printed on the report.");
-  const age = daysBetween(reportDate, todayIST());
-  if (age < 0) fail(422, "The report date cannot be in the future.");
-  if (age > 90) fail(422, "This report is older than 3 months. Upload a newer one, or book a home blood test.");
+  if (file.size < 100) fail(422, "This file is empty. Choose the report again.");
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  // what the file really is comes from its bytes; the name and stated type are only claims
+  const checked = await checkFile(bytes);
+  if (!checked) return fail(422, "Upload a PDF, PNG or JPEG file.");
+  if (checked.active)
+    fail(422, "This PDF has scripts or attached files in it, so it cannot be accepted. Upload a plain copy, or a photo of the report.");
   const forEligibility = String(form.purpose ?? "").toUpperCase() === "ELIGIBILITY";
   // file names ("report", "IMG_2041") make poor titles; a plain label reads better in both apps
   const title = String(form.title ?? "").trim().slice(0, 200) || (forEligibility ? "Blood test report" : "Uploaded report");
+  const type = MIME[checked.kind];
 
-  const path = `${me.id}/${crypto.randomUUID()}.${ext}`;
-  await uploadFile("reports", path, file, file.type);
+  const path = `${me.id}/${crypto.randomUUID()}.${checked.kind}`;
+  await uploadFile("reports", path, new Blob([bytes as Uint8Array<ArrayBuffer>], { type }), type);
   const reviewStatus = forEligibility ? "UNDER_REVIEW" : null;
   const [row] = await sql`
-    insert into reports (user_id, purpose, source, title, file_path, file_name, mime_type, size_bytes, report_date, review_status, review_note)
-    values (${me.id}, ${forEligibility ? "ELIGIBILITY" : "GENERAL"}, 'UPLOAD', ${title}, ${path}, ${file.name}, ${file.type},
-            ${file.size}, ${reportDate}, ${reviewStatus}, null)
+    insert into reports (user_id, purpose, source, title, file_path, file_name, mime_type, size_bytes, review_status, review_note, sha256, file_meta)
+    values (${me.id}, ${forEligibility ? "ELIGIBILITY" : "GENERAL"}, 'UPLOAD', ${title}, ${path}, ${file.name.slice(0, 200)}, ${type},
+            ${file.size}, ${reviewStatus}, null, ${await sha256(bytes)}, ${sql.json(checked.meta)})
     returning ${REPORT_COLUMNS()}`;
   if (forEligibility) await setEligibility(sql, me.id, { path: "OWN_REPORT", stage: "UNDER_REVIEW" });
   return ok(c, await toReport(row), "Report uploaded");

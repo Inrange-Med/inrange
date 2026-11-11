@@ -1,21 +1,9 @@
-/* Uploading a lab report: the date, its check, a dashed drop area (Arhaan's photo frame), then the action. */
+/* Uploading a lab report: a dashed drop area (Arhaan's photo frame), then the action. */
 
 .form {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 16px;
-}
-.ok {
-  display: flex;
-  gap: 8px;
-  align-items: flex-start;
-  font-size: 0.875rem;
-  line-height: 1.45;
-  color: var(--signal-ink);
-}
-.ok svg {
-  flex: none;
-  margin-top: 2px;
 }
 .zone {
   display: grid;

@@ -30,10 +30,8 @@ export default function ReportUploadScreen({
       headingRef={headingRef}
     >
       <LabReportUpload
-        dateLabel="Date on the report"
         chooseLabel="Choose the report"
         submitLabel="Send for review"
-        tooOldAdvice="Go back and choose No to book a home blood test."
         onUpload={async (report) => {
           await uploadReport({ ...report, purpose: "ELIGIBILITY" });
           onSent();

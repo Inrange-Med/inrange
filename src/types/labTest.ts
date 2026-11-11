@@ -134,5 +134,7 @@ export type LabBooking = {
   } | null;
   /** true when the test is part of the eligibility check: a doctor reviews the report next */
   forEligibility?: boolean;
+  /** the API path that streams the lab's report once it is in hand (fileService.getFile) */
+  reportFile: string | null;
   tests: { code: string; name: string; status: LabTestStatus }[];
 };

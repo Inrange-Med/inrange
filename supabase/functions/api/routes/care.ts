@@ -290,6 +290,8 @@ careRoutes.get("/care/prescription/current", async (c) => {
   return ok(c, {
     id: String(p.id), doctorName: p.full_name, doctorQualification: p.qualification ?? "",
     doctorRegistrationNo: p.registration_no ?? "", signedAt: p.signed_iso, version: p.version,
+    pdf: p.pdf_path ? `/api/files/prescriptions/${p.id}` : null,
+    // ponytail: the signed link stays until the web app that opens `pdf` is live; then delete it
     pdfUrl: await signedUrl("prescriptions", p.pdf_path),
     items: (p.items ?? []).map((i: Record<string, unknown>) => ({
       medicineName: i.medicineName ?? "", strength: i.strength ?? "", dose: i.dose ?? "", frequency: i.frequency ?? "",

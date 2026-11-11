@@ -13,7 +13,6 @@
  *   GET  /api/labs/bookings/:id                       PROPOSED. One booking (center-get-booking, booking-test-status, corporate-phlebo-tracking)
  *   POST /api/labs/bookings/:id/reschedule            PROPOSED. Moves it (center-update-booking, rescheduled)
  *   POST /api/labs/bookings/:id/cancel                PROPOSED. Cancels it (center-update-booking, cancelled)
- *   GET  /api/labs/bookings/:id/report                PROPOSED. A fresh link to the PDF (get-consolidated-report)
  * Redcliffe's limits are checked before any call (labPatientProblem from lib/validation/labBookingRules,
  * the 4-day window), so a screen gets a plain sentence instead of a failed booking at the last step.
  */
@@ -81,6 +80,7 @@ const toLabBooking = (raw: RawLabBooking): LabBooking => ({
   partnerBookingId:
     raw.partnerBookingId === null ? null : String(raw.partnerBookingId),
   collector: raw.collector ?? null,
+  reportFile: raw.reportFile ?? null,
   tests: raw.tests ?? [],
 });
 
@@ -248,9 +248,3 @@ export async function cancelLabBooking(
 }
 
 /** A fresh link to the lab's PDF (Redcliffe's links can expire, so ask each time). */
-export async function getLabReportUrl(bookingId: string): Promise<string> {
-  const body = await labRequest<{ data: { url: string } }>(
-    `/api/labs/bookings/${encodeURIComponent(bookingId)}/report`,
-  );
-  return body.data.url;
-}

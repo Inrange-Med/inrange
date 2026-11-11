@@ -23,7 +23,8 @@ export type Prescription = {
   doctorRegistrationNo: string;
   signedAt: string; // ISO
   version: number; // above 1 when updated after a follow-up
-  pdfUrl: string | null;
+  /** the API path that streams the signed PDF (fileService.getFile) */
+  pdf: string | null;
   items: PrescriptionItem[];
 };
 

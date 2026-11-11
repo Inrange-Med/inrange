@@ -31,6 +31,8 @@ export const env = {
   redcliffeBaseUrl: get("REDCLIFFE_BASE_URL") || "https://apiqa.redcliffelabs.com",
   redcliffeApiKey: get("REDCLIFFE_API_KEY"),
   redcliffeWebhookSecret: get("REDCLIFFE_WEBHOOK_SECRET"),
+  /** Dry runs: admins may walk a paid lab booking to a placeholder report (POST /admin/lab-bookings/:id/simulate). Unset at launch. */
+  pilotLabSimulation: get("PILOT_LAB_SIMULATION") === "1",
 
   hmsAccessKey: get("HMS_ACCESS_KEY"),
   hmsSecret: get("HMS_SECRET"),

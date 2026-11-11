@@ -51,10 +51,8 @@ export default function ReportsView() {
       )}
       <LabReportUpload
         key={formKey}
-        dateLabel="Date on the report"
         chooseLabel="Choose a PDF or photo"
         submitLabel="Upload report"
-        tooOldAdvice="Book a home test for a fresh one."
         onUpload={upload}
       />
     </Card>

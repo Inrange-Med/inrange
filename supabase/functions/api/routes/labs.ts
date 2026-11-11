@@ -11,7 +11,6 @@
 //   GET  /labs/bookings/:id                     one booking (live: refreshed from Redcliffe)
 //   POST /labs/bookings/:id/reschedule          { collectionDate, slotId }
 //   POST /labs/bookings/:id/cancel              { reason }
-//   GET  /labs/bookings/:id/report              { url } a fresh link to the PDF
 //   POST /labs/bookings/:id/simulate            MOCK ONLY { event: SAMPLE_COLLECTED | REPORT_READY }, walks the pilot lab path
 // A booking that is not the caller's answers 404, as the doc asks.
 import { Hono } from "hono";
@@ -21,7 +20,9 @@ import { body, fail, ok, todayIST } from "../lib/http.ts";
 import { requirePatient } from "../lib/auth.ts";
 import { setEligibility } from "../lib/eligibility.ts";
 import { signedUrl, uploadFile } from "../lib/storage.ts";
+import { readPdf, sha256, sniff } from "../lib/fileCheck.ts";
 import * as rc from "../integrations/redcliffe.ts";
+import { env } from "../lib/env.ts";
 
 export const labRoutes = new Hono();
 
@@ -78,11 +79,12 @@ export function toLabBooking(r: Row) {
     canCancel: r.status === "PAYMENT_PENDING" || r.status === "BOOKED",
     collector: r.collector ?? null,
     forEligibility: Boolean(r.care_package_code),
+    reportFile: r.report_path ? `/api/files/lab-bookings/${r.id}` : null,
     tests: r.tests ?? [],
   };
 }
 
-const bookingQuery = (db: Db, id: string) => db`
+export const bookingQuery = (db: Db, id: string) => db`
   select b.*, a.line1, a.line2, a.city, a.state, a.pincode, a.landmark, a.latitude, a.longitude
   from lab_bookings b left join addresses a on a.id = b.address_id where b.id = ${id}`;
 
@@ -251,20 +253,26 @@ labRoutes.get("/labs/bookings", async (c) => {
 
 labRoutes.get("/labs/bookings/:id", async (c) => {
   const me = await requirePatient(c);
-  let row = await ownedBooking(me.id, c.req.param("id"));
-  if (row.provider_booking_id && rc.redcliffeLive() && RANK[row.status] >= 1) {
-    // webhooks move the booking; this read is the fallback when one was missed
-    const fresh = await rc.bookingStatus(row.provider_booking_id).catch((e) => (console.error("redcliffe refresh", e.message), null));
-    if (fresh) {
-      const collector = fresh.collector ? { ...fresh.collector, journey: row.collector?.journey ?? null } : row.collector ?? null;
-      await sql`update lab_bookings set collector = ${collector ? sql.json(collector) : null},
-        tests = ${sql.json(fresh.tests.length ? fresh.tests : row.tests ?? [])}, updated_at = now() where id = ${row.id}`;
-      if (fresh.stage) await applyLabEvent(row.id, fresh.stage).catch((e) => console.error("lab refresh event", row.id, e.message));
-      [row] = await bookingQuery(sql, row.id);
-    }
-  }
-  return ok(c, toLabBooking(row));
+  const row = await ownedBooking(me.id, c.req.param("id"));
+  return ok(c, toLabBooking(await refreshFromLab(row)));
 });
+
+/**
+ * Webhooks move a booking; this read from Redcliffe is the fallback when one was missed (the patient
+ * opening the booking, an admin opening reviews). It also fetches the report once the lab says it is ready.
+ */
+export async function refreshFromLab(row: Row): Promise<Row> {
+  // ponytail: during a dry run (PILOT_LAB_SIMULATION) the QA lab's own status would fight the simulated one
+  if (env.pilotLabSimulation || !row.provider_booking_id || !rc.redcliffeLive() || !(RANK[row.status] >= 1)) return row;
+  const fresh = await rc.bookingStatus(row.provider_booking_id).catch((e) => (console.error("redcliffe refresh", e.message), null));
+  if (!fresh) return row;
+  const collector = fresh.collector ? { ...fresh.collector, journey: row.collector?.journey ?? null } : row.collector ?? null;
+  await sql`update lab_bookings set collector = ${collector ? sql.json(collector) : null},
+    tests = ${sql.json(fresh.tests.length ? fresh.tests : row.tests ?? [])}, updated_at = now() where id = ${row.id}`;
+  if (fresh.stage) await applyLabEvent(row.id, fresh.stage).catch((e) => console.error("lab refresh event", row.id, e.message));
+  const [saved] = await bookingQuery(sql, row.id);
+  return saved;
+}
 
 labRoutes.post("/labs/bookings/:id/reschedule", async (c) => {
   const me = await requirePatient(c);
@@ -302,34 +310,42 @@ labRoutes.post("/labs/bookings/:id/cancel", async (c) => {
   return ok(c, toLabBooking(saved), "Booking cancelled");
 });
 
+// ponytail: kept until the web app that opens /api/files/lab-bookings/:id is live; then delete this route
 labRoutes.get("/labs/bookings/:id/report", async (c) => {
   const me = await requirePatient(c);
   const row = await ownedBooking(me.id, c.req.param("id"));
-  if (row.report_path) return ok(c, { url: await signedUrl("reports", row.report_path, 600) });
-  if (row.status !== "REPORT_READY" || !row.provider_booking_id) fail(400, "The report is not ready yet.");
-  return ok(c, { url: await lab(rc.reportUrl(row.provider_booking_id)) });
+  if (!row.report_path) fail(400, "The report is not ready yet.");
+  return ok(c, { url: await signedUrl("reports", row.report_path, 600) });
 });
+
+/**
+ * Walks a paid booking along the lab path as if Redcliffe had sent each step, ending with the placeholder
+ * report: the patient's own simulate (mock mode) and the admin's (PILOT_LAB_SIMULATION) both use it.
+ */
+export async function simulateLab(row: Row, event: unknown): Promise<Row> {
+  if (RANK[row.status] === undefined || row.status === "PAYMENT_PENDING") fail(400, "Pay for the booking first.");
+  if (event === "SAMPLE_COLLECTED") {
+    await sql`update lab_bookings set collector = ${sql.json({ name: "Ravi Kumar (pilot collector)", phone: "9000000000", trackingUrl: null })}
+      where id = ${row.id}`;
+    await applyLabEvent(row.id, "SAMPLE_COLLECTED", true);
+  } else if (event === "REPORT_READY") {
+    if (RANK[row.status] < RANK.SAMPLE_COLLECTED) await simulateLab(row, "SAMPLE_COLLECTED");
+    await sql`update lab_bookings set tests = (select coalesce(jsonb_agg(t || '{"status":"COMPLETED"}'), '[]') from jsonb_array_elements(tests) t)
+      where id = ${row.id}`;
+    await applyLabEvent(row.id, "REPORT_READY", true);
+  } else {
+    fail(400, "event must be SAMPLE_COLLECTED or REPORT_READY.");
+  }
+  const [saved] = await bookingQuery(sql, row.id);
+  return saved;
+}
 
 labRoutes.post("/labs/bookings/:id/simulate", async (c) => {
   if (rc.redcliffeLive()) fail(404, "This feature is not available.");
   const me = await requirePatient(c);
   const row = await ownedBooking(me.id, c.req.param("id"));
   const { event } = await body<{ event?: string }>(c);
-  if (RANK[row.status] === undefined || row.status === "PAYMENT_PENDING") fail(400, "Pay for the booking first.");
-  if (event === "SAMPLE_COLLECTED") {
-    await sql`update lab_bookings set collector = ${sql.json({ name: "Ravi Kumar (pilot collector)", phone: "9000000000", trackingUrl: null })}
-      where id = ${row.id}`;
-    await applyLabEvent(row.id, "SAMPLE_COLLECTED");
-  } else if (event === "REPORT_READY") {
-    if (RANK[row.status] < RANK.SAMPLE_COLLECTED) await applyLabEvent(row.id, "SAMPLE_COLLECTED");
-    await sql`update lab_bookings set tests = (select coalesce(jsonb_agg(t || '{"status":"COMPLETED"}'), '[]') from jsonb_array_elements(tests) t)
-      where id = ${row.id}`;
-    await applyLabEvent(row.id, "REPORT_READY");
-  } else {
-    fail(400, "event must be SAMPLE_COLLECTED or REPORT_READY.");
-  }
-  const [saved] = await bookingQuery(sql, row.id);
-  return ok(c, toLabBooking(saved), "Simulated");
+  return ok(c, toLabBooking(await simulateLab(row, event)), "Simulated");
 });
 
 // ---------------------------------------------------------------- lab events (webhooks, simulation) and payment
@@ -337,7 +353,8 @@ labRoutes.post("/labs/bookings/:id/simulate", async (c) => {
 export type LabEvent = "BOOKED" | "COLLECTOR_ASSIGNED" | "SAMPLE_COLLECTED" | "PROCESSING" | "REPORT_READY" | "CANCELLED";
 
 /** Moves a booking forward (never backwards; a resample before the lab has the sample changes nothing) and updates eligibility. */
-export async function applyLabEvent(bookingId: string, event: LabEvent) {
+/** `simulated` (pilot dry runs only): the report is the placeholder PDF, never a download from the lab. */
+export async function applyLabEvent(bookingId: string, event: LabEvent, simulated = false) {
   const [row] = await bookingQuery(sql, bookingId);
   if (!row) return;
   const current = RANK[row.status];
@@ -349,7 +366,7 @@ export async function applyLabEvent(bookingId: string, event: LabEvent) {
   // "report ready" only once the PDF is in hand: until the lab has a real link the booking stays at the lab
   if (event === "REPORT_READY") {
     try {
-      await attachReport(row, forEligibility);
+      await attachReport(row, forEligibility, simulated);
     } catch (e) {
       console.error("lab report not attached", bookingId, (e as Error).message);
       if (current < RANK.PROCESSING) await sql`update lab_bookings set status = 'PROCESSING', updated_at = now() where id = ${bookingId}`;
@@ -360,14 +377,16 @@ export async function applyLabEvent(bookingId: string, event: LabEvent) {
   if (event === "SAMPLE_COLLECTED" && forEligibility) await setEligibility(sql, row.user_id, { stage: "SAMPLE_COLLECTED" });
 }
 
-async function attachReport(row: Row, forEligibility: boolean) {
+async function attachReport(row: Row, forEligibility: boolean, simulated: boolean) {
   if (row.report_path) return;
   let pdf: Uint8Array<ArrayBuffer>;
-  if (rc.redcliffeLive() && row.provider_booking_id && !String(row.provider_booking_id).startsWith("RC-MOCK")) {
+  if (!simulated && rc.redcliffeLive() && row.provider_booking_id && !String(row.provider_booking_id).startsWith("RC-MOCK")) {
     const url = await rc.reportUrl(row.provider_booking_id);
     const res = await fetch(url, { signal: AbortSignal.timeout(20_000) });
     if (!res.ok) throw new Error(`report download ${res.status}`);
     pdf = new Uint8Array(await res.arrayBuffer());
+    // a lab error page can arrive with a 200; only a real PDF becomes the report
+    if (sniff(pdf) !== "pdf") throw new Error("the lab's report link did not return a PDF");
   } else {
     pdf = placeholderPdf([
       "InRange pilot: sample lab report",
@@ -384,10 +403,11 @@ async function attachReport(row: Row, forEligibility: boolean) {
   });
   await sql`update lab_bookings set report_path = ${path}, updated_at = now() where id = ${row.id}`;
   await sql`
-    insert into reports (user_id, purpose, source, title, file_path, file_name, mime_type, size_bytes, lab_booking_id, review_status, report_date)
+    insert into reports (user_id, purpose, source, title, file_path, file_name, mime_type, size_bytes, lab_booking_id, review_status,
+      report_date, sha256, file_meta)
     values (${row.user_id}, ${forEligibility ? "ELIGIBILITY" : "GENERAL"}, 'LAB', ${row.package_name ?? "Lab report"}, ${path},
       ${`${row.id}.pdf`}, 'application/pdf', ${pdf.byteLength}, ${row.id},
-      ${forEligibility ? "UNDER_REVIEW" : null}, ${todayIST()})`;
+      ${forEligibility ? "UNDER_REVIEW" : null}, ${todayIST()}, ${await sha256(pdf)}, ${sql.json((await readPdf(pdf)).meta)})`;
   if (forEligibility) await setEligibility(sql, row.user_id, { stage: "UNDER_REVIEW" });
 }
 

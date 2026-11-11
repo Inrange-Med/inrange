@@ -270,6 +270,7 @@ paymentRoutes.post("/webhooks/redcliffe", async (c) => {
     })}, updated_at = now() where id = ${row.id}`;
   }
   const mapped = type in REDCLIFFE_EVENTS ? REDCLIFFE_EVENTS[type] : journey ? "COLLECTOR_ASSIGNED" : rc.stageFromWords(d.customer_status);
-  if (mapped) await applyLabEvent(row.id, mapped).catch((e) => console.error("redcliffe webhook event", row.id, type, e.message));
+  // during a dry run (PILOT_LAB_SIMULATION) the admin walks the steps; the QA lab's events would fight them
+  if (mapped && !env.pilotLabSimulation) await applyLabEvent(row.id, mapped).catch((e) => console.error("redcliffe webhook event", row.id, type, e.message));
   return c.json({ success: true });
 });
