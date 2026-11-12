@@ -145,21 +145,46 @@
   font-size: 0.8125rem;
   font-weight: 560;
   color: var(--ink-3);
+  white-space: nowrap;
   cursor: pointer;
   transition:
     background-color 180ms var(--ease-out),
     color 180ms var(--ease-out);
 }
 
+/* on the rail it is the prototype's .reset: a line of small ink-3 text one rail gap under the name card,
+   kept at the team's 44px target */
 .rail .signOut {
-  align-self: center;
-  margin-top: -16px;
+  min-height: 44px;
+  padding: 0;
+  border-radius: 0;
+  font-weight: 400;
+}
+
+.signOut svg {
+  flex: none;
+}
+/* the narrowest phones: the words alone, so the wordmark, the role chip and the avatar keep their room */
+@media (max-width: 389px) {
+  .signOut {
+    padding: 0 8px;
+  }
+  .signOut svg {
+    display: none;
+  }
+}
+.rail .signOut svg {
+  display: none;
 }
 
 @media (hover: hover) and (pointer: fine) {
   .signOut:hover {
     background: var(--hover-wash);
     color: var(--ink);
+  }
+  .rail .signOut:hover {
+    background: none;
+    text-decoration: underline;
   }
 }
 
@@ -300,8 +325,8 @@
 }
 
 /*
-  A pushed screen (a loaded call note, marked data-own-bars): below a laptop it brings its own top and
-  bottom bars, so the shell's step aside. Its loading and error states keep the shell's.
+  A pushed screen (a call note, marked data-own-bars): below a laptop it brings its own top and
+  bottom bars, so the shell's step aside. Its loading and error states bring a top bar with Back.
 */
 @media (max-width: 1023px) {
   .app:has([data-own-bars]) .top,

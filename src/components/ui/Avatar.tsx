@@ -34,6 +34,7 @@ export default function Avatar({
         unoptimized
       />
     );
+  // initials shrink with a small avatar so two letters never spill past the circle
   const fontSize = Math.max(
     10,
     Math.min(size * 0.4, Math.max(14, size * 0.34)),

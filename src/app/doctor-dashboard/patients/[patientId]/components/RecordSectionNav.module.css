@@ -10,7 +10,7 @@
   padding: 8px var(--gutter);
   overflow-x: auto;
   scrollbar-width: none;
-  background: rgb(241 242 243 / 0.9);
+  background: color-mix(in srgb, var(--bg) 90%, transparent);
   --chrome-blur: blur(14px);
   -webkit-backdrop-filter: var(--chrome-blur);
   backdrop-filter: var(--chrome-blur);

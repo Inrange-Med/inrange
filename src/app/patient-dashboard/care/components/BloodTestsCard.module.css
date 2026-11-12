@@ -18,3 +18,22 @@
   grid-template-columns: repeat(auto-fit, minmax(172px, 1fr));
   gap: 8px;
 }
+/* while the patient's path is still loading: one soft line (Arhaan Booking .ghost shape) */
+.ghostLine {
+  display: block;
+  width: 60%;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--bg-2);
+  animation: breathe 1400ms var(--ease-out) infinite alternate;
+}
+@keyframes breathe {
+  to {
+    opacity: 0.5;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ghostLine {
+    animation: none;
+  }
+}

@@ -1,6 +1,6 @@
 /**
  * Lab reports in the patient's record: ones the patient uploaded, and ones Redcliffe Labs sent
- * for a home blood test booked through InRange (GET /api/reports returns both).
+ * for a home blood test booked through inrange (GET /api/reports returns both).
  */
 
 export type ReportSource = "UPLOADED" | "LAB_BOOKING";

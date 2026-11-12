@@ -12,7 +12,7 @@ import { useState } from "react";
 import Card from "@/components/ui/Card";
 import ErrorNotice from "@/components/ui/ErrorNotice";
 import LabReportUpload from "@/components/ui/LabReportUpload";
-import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
+import PageGhosts from "@/app/patient-dashboard/components/PageGhosts";
 import PageHead from "@/components/ui/PageHead";
 import { useToast } from "@/components/ui/ToastProvider";
 import { useApiResource } from "@/hooks/useApiResource";
@@ -60,7 +60,7 @@ export default function ReportsView() {
 
   const listCard = (
     <Card title="Your reports">
-      {reports.loading && <LoadingSkeleton />}
+      {reports.loading && <PageGhosts heights={[52, 52]} />}
       {reports.error && (
         <ErrorNotice message={reports.error} onRetry={reports.reload} />
       )}
@@ -85,7 +85,9 @@ export default function ReportsView() {
   );
 
   return (
-    <main className={`${layoutStyles.page} ${layoutStyles.narrow}`}>
+    <main
+      className={`${layoutStyles.page} ${layoutStyles.narrow} ${styles.page}`}
+    >
       <PageHead
         title="Reports"
         back={{ href: "/patient-dashboard/care", label: "Care" }}

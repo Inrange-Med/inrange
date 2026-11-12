@@ -10,7 +10,7 @@ type Params = { params: Promise<{ slug: string }> };
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { slug } = await params;
   return {
-    title: `${GUIDES.find((guide) => guide.slug === slug)?.title ?? "Guide"} | InRange`,
+    title: `${GUIDES.find((guide) => guide.slug === slug)?.title ?? "Guide"} | inrange`,
   };
 }
 

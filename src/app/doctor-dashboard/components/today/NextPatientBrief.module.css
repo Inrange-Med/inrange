@@ -25,6 +25,7 @@
   color: var(--on-dark-3);
 }
 .brief strong {
+  align-self: end;
   font-size: 0.875rem;
   font-weight: 560;
   color: var(--on-dark);

@@ -2,7 +2,7 @@
 import type { Metadata } from "next";
 import PilotLegalPage from "@/components/ui/PilotLegalPage";
 
-export const metadata: Metadata = { title: "Grievances | InRange" };
+export const metadata: Metadata = { title: "Grievances | inrange" };
 
 export default function GrievancePage() {
   return (

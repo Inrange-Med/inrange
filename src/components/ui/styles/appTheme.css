@@ -1,5 +1,7 @@
 /*
   The dashboards' design system (from the design repository's globals.css), scoped to .app-theme.
+  Palette: In range (client's choice, Nov 2026), the same tokens as the public site: ink, paper and
+  one light green, which appears only where something is live or asks to be pressed.
 
   Why scoped: the public landing page keeps its own src/app/globals.css untouched. Every signed-in
   area (patient dashboard, doctor dashboard, sign-in, onboarding, video call) renders inside
@@ -10,49 +12,52 @@
 */
 
 .app-theme {
-  --slate-950: #0a0b0c;
-  --slate-900: #0f1011;
-  --slate-850: #141517;
-  --slate-800: #18191b;
-  --slate-700: #242528;
-  --slate-600: #393b3f;
+  --slate-950: #0a0b0a;
+  --slate-900: #0e0f0e;
+  --slate-850: #121312;
+  --slate-800: #151615;
+  --slate-700: #232523;
+  --slate-600: #393c39;
 
-  --signal: #f4f5f6;
-  --signal-soft: #c8cacd;
-  --signal-ink: #18191b;
-  --signal-wash: #e7e8ea;
+  --signal: #c3ecb2;
+  --signal-soft: #dcf5d0;
+  --signal-ink: #111111;
+  --signal-wash: #ebf7e4;
 
-  --glacier-hi: #fbfcfd;
-  --glacier: #e9eef2;
+  --glacier-hi: #d6f4c8;
+  --glacier: #bde8aa;
 
   --alert: #d1242f;
 
-  --bg: #f1f2f3;
-  --bg-2: #e6e7e9;
-  --paper: #fbfbfc;
-  --ink: #0e0f10;
-  --ink-2: #45474b;
-  --ink-3: #5d6065;
-  --hair: #dcdde0;
-  --hair-2: #c9cbcf;
+  --bg: #f4f4f2;
+  --bg-2: #e9e9e5;
+  --paper: #ffffff;
+  --ink: #111111;
+  --ink-2: #474845;
+  --ink-3: #63655f;
+  --hair: #e3e3de;
+  --hair-2: #d1d2cb;
 
-  --on-dark: #eeeff0;
-  --on-dark-2: rgb(238 239 240 / 0.72);
-  --on-dark-3: rgb(238 239 240 / 0.62);
-  --hair-dark: rgb(236 237 239 / 0.11);
+  --on-dark: #f4f5f2;
+  --on-dark-2: rgb(244 245 242 / 0.76);
+  --on-dark-3: rgb(244 245 242 / 0.64);
+  --hair-dark: rgb(255 255 255 / 0.13);
 
-  --head-soft-dark: #b4b7bb;
+  --head-soft-dark: #c3ecb2;
 
-  --carbon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Cdefs%3E%3ClinearGradient id='h' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23fff' stop-opacity='.032'/%3E%3Cstop offset='1' stop-color='%23fff' stop-opacity='0'/%3E%3C/linearGradient%3E%3ClinearGradient id='v' x1='0' y1='0' x2='1' y2='0'%3E%3Cstop offset='0' stop-color='%23fff' stop-opacity='.022'/%3E%3Cstop offset='1' stop-color='%23000' stop-opacity='.08'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='4' height='4' fill='url(%23h)'/%3E%3Crect x='4' y='4' width='4' height='4' fill='url(%23h)'/%3E%3Crect x='4' width='4' height='4' fill='url(%23v)'/%3E%3Crect y='4' width='4' height='4' fill='url(%23v)'/%3E%3C/svg%3E");
+  /* the isoline field on dark plates (ContourField reads these): green-grey lines, a light-green sweep */
+  --field-line: 0.62 0.68 0.63;
+  --field-signal: 0.77 0.93 0.7;
+
+  --carbon: none;
 
   --sheen: radial-gradient(
     120% 90% at 18% 0%,
     rgb(255 255 255 / 0.055),
     transparent 62%
   );
-
-  --font-display: "Jost", "Futura", "Century Gothic", system-ui, sans-serif;
-  --font-text: "Wix Madefor Text", system-ui, sans-serif;
+  /* Jost everywhere (brand guidelines v1.1): --font-display comes from next/font on <html> */
+  --font-text: var(--font-display);
 
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-io: cubic-bezier(0.77, 0, 0.175, 1);
@@ -67,8 +72,8 @@
 
   --nav-h: 60px;
 
-  --chrome-bg: rgb(241 242 243 / 0.84);
-  --hover-wash: rgb(25 26 28 / 0.06);
+  --chrome-bg: rgb(244 244 242 / 0.86);
+  --hover-wash: rgb(17 17 17 / 0.05);
 
   --card-pad: 20px;
 }
@@ -170,6 +175,11 @@
 :where(.app-theme) :focus-visible {
   outline: 2px solid var(--signal-ink);
   outline-offset: 3px;
+}
+
+/* The ring follows the control's own radius: the 6px corner adds no weight, so a pill or a
+   rounded card keeps its shape when focused, whatever order the stylesheets load in. */
+:where(.app-theme :focus-visible) {
   border-radius: 6px;
 }
 
@@ -182,7 +192,9 @@
   touch-action: manipulation;
 }
 
-.app-theme {
+/* :where() keeps every rule below at the prototype's weight (one class), so a module class on the
+   same element (for example .go on a .btn) wins by source order, as it does in the design repository. */
+:where(.app-theme) {
   & {
     margin: 0;
     background: var(--bg);
@@ -190,7 +202,6 @@
     font-family: var(--font-text);
     font-size: 1rem;
     line-height: 1.6;
-    font-feature-settings: "ss01", "cv05";
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
@@ -210,7 +221,7 @@
     --btn-bg: var(--slate-900);
     --btn-fg: var(--on-dark);
     --well-bg: var(--signal);
-    --well-fg: var(--slate-950);
+    --well-fg: var(--ink);
     display: inline-flex;
     align-items: center;
     gap: 14px;
@@ -267,12 +278,12 @@
       var(--glacier) 100%
     );
     --btn-fg: var(--slate-950);
-    --well-bg: var(--slate-950);
-    --well-fg: var(--glacier-hi);
+    /* the one accent sits in the arrow well of every action */
+    --well-bg: var(--signal);
+    --well-fg: var(--ink);
     box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.95),
-      inset 0 -1px 0 rgb(24 32 40 / 0.07),
-      0 10px 28px -14px rgb(0 0 0 / 0.6);
+      inset 0 1px 0 rgb(255 255 255 / 0.4),
+      0 10px 28px -14px rgb(0 0 0 / 0.5);
     transition:
       transform 160ms var(--ease-out),
       box-shadow 240ms var(--ease-out);
@@ -281,10 +292,6 @@
   @media (hover: hover) and (pointer: fine) {
     .btn--signal:hover {
       --btn-bg: linear-gradient(180deg, #ffffff 0%, var(--glacier-hi) 100%);
-      box-shadow:
-        inset 0 1px 0 rgb(255 255 255 / 1),
-        inset 0 -1px 0 rgb(24 32 40 / 0.06),
-        0 14px 32px -14px rgb(0 0 0 / 0.65);
     }
   }
 
@@ -354,6 +361,16 @@
   .tag svg {
     flex: none;
     color: var(--signal-ink);
+  }
+
+  .tag--dark {
+    background: rgb(236 237 239 / 0.07);
+    box-shadow: inset 0 0 0 1px rgb(236 237 239 / 0.1);
+    color: var(--on-dark);
+  }
+
+  .tag--dark svg {
+    color: var(--signal);
   }
 
   .art {

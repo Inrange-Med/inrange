@@ -54,8 +54,51 @@
   max-width: 820px;
 }
 
+/* waiting: four rows shaped like the notes they stand for, breathing */
+.ghostRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-height: 64px;
+  padding: 12px;
+}
+
+.ghostFace,
+.ghostLines > span {
+  display: block;
+  background: var(--bg-2);
+  animation: ghostBreathe 1400ms var(--ease-out) infinite alternate;
+}
+
+.ghostFace {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+
+.ghostLines {
+  display: grid;
+  flex: 1;
+  gap: 8px;
+  padding-top: 2px;
+}
+
+.ghostLines > span {
+  height: 14px;
+  border-radius: 7px;
+}
+
+@keyframes ghostBreathe {
+  to {
+    opacity: 0.5;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .breath {
+  .breath,
+  .ghostFace,
+  .ghostLines > span {
     animation: none;
   }
 }

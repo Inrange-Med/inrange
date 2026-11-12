@@ -45,7 +45,7 @@ export default function PersonalDetailsForm({ profile, onSaved }: Props) {
         : "",
     age:
       form.age && (!Number.isInteger(age) || age < 18 || age > 100)
-        ? "InRange is for adults aged 18 and over."
+        ? "inrange is for adults aged 18 and over."
         : "",
   };
   const invalid = Object.values(errors).some(Boolean);
@@ -105,14 +105,17 @@ export default function PersonalDetailsForm({ profile, onSaved }: Props) {
         error={shown("email")}
         hint="For invoices and your data copy."
       />
-      <ProfileField
-        label="Age"
-        inputMode="numeric"
-        pattern="[0-9]*"
-        value={form.age}
-        onValueChange={set("age")}
-        error={shown("age")}
-      />
+      {/* a half-width box, as in the design's pair of short fields */}
+      <div className={styles.pairFields}>
+        <ProfileField
+          label="Age"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          value={form.age}
+          onValueChange={set("age")}
+          error={shown("age")}
+        />
+      </div>
       <p className={formStyles.hint}>
         Your mobile number signs you in, so it changes only through your care
         team.

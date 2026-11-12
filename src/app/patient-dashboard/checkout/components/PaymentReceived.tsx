@@ -5,7 +5,7 @@
  */
 
 import Link from "next/link";
-import { ArrowRight, CheckCircle } from "@phosphor-icons/react/dist/ssr";
+import { ArrowRight } from "@phosphor-icons/react/dist/ssr";
 import Card from "@/components/ui/Card";
 import { formatRupees } from "@/lib/format/money";
 import formStyles from "@/components/ui/styles/FormControls.module.css";
@@ -29,12 +29,18 @@ export default function PaymentReceived({
   return (
     <Card>
       <div className={styles.receipt}>
-        <CheckCircle
-          size={44}
-          weight="duotone"
-          className={styles.mark}
-          aria-hidden="true"
-        />
+        <span className={styles.seal} aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="30" height="30">
+            <path
+              d="M5 12.5l4.5 4.5L19 7.5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </span>
         <p className={styles.next}>{nextStep}</p>
         <dl className={styles.facts}>
           <div>
@@ -47,15 +53,19 @@ export default function PaymentReceived({
           </div>
           <div>
             <dt>Payment reference</dt>
-            <dd className={styles.reference}>{paid.paymentReference}</dd>
+            <dd className={`${styles.reference} num`}>
+              {paid.paymentReference}
+            </dd>
           </div>
         </dl>
-        <Link href={continueTo} className={`btn ${formStyles.go}`}>
-          <span>Continue</span>
-          <span className="well" aria-hidden="true">
-            <ArrowRight size={18} />
-          </span>
-        </Link>
+        <div className={styles.actions}>
+          <Link href={continueTo} className={`btn ${formStyles.go}`}>
+            <span>Continue</span>
+            <span className="well" aria-hidden="true">
+              <ArrowRight size={18} />
+            </span>
+          </Link>
+        </div>
       </div>
     </Card>
   );

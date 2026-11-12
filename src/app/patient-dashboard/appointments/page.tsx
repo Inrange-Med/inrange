@@ -3,7 +3,7 @@
 import type { Metadata } from "next";
 import AppointmentsView from "./components/AppointmentsView";
 
-export const metadata: Metadata = { title: "Appointments | InRange" };
+export const metadata: Metadata = { title: "Appointments | inrange" };
 
 export default function AppointmentsPage() {
   return <AppointmentsView />;

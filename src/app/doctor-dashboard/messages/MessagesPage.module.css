@@ -240,7 +240,7 @@
 
 .bubble[data-urgent="true"] {
   box-shadow:
-    inset 0 0 0 1px rgb(180 68 43 / 0.3),
+    inset 0 0 0 1px color-mix(in srgb, var(--alert) 30%, transparent),
     inset 3px 0 0 var(--alert);
 }
 
@@ -263,6 +263,18 @@
   font-size: 0.8125rem;
   font-weight: 560;
   color: var(--ink-2);
+  text-decoration: underline;
+  text-decoration-color: var(--hair-2);
+  text-underline-offset: 3px;
+  transition: text-decoration-color 160ms var(--ease-out);
+}
+
+/* the attachment opens the file, so it reads as a link: the underline darkens under the pointer */
+@media (hover: hover) and (pointer: fine) {
+  .photoNote:hover {
+    text-decoration-color: var(--ink-3);
+    color: var(--ink);
+  }
 }
 
 .meta {
@@ -400,9 +412,18 @@
   inset: -12px -8px;
 }
 
-/* below a laptop (touch): quick replies are full 44px taps */
+/* below a laptop (touch): quick replies stay 34px chips with an invisible 44px tap area */
 @media (max-width: 1023px) {
+  .quick {
+    padding-block: 5px;
+    margin-block: -5px;
+  }
   .quick button {
-    min-height: 44px;
+    position: relative;
+  }
+  .quick button::after {
+    content: "";
+    position: absolute;
+    inset: -5px 0;
   }
 }

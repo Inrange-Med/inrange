@@ -21,8 +21,14 @@
   fill: var(--ink-2);
   font-weight: 500;
 }
+.halo {
+  paint-order: stroke;
+  stroke: var(--bg-2);
+  stroke-width: 5px;
+  stroke-linejoin: round;
+}
 .txtOn {
-  fill: var(--mint-ink);
+  fill: var(--signal-ink);
   font-weight: 560;
 }
 .axis {
@@ -45,21 +51,21 @@
   fill: var(--ink-2);
 }
 .leaderEndOn {
-  fill: var(--mint-ink);
+  fill: var(--signal-ink);
 }
 .rule {
   stroke: var(--hair-2);
   stroke-width: 1;
 }
 .signal {
-  fill: var(--mint);
+  fill: var(--slate-600);
 }
 
 /* waist */
 /* the fat under the skin carries a faint warm tint, the one warm note in the plates */
 .skin {
   fill: rgb(214 196 170 / 0.24);
-  stroke: var(--teal-800);
+  stroke: var(--slate-800);
   stroke-width: 1.6;
 }
 .wallFill {
@@ -72,17 +78,17 @@
   stroke-width: 1.2;
 }
 .cavity {
-  fill: var(--mint-wash);
+  fill: var(--signal-wash);
   stroke: none;
 }
 .cavityLine {
   fill: none;
-  stroke: rgb(11 118 87 / 0.55);
+  stroke: rgb(24 25 27 / 0.55);
   stroke-width: 1.2;
 }
 .iso {
   fill: none;
-  stroke: rgb(11 118 87 / 0.24);
+  stroke: rgb(24 25 27 / 0.24);
   stroke-width: 1;
 }
 .bone {
@@ -91,32 +97,32 @@
   stroke-width: 1.2;
 }
 .navel {
-  fill: var(--teal-800);
+  fill: var(--slate-800);
 }
 .tape {
   fill: none;
-  stroke: var(--teal-800);
+  stroke: var(--slate-800);
   stroke-width: 2.2;
   stroke-linejoin: round;
 }
 .tick {
-  stroke: var(--teal-700);
+  stroke: var(--slate-700);
   stroke-width: 0.9;
 }
 .tickMajor {
-  stroke: var(--teal-800);
+  stroke: var(--slate-800);
   stroke-width: 1.2;
 }
 .tab {
-  fill: var(--teal-800);
+  fill: var(--slate-800);
 }
 
 /* weight */
 .band {
-  fill: var(--mint-wash);
+  fill: var(--signal-wash);
 }
 .avg {
-  stroke: var(--teal-800);
+  stroke: var(--slate-800);
   stroke-width: 2.2;
   stroke-linecap: round;
 }
@@ -126,26 +132,26 @@
   stroke-dasharray: 2 3;
 }
 .dot {
-  fill: var(--teal-900);
+  fill: var(--slate-900);
 }
 .ring {
   fill: var(--paper);
-  stroke: var(--teal-800);
+  stroke: var(--slate-800);
   stroke-width: 1.6;
 }
 
 /* glucose */
 .range {
-  fill: var(--mint-wash);
+  fill: var(--signal-wash);
 }
 .limit {
-  stroke: rgb(11 118 87 / 0.7);
+  stroke: rgb(24 25 27 / 0.7);
   stroke-width: 1;
   stroke-dasharray: 3 4;
 }
 .trace {
   fill: none;
-  stroke: var(--teal-800);
+  stroke: var(--slate-800);
   stroke-width: 2.2;
   stroke-linecap: round;
   stroke-linejoin: round;

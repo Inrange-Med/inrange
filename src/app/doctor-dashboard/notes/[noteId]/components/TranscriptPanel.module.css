@@ -88,7 +88,7 @@
 }
 
 .en {
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   line-height: 1.45;
   color: var(--ink-3);
 }
@@ -139,6 +139,11 @@
   font-size: 0.8125rem;
   font-weight: 560;
   color: var(--signal-ink);
+}
+
+/* the count on the left, the controls flush right */
+.moments > :global(.num) {
+  margin-right: auto;
 }
 
 .moments .iconBtn {

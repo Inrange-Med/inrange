@@ -163,7 +163,7 @@ export default function WeightSheet({
       {error && <ErrorNotice message={error} />}
       <button
         type="button"
-        className={`btn ${formStyles.go}`}
+        className={`btn ${formStyles.go} ${styles.save}`}
         data-busy={saving}
         disabled={!ok || saving}
         onClick={save}

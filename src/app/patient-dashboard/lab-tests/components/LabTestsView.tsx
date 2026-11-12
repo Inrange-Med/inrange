@@ -7,14 +7,15 @@
 
 import Link from "next/link";
 import { CaretRight, FileArrowUp, Flask } from "@phosphor-icons/react";
+import PageGhosts from "@/app/patient-dashboard/components/PageGhosts";
 import Card from "@/components/ui/Card";
 import ErrorNotice from "@/components/ui/ErrorNotice";
-import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import PageHead from "@/components/ui/PageHead";
 import { useApiResource } from "@/hooks/useApiResource";
 import { useNow } from "@/hooks/useNow";
 import { shortDate } from "@/lib/format/dateTime";
 import { listMyLabBookings } from "@/services/labTestService";
+import formStyles from "@/components/ui/styles/FormControls.module.css";
 import layoutStyles from "@/components/ui/styles/PageLayout.module.css";
 import { isOngoing, LAB_STATUS_WORDS } from "./labBookingFormat";
 import OngoingLabCard from "./OngoingLabCard";
@@ -41,13 +42,16 @@ export default function LabTestsView() {
         title="Blood tests"
         back={{ href: "/patient-dashboard/care", label: "Care" }}
         action={
-          <Link href={BOOK_HREF} className={`btn btn--ghost ${styles.pill}`}>
-            <Flask size={17} /> Book a home test
+          <Link
+            href={BOOK_HREF}
+            className={`${formStyles.link} ${styles.headLink}`}
+          >
+            Book a home test <CaretRight size={15} />
           </Link>
         }
       />
 
-      {bookings.loading && <LoadingSkeleton />}
+      {bookings.loading && <PageGhosts heights={[200, 140]} />}
       {bookings.error && (
         <ErrorNotice message={bookings.error} onRetry={bookings.reload} />
       )}

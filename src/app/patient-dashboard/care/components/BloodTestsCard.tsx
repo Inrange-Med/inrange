@@ -14,10 +14,14 @@ import styles from "./BloodTestsCard.module.css";
 export default function BloodTestsCard({
   hasTeam,
   hasTestsOrReport,
+  settled = true,
 }: {
   hasTeam: boolean;
   /** the patient already shared a report or booked home tests */
   hasTestsOrReport: boolean;
+  /** whether hasTestsOrReport is known yet; until then the card holds one soft line, so it never
+      shows the two suggestions and then swaps them for the rows */
+  settled?: boolean;
 }) {
   const showRecords = hasTeam || hasTestsOrReport;
   return (
@@ -35,7 +39,9 @@ export default function BloodTestsCard({
         )
       }
     >
-      {showRecords ? (
+      {!showRecords && !settled ? (
+        <span className={styles.ghostLine} aria-hidden="true" />
+      ) : showRecords ? (
         <>
           <ul className={pageStyles.people}>
             <li>

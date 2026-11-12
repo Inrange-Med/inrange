@@ -130,7 +130,7 @@ export default function PhoneStep({
       </div>
 
       <p className={pageStyles.switch}>
-        {creating ? "Already with InRange?" : "New to InRange?"}{" "}
+        {creating ? "Already with inrange?" : "New to inrange?"}{" "}
         <Link
           href={creating ? "/sign-in" : "/sign-in?new=1"}
           className={`${formStyles.link} ${pageStyles.link}`}

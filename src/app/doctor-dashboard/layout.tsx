@@ -9,7 +9,7 @@ import type { ReactNode } from "react";
 import DoctorShell from "./components/DoctorShell";
 
 export const metadata: Metadata = {
-  title: "Clinician | InRange",
+  title: "Clinician | inrange",
   robots: { index: false, follow: false },
 };
 

@@ -6,6 +6,15 @@ import type { LabBooking } from "@/types/labTest";
 import { collectionWindow } from "./labBookingFormat";
 import styles from "../LabTestsPage.module.css";
 
+/** The stored value in the design's words (Arhaan Profile.tsx); anything else shows as it did. */
+const GENDER_WORDS: Record<string, string> = {
+  male: "Man",
+  female: "Woman",
+  other: "Other",
+};
+const genderWord = (gender: string) =>
+  GENDER_WORDS[gender.toLowerCase()] ?? gender.toLowerCase();
+
 export default function LabBookingCollectionCard({
   booking,
 }: {
@@ -27,7 +36,7 @@ export default function LabBookingCollectionCard({
           <dd>
             {booking.patient.name},{" "}
             <span className="num">{booking.patient.age}</span>,{" "}
-            {booking.patient.gender.toLowerCase()}
+            {genderWord(booking.patient.gender)}
           </dd>
         </div>
         <div>

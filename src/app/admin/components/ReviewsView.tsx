@@ -7,9 +7,7 @@
   under way, so the team sees what is coming (their report joins Waiting by itself when it arrives).
 */
 
-import { CaretDown } from "@phosphor-icons/react";
 import { useState } from "react";
-import Card from "@/components/ui/Card";
 import ErrorNotice from "@/components/ui/ErrorNotice";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import PageHead from "@/components/ui/PageHead";
@@ -26,7 +24,6 @@ import type {
   EligibilityReview,
   ReviewDecision,
 } from "@/types/admin";
-import surfaceStyles from "@/components/ui/styles/CardSurface.module.css";
 import ReviewItem from "./ReviewItem";
 import adminStyles from "@/app/admin/styles/AdminSurfaces.module.css";
 
@@ -136,22 +133,26 @@ export default function ReviewsView() {
       ) : !reviews.data ? (
         <LoadingSkeleton />
       ) : (
-        <div className={adminStyles.stack}>
-          <Card
-            title="Waiting"
-            action={
+        <div className={adminStyles.reviewsGrid}>
+          <section
+            className={adminStyles.panel}
+            aria-labelledby="reviews-waiting-h"
+          >
+            <div className={adminStyles.panelHead}>
+              <h2 id="reviews-waiting-h" className={adminStyles.h2}>
+                Waiting
+              </h2>
               <span className={`${adminStyles.count} num`}>
                 {waiting.length}
               </span>
-            }
-          >
+            </div>
             {waiting.length === 0 ? (
               <p className={adminStyles.empty}>
                 Nothing is waiting. New eligibility checks appear here as soon
                 as a patient sends a report or a home test result arrives.
               </p>
             ) : (
-              <ul className={adminStyles.list}>
+              <ul className={adminStyles.queue}>
                 {waiting.map((review) => (
                   <ReviewItem
                     key={review.patientId}
@@ -162,17 +163,21 @@ export default function ReviewsView() {
                 ))}
               </ul>
             )}
-          </Card>
+          </section>
 
           {awaitingLab.length > 0 && (
-            <Card
-              title="Waiting on the lab"
-              action={
+            <section
+              className={adminStyles.panel}
+              aria-labelledby="reviews-lab-h"
+            >
+              <div className={adminStyles.panelHead}>
+                <h2 id="reviews-lab-h" className={adminStyles.h2}>
+                  Waiting on the lab
+                </h2>
                 <span className={`${adminStyles.count} num`}>
                   {awaitingLab.length}
                 </span>
-              }
-            >
+              </div>
               <ul className={adminStyles.list}>
                 {awaitingLab.map((entry) => (
                   <li key={entry.patientId} className={adminStyles.labRow}>
@@ -198,29 +203,36 @@ export default function ReviewsView() {
                   </li>
                 ))}
               </ul>
-            </Card>
+            </section>
           )}
 
           {decided.length > 0 && (
-            <details className={`${adminStyles.history} ${surfaceStyles.card}`}>
-              <summary>
-                Recently decided
+            <section
+              className={adminStyles.panel}
+              aria-labelledby="reviews-decided-h"
+            >
+              <div className={adminStyles.panelHead}>
+                <h2 id="reviews-decided-h" className={adminStyles.h2}>
+                  Recently decided
+                </h2>
                 <span className={`${adminStyles.count} num`}>
                   {decided.length}
                 </span>
-                <CaretDown size={18} aria-hidden="true" />
-              </summary>
-              <ul className={adminStyles.list}>
-                {decided.map((review) => (
-                  <ReviewItem
-                    key={review.patientId}
-                    review={review}
-                    now={now}
-                    onDecided={onDecided}
-                  />
-                ))}
-              </ul>
-            </details>
+              </div>
+              <details className={adminStyles.history}>
+                <summary className="num">Show {decided.length} decided</summary>
+                <ul className={adminStyles.queue}>
+                  {decided.map((review) => (
+                    <ReviewItem
+                      key={review.patientId}
+                      review={review}
+                      now={now}
+                      onDecided={onDecided}
+                    />
+                  ))}
+                </ul>
+              </details>
+            </section>
           )}
         </div>
       )}

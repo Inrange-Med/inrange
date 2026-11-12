@@ -29,10 +29,10 @@ export default function OnboardingTopBar({
 }: Props) {
   const done = phase === "sent";
   return (
-    <header className={styles.bar}>
+    <header className={styles.bar} data-phase={phase}>
       <div className={styles.barStart}>
-        <Link href="/" className={styles.brand} aria-label="InRange home">
-          <Wordmark height={24} />
+        <Link href="/" className={styles.brand} aria-label="inrange home">
+          <Wordmark height={34} />
         </Link>
         {!done && (
           <button
@@ -48,6 +48,7 @@ export default function OnboardingTopBar({
       </div>
       <div
         className={styles.progress}
+        hidden={done}
         role="progressbar"
         aria-label="Profile"
         aria-valuemin={0}

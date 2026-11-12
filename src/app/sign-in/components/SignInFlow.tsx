@@ -71,7 +71,7 @@ export default function SignInFlow({
           ) : (
             <span className={styles.slot} aria-hidden="true" />
           )}
-          <Link href="/" className={styles.brand} aria-label="InRange home">
+          <Link href="/" className={styles.brand} aria-label="inrange home">
             <Wordmark height={34} />
           </Link>
           <Link
@@ -117,9 +117,10 @@ export default function SignInFlow({
         )}
       </section>
 
-      {/* under the box, in the page's flow, so it can never cover the wordmark or the form */}
-      <div className={styles.below}>
-        {stage === "phone" && (
+      {/* under the box, in the page's flow, so it can never cover the wordmark or the form; only on
+          the phone step, so the plate stays centred on the code step */}
+      {stage === "phone" && (
+        <div className={styles.below}>
           <footer className={styles.foot}>
             <p className={`${formStyles.hint} ${styles.footLinks}`}>
               <span>
@@ -128,8 +129,8 @@ export default function SignInFlow({
               </span>
             </p>
           </footer>
-        )}
-      </div>
+        </div>
+      )}
     </main>
   );
 }

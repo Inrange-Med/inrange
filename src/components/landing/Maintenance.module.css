@@ -1,11 +1,12 @@
 .maint {
   position: relative;
-  background: var(--teal-900);
+  background: var(--slate-900);
+  background-image: var(--sheen), var(--carbon);
   color: var(--on-dark);
 }
 
 .photo {
-  --wipe: var(--teal-900);
+  --wipe: var(--slate-900);
   position: relative;
   height: clamp(320px, 62vw, 760px);
   overflow: hidden;
@@ -21,7 +22,7 @@
   z-index: 1;
   inset: auto 0 0 0;
   height: 42%;
-  background: linear-gradient(to bottom, rgb(18 44 48 / 0), var(--teal-900));
+  background: linear-gradient(to bottom, rgb(15 16 17 / 0), var(--slate-900));
   pointer-events: none;
 }
 
@@ -53,6 +54,7 @@
 }
 .title {
   color: var(--on-dark);
+  --head-soft: var(--head-soft-dark);
 }
 .lede {
   font-size: clamp(1.06rem, 0.98rem + 0.32vw, 1.25rem);
@@ -68,27 +70,27 @@
   overflow: visible;
 }
 .strip {
-  fill: rgb(238 241 240 / 0.025);
-  stroke: rgb(238 241 240 / 0.22);
+  fill: rgb(238 239 240 / 0.025);
+  stroke: rgb(238 239 240 / 0.22);
   stroke-dasharray: 3 5;
 }
 .tint {
-  fill: rgb(70 216 173 / 0.09);
+  fill: rgb(244 245 246 / 0.09);
 }
 .divide {
-  stroke: rgb(70 216 173 / 0.35);
+  stroke: rgb(244 245 246 / 0.35);
   stroke-width: 1;
 }
 .axis {
-  stroke: rgb(238 241 240 / 0.2);
+  stroke: rgb(238 239 240 / 0.2);
   stroke-width: 1.5;
 }
 .tick {
-  fill: var(--mint);
+  fill: var(--signal);
 }
 .ring {
   fill: none;
-  stroke: rgb(238 241 240 / 0.75);
+  stroke: rgb(238 239 240 / 0.75);
   stroke-width: 1.5;
 }
 .lbl,
@@ -98,7 +100,7 @@
   fill: var(--on-dark-2);
 }
 .lblOn {
-  fill: var(--mint);
+  fill: var(--signal);
   font-weight: 560;
 }
 @media (min-width: 768px) {
@@ -159,13 +161,13 @@
   width: 8px !important;
   height: 8px !important;
   border-radius: 50%;
-  background: var(--mint);
+  background: var(--signal);
 }
 .kRing {
   width: 14px !important;
   height: 14px !important;
   border-radius: 50%;
-  box-shadow: inset 0 0 0 1.5px rgb(238 241 240 / 0.75);
+  box-shadow: inset 0 0 0 1.5px rgb(238 239 240 / 0.75);
 }
 .legend em {
   flex-basis: 100%;
@@ -193,19 +195,24 @@
   .photo img {
     object-position: 78% 50%;
   }
+  /* the solid teal ends 48px past the chart's right edge (the column's edge, wherever the centred
+     content sits), so the strip lies wholly on plain background; the fade then clears before the walkers */
+  .maint {
+    --edge: calc(max(var(--gutter), (100vw - var(--max)) / 2) + min(40vw, 560px) + 48px);
+  }
   .photo::before {
     inset: 0;
     height: auto;
     background:
       linear-gradient(
         to right,
-        var(--teal-900) 0,
-        var(--teal-900) 44vw,
-        rgb(18 44 48 / 0.78) 50vw,
-        rgb(18 44 48 / 0.3) 56vw,
-        rgb(18 44 48 / 0) 62vw
+        var(--slate-900) 0,
+        var(--slate-900) var(--edge),
+        rgb(15 16 17 / 0.78) calc(var(--edge) + 4vw),
+        rgb(15 16 17 / 0.3) calc(var(--edge) + 8vw),
+        rgb(15 16 17 / 0) calc(var(--edge) + 13vw)
       ),
-      linear-gradient(to top, rgb(18 44 48 / 0.45), rgb(18 44 48 / 0) 28%);
+      linear-gradient(to top, rgb(15 16 17 / 0.45), rgb(15 16 17 / 0) 28%);
   }
   .body {
     padding-block: calc(var(--nav-h) + clamp(40px, 7vh, 88px)) clamp(56px, 9vh, 104px);

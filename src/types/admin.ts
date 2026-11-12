@@ -1,4 +1,4 @@
-/** The InRange team's admin area: eligibility reviews and the doctor roster. */
+/** The inrange team's admin area: eligibility reviews and the doctor roster. */
 
 export type ReviewPath = "OWN_REPORT" | "LAB_TEST";
 export type ReviewDecision = "APPROVED" | "NOT_APPROVED";

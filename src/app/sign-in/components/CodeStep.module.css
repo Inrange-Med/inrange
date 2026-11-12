@@ -75,7 +75,8 @@
 }
 .digit {
   font-family: var(--font-display);
-  font-size: 1.75rem;
+  /* six cells are smaller than the prototype's four on a phone; the digit keeps the same share */
+  font-size: min(1.75rem, calc(var(--c) * 0.52));
   font-weight: 520;
   letter-spacing: -0.02em;
 }
@@ -91,7 +92,7 @@
 .caret {
   position: absolute;
   width: 2px;
-  height: 24px;
+  height: min(24px, calc(var(--c) * 0.45));
   border-radius: 2px;
   background: var(--ink);
   opacity: 0;
@@ -147,14 +148,15 @@
     transform: translateX(2px);
   }
 }
-/* verified: the cells fill with the signal colour one after another */
+/* verified: the cells fill with the signal colour one after another, all six done (5 x 40 + 260ms)
+   before the page changes at 520ms */
 .otp[data-state="ok"] .cell {
-  transition-delay: calc(var(--i, 0) * 60ms);
+  transition-delay: calc(var(--i, 0) * 40ms);
   background: var(--signal-wash);
   box-shadow: inset 0 0 0 1.5px var(--signal-ink);
 }
 .otp[data-state="ok"] .digit {
-  transition: color 260ms var(--ease-out) calc(var(--i, 0) * 60ms);
+  transition: color 260ms var(--ease-out) calc(var(--i, 0) * 40ms);
   color: var(--signal-ink);
 }
 @media (prefers-reduced-motion: reduce) {

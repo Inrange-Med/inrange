@@ -97,6 +97,10 @@
   .root[data-shown="true"] .panel {
     opacity: 1;
   }
+  /* a short confirmation (end a call, leave it) needs no more than this */
+  .panel[data-size="compact"] {
+    width: min(450px, 100%);
+  }
   .grab {
     cursor: default;
     padding: 20px 28px 4px;

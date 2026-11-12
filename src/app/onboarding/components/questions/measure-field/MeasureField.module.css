@@ -130,30 +130,20 @@
     0 0 0 6px var(--signal-ink);
 }
 
-/* labelled marks at round values, each with its own tick, centred on its place on the ruler */
-.scaleMarks {
-  position: relative;
-  height: 28px;
-  /* the ruler's ticks run from thumb centre to thumb centre, 13px in from each side */
-  margin-inline: 13px;
-  font-size: 0.875rem;
-  color: var(--ink-2);
+/* the two end values, each centred on its end tick, which sits at the thumb inset */
+.scaleEnds {
+  display: flex;
+  justify-content: space-between;
+  padding-inline: 13px;
+  font-size: 0.8125rem;
+  color: var(--ink-3);
+  margin-top: 2px;
 }
-.scaleMarks > * {
-  position: absolute;
-  top: 6px;
-  left: calc(var(--at) * 100%);
-  transform: translateX(-50%);
+.scaleEnds > * {
+  display: flex;
+  justify-content: center;
+  width: 0;
   white-space: nowrap;
-}
-.scaleMarks > *::before {
-  content: "";
-  position: absolute;
-  left: 50%;
-  bottom: 100%;
-  width: 1px;
-  height: 7px;
-  background: var(--ink-3);
 }
 
 /* the label with its unit switch beside it */

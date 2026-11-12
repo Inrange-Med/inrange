@@ -6,12 +6,12 @@
  */
 
 import Link from "next/link";
-import { CaretRight } from "@phosphor-icons/react";
+import { ArrowRight, CaretRight } from "@phosphor-icons/react";
 import { loadCareTeamDoctors } from "@/app/patient-dashboard/components/careTeamDoctors";
+import PageGhosts from "@/app/patient-dashboard/components/PageGhosts";
 import Avatar from "@/components/ui/Avatar";
 import Card from "@/components/ui/Card";
 import ErrorNotice from "@/components/ui/ErrorNotice";
-import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import PageHead from "@/components/ui/PageHead";
 import { useApiResource } from "@/hooks/useApiResource";
 import formStyles from "@/components/ui/styles/FormControls.module.css";
@@ -29,24 +29,27 @@ export default function MessagesView() {
         back={{ href: "/patient-dashboard", label: "Home" }}
       />
 
-      {team.loading && !team.data && <LoadingSkeleton />}
+      {team.loading && !team.data && <PageGhosts heights={[140]} />}
       {team.error && <ErrorNotice message={team.error} onRetry={team.reload} />}
 
       {team.data && (
         <Card title="My doctors" className={styles.card}>
           {doctors.length === 0 ? (
-            <>
+            <div className={styles.emptyBlock}>
               <p className={styles.empty}>
                 No doctors yet. After your first consultation, you can message
                 your doctor here.
               </p>
               <Link
                 href="/patient-dashboard/appointments/book"
-                className={formStyles.link}
+                className={`btn ${formStyles.go}`}
               >
-                Book a consultation <CaretRight size={15} />
+                <span>Book a consultation</span>
+                <span className="well" aria-hidden="true">
+                  <ArrowRight size={18} />
+                </span>
               </Link>
-            </>
+            </div>
           ) : (
             <ul className={styles.people}>
               {doctors.map((doctor) => (

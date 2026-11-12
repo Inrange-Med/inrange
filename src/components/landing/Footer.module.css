@@ -2,7 +2,8 @@
   position: relative;
   isolation: isolate;
   overflow: clip;
-  background: var(--teal-950);
+  background: var(--slate-950);
+  background-image: var(--sheen), var(--carbon);
   color: var(--on-dark);
   padding: var(--section) 0 calc(96px + env(safe-area-inset-bottom));
 }
@@ -24,6 +25,7 @@
 }
 .title {
   color: var(--on-dark);
+  --head-soft: var(--head-soft-dark);
 }
 .ctaSide {
   display: grid;
@@ -100,7 +102,7 @@
 .legal {
   display: grid;
   gap: 12px;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   line-height: 1.6;
   color: var(--on-dark-2);
 }
@@ -115,27 +117,32 @@
   .foot {
     padding-bottom: 56px;
   }
+  /* four short columns read as a calm two-by-two grid */
   .cols {
-    grid-template-columns: repeat(3, auto);
+    grid-template-columns: repeat(2, minmax(0, max-content));
     justify-content: start;
     column-gap: 64px;
   }
 }
 
 @media (min-width: 1024px) {
-  /* one template for both rows, so the right-hand columns share an edge */
+  /* the closing line on one line, its sentence and the action straight under it */
   .cta {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 30rem);
-    align-items: end;
-    gap: 64px;
+    gap: 32px;
+  }
+  .ctaSide {
+    grid-template-columns: minmax(0, 34em) auto;
+    align-items: center;
+    justify-content: start;
+    column-gap: 48px;
   }
   .base {
     grid-template-columns: minmax(0, 1fr) minmax(0, 30rem);
     column-gap: 64px;
   }
   .cols {
-    justify-content: space-between;
-    column-gap: 40px;
+    justify-content: start;
+    column-gap: 72px;
   }
   .legal {
     grid-column: 1 / -1;
@@ -149,5 +156,31 @@
   .ctaSide :global(.btn) {
     width: 100%;
     justify-content: space-between;
+  }
+}
+
+/* footnotes for figures on the page: numbered, quiet, above the legal text */
+.notes {
+  display: grid;
+  gap: 4px;
+  counter-reset: note;
+}
+.notes li {
+  counter-increment: note;
+  display: grid;
+  grid-template-columns: 1.4em minmax(0, 1fr);
+}
+.notes li::before {
+  content: counter(note);
+}
+
+/* wide screens: the four link columns in one row beside the brand, so neither half sits empty */
+@media (min-width: 1200px) {
+  .base {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .cols {
+    grid-template-columns: repeat(4, max-content);
+    column-gap: 56px;
   }
 }

@@ -99,8 +99,3 @@
     grid-column: 1 / -1;
   }
 }
-
-/* the kit weight chart's axis labels are 11px; the record reads them at 13px */
-.full svg text {
-  font-size: 13px;
-}

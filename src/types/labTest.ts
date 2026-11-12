@@ -1,5 +1,5 @@
 /**
- * Home blood tests through Redcliffe Labs. The browser only ever sees these InRange shapes: the
+ * Home blood tests through Redcliffe Labs. The browser only ever sees these inrange shapes: the
  * backend calls Redcliffe (with its secret key) and maps its replies (docs/backend/lab-tests-redcliffe.md).
  * Money is in rupees.
  */
@@ -97,7 +97,7 @@ export type LabBookingStatus =
 export type LabTestStatus = "PENDING" | "COMPLETED" | "REJECTED" | "DISMISSED";
 
 export type LabBooking = {
-  /** InRange's booking id (used in URLs and payments) */
+  /** inrange's booking id (used in URLs and payments) */
   id: string;
   /** Redcliffe's booking id, shown to the patient for calls with the lab */
   partnerBookingId: string | null;

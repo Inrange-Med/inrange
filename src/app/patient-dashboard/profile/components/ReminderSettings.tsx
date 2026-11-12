@@ -3,7 +3,7 @@
 /*
   The "Reminders" sheet (Arhaan AccountSheet.tsx ReminderSettings): switches that save as they are
   flipped, through PATCH /api/patient/reminders. The channel switches only apply while reminders
-  are on. A failed save puts the switch back and says why.
+  are on. A failed save puts the switch back and says why. While a save runs, its knob dims.
 */
 
 import { useState } from "react";
@@ -38,17 +38,31 @@ export default function ReminderSettings({
     whatsappReminders: profile.whatsappReminders,
     emailReminders: profile.emailReminders,
   });
+  // the switches whose save is still running, for the row's busy look only
+  const [saving, setSaving] = useState<ReadonlySet<keyof Settings>>(
+    () => new Set(),
+  );
+  const markSaving = (key: keyof Settings, on: boolean) =>
+    setSaving((current) => {
+      const next = new Set(current);
+      if (on) next.add(key);
+      else next.delete(key);
+      return next;
+    });
 
   const flip = async (key: keyof Settings) => {
     const before = settings;
     const next = { ...settings, [key]: !settings[key] };
     setSettings(next);
+    markSaving(key, true);
     try {
       await updateReminderSettings(next);
       onSaved(next);
     } catch (error) {
       setSettings(before);
       toast(errorMessage(error));
+    } finally {
+      markSaving(key, false);
     }
   };
 
@@ -61,7 +75,10 @@ export default function ReminderSettings({
         <ul className={styles.toggles}>
           {SWITCHES.map((item) => (
             <li key={item.key}>
-              <label className={styles.toggleRow}>
+              <label
+                className={styles.toggleRow}
+                data-busy={saving.has(item.key) || undefined}
+              >
                 <span>
                   <strong>{item.label}</strong>
                 </span>
@@ -82,7 +99,7 @@ export default function ReminderSettings({
           ))}
         </ul>
         <p className={formStyles.hint}>
-          Nobody from InRange will ever ask you for a one-time code.
+          Nobody from inrange will ever ask you for a one-time code.
         </p>
       </section>
     </div>

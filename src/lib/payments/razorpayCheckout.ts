@@ -140,7 +140,7 @@ export async function openRazorpayCheckout(
       amount: request.amountPaise,
       currency: request.currency,
       order_id: request.orderId,
-      name: "InRange",
+      name: "inrange",
       description: request.description,
       prefill: {
         name: request.customerName || undefined,

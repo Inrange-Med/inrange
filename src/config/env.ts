@@ -1,7 +1,7 @@
 /**
  * Public environment configuration: the ONLY file that reads process.env, except the server-only
  * Redcliffe client in src/server/ (it reads its own secrets). Every variable is in `.env.example`.
- *   NEXT_PUBLIC_API_BASE_URL     InRange API (the Supabase edge function base, .../functions/v1)
+ *   NEXT_PUBLIC_API_BASE_URL     inrange API (the Supabase edge function base, .../functions/v1)
  *   NEXT_PUBLIC_FIREBASE_*       the Firebase web app for phone sign-in (public by design; see lib/auth/firebasePhone.ts)
  * The frontend runs on port 3001 (`npm run dev`).
  */

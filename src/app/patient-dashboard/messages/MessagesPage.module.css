@@ -13,6 +13,26 @@
     --card-pad: 16px;
   }
 }
+@media (min-width: 768px) {
+  .card {
+    --card-gap: 14px;
+  }
+}
+/* a phone: the list is a list card (Arhaan Care .team): the page title already names it, so the card
+   drops its head and its inset above and below, and the rows carry their own */
+@media (max-width: 767px) {
+  .card:has(.people) {
+    padding-block: 0;
+    --card-gap: 0px;
+  }
+  .card:has(.people) > div:first-child {
+    display: none;
+  }
+  .people > li:first-child .row,
+  .people > li:last-child .row {
+    padding-block: 6px;
+  }
+}
 .people {
   display: grid;
 }
@@ -65,6 +85,12 @@
 .go {
   flex: none;
   color: var(--ink-3);
+}
+/* no doctors yet: the line, then the one primary action (Arhaan Appointments .emptyBlock) */
+.emptyBlock {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
 }
 .empty {
   font-size: 1rem;

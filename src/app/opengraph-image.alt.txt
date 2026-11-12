@@ -1,1 +1,1 @@
-InRange: doctor-led care for weight and blood sugar
+inrange: doctor-led care for weight and blood sugar

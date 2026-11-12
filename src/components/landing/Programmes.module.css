@@ -1,0 +1,315 @@
+.programmes {
+  background: var(--paper);
+}
+
+.grid {
+  display: grid;
+  gap: 40px;
+}
+
+.head {
+  display: grid;
+  gap: 20px;
+  align-content: start;
+}
+/* the subhead sits right under the one-line heading, short enough to read at a glance */
+.head > :global(.tag) {
+  margin-bottom: 4px;
+}
+.lede {
+  max-width: 30em;
+}
+
+/* ---------------------------------------------------------------
+   The tiles: one person per programme, the words on the photo's quiet lower third.
+   Phones and tablets swipe through them; from 1200 all four sit in one row.
+---------------------------------------------------------------- */
+.railWrap {
+  /* a grid item grows to its content by default; the rail must scroll instead */
+  min-width: 0;
+  margin-inline: calc(var(--gutter) * -1);
+}
+.rail {
+  /* room for the focus ring: the scroller clips both axes */
+  padding-block: 6px;
+  margin-block: -6px;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: min(80vw, 340px);
+  gap: 12px;
+  padding-inline: var(--gutter);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: var(--gutter);
+  scrollbar-width: none;
+}
+.rail::-webkit-scrollbar {
+  display: none;
+}
+
+/* the tile: a photo with only the name on it, then the reading and the one action on the page */
+.card {
+  position: relative;
+  display: grid;
+  /* the tiles in a row stretch to one height; the description takes the slack, so every button sits on one line */
+  grid-template-rows: auto 1fr auto;
+  gap: 14px;
+  scroll-snap-align: start;
+  min-width: 0;
+}
+.media {
+  --wipe: var(--paper);
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: flex-end;
+  aspect-ratio: 4 / 5;
+  border-radius: var(--r-surface);
+  overflow: hidden;
+  background: var(--slate-900);
+  color: var(--on-dark);
+}
+.photo {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  margin: 0;
+}
+.photo img {
+  object-fit: cover;
+}
+/* a short fall-off holds the name; the rest of the photo stays clear */
+.media::before {
+  content: "";
+  position: absolute;
+  inset: 52% 0 0 0;
+  z-index: -1;
+  background: linear-gradient(to bottom, rgb(10 11 12 / 0), rgb(10 11 12 / 0.62) 55%, rgb(10 11 12 / 0.86));
+  pointer-events: none;
+}
+
+
+/* the tile is the link: no underline, and the focus ring drawn round the photo */
+a.card {
+  color: inherit;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+a.card:focus-visible {
+  outline: none;
+}
+a.card:focus-visible .media {
+  outline: 2px solid var(--slate-800);
+  outline-offset: 3px;
+}
+.name {
+  padding: 0 20px 18px;
+  font-family: var(--font-display);
+  font-weight: 520;
+  font-size: 1.5rem;
+  line-height: 1.12;
+  letter-spacing: -0.016em;
+  text-wrap: balance;
+}
+.line {
+  margin-top: 4px;
+  color: var(--ink-2);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  text-wrap: pretty;
+  max-width: 30em;
+}
+
+/* one action per tile: mint when the programme is open, a quiet outline when it takes a waitlist */
+.go {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  margin-top: 2px;
+  padding: 0 6px 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--paper);
+  box-shadow: inset 0 0 0 1px var(--hair-2);
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background 220ms var(--ease-out),
+    transform 140ms var(--ease-out);
+}
+.card:active .go {
+  transform: scale(0.97);
+}
+.well {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: var(--slate-900);
+  color: var(--on-dark);
+  transition: transform 240ms var(--ease-out);
+}
+/* the waitlist button's own well (Waitlist.module.css) takes the same quiet colours */
+.go > span:last-child {
+  background: var(--slate-900);
+  color: var(--on-dark);
+}
+.card[data-live] .go {
+  background: var(--slate-900);
+  box-shadow: none;
+  color: var(--on-dark);
+}
+.card[data-live] .go > span:last-child {
+  background: var(--signal);
+  color: var(--slate-950);
+}
+@media (hover: hover) and (pointer: fine) {
+  /* after the reveal has settled, a slow lean into the photo */
+  .rail .media:global(.in):hover .photo img,
+  .rail .card:hover .media:global(.in) .photo img {
+    transform: scale(1.035);
+  }
+  .card:hover .go > span:last-child {
+    transform: translateX(2px);
+  }
+  .card:not([data-live]):hover .go {
+    background: var(--bg);
+  }
+  .card[data-live]:hover .go {
+    background: var(--slate-800);
+  }
+}
+
+.foot {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin: 20px var(--gutter) 0;
+}
+.progress {
+  flex: 1;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--hair);
+  overflow: hidden;
+}
+.progress i {
+  display: block;
+  height: 100%;
+  background: var(--slate-800);
+  transform-origin: left;
+  transform: scaleX(0.25);
+}
+
+/* arrows only where a mouse meets a rail that does not fit: laptops below 1200 */
+.arrows {
+  display: none;
+  gap: 8px;
+  flex: none;
+}
+.arrow {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--paper);
+  box-shadow: inset 0 0 0 1px var(--hair-2);
+  color: var(--ink);
+  cursor: pointer;
+  transition:
+    background 220ms var(--ease-out),
+    opacity 220ms var(--ease-out),
+    transform 140ms var(--ease-out);
+}
+.arrow:active:not([aria-disabled="true"]) {
+  transform: scale(0.94);
+}
+.arrow[aria-disabled="true"] {
+  opacity: 0.38;
+  cursor: default;
+}
+@media (hover: hover) and (pointer: fine) {
+  .arrow:hover:not([aria-disabled="true"]) {
+    background: var(--bg-2);
+  }
+}
+@media (min-width: 768px) and (max-width: 1199px) and (hover: hover) and (pointer: fine) {
+  .arrows {
+    display: flex;
+  }
+}
+
+
+@media (min-width: 768px) {
+  /* every tile's name ends on the same line, and every description takes the same depth,
+     so the four read as one row */
+  .rail {
+    grid-auto-columns: min(44vw, 360px);
+    gap: 16px;
+  }
+  .name {
+    padding: 0 22px 20px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .grid {
+    gap: 56px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .railWrap {
+    margin-inline: 0;
+  }
+  .rail {
+    grid-auto-flow: row;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    padding-inline: 0;
+    overflow: visible;
+    scroll-snap-type: none;
+  }
+  .foot {
+    display: none;
+  }
+  .name {
+    font-size: 1.375rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .go,
+  .well {
+    transition: none;
+  }
+}
+
+/* on /programmes the tiles follow the page header directly */
+.programmes[data-bare] {
+  padding-top: clamp(56px, 6vw, 88px);
+  background: none;
+}
+
+/* phones: running text stays at 16px (rule 50) */
+@media (max-width: 767px) {
+  .line {
+    font-size: 1rem;
+  }
+}
+
+/* narrow four-across rows: the longest name stays on one line */
+@media (min-width: 1200px) and (max-width: 1359px) {
+  .name {
+    font-size: 1.25rem;
+  }
+}

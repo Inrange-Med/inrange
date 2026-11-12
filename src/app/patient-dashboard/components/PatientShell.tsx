@@ -7,8 +7,9 @@
   (?next= brings them back to this page) and a doctor goes to their own dashboard.
 
   The chat thread (/patient-dashboard/messages/<doctorId>) brings its own bar, so the shell draws neither
-  the bar nor the dock there, as in Arhaan's design. The checkout is a focused page: the bar keeps only
-  the wordmark, with no sections and no dock, so paying is the one thing on screen.
+  the bar nor the dock there, as in Arhaan's design. A task that owns the screen (the checkout, the
+  first-injection walk-through) turns on focus mode (shellFocus.tsx): the bar becomes a round close,
+  the task's name centred and a spacer, and the dock goes, so the task is the one thing on screen.
 */
 
 import { useEffect, useState, type ReactNode } from "react";
@@ -19,15 +20,18 @@ import {
   FirstAidKit,
   House,
   UserCircle,
+  X,
 } from "@phosphor-icons/react";
 import AppTheme from "@/components/ui/AppTheme";
-import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import ToastProvider from "@/components/ui/ToastProvider";
 import Wordmark from "@/components/ui/Wordmark";
 import { useOnline } from "@/hooks/useOnline";
 import { useSessionUser } from "@/hooks/useSessionUser";
 import { signInHrefFor } from "@/lib/navigation/signInReturn";
+import formStyles from "@/components/ui/styles/FormControls.module.css";
 import layoutStyles from "@/components/ui/styles/PageLayout.module.css";
+import PageGhosts from "./PageGhosts";
+import { ShellFocusContext, type ShellFocus } from "./shellFocus";
 import styles from "./PatientShell.module.css";
 
 type Section = "home" | "care" | "resources" | "profile";
@@ -78,12 +82,54 @@ function sectionFor(pathname: string): Section | null {
   return SECTION_OF_FOLDER[folder] ?? null;
 }
 
+/** Focus mode's bar: the close (or an empty slot), the task's name centred, a 44px spacer. */
+function FocusBar({
+  focus,
+  scrolled,
+}: {
+  focus: ShellFocus;
+  scrolled: boolean;
+}) {
+  return (
+    <header
+      className={`${styles.bar} ${styles.focusBar}`}
+      data-scrolled={scrolled}
+    >
+      <div className={styles.barInner}>
+        {focus.onClose ? (
+          <button
+            type="button"
+            className={formStyles.round}
+            onClick={focus.onClose}
+            aria-label={focus.closeLabel ?? "Close"}
+          >
+            <X size={18} />
+          </button>
+        ) : focus.closeHref ? (
+          <Link
+            href={focus.closeHref}
+            className={formStyles.round}
+            aria-label={focus.closeLabel ?? "Close"}
+          >
+            <X size={18} />
+          </Link>
+        ) : (
+          <span aria-hidden="true" className={styles.focusSpacer} />
+        )}
+        <p className={styles.focusTitle}>{focus.title}</p>
+        <span aria-hidden="true" className={styles.focusSpacer} />
+      </div>
+    </header>
+  );
+}
+
 export default function PatientShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const { status: role } = useSessionUser();
   const online = useOnline();
   const [scrolled, setScrolled] = useState(false);
+  const [registered, setRegistered] = useState<ShellFocus | null>(null);
 
   useEffect(() => {
     if (role === "OUT")
@@ -103,15 +149,34 @@ export default function PatientShell({ children }: { children: ReactNode }) {
 
   const current = sectionFor(pathname);
   const bare = /^\/patient-dashboard\/messages\/[^/]+/.test(pathname);
-  const focused = pathname.startsWith("/patient-dashboard/checkout");
-  const tabs = !bare && !focused;
+  // the checkout is a focused page from its first frame; the page fills in where Close goes
+  const onCheckout = pathname.startsWith("/patient-dashboard/checkout");
+  const focus: ShellFocus | null = bare
+    ? null
+    : (registered ?? (onCheckout ? { title: "Checkout" } : null));
+  const tabs = !bare && !focus;
 
+  // while the session is checked: the bar as it will be (wordmark only, or the focus bar), and the
+  // page's ghosts under it, so nothing moves when the page lands
   if (role !== "PATIENT") {
     return (
       <AppTheme>
         <div className={styles.app}>
-          <main className={layoutStyles.page}>
-            <LoadingSkeleton />
+          {focus ? (
+            <FocusBar focus={focus} scrolled={false} />
+          ) : (
+            !bare && (
+              <header className={styles.bar}>
+                <div className={styles.barInner}>
+                  <span className={styles.brand}>
+                    <Wordmark height={34} />
+                  </span>
+                </div>
+              </header>
+            )
+          )}
+          <main className={layoutStyles.page} aria-busy="true">
+            <PageGhosts title heights={[120, 180]} />
           </main>
         </div>
       </AppTheme>
@@ -120,19 +185,22 @@ export default function PatientShell({ children }: { children: ReactNode }) {
 
   return (
     <AppTheme>
-      <ToastProvider className={bare ? styles.toastChat : styles.toastUp}>
-        <div className={`${styles.app} ${tabs ? styles.withTabs : ""}`}>
-          {!bare && (
-            <header className={styles.bar} data-scrolled={scrolled}>
-              <div className={`${styles.barInner} ${styles.barTabs}`}>
-                <Link
-                  href="/patient-dashboard"
-                  className={styles.brand}
-                  aria-label="InRange, home"
-                >
-                  <Wordmark height={24} />
-                </Link>
-                {tabs && (
+      <ShellFocusContext.Provider value={setRegistered}>
+        <ToastProvider
+          className={bare ? styles.toastChat : tabs ? styles.toastUp : ""}
+        >
+          <div className={`${styles.app} ${tabs ? styles.withTabs : ""}`}>
+            {focus && <FocusBar focus={focus} scrolled={scrolled} />}
+            {tabs && (
+              <header className={styles.bar} data-scrolled={scrolled}>
+                <div className={`${styles.barInner} ${styles.barTabs}`}>
+                  <Link
+                    href="/patient-dashboard"
+                    className={styles.brand}
+                    aria-label="inrange, home"
+                  >
+                    <Wordmark height={34} />
+                  </Link>
                   <nav className={styles.tabs} aria-label="Sections">
                     {SECTIONS.map((section) => (
                       <Link
@@ -147,42 +215,42 @@ export default function PatientShell({ children }: { children: ReactNode }) {
                       </Link>
                     ))}
                   </nav>
-                )}
-                {/* the bar's third column keeps the sections centred */}
-                <div className={styles.barEnd} />
-              </div>
-            </header>
-          )}
+                  {/* the bar's third column keeps the sections centred */}
+                  <div className={styles.barEnd} />
+                </div>
+              </header>
+            )}
 
-          {!online && (
-            <p className={styles.offline} role="status">
-              You are offline. Check your connection.
-            </p>
-          )}
+            {!online && (
+              <p className={styles.offline} role="status">
+                You are offline. Check your connection.
+              </p>
+            )}
 
-          {children}
+            {children}
 
-          {tabs && (
-            <nav className={styles.dock} aria-label="Sections">
-              {SECTIONS.map((section) => {
-                const Icon = section.icon;
-                const on = section.id === current;
-                return (
-                  <Link
-                    key={section.id}
-                    href={section.href}
-                    className={styles.dockTab}
-                    aria-current={on ? "page" : undefined}
-                  >
-                    <Icon size={22} weight={on ? "fill" : "regular"} />
-                    <span>{section.label}</span>
-                  </Link>
-                );
-              })}
-            </nav>
-          )}
-        </div>
-      </ToastProvider>
+            {tabs && (
+              <nav className={styles.dock} aria-label="Sections">
+                {SECTIONS.map((section) => {
+                  const Icon = section.icon;
+                  const on = section.id === current;
+                  return (
+                    <Link
+                      key={section.id}
+                      href={section.href}
+                      className={styles.dockTab}
+                      aria-current={on ? "page" : undefined}
+                    >
+                      <Icon size={22} weight={on ? "fill" : "regular"} />
+                      <span>{section.label}</span>
+                    </Link>
+                  );
+                })}
+              </nav>
+            )}
+          </div>
+        </ToastProvider>
+      </ShellFocusContext.Provider>
     </AppTheme>
   );
 }

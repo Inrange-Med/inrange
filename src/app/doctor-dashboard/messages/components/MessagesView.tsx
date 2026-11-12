@@ -10,7 +10,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import ErrorNotice from "@/components/ui/ErrorNotice";
-import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
+import ClinicSkeleton from "@/app/doctor-dashboard/components/ClinicSkeleton";
 import { useToast } from "@/components/ui/ToastProvider";
 import { useApiResource } from "@/hooks/useApiResource";
 import { errorMessage } from "@/lib/http/apiClient";
@@ -74,6 +74,11 @@ export default function MessagesView() {
   if (sessions.error && !sessions.data) {
     return (
       <main className={clinicStyles.page}>
+        {/* the page keeps its heading when the chats fail to load */}
+        <div className={styles.listHead}>
+          <h1 className={clinicStyles.h1}>Messages</h1>
+          <p className={clinicStyles.sub}>Every patient chat in one place.</p>
+        </div>
         <ErrorNotice message={sessions.error} onRetry={sessions.reload} />
       </main>
     );
@@ -81,7 +86,7 @@ export default function MessagesView() {
   if (sessions.loading && !sessions.data) {
     return (
       <main className={clinicStyles.page}>
-        <LoadingSkeleton />
+        <ClinicSkeleton />
       </main>
     );
   }

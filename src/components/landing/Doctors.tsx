@@ -1,33 +1,35 @@
 import Image from "next/image";
-import { HouseLine, SealCheck, ShieldCheck, VideoCamera } from "@phosphor-icons/react/dist/ssr";
+import { ArrowRight, HouseLine, SealCheck, ShieldCheck, VideoCamera } from "@phosphor-icons/react/dist/ssr";
 import { Mask, Tag } from "./ui";
+import { LISTED_DOCTORS } from "./doctor-data";
+import DoctorBench from "./DoctorBench";
 import s from "./Doctors.module.css";
 
-const FACTS = [
+export const FACTS = [
   {
     icon: SealCheck,
     lead: "Registered doctors.",
-    text: "A panel of more than 50 physicians and diabetes specialists, each registered with the National Medical Commission or a State Medical Council.",
+    text: "Physicians, each registered with the National Medical Commission or a State Medical Council.",
   },
   {
     icon: ShieldCheck,
     lead: "Independent prescribing.",
-    text: "Your doctor alone decides what, if anything, you are prescribed. Doctors are never paid per prescription.",
+    text: "Only your doctor prescribes, and only when it is clinically appropriate. Doctors are never paid per prescription.",
   },
   {
     icon: VideoCamera,
     lead: "By video, anywhere in India.",
-    text: "A secure video call from home or work. The first consultation takes 15 minutes and is free, with no waiting room and no drive across the city.",
+    text: "A secure 30-minute video call from home or work, with no waiting room.",
   },
   {
     icon: HouseLine,
     lead: "Blood tests at home.",
-    text: "A partner lab collects samples at your door, and the results go straight into your record for your doctor.",
+    text: "Upload a report from the last three months, or a lab collects samples at your door. Results go straight to your doctor.",
   },
 ];
 
 /** An instrument dial: a graduated bezel around the icon, drawn once on arrival. */
-function Dial({ icon: Icon }: { icon: typeof SealCheck }) {
+export function Dial({ icon: Icon }: { icon: typeof SealCheck }) {
   return (
     <span className={s.dial} aria-hidden="true">
       <svg className={s.bezel} viewBox="0 0 52 52">
@@ -57,32 +59,35 @@ function Dial({ icon: Icon }: { icon: typeof SealCheck }) {
 
 export default function Doctors() {
   return (
-    <section className={`section ${s.doctors}`} aria-labelledby="doctors-title">
+    <section id="doctors" className={`section ${s.doctors}`} aria-labelledby="doctors-title">
       <div className={`wrap ${s.grid}`}>
-        <figure className={s.consult} data-reveal="wipe">
+        <figure className={s.consult} suppressHydrationWarning data-reveal="wipe">
           <Image
-            src="/img/consult-call.jpg"
+            src="/img/consult-call-c.jpg"
             alt="A physician in his fifties on a video consultation, his patient on the laptop screen"
             fill
             sizes="(max-width: 1023px) 100vw, 60vw"
           />
-          <figcaption className={s.cap}>
-            <span>AI illustration.</span> <span>Not an InRange doctor.</span>
-          </figcaption>
         </figure>
 
         <div className={s.copy}>
           <Tag>Your doctor</Tag>
-          <Mask id="doctors-title" className="h2" lines={["A doctor who", "knows your file."]} />
-          <p className="lede" data-reveal="rise" style={{ "--d": "160ms" } as React.CSSProperties}>
-            Every plan is written by a doctor after your first consultation, which is free, and the same doctor stays with you for the length
-            of your programme.
+          <Mask id="doctors-title" className="h2" lines={["A doctor who", "knows your file."]} soft={1} />
+          <p className="lede" suppressHydrationWarning data-reveal="rise" style={{ "--d": "160ms" } as React.CSSProperties}>
+            The doctor who writes your plan stays with you for the whole programme.
           </p>
+          <a href="/doctors" className={s.more} suppressHydrationWarning data-reveal="rise" style={{ "--d": "220ms" } as React.CSSProperties}>
+            Meet the doctors
+            <ArrowRight size={15} aria-hidden="true" />
+          </a>
         </div>
+
+
+        {LISTED_DOCTORS.length > 0 && <DoctorBench doctors={LISTED_DOCTORS} />}
 
         <dl className={s.facts}>
           {FACTS.map((f, i) => (
-            <div key={f.lead} className={s.fact} data-reveal="rise" style={{ "--d": `${i * 70}ms` } as React.CSSProperties}>
+            <div key={f.lead} className={s.fact} suppressHydrationWarning data-reveal="rise" style={{ "--d": `${i * 70}ms` } as React.CSSProperties}>
               <Dial icon={f.icon} />
               <dt>{f.lead}</dt>
               <dd>{f.text}</dd>
@@ -90,14 +95,6 @@ export default function Doctors() {
           ))}
         </dl>
 
-        <figure className={s.labs} data-reveal="wipe" style={{ "--d": "120ms" } as React.CSSProperties}>
-          <Image
-            src="/img/home-kit.jpg"
-            alt="A home blood collection kit laid out on a dining table"
-            fill
-            sizes="(max-width: 1023px) 100vw, 34vw"
-          />
-        </figure>
       </div>
     </section>
   );

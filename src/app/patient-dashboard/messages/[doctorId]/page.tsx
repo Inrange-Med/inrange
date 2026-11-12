@@ -6,7 +6,7 @@
 import type { Metadata } from "next";
 import ChatScreen from "./components/ChatScreen";
 
-export const metadata: Metadata = { title: "Chat | InRange" };
+export const metadata: Metadata = { title: "Chat | inrange" };
 
 export default async function ChatPage({
   params,

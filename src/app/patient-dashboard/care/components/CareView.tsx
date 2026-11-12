@@ -15,7 +15,6 @@ import {
 } from "@/app/patient-dashboard/components/careTeamDoctors";
 import DeviceCheck from "@/components/ui/DeviceCheck";
 import ErrorNotice from "@/components/ui/ErrorNotice";
-import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import PageHead from "@/components/ui/PageHead";
 import Sheet from "@/components/ui/Sheet";
 import { useApiResource } from "@/hooks/useApiResource";
@@ -29,6 +28,7 @@ import {
   getSubscriptionStatus,
   listPlans,
 } from "@/services/subscriptionService";
+import PageGhosts from "@/app/patient-dashboard/components/PageGhosts";
 import AppointmentsCard from "./AppointmentsCard";
 import BloodTestsCard from "./BloodTestsCard";
 import CareTeamCard from "./CareTeamCard";
@@ -83,7 +83,9 @@ export default function CareView() {
       <PageHead title="Your care" />
 
       {(appointments.loading || team.loading) &&
-        !(appointments.data && team.data) && <LoadingSkeleton />}
+        !(appointments.data && team.data) && (
+          <PageGhosts heights={[168, 212, 168]} className={styles.grid} />
+        )}
       {appointments.error && (
         <ErrorNotice
           message={appointments.error}
@@ -124,6 +126,7 @@ export default function CareView() {
           <BloodTestsCard
             hasTeam={hasTeam}
             hasTestsOrReport={Boolean(eligibility.data?.path)}
+            settled={Boolean(eligibility.data || eligibility.error)}
           />
           {hasTeam && (
             <AppointmentsCard

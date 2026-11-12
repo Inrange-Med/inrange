@@ -16,9 +16,9 @@
 /* booked consultations left outside the hours: calm, on the page tint */
 .note {
   margin-bottom: 16px;
-  padding: 12px 16px;
+  padding: 16px;
   border-radius: var(--r-media);
-  background: var(--bg-2);
+  background: var(--bg);
   font-size: 0.9375rem;
   line-height: 1.5;
   color: var(--ink-2);
@@ -26,7 +26,7 @@
 
 .note a {
   font-weight: 560;
-  color: var(--ink);
+  color: var(--slate-800);
 }
 
 /* ---------- weekly hours ---------- */
@@ -182,10 +182,24 @@
   pointer-events: none;
 }
 
-@media (min-width: 768px) {
-  .save {
-    max-width: 320px;
-  }
+/* Save sits at its own width, left-aligned, as every in-panel submit in the portal */
+.saveRow {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+}
+
+/* nothing changed yet: the button rests in the kit's quiet disabled colours and holds still */
+.saveRow > button:disabled {
+  cursor: default;
+  --btn-bg: var(--bg-2);
+  --btn-fg: var(--ink-3);
+  --well-bg: var(--hair);
+  --well-fg: var(--ink-3);
+}
+.saveRow > button:disabled:active,
+.saveRow > button:disabled :global(.well) {
+  transform: none;
 }
 
 /* ---------- days off ---------- */
@@ -199,6 +213,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  min-height: 56px;
+  padding: 6px 4px;
   border-top: 1px solid var(--hair);
   font-size: 0.9375rem;
 }
@@ -225,6 +241,20 @@
 .addOff button {
   flex: none;
   min-height: 56px;
+}
+
+.addBtn {
+  position: relative;
+}
+
+.addBtn > [data-hidden="true"] {
+  visibility: hidden;
+}
+
+.addBtn > i {
+  position: absolute;
+  inset: 0;
+  margin: auto;
 }
 
 @media (prefers-reduced-motion: reduce) {

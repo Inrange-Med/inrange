@@ -18,7 +18,7 @@ import {
 } from "@/app/patient-dashboard/components/eligibilityStage";
 import Card from "@/components/ui/Card";
 import ErrorNotice from "@/components/ui/ErrorNotice";
-import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
+import PageGhosts from "@/app/patient-dashboard/components/PageGhosts";
 import PageHead from "@/components/ui/PageHead";
 import type { PickableSlot } from "@/components/ui/SlotPicker";
 import { useToast } from "@/components/ui/ToastProvider";
@@ -71,7 +71,7 @@ export default function BookAppointmentView() {
   const content = () => {
     if (review.error)
       return <ErrorNotice message={review.error} onRetry={review.reload} />;
-    if (!review.data) return <LoadingSkeleton />;
+    if (!review.data) return <PageGhosts heights={[132, 360]} />;
     if (eligibility && !canBook) {
       return (
         <Card title="Booking opens after your review" className={styles.card}>
@@ -111,7 +111,7 @@ export default function BookAppointmentView() {
     <main className={`${layoutStyles.page} ${styles.page}`}>
       <PageHead
         title="Book a consultation"
-        sub="A 30-minute video consultation with an InRange doctor."
+        sub="A 30-minute video consultation with an inrange doctor."
         back={{
           href: "/patient-dashboard/appointments",
           label: "Appointments",

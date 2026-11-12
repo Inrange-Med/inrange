@@ -83,3 +83,13 @@
   font-weight: 600;
   color: var(--ink);
 }
+
+/* saving: the carbon button keeps its colour with the spinner in its well (Arhaan Logs.tsx sets only
+   data-busy); the kit's grey disabled look is for a reading that cannot be saved */
+.save:disabled[data-busy="true"],
+.save:disabled[data-busy="true"]:hover {
+  --btn-bg: var(--slate-900);
+  --btn-fg: var(--on-dark);
+  --well-bg: var(--signal);
+  --well-fg: var(--ink);
+}

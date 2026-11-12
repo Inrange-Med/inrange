@@ -22,7 +22,8 @@
   -webkit-tap-highlight-color: transparent;
   transition:
     transform 160ms var(--ease-out),
-    background-color 200ms var(--ease-out);
+    background-color 200ms var(--ease-out),
+    border-color 200ms var(--ease-out);
 }
 .zone svg {
   color: var(--slate-700);
@@ -39,7 +40,7 @@
   color: var(--ink-3);
 }
 .zone:active:not(:disabled) {
-  transform: scale(0.985);
+  transform: scale(0.98);
 }
 .zone:disabled {
   cursor: default;
@@ -47,6 +48,12 @@
 }
 @media (hover: hover) and (pointer: fine) {
   .zone:not(:disabled):hover {
-    background: var(--bg-2);
+    border-color: var(--ink-3);
   }
+}
+/* a chosen file: the frame turns into a filled surface, like the photo frame holding its picture */
+.zone[data-chosen="true"] {
+  border-style: solid;
+  border-color: var(--hair);
+  background: var(--paper);
 }

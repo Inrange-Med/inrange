@@ -44,7 +44,7 @@
 }
 
 .sText > span {
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   line-height: 1.45;
   color: var(--ink-3);
 }
@@ -99,9 +99,9 @@
 .sNote {
   margin-top: 8px;
   padding: 10px 14px;
-  border-radius: var(--r-media);
+  border-radius: 12px;
   background: var(--paper);
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   line-height: 1.5;
   color: var(--ink-2);
 }
@@ -116,6 +116,12 @@
   border-top: 1px solid var(--hair);
   font-size: 0.875rem;
   font-weight: 560;
+}
+
+/* the time stamp steps back from the doctor's name */
+.sig > :global(.num) {
+  font-weight: 450;
+  color: var(--ink-3);
 }
 
 .sActions {

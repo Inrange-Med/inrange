@@ -3,7 +3,7 @@
 import type { Metadata } from "next";
 import HoursView from "./components/HoursView";
 
-export const metadata: Metadata = { title: "Hours | InRange" };
+export const metadata: Metadata = { title: "Hours | inrange" };
 
 export default function HoursPage() {
   return <HoursView />;

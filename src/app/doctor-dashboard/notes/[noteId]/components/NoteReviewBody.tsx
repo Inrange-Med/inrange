@@ -247,7 +247,13 @@ export default function NoteReviewBody({
       uncheckedCount={unchecked.length}
     />
   );
-  const signButton = <SignButton ready={ready} onSign={signing.openSheet} />;
+  const signButton = (
+    <SignButton
+      ready={ready}
+      busy={signing.signing}
+      onSign={signing.openSheet}
+    />
+  );
   const status = (
     <SignStatus
       isWriting={isWriting}

@@ -9,7 +9,6 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import ErrorNotice from "@/components/ui/ErrorNotice";
-import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import PageHead from "@/components/ui/PageHead";
 import { useApiResource } from "@/hooks/useApiResource";
 import { useNow } from "@/hooks/useNow";
@@ -19,6 +18,7 @@ import type { Appointment } from "@/types/appointment";
 import AppointmentRow, {
   appointmentListClass,
 } from "@/app/doctor-dashboard/components/AppointmentRow";
+import ClinicSkeleton from "@/app/doctor-dashboard/components/ClinicSkeleton";
 import MonthCalendar from "./MonthCalendar";
 import clinicStyles from "@/app/doctor-dashboard/styles/ClinicSurfaces.module.css";
 import styles from "../SchedulePage.module.css";
@@ -55,6 +55,7 @@ export default function ScheduleView() {
   if (appointments.error && !appointments.data) {
     return (
       <main className={clinicStyles.page}>
+        <PageHead className={clinicStyles.pageHead} title="Schedule" />
         <ErrorNotice
           message={appointments.error}
           onRetry={appointments.reload}
@@ -65,7 +66,8 @@ export default function ScheduleView() {
   if (!appointments.data) {
     return (
       <main className={clinicStyles.page}>
-        <LoadingSkeleton />
+        <PageHead className={clinicStyles.pageHead} title="Schedule" />
+        <ClinicSkeleton titled={false} />
       </main>
     );
   }
@@ -103,12 +105,14 @@ export default function ScheduleView() {
         className={clinicStyles.pageHead}
         title="Schedule"
         action={
-          <Link
-            href="/doctor-dashboard/hours"
-            className={clinicStyles.textLink}
-          >
-            Working hours
-          </Link>
+          <span className={styles.headAction}>
+            <Link
+              href="/doctor-dashboard/hours"
+              className={clinicStyles.textLink}
+            >
+              Working hours
+            </Link>
+          </span>
         }
         sub={
           <>

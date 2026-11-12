@@ -29,11 +29,14 @@ export default function Sheet({
   onClose,
   title,
   children,
+  size = "default",
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
   children: ReactNode;
+  /** "compact" is a narrower panel from 768px, for a short confirmation */
+  size?: "default" | "compact";
 }) {
   const panel = useRef<HTMLDivElement>(null);
   const opener = useRef<Element | null>(null);
@@ -150,6 +153,7 @@ export default function Sheet({
       <div
         ref={panel}
         className={styles.panel}
+        data-size={size}
         role="dialog"
         aria-modal="true"
         aria-label={title}

@@ -5,7 +5,7 @@
  */
 
 import Link from "next/link";
-import { CaretRight } from "@phosphor-icons/react/dist/ssr";
+import { ArrowRight, CaretRight } from "@phosphor-icons/react/dist/ssr";
 import Card from "@/components/ui/Card";
 import ErrorNotice from "@/components/ui/ErrorNotice";
 import type { CarePlan, MedicineOrder } from "@/types/carePlan";
@@ -49,27 +49,42 @@ export default function CareProgrammeCard({
       title="Your programme"
       id="programme"
       className={`${pageStyles.card} ${pageStyles.prog}`}
+      action={
+        programme?.active && medicine ? (
+          <span className={styles.week}>
+            {programme.plan?.name ?? "Your plan is active"}
+          </span>
+        ) : undefined
+      }
     >
-      {programme?.active ? (
-        <p className={styles.progName}>
-          {programme.plan?.name ?? "Your plan is active"}
-        </p>
-      ) : (
-        programme && (
-          <>
-            <p className={pageStyles.text}>
-              Not on a programme yet. Plans shows the one your doctor suggests,
-              and a dietitian joins you once it starts.
-            </p>
-            <Link
-              href="/patient-dashboard/plans"
-              className={`${formStyles.link} ${styles.self}`}
-            >
-              See plans <CaretRight size={15} />
-            </Link>
-          </>
-        )
+      {programme === null && !programmeError && (
+        <span className={styles.ghostLine} aria-hidden="true" />
       )}
+      {programme?.active
+        ? !medicine && (
+            <p className={styles.progName}>
+              {programme.plan?.name ?? "Your plan is active"}
+            </p>
+          )
+        : programme && (
+            <>
+              <p className={pageStyles.text}>
+                Not on a programme yet. Plans shows the one your doctor
+                suggests, and a dietitian joins you once it starts.
+              </p>
+              <div className={styles.startRow}>
+                <Link
+                  href="/patient-dashboard/plans"
+                  className={`btn ${formStyles.go} ${styles.cta}`}
+                >
+                  <span>See plans</span>
+                  <span className="well" aria-hidden="true">
+                    <ArrowRight size={18} />
+                  </span>
+                </Link>
+              </div>
+            </>
+          )}
 
       {medicine && (
         <div className={styles.med}>

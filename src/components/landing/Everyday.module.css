@@ -1,0 +1,376 @@
+.everyday {
+  position: relative;
+  isolation: isolate;
+  overflow: clip;
+  padding-block: var(--section);
+  background: var(--slate-950);
+  background-image: var(--sheen), var(--carbon);
+  color: var(--on-dark);
+}
+
+/* phones: heading, the photo, the occasions, then the plan for the chosen day */
+.grid {
+  display: grid;
+  gap: 20px;
+}
+/* the heading on one line with its lede below, across the top; then the photo, the occasions and the plan */
+.head {
+  order: 1;
+  display: grid;
+  gap: 20px;
+  --stack-gap: 20px;
+}
+.copy {
+  display: contents;
+}
+.title {
+  color: var(--on-dark);
+  --head-soft: var(--head-soft-dark);
+}
+.lede {
+  font-size: clamp(1.06rem, 0.98rem + 0.32vw, 1.25rem);
+  line-height: 1.55;
+  color: var(--on-dark-2);
+  max-width: 40em;
+  text-wrap: pretty;
+}
+.photo {
+  order: 2;
+  position: relative;
+  margin: 12px 0 8px;
+  aspect-ratio: 4 / 4.4;
+  border-radius: var(--r-media);
+  overflow: hidden;
+  background: var(--slate-900);
+  --wipe: var(--slate-950);
+}
+.tabs {
+  order: 3;
+}
+.panels {
+  order: 4;
+  display: grid;
+}
+.panels > .panel {
+  grid-area: 1 / 1;
+}
+.panel:not([data-on="true"]) {
+  visibility: hidden;
+}
+/* the chosen day's rows rise in; the others wait without animating, so each switch replays it */
+.panel:not([data-on="true"]) .marks li {
+  animation: none;
+}
+
+/* the photos sit stacked; the chosen one wipes in over the last, which leaves only once covered */
+.img {
+  object-fit: cover;
+  z-index: 0;
+  clip-path: inset(0 0 0 100%);
+  transition: clip-path 0s 760ms;
+}
+.img[data-on="true"] {
+  z-index: 1;
+  clip-path: inset(0);
+  transition: clip-path 760ms var(--ease-io);
+}
+
+/* occasions: the same sliding thumb as the plan lengths */
+.tabs {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr));
+  padding: 4px;
+  border-radius: 999px;
+  background: rgb(238 239 240 / 0.06);
+  box-shadow: inset 0 0 0 1px rgb(238 239 240 / 0.1);
+}
+.thumb {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc((100% - 8px) / var(--n, 3));
+  border-radius: 999px;
+  background: var(--on-dark);
+  transform: translateX(calc(var(--at) * 100%));
+  transition: transform 420ms var(--ease-drawer);
+}
+.tab {
+  position: relative;
+  z-index: 1;
+  min-height: 44px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--on-dark-2);
+  font-family: var(--font-display);
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    color 300ms var(--ease-out),
+    transform 160ms var(--ease-out);
+}
+.tab:active {
+  transform: scale(0.97);
+}
+.tab[aria-selected="true"] {
+  color: var(--slate-950);
+}
+.tab:focus-visible {
+  outline-offset: 2px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .tab:not([aria-selected="true"]):hover {
+    color: var(--on-dark);
+  }
+}
+
+/* the plan for the day */
+.panels {
+  margin-top: 8px;
+}
+.panel {
+  display: grid;
+  gap: 18px;
+  align-content: start;
+  padding: 22px 20px 20px;
+  border-radius: var(--r-surface);
+  background: rgb(238 239 240 / 0.04);
+  box-shadow: inset 0 0 0 1px var(--hair-dark);
+}
+.dayTitle {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 520;
+  letter-spacing: -0.01em;
+}
+
+/* morning to past midnight; each mark glides to its new hour when the day changes */
+.ruler {
+  position: relative;
+  height: 64px;
+  container-type: inline-size;
+}
+.ruler svg {
+  display: block;
+  width: 100%;
+  height: 44px;
+  overflow: visible;
+}
+.base {
+  stroke: rgb(238 239 240 / 0.26);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.tick {
+  stroke: rgb(238 239 240 / 0.22);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.mark {
+  position: absolute;
+  top: 24px;
+  left: 0;
+  transform: translate(calc(var(--x) * 100cqw - 50%), -50%);
+  transition: transform 620ms var(--ease-drawer);
+}
+.mark[data-kind="meal"] {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--on-dark);
+}
+/* movement rides its own lane above the line, so it never touches a meal beside it */
+.mark[data-kind="move"] {
+  top: 15px;
+  width: 20px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--signal);
+}
+.mark[data-kind="check"] {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px var(--signal);
+}
+.hours {
+  position: absolute;
+  inset: 38px 0 auto;
+  height: 20px;
+}
+.hours span {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  font-size: 0.75rem;
+  color: var(--on-dark-3);
+  white-space: nowrap;
+}
+.hours span:first-child {
+  transform: none;
+}
+
+.marks {
+  display: grid;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--hair-dark);
+}
+.marks li {
+  display: grid;
+  grid-template-columns: 6rem minmax(0, 1fr);
+  gap: 12px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--hair-dark);
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  color: var(--on-dark);
+  animation: mark-in 520ms var(--ease-out) both;
+  animation-delay: calc(var(--i) * 50ms);
+}
+.time {
+  position: relative;
+  padding-left: 18px;
+  color: var(--on-dark-3);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+/* each row carries its mark from the ruler, so the key is the list itself */
+.time::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.45em;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--on-dark);
+}
+.marks li[data-kind="move"] .time::before {
+  top: 0.62em;
+  width: 12px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--signal);
+}
+.marks li[data-kind="check"] .time::before {
+  top: 0.38em;
+  width: 10px;
+  height: 10px;
+  background: none;
+  box-shadow: inset 0 0 0 1.5px var(--signal);
+}
+@keyframes mark-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+.care {
+  color: var(--on-dark-2);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+.foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 20px;
+}
+.example {
+  font-size: 0.8125rem;
+  color: var(--on-dark-3);
+}
+.link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  color: var(--on-dark);
+  font-weight: 560;
+  font-size: 0.9375rem;
+  text-decoration: underline;
+  text-decoration-color: rgb(238 239 240 / 0.4);
+  text-underline-offset: 4px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .link:hover {
+    text-decoration-color: var(--on-dark);
+  }
+}
+
+@media (min-width: 768px) {
+  .photo {
+    aspect-ratio: 16 / 11;
+  }
+  .panel {
+    padding: 28px 28px 24px;
+  }
+}
+
+/* laptops: the words and the day on the left, the photograph tall on the right */
+@media (min-width: 1024px) {
+  .grid {
+    grid-template-columns: minmax(0, 6fr) minmax(0, 5fr);
+    column-gap: clamp(48px, 6vw, 96px);
+    row-gap: 0;
+    align-items: stretch;
+  }
+  .head {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    margin-bottom: 48px;
+  }
+  .copy {
+    grid-column: 1;
+    grid-row: 2;
+    display: grid;
+    gap: 20px;
+    align-content: start;
+  }
+  .photo {
+    grid-column: 2;
+    grid-row: 2;
+    margin: 0;
+    aspect-ratio: auto;
+    min-height: 100%;
+  }
+  .tabs {
+    max-width: 30rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .img,
+  .img[data-on="true"],
+  .mark,
+  .thumb {
+    transition: none;
+  }
+  .marks li {
+    animation: none;
+  }
+}
+
+/* phones: running text stays at 16px (rule 50) */
+@media (max-width: 767px) {
+  .care,
+  .marks li {
+    font-size: 1rem;
+  }
+}
+
+/* phones and tablets: the card fits the chosen day, so no tab shows a tall empty card; the others
+   leave the flow (they are already hidden, so nothing animates out) */
+@media (max-width: 1023px) {
+  .panels > .panel:not([data-on="true"]) {
+    display: none;
+  }
+}

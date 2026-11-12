@@ -5,6 +5,24 @@
   gap: 8px;
 }
 
+/* while the queue loads: rows the height of a patient row, breathing */
+.ghost {
+  min-height: 64px;
+  border-radius: var(--r-media);
+  background: var(--bg-2);
+  animation: breathe 1400ms var(--ease-out) infinite alternate;
+}
+@keyframes breathe {
+  to {
+    opacity: 0.5;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ghost {
+    animation: none;
+  }
+}
+
 /* one row per patient; the row opens the leading item */
 .item {
   position: relative;

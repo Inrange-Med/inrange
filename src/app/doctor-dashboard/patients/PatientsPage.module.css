@@ -212,3 +212,8 @@
     );
   }
 }
+
+/* a failed load sits between the head and the search pill without touching it */
+.notice {
+  margin-bottom: 16px;
+}

@@ -3,14 +3,14 @@ import type { Metadata } from "next";
 import PilotLegalPage from "@/components/ui/PilotLegalPage";
 
 export const metadata: Metadata = {
-  title: "Cancellation and refund policy | InRange",
+  title: "Cancellation and refund policy | inrange",
 };
 
 export default function RefundPage() {
   return (
     <PilotLegalPage
       title="Cancellation and refund policy"
-      intro="This policy covers every payment made on InRange: care plans, home blood tests and paid consultations. The free eligibility check and the free first consultation cost nothing, so there is nothing to refund."
+      intro="This policy covers every payment made on inrange: care plans, home blood tests and paid consultations. The free eligibility check and the free first consultation cost nothing, so there is nothing to refund."
       sections={[
         {
           heading: "Care plans",

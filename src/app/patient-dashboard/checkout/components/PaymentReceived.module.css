@@ -1,57 +1,114 @@
-/* The receipt card: a centred confirmation, then the facts as label/value rows, then Continue. */
+/* The receipt card, as the onboarding "Booked" step (Arhaan Onboarding.module.css .seal, .doneActions):
+   the drawn seal, what happens next, the facts as Profile's label/value list, then Continue. */
 
 .receipt {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
-  justify-items: center;
-  text-align: center;
 }
 
-.mark {
-  color: var(--ink);
+/* the seal pops in, then its tick draws itself */
+.seal {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 999px;
+  background: var(--signal-wash);
+  color: var(--signal-ink);
+  animation: seal 520ms var(--ease-out) both;
+}
+.seal svg {
+  clip-path: inset(0 100% 0 0);
+  animation: draw 620ms var(--ease-out) 220ms forwards;
+}
+@keyframes seal {
+  from {
+    opacity: 0;
+    transform: scale(0.86);
+  }
+}
+@keyframes draw {
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .seal {
+    animation: none;
+  }
+  .seal svg {
+    animation: none;
+    clip-path: none;
+  }
 }
 
 .next {
   margin: 0;
-  max-width: 28rem;
+  font-size: 1rem;
+  line-height: 1.55;
   color: var(--ink-2);
-  line-height: 1.5;
 }
 
+/* Arhaan Profile .dl: no line above the first row, none under the last */
 .facts {
-  width: 100%;
-  margin: 4px 0 8px;
   display: grid;
-  border-top: 1px solid var(--hair);
-  text-align: left;
+  margin: 0;
 }
-
 .facts > div {
   display: flex;
   justify-content: space-between;
   gap: 16px;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--hair);
+  padding: 13px 0;
+  border-top: 1px solid var(--hair);
+  font-size: 1rem;
+  line-height: 1.45;
 }
-
+.facts > div:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+.facts > div:last-child {
+  padding-bottom: 0;
+}
 .facts dt {
+  flex: none;
   color: var(--ink-3);
-  font-size: 0.875rem;
 }
-
 .facts dd {
   margin: 0;
-  color: var(--ink);
   font-weight: 560;
   text-align: right;
   overflow-wrap: anywhere;
 }
-
-.reference {
-  font-family: ui-monospace, "SF Mono", Menlo, monospace;
-  font-size: 0.875rem;
+/* a narrow phone: each value under its label, left-aligned */
+@media (max-width: 389px) {
+  .facts > div {
+    display: grid;
+    gap: 2px;
+    padding: 11px 0;
+  }
+  .facts dd {
+    text-align: left;
+  }
 }
 
-.receipt > a {
-  width: 100%;
+.reference {
+  font-size: 0.9375rem;
+}
+
+/* Continue across a phone; at its own width from 560px */
+.actions {
+  display: grid;
+  gap: 12px;
+}
+@media (min-width: 560px) {
+  .actions {
+    grid-auto-flow: column;
+    justify-content: start;
+  }
+  .actions :global(.btn) {
+    width: auto;
+    min-width: 232px;
+  }
 }

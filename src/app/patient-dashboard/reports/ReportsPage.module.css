@@ -1,5 +1,9 @@
 /* Reports: the list and the upload card. Rows are Arhaan's Care.module.css report rows, with the review line. */
 
+/* app pages wrap phone paragraphs normally (Arhaan Care .page) */
+.page :is(p, li, dd) {
+  text-wrap: wrap;
+}
 .grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -33,8 +37,21 @@
   -webkit-tap-highlight-color: transparent;
   transition: transform 160ms var(--ease-out);
 }
+.people > li:first-child .row {
+  padding-top: 0;
+}
+.people > li:last-child .row {
+  padding-bottom: 0;
+}
 .row:active {
   transform: scale(0.985);
+}
+/* a report with no file yet: not a button to press */
+.row:disabled {
+  cursor: default;
+}
+.row:disabled:active {
+  transform: none;
 }
 .plate {
   display: grid;
@@ -63,43 +80,43 @@
   line-height: 1.4;
   color: var(--ink-2);
 }
-.rowText .review {
+/* the review and its reason wrap as a pair, never with the reason indented */
+.rowText .rowMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 8px;
+  margin-top: 2px;
+}
+.tag {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 7px;
+  background: var(--bg-2);
+  font-style: normal;
   font-size: 0.875rem;
   font-weight: 560;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.rowText .rowMeta .reviewNote {
+  font-size: 0.875rem;
   color: var(--ink-2);
   overflow-wrap: anywhere;
-}
-.rowText .review[data-review="APPROVED"] {
-  color: var(--ink);
-}
-.rowText .review[data-review="NOT_APPROVED"] {
-  color: var(--alert);
-}
-.rowText .review .reviewNote {
-  font-size: inherit;
-  font-weight: 400;
-  color: var(--ink-2);
 }
 .go {
   flex: none;
   color: var(--ink-3);
 }
-.spin {
+/* opening a file: the kit's spinner (it slows under reduced motion), sized to the caret */
+.row .spin {
   flex: none;
   width: 17px;
   height: 17px;
-  border-radius: 50%;
-  border: 1.75px solid var(--ink-3);
-  border-right-color: transparent;
-  animation: turn 700ms linear infinite;
-}
-@keyframes turn {
-  to {
-    transform: rotate(360deg);
-  }
+  color: var(--ink-3);
 }
 @media (hover: hover) and (pointer: fine) {
-  .row:hover strong {
+  .row:not(:disabled):hover strong {
     text-decoration: underline;
     text-decoration-color: var(--hair-2);
     text-underline-offset: 3px;

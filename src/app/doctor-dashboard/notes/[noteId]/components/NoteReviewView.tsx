@@ -10,7 +10,6 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import ErrorNotice from "@/components/ui/ErrorNotice";
-import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import PageHead from "@/components/ui/PageHead";
 import { useApiResource } from "@/hooks/useApiResource";
 import type { BackDestination } from "@/lib/navigation/backDestination";
@@ -29,7 +28,9 @@ import {
   shortDoctorName,
 } from "@/app/doctor-dashboard/notes/components/noteFormat";
 import NoteReviewBody from "./NoteReviewBody";
+import { NoteReviewSkeleton, PhoneBackBar } from "./NoteReviewWaiting";
 import clinicStyles from "@/app/doctor-dashboard/styles/ClinicSurfaces.module.css";
+import styles from "../NoteReviewPage.module.css";
 
 /** Where Back goes (?from=): Today, the patient's record (once the note says whose), else the Notes list. */
 function backFor(
@@ -60,41 +61,51 @@ export default function NoteReviewView({ noteId }: { noteId: string }) {
   const profile = useApiResource("doctor-profile", getMyDoctorProfile);
   const back = backFor(from, note.data);
 
+  // every state is the pushed screen (data-own-bars): below a laptop the shell's bars never flash
   if (note.error && !note.data)
     return (
-      <main className={clinicStyles.page}>
-        <PageHead
-          className={clinicStyles.pageHead}
-          title="Call note"
-          back={back}
-        />
-        <ErrorNotice message={note.error} onRetry={note.reload} />
-      </main>
+      <>
+        <PhoneBackBar back={back} />
+        <main className={clinicStyles.page} data-own-bars>
+          <PageHead
+            className={`${clinicStyles.pageHead} ${styles.headInBars}`}
+            title="Call note"
+            back={back}
+          />
+          <ErrorNotice message={note.error} onRetry={note.reload} />
+        </main>
+      </>
     );
   if (
     note.loading ||
     (patientId && record.loading && !record.data && !record.error)
   )
     return (
-      <main className={clinicStyles.page}>
-        <LoadingSkeleton />
-      </main>
+      <>
+        <PhoneBackBar back={back} />
+        <main className={clinicStyles.page} data-own-bars>
+          <NoteReviewSkeleton />
+        </main>
+      </>
     );
   if (!note.data)
     return (
-      <main className={clinicStyles.page}>
-        <PageHead
-          className={clinicStyles.pageHead}
-          title="Note not available"
-          back={back}
-          sub={
-            <>
-              It may belong to another doctor, or call notes are not available
-              yet. <Link href="/doctor-dashboard/notes">Back to Notes</Link>
-            </>
-          }
-        />
-      </main>
+      <>
+        <PhoneBackBar back={back} />
+        <main className={clinicStyles.page} data-own-bars>
+          <PageHead
+            className={`${clinicStyles.pageHead} ${styles.headInBars}`}
+            title="Note not available"
+            back={back}
+            sub={
+              <>
+                It may belong to another doctor, or call notes are not available
+                yet. <Link href="/doctor-dashboard/notes">Back to Notes</Link>
+              </>
+            }
+          />
+        </main>
+      </>
     );
 
   const fullName = profile.data?.fullName ?? "You";

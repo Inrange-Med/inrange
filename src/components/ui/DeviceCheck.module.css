@@ -86,3 +86,14 @@
   font-weight: 560;
   color: var(--ink-2);
 }
+
+/* the quiet start: a ghost pill at its own width, so Join below stays the one main action */
+.check .quietStart {
+  justify-self: start;
+  gap: 8px;
+  min-height: 48px;
+  padding-inline: 18px 20px;
+}
+.check .quietStart[data-busy="true"] {
+  cursor: default; /* the spinner says it is working; no OS busy cursor */
+}

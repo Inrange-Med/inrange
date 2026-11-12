@@ -8,7 +8,7 @@
 
 import Link from "next/link";
 import ErrorNotice from "@/components/ui/ErrorNotice";
-import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
+import ClinicSkeleton from "@/app/doctor-dashboard/components/ClinicSkeleton";
 import PageHead from "@/components/ui/PageHead";
 import { useApiResource } from "@/hooks/useApiResource";
 import { getMyAvailability } from "@/services/doctorPortalService";
@@ -33,7 +33,7 @@ export default function HoursView() {
   if (!availability.data) {
     return (
       <main className={clinicStyles.page}>
-        <LoadingSkeleton />
+        <ClinicSkeleton />
       </main>
     );
   }

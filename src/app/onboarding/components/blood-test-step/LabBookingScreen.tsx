@@ -7,7 +7,7 @@
  * button.
  */
 
-import type { RefObject } from "react";
+import { useState, type RefObject } from "react";
 import LabBookingFlow from "@/features/lab-booking/LabBookingFlow";
 import type {
   LabBookingState,
@@ -59,10 +59,19 @@ export default function LabBookingScreen({
   direction,
   headingRef,
 }: Props) {
+  // between lab steps the screen arrives from the side it is going to, by the steps' order: a step
+  // further on comes from the right even after a Back. The first lab screen takes the onboarding's.
+  const [shownStep, setShownStep] = useState(lab.stepNumber);
+  const [labDirection, setLabDirection] = useState<1 | -1>(direction);
+  if (lab.stepNumber !== shownStep) {
+    setShownStep(lab.stepNumber);
+    setLabDirection(lab.stepNumber < shownStep ? -1 : 1);
+  }
+
   return (
     <BloodTestScreenFrame
       screenKey={`lab-${lab.step}`}
-      direction={direction}
+      direction={labDirection}
       title={lab.title}
       headingRef={headingRef}
     >

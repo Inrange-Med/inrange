@@ -90,6 +90,18 @@
     padding-inline: 12px;
   }
 }
+/* three actions besides the lead (Change time, Message and the calendar) do not fit one 390px row
+   with words: the calendar becomes its 44px icon, as under 390px */
+@media (min-width: 390px) and (max-width: 559px) {
+  .actions:has(> .pill:not(.lead) ~ .pill:not(.lead)) > .cal {
+    flex: none;
+    width: 44px;
+    padding: 0;
+  }
+  .actions:has(> .pill:not(.lead) ~ .pill:not(.lead)) .calText {
+    display: none;
+  }
+}
 /* wider: every action on one line, Add to calendar as a quiet text action after the pills */
 @media (min-width: 560px) {
   .actions > .pill,

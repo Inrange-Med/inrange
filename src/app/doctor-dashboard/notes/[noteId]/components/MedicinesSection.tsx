@@ -8,7 +8,7 @@ import {
   removeMedicine,
   toggleMedicine,
 } from "@/app/doctor-dashboard/notes/components/noteEdits";
-import formStyles from "@/components/ui/styles/FormControls.module.css";
+import clinicStyles from "@/app/doctor-dashboard/styles/ClinicSurfaces.module.css";
 import { rxChanges } from "@/app/doctor-dashboard/notes/components/noteState";
 import { useNoteReview } from "./NoteReviewContext";
 import AddMedicineSheet from "./AddMedicineSheet";
@@ -76,7 +76,7 @@ export default function MedicinesSection({
                     {!done && medicine.id.startsWith(ADDED_MEDICINE_PREFIX) && (
                       <button
                         type="button"
-                        className={formStyles.link}
+                        className={sectionStyles.inlineBtn}
                         onClick={() =>
                           review.apply(removeMedicine(note, medicine.id))
                         }
@@ -119,10 +119,10 @@ export default function MedicinesSection({
           <>
             <button
               type="button"
-              className={`${formStyles.link} ${styles.addLink}`}
+              className={`${clinicStyles.textBtn} ${styles.addLink}`}
               onClick={() => setAdding(true)}
             >
-              <Plus size={16} aria-hidden="true" />
+              <Plus size={15} aria-hidden="true" />
               Add a medicine
             </button>
             <AddMedicineSheet

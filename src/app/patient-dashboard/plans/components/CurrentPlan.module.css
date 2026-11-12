@@ -25,3 +25,27 @@
   font-weight: 560;
   text-align: right;
 }
+/* the list's own last row needs no space under it; the card's inset is the space */
+@media (max-width: 767px) {
+  .dl div:last-child {
+    padding-bottom: 0;
+  }
+}
+/* a narrow phone: each value under its label, left-aligned, so a long value is one calm line */
+@media (max-width: 389px) {
+  .dl div {
+    display: grid;
+    gap: 2px;
+    padding: 11px 0;
+  }
+  .dl dd {
+    justify-items: start;
+    text-align: left;
+  }
+}
+/* laptops: one step up for reading at arm's length */
+@media (min-width: 1024px) {
+  .dl div {
+    font-size: 1.0625rem;
+  }
+}

@@ -6,7 +6,7 @@
   page stays short (its red heading says what to do), and opens by itself on a laptop.
 */
 
-import { useEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 import { CaretDown, Phone, WarningCircle } from "@phosphor-icons/react";
 import type { Guide } from "../content/guideContent";
 import foldingStyles from "@/app/patient-dashboard/styles/FoldingSection.module.css";
@@ -19,7 +19,8 @@ export default function GuideHelpLevels({
   help: NonNullable<Guide["help"]>;
 }) {
   const urgent = useRef<HTMLDetailsElement>(null);
-  useEffect(() => {
+  // before the first paint, so a laptop never sees it closed
+  useLayoutEffect(() => {
     if (urgent.current && window.matchMedia("(min-width: 1024px)").matches)
       urgent.current.open = true;
   }, []);

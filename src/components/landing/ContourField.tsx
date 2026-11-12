@@ -95,10 +95,10 @@ void main(){
 
 export default function ContourField({
   className,
-  line = [0.62, 0.8, 0.79],
-  signal = [0.42, 0.93, 0.78],
+  line = [0.78, 0.79, 0.81],
+  signal = [0.97, 0.97, 0.98],
   lineAlpha = 0.16,
-  signalAlpha = 0.9,
+  signalAlpha = 0.72,
   density = 11,
   scan = true,
   interactive = true,
@@ -109,128 +109,169 @@ export default function ContourField({
   useEffect(() => {
     const canvas = ref.current;
     if (!canvas) return;
-    const gl = canvas.getContext("webgl2", { premultipliedAlpha: true, antialias: false, alpha: true });
-    if (!gl || gl.isContextLost()) return;
 
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const coarse = window.matchMedia("(pointer: coarse)").matches;
+    // The field is decoration: it starts once the page has painted, and only on real graphics
+    // hardware. Software GL (low-end phones, lab machines) would block the first paint for seconds,
+    // so there the band keeps its own carbon colour.
+    const init = (): (() => void) | undefined => {
+      const gl = canvas.getContext("webgl2", {
+        premultipliedAlpha: true,
+        antialias: false,
+        alpha: true,
+        failIfMajorPerformanceCaveat: true,
+      });
+      if (!gl || gl.isContextLost()) return;
 
-    const sh = (type: number, src: string) => {
-      const s = gl.createShader(type)!;
-      gl.shaderSource(s, src);
-      gl.compileShader(s);
-      return s;
-    };
-    const prog = gl.createProgram()!;
-    gl.attachShader(prog, sh(gl.VERTEX_SHADER, VERT));
-    gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FRAG));
-    gl.linkProgram(prog);
-    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return;
-    gl.useProgram(prog);
+      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const coarse = window.matchMedia("(pointer: coarse)").matches;
 
-    const buf = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
-    const loc = gl.getAttribLocation(prog, "p");
-    gl.enableVertexAttribArray(loc);
-    gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+      const sh = (type: number, src: string) => {
+        const s = gl.createShader(type)!;
+        gl.shaderSource(s, src);
+        gl.compileShader(s);
+        return s;
+      };
+      const prog = gl.createProgram()!;
+      gl.attachShader(prog, sh(gl.VERTEX_SHADER, VERT));
+      gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FRAG));
+      gl.linkProgram(prog);
+      if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return;
+      gl.useProgram(prog);
 
-    const U = (n: string) => gl.getUniformLocation(prog, n);
-    const uRes = U("uRes"), uT = U("uT"), uPtr = U("uPtr"), uPtrAmt = U("uPtrAmt"), uDpr = U("uDpr");
-    gl.uniform3fv(U("uLine"), line);
-    gl.uniform3fv(U("uSig"), signal);
-    gl.uniform1f(U("uLineA"), lineAlpha);
-    gl.uniform1f(U("uSigA"), signalAlpha);
-    gl.uniform1f(U("uDensity"), density);
-    gl.uniform1f(U("uScan"), scan ? 1 : 0);
-    gl.uniform1f(U("uSeed"), seed);
-    gl.enable(gl.BLEND);
-    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+      const buf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+      const loc = gl.getAttribLocation(prog, "p");
+      gl.enableVertexAttribArray(loc);
+      gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
 
-    let dpr = 1;
-    const resize = () => {
-      dpr = Math.min(window.devicePixelRatio || 1, coarse ? 1.5 : 2);
-      const r = canvas.getBoundingClientRect();
-      canvas.width = Math.max(1, Math.round(r.width * dpr));
-      canvas.height = Math.max(1, Math.round(r.height * dpr));
-      gl.viewport(0, 0, canvas.width, canvas.height);
-      gl.uniform2f(uRes, canvas.width, canvas.height);
-      gl.uniform1f(uDpr, 1);
-    };
-    resize();
-    const ro = new ResizeObserver(resize);
-    ro.observe(canvas);
+      const U = (n: string) => gl.getUniformLocation(prog, n);
+      const uRes = U("uRes"), uT = U("uT"), uPtr = U("uPtr"), uPtrAmt = U("uPtrAmt"), uDpr = U("uDpr");
+      // palette previews (src/app/palettes.css) can recolour the field through custom properties
+      const css = getComputedStyle(canvas);
+      const rgb = (n: string, d: number[]) => {
+        const v = css.getPropertyValue(n).trim().split(/\s+/).map(Number);
+        return v.length === 3 && v.every((x) => Number.isFinite(x)) ? v : d;
+      };
+      const lineA = Number(css.getPropertyValue("--field-line-a")) || lineAlpha;
+      gl.uniform3fv(U("uLine"), rgb("--field-line", line));
+      gl.uniform3fv(U("uSig"), rgb("--field-signal", signal));
+      gl.uniform1f(U("uLineA"), lineA);
+      gl.uniform1f(U("uSigA"), signalAlpha);
+      gl.uniform1f(U("uDensity"), density);
+      gl.uniform1f(U("uScan"), scan ? 1 : 0);
+      gl.uniform1f(U("uSeed"), seed);
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 
-    // pointer eased toward target so the field follows with mass
-    const ptr = { x: 0.5, y: 0.5, tx: 0.5, ty: 0.5, a: 0, ta: 0 };
-    const onMove = (e: PointerEvent) => {
-      const r = canvas.getBoundingClientRect();
-      ptr.tx = (e.clientX - r.left) / r.width;
-      ptr.ty = 1 - (e.clientY - r.top) / r.height;
-      ptr.ta = ptr.tx > 0 && ptr.tx < 1 && ptr.ty > 0 && ptr.ty < 1 ? 1 : 0;
-    };
-    if (interactive && !coarse && !reduce) window.addEventListener("pointermove", onMove, { passive: true });
+      let dpr = 1;
+      const resize = () => {
+        dpr = Math.min(window.devicePixelRatio || 1, coarse ? 1.5 : 2);
+        const r = canvas.getBoundingClientRect();
+        canvas.width = Math.max(1, Math.round(r.width * dpr));
+        canvas.height = Math.max(1, Math.round(r.height * dpr));
+        gl.viewport(0, 0, canvas.width, canvas.height);
+        gl.uniform2f(uRes, canvas.width, canvas.height);
+        gl.uniform1f(uDpr, 1);
+      };
+      resize();
+      const ro = new ResizeObserver(resize);
+      ro.observe(canvas);
 
-    let raf = 0;
-    let visible = true;
-    let last = performance.now();
-    let time = 12 + seed * 7;
-    const frame = (now: number) => {
-      raf = requestAnimationFrame(frame);
-      const dt = Math.min(0.05, (now - last) / 1000);
-      // cap at ~30fps on touch devices to save battery
-      if (coarse && now - last < 32) return;
-      last = now;
-      time += dt;
-      ptr.x += (ptr.tx - ptr.x) * 0.06;
-      ptr.y += (ptr.ty - ptr.y) * 0.06;
-      ptr.a += (ptr.ta - ptr.a) * 0.04;
-      gl.uniform1f(uT, time);
-      gl.uniform2f(uPtr, ptr.x, ptr.y);
-      gl.uniform1f(uPtrAmt, ptr.a);
-      gl.clearColor(0, 0, 0, 0);
-      gl.clear(gl.COLOR_BUFFER_BIT);
-      gl.drawArrays(gl.TRIANGLES, 0, 3);
-    };
+      // pointer eased toward target so the field follows with mass
+      const ptr = { x: 0.5, y: 0.5, tx: 0.5, ty: 0.5, a: 0, ta: 0 };
+      const onMove = (e: PointerEvent) => {
+        const r = canvas.getBoundingClientRect();
+        ptr.tx = (e.clientX - r.left) / r.width;
+        ptr.ty = 1 - (e.clientY - r.top) / r.height;
+        ptr.ta = ptr.tx > 0 && ptr.tx < 1 && ptr.ty > 0 && ptr.ty < 1 ? 1 : 0;
+      };
+      if (interactive && !coarse && !reduce) window.addEventListener("pointermove", onMove, { passive: true });
 
-    const drawStill = () => {
-      gl.uniform1f(uT, time);
-      gl.uniform2f(uPtr, 0.5, 0.5);
-      gl.uniform1f(uPtrAmt, 0);
-      gl.drawArrays(gl.TRIANGLES, 0, 3);
-    };
-
-    const io = new IntersectionObserver(([e]) => {
-      visible = e.isIntersecting;
-      cancelAnimationFrame(raf);
-      if (visible && !reduce) {
-        last = performance.now();
+      let raf = 0;
+      let visible = true;
+      let last = performance.now();
+      let time = 12 + seed * 7;
+      const frame = (now: number) => {
         raf = requestAnimationFrame(frame);
-      }
-    });
-    if (reduce) drawStill();
-    else io.observe(canvas);
+        const dt = Math.min(0.05, (now - last) / 1000);
+        // cap at ~30fps on touch devices to save battery
+        if (coarse && now - last < 32) return;
+        last = now;
+        time += dt;
+        ptr.x += (ptr.tx - ptr.x) * 0.06;
+        ptr.y += (ptr.ty - ptr.y) * 0.06;
+        ptr.a += (ptr.ta - ptr.a) * 0.04;
+        gl.uniform1f(uT, time);
+        gl.uniform2f(uPtr, ptr.x, ptr.y);
+        gl.uniform1f(uPtrAmt, ptr.a);
+        gl.clearColor(0, 0, 0, 0);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+      };
 
-    const onVis = () => {
-      cancelAnimationFrame(raf);
-      if (!document.hidden && visible && !reduce) {
-        last = performance.now();
-        raf = requestAnimationFrame(frame);
-      }
+      const drawStill = () => {
+        gl.uniform1f(uT, time);
+        gl.uniform2f(uPtr, 0.5, 0.5);
+        gl.uniform1f(uPtrAmt, 0);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+      };
+
+      const io = new IntersectionObserver(([e]) => {
+        visible = e.isIntersecting;
+        cancelAnimationFrame(raf);
+        if (visible && !reduce) {
+          last = performance.now();
+          raf = requestAnimationFrame(frame);
+        }
+      });
+      if (reduce) drawStill();
+      else io.observe(canvas);
+
+      const onVis = () => {
+        cancelAnimationFrame(raf);
+        if (!document.hidden && visible && !reduce) {
+          last = performance.now();
+          raf = requestAnimationFrame(frame);
+        }
+      };
+      document.addEventListener("visibilitychange", onVis);
+      // if the GPU drops the context, hide the canvas so the plate's own colour shows, never a blank box
+      const onLost = (e: Event) => {
+        e.preventDefault();
+        cancelAnimationFrame(raf);
+        canvas.style.visibility = "hidden";
+      };
+      canvas.addEventListener("webglcontextlost", onLost);
+
+      canvas.dataset.ready = "1";
+
+      return () => {
+        cancelAnimationFrame(raf);
+        io.disconnect();
+        ro.disconnect();
+        window.removeEventListener("pointermove", onMove);
+        document.removeEventListener("visibilitychange", onVis);
+        canvas.removeEventListener("webglcontextlost", onLost);
+        // Free GPU objects but keep the context: React may remount this same canvas.
+        gl.deleteBuffer(buf);
+        gl.deleteProgram(prog);
+      };
     };
-    document.addEventListener("visibilitychange", onVis);
 
-    canvas.dataset.ready = "1";
-
+    let stop: (() => void) | undefined;
+    let dead = false;
+    const start = () => {
+      if (!dead) stop = init();
+    };
+    // some Safari versions have no requestIdleCallback
+    const hasIdle = typeof window.requestIdleCallback === "function";
+    const handle = hasIdle ? window.requestIdleCallback(start, { timeout: 1200 }) : window.setTimeout(start, 250);
     return () => {
-      cancelAnimationFrame(raf);
-      io.disconnect();
-      ro.disconnect();
-      window.removeEventListener("pointermove", onMove);
-      document.removeEventListener("visibilitychange", onVis);
-      // Free GPU objects but keep the context: React may remount this same canvas.
-      gl.deleteBuffer(buf);
-      gl.deleteProgram(prog);
+      dead = true;
+      if (hasIdle) window.cancelIdleCallback(handle);
+      else window.clearTimeout(handle);
+      stop?.();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

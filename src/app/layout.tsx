@@ -1,38 +1,26 @@
-/** The root layout for every page: the two brand fonts (Jost, Wix Madefor Text), globals.css and the "js" class set before paint. */
-
 import type { Metadata, Viewport } from "next";
-import { Jost, Wix_Madefor_Text } from "next/font/google";
-import Script from "next/script";
+import { Jost } from "next/font/google";
 import "./globals.css";
+import { SITE } from "@/components/landing/tools/catalog";
 
+/* The root layout for every page, public and signed in.
+   Jost, everywhere (inrange brand guidelines v1.1): headings in Medium 500,
+   body in Regular 400. The wordmark is outlined from Jost Medium. */
 const display = Jost({
   variable: "--font-display",
   subsets: ["latin", "latin-ext"],
   weight: "variable",
 });
 
-const text = Wix_Madefor_Text({
-  variable: "--font-text",
-  subsets: ["latin", "latin-ext"],
-  weight: "variable",
-});
-
-/**
- * The site-wide defaults (the team's own landing copy). Pages set their own titles ("Care | InRange");
- * every signed-in area, sign-in, onboarding and the video call set noindex in their own layout or page.
- */
 export const metadata: Metadata = {
-  metadataBase: new URL("https://inrangemed.com"),
-  title: {
-    default: "InRange | Doctor-led care for weight and blood sugar",
-    template: "%s",
-  },
+  metadataBase: new URL(SITE),
+  title: "Doctor-led weight and diabetes care in India | inrange",
   description:
-    "A doctor-led programme for obesity and type 2 diabetes in India. A free check, a free first consultation, blood tests at home, nutrition built on Indian food, and a care team that follows your progress every week.",
+    "Doctor-led care for obesity and type 2 diabetes in India. A free check, then a 30-minute video consultation with a doctor, blood tests at home, Indian nutrition and one care team.",
   openGraph: {
-    title: "InRange | Doctor-led care for weight and blood sugar",
+    title: "inrange: doctor-led care for weight and blood sugar",
     description:
-      "A doctor-led programme for obesity and type 2 diabetes. Consultation, tests, nutrition and follow-up in one plan.",
+      "Doctor-led care for obesity and type 2 diabetes. A free check, then a 30-minute video consultation with a doctor, blood tests at home and one care team.",
     locale: "en_IN",
     type: "website",
   },
@@ -40,8 +28,10 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
+  // iOS Safari draws edge to edge; opting in makes env(safe-area-inset-*) real,
+  // so the floating nav and action dock can keep clear of the system UI
   viewportFit: "cover",
-  themeColor: "#0B1F22",
+  themeColor: "#0a0b0a",
   colorScheme: "light",
 };
 
@@ -51,21 +41,27 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html
-      lang="en-IN"
-      className={`${display.variable} ${text.variable}`}
-      suppressHydrationWarning
-    >
+    <html lang="en-IN" className={display.variable} suppressHydrationWarning>
       <head>
-        <Script
-          id="add-js-class"
-          strategy="beforeInteractive"
+        {/* Reveal states must exist before first paint, or content flashes and then hides. */}
+        <script
           dangerouslySetInnerHTML={{
             __html: "document.documentElement.classList.add('js')",
           }}
         />
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        {/* Start the reveals already on screen at first paint, without waiting for the page's JavaScript
+            (about two seconds on a mid-range phone). Two frames later, so the transition still plays. The
+            main content then counts as visible straight away, which is what Google measures (LCP). */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "requestAnimationFrame(function(){requestAnimationFrame(function(){var h=innerHeight;document.querySelectorAll('[data-reveal]').forEach(function(e){if(e.getBoundingClientRect().top<h*0.88)e.classList.add('in')})})})",
+          }}
+        />
+      </body>
     </html>
   );
 }

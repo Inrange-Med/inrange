@@ -1,7 +1,8 @@
 .hero {
   overflow: clip;
   position: relative;
-  background: var(--teal-800);
+  background: var(--slate-800);
+  background-image: var(--sheen), var(--carbon);
   color: var(--on-dark);
   display: grid;
   padding: 0 0 var(--gutter);
@@ -53,21 +54,97 @@
   text-wrap: pretty;
 }
 
-/* what happens after the click, said right at the button */
-.proof {
-  margin-top: -6px;
-  font-size: 0.875rem;
-  line-height: 1.5;
-  color: var(--on-dark-2);
-  max-width: 30em;
-  text-wrap: pretty;
-}
-
 .actions {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
   margin-top: 8px;
+}
+
+/* the programmes, named once in the first screen; each opens its tile further down */
+/* the programme index: a band ruled top and bottom, on the panel's own colour, so the scan lines stop
+   at its rules without a visible box; the first name sits exactly on the headline's left edge */
+.progs {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  max-width: 34rem;
+  z-index: 0;
+  border-top: 1px solid var(--hair-dark);
+  border-bottom: 1px solid var(--hair-dark);
+}
+/* the band's ground: the panel's own carbon, masked out over its last 32px past the end, so the
+   isolines stop at the rules and are never cut by a hard edge, and the weave runs unbroken */
+.progs::after {
+  content: "";
+  position: absolute;
+  inset: 0 -32px 0 0;
+  z-index: -1;
+  background: var(--slate-800) var(--carbon);
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 32px), transparent);
+  mask-image: linear-gradient(90deg, #000 calc(100% - 32px), transparent);
+  pointer-events: none;
+}
+.progs li {
+  display: grid;
+}
+.progs a {
+  display: grid;
+  gap: 3px;
+  align-content: center;
+  min-height: 64px;
+  padding: 12px 16px 12px 0;
+  color: var(--on-dark);
+  text-decoration: none;
+}
+/* phones: two by two, a rule between the columns and between the rows */
+.progs li:nth-child(even) a {
+  padding-left: 16px;
+  box-shadow: inset 1px 0 0 var(--hair-dark);
+}
+.progs li:nth-child(n + 3) {
+  border-top: 1px solid var(--hair-dark);
+}
+.progName {
+  font-family: var(--font-display);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: -0.006em;
+  line-height: 1.2;
+  white-space: nowrap;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 4px;
+  transition: text-decoration-color 220ms var(--ease-out);
+}
+.progState {
+  font-size: 0.8125rem;
+  line-height: 1.3;
+  color: var(--on-dark-3);
+}
+.progState[data-live] {
+  color: var(--signal);
+}
+@media (hover: hover) and (pointer: fine) {
+  .progs a:hover .progName {
+    text-decoration-color: rgb(238 239 240 / 0.5);
+  }
+}
+/* from 640 the four share one row, each cell the same width, a rule between each */
+@media (min-width: 640px) {
+  .progs {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .progs li:nth-child(n + 3) {
+    border-top: 0;
+  }
+  .progs li + li a {
+    padding-left: 16px;
+    box-shadow: inset 1px 0 0 var(--hair-dark);
+  }
 }
 
 .ruler {
@@ -94,14 +171,101 @@
   aspect-ratio: 4 / 3.5;
   border-radius: var(--r-media);
   overflow: hidden;
-  background: var(--teal-700);
-  --wipe: var(--teal-800);
+  background: var(--slate-700);
+  --wipe: var(--slate-800);
 }
 .img {
   object-fit: cover;
   object-position: 50% 66%;
 }
-
+/* the photo settles into carbon at its foot, so the seal reads as the photo's own caption rather than
+   a card laid on top of it: the same fall-off the programme tiles use under their names */
+.media::before {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 44%;
+  background: linear-gradient(
+    to top,
+    rgb(10 11 12 / 0.9) 0%,
+    rgb(10 11 12 / 0.62) 38%,
+    rgb(10 11 12 / 0.22) 72%,
+    rgb(10 11 12 / 0) 100%
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+/* the seal label: the one place the hero names where medicine comes from, set on that dark foot */
+.seal {
+  position: absolute;
+  z-index: 2;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  max-width: 24rem;
+  min-height: 52px;
+  color: var(--on-dark);
+  text-decoration: none;
+}
+.sealWell {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 7px;
+  background: var(--paper);
+  box-shadow: inset 0 0 0 1px var(--hair-2);
+}
+.sealWell svg {
+  width: 26px;
+  height: 26px;
+  fill: var(--ink);
+}
+.sealText {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.sealK {
+  font-family: var(--font-display);
+  font-size: 0.9375rem;
+  font-weight: 520;
+  letter-spacing: -0.006em;
+  line-height: 1.2;
+}
+.sealV {
+  font-size: 0.8125rem;
+  line-height: 1.3;
+  color: var(--on-dark-2);
+}
+.sealGo {
+  color: var(--on-dark-2);
+  transition: transform 240ms var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .seal:hover .sealGo {
+    transform: translateX(3px);
+  }
+}
+#top .seal:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 6px;
+  border-radius: 12px;
+}
+/* the narrowest phones: the arrow steps aside so both lines hold on one line each */
+@media (max-width: 379px) {
+  .seal {
+    grid-template-columns: auto minmax(0, 1fr);
+    padding-right: 0;
+  }
+  .sealGo {
+    display: none;
+  }
+}
 @media (min-width: 640px) {
   .media {
     aspect-ratio: 16 / 12;
@@ -145,8 +309,13 @@
     bottom: 0;
     width: 14px;
     height: 100%;
-    stroke: rgb(234 242 240 / 0.22);
+    stroke: rgb(236 237 239 / 0.22);
     stroke-width: 1;
+  }
+  .seal {
+    left: 32px;
+    right: auto;
+    bottom: clamp(48px, 7vh, 80px);
   }
   .media {
     margin: 0;
@@ -170,5 +339,113 @@
 @media (min-width: 1280px) {
   .img {
     object-position: 20% 50%;
+  }
+}
+@media (hover: hover) and (pointer: fine) {
+  .sealK {
+    text-decoration: underline;
+    text-decoration-color: transparent;
+    text-underline-offset: 4px;
+    transition: text-decoration-color 220ms var(--ease-out);
+  }
+  .seal:hover .sealK {
+    text-decoration-color: rgb(238 239 240 / 0.5);
+  }
+}
+/* phones and tablets: the photo is short, so the foot that carries the seal is taller and deeper */
+@media (max-width: 1023px) {
+  .media::before {
+    height: 62%;
+    background: linear-gradient(
+      to top,
+      rgb(10 11 12 / 0.92) 0%,
+      rgb(10 11 12 / 0.74) 34%,
+      rgb(10 11 12 / 0.3) 70%,
+      rgb(10 11 12 / 0) 100%
+    );
+  }
+}
+/* phones: the programme index moves under the photo, so the photo and its seal reach the first screen */
+.indexBelow {
+  display: none;
+}
+@media (max-width: 639px) {
+  .indexTop {
+    display: none;
+  }
+  .indexBelow {
+    display: block;
+    padding: 8px var(--gutter) 4px;
+  }
+}
+/* phones held sideways: a shorter climb to the headline so the booking button is on the first screen */
+@media (orientation: landscape) and (max-height: 500px) and (max-width: 1023px) {
+  .panel {
+    padding-top: calc(var(--nav-h) + 24px + env(safe-area-inset-top));
+  }
+  .title {
+    font-size: 2.6rem;
+  }
+  .copy {
+    gap: 14px;
+  }
+}
+
+/* ------------------------------------------------------------------
+   The hero is one sheet of fluted glass with her call behind it (the
+   In range look, chosen Nov 2026; art from scripts/glass-hero.mjs in the
+   design repo). The words sit on its plain side; on laptops she is
+   behind the right column, on phones inside the photo frame. :root
+   lifts these above the base rules earlier in this file.
+------------------------------------------------------------------- */
+:global(:root) .hero {
+  --carbon: none;
+  --sheen: none;
+  background: var(--glass-ground);
+}
+:global(:root) .glass {
+  position: absolute;
+  inset: 0;
+  background: var(--glass-ground) var(--glass) 0% 50% / cover no-repeat;
+}
+:global(:root) .progs::after {
+  display: none;
+}
+:global(:root) .indexBelow {
+  position: relative;
+}
+/* the photo frame and its seal keep white words on the glass's dark foot */
+:global(:root) .media {
+  --on-dark: #f7f6f3;
+  --on-dark-2: rgb(247 246 243 / 0.8);
+  --signal: #f7f6f3;
+  --wipe: var(--glass-ground);
+  background: var(--glass-ground) var(--glass) 88% 6% / auto 175% no-repeat;
+}
+:global(:root) .media::before {
+  background: linear-gradient(
+    to top,
+    rgb(var(--glass-foot) / 0.9) 0%,
+    rgb(var(--glass-foot) / 0.6) 38%,
+    rgb(var(--glass-foot) / 0) 100%
+  );
+}
+@media (min-width: 1024px) {
+  :global(:root) .glass {
+    background-position: 100% 22%;
+  }
+  /* screens squarer than the art (16:10) would push her under the words: fit the art to the width
+     instead, sat on the hero's foot, with the plain glass colour above it */
+  @media (max-aspect-ratio: 16 / 10) {
+    :global(:root) .glass {
+      background:
+        linear-gradient(to bottom, var(--glass-ground), transparent 32%) 0 100% / 100% 62.5vw no-repeat,
+        linear-gradient(90deg, rgb(255 255 255 / 0.03), transparent 28%, transparent 80%, rgb(0 0 0 / 0.1)) 0 0 / 1.25% 100%,
+        var(--glass) 100% 100% / 100% auto no-repeat,
+        var(--glass-ground);
+    }
+  }
+  :global(:root) .media {
+    background: none;
   }
 }

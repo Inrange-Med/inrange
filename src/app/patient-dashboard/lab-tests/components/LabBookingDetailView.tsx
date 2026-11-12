@@ -8,7 +8,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import ErrorNotice from "@/components/ui/ErrorNotice";
-import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
+import PageGhosts from "@/app/patient-dashboard/components/PageGhosts";
 import PageHead from "@/components/ui/PageHead";
 import { useToast } from "@/components/ui/ToastProvider";
 import { useApiResource } from "@/hooks/useApiResource";
@@ -68,7 +68,7 @@ export default function LabBookingDetailView({
   if (bookingResource.loading) {
     return (
       <main className={`${layoutStyles.page} ${layoutStyles.narrow}`}>
-        <LoadingSkeleton />
+        <PageGhosts title heights={[220, 160]} />
       </main>
     );
   }

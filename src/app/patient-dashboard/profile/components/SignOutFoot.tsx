@@ -20,7 +20,7 @@ export default function SignOutFoot() {
     <div className={styles.foot}>
       {asking ? (
         <div className={styles.outAsk} role="group" aria-label="Sign out">
-          <p>Sign out of InRange on this device?</p>
+          <p>Sign out of inrange on this device?</p>
           <div className={styles.outBtns}>
             <button
               type="button"
@@ -52,7 +52,7 @@ export default function SignOutFoot() {
         </button>
       )}
       <p className={styles.version}>
-        InRange for patients, version{" "}
+        inrange for patients, version{" "}
         <span className="num">{VERSION}</span>
       </p>
     </div>

@@ -3,7 +3,7 @@
 import type { Metadata } from "next";
 import LabTestsView from "./components/LabTestsView";
 
-export const metadata: Metadata = { title: "Blood tests | InRange" };
+export const metadata: Metadata = { title: "Blood tests | inrange" };
 
 export default function LabTestsPage() {
   return <LabTestsView />;

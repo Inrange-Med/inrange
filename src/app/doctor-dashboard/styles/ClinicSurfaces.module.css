@@ -11,6 +11,32 @@
   padding: clamp(16px, 3vw, 36px) var(--gutter) 0;
 }
 
+/* the waiting state (ClinicSkeleton): blocks shaped like a portal page, breathing while it loads */
+.skeleton {
+  display: grid;
+  gap: 16px;
+}
+/* on its own it starts 40px down, as the prototype's does, whatever the page's own top padding */
+.skeleton[data-titled="true"] {
+  padding-top: calc(40px - clamp(16px, 3vw, 36px));
+}
+.skeleton span {
+  display: block;
+  border-radius: var(--r-surface);
+  background: var(--bg-2);
+  animation: breathe 1400ms var(--ease-out) infinite alternate;
+}
+@keyframes breathe {
+  to {
+    opacity: 0.5;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton span {
+    animation: none;
+  }
+}
+
 /* the doctor's page head: passed to the kit's PageHead as className (it replaces the kit's spacing) */
 .pageHead {
   display: grid;

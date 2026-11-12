@@ -102,7 +102,7 @@ export default function LabCard({
           The values are in the report file.{" "}
           {lab.file && (
             <FileOpenButton
-              className={clinicStyles.textBtn}
+              className={`${clinicStyles.textBtn} ${styles.inlineOpen}`}
               load={() => getFile(lab.file ?? "")}
             >
               {(opening) => (opening ? "Opening" : "Open the report")}

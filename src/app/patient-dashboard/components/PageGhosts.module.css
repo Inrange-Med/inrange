@@ -1,0 +1,24 @@
+/* PageGhosts: the prototype's ghost recipe (Arhaan Dashboard.module.css .ghost), breathing while a
+   page loads and holding still under reduced motion. */
+
+.stack {
+  display: grid;
+  gap: 16px;
+}
+.ghost {
+  display: block;
+  min-width: 0;
+  border-radius: var(--r-surface);
+  background: var(--bg-2);
+  animation: breathe 1400ms var(--ease-out) infinite alternate;
+}
+@keyframes breathe {
+  to {
+    opacity: 0.5;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ghost {
+    animation: none;
+  }
+}

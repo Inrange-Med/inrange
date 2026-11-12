@@ -152,8 +152,22 @@
     transform: translate3d(0, 8px, 0);
   }
 }
+/* a day with no open time holds the height of one group of times, so the action below stays put */
+.empty {
+  display: grid;
+  place-items: center;
+  min-height: 112px;
+  border-radius: var(--r-media);
+  box-shadow: inset 0 0 0 1px var(--hair);
+  color: var(--ink-3);
+  font-size: 0.9375rem;
+  text-align: center;
+  animation: times-in 320ms var(--ease-out) both;
+}
 @media (prefers-reduced-motion: reduce) {
-  .times {
+  .days,
+  .times,
+  .empty {
     animation: none;
   }
 }
@@ -264,6 +278,12 @@
 .note {
   text-align: center;
 }
+/* the confirm action always spans its column, whatever page it sits on */
+.wrap .confirm :global(.btn):not(:global(.btn--ghost)) {
+  justify-self: stretch;
+  width: 100%;
+  min-width: 0;
+}
 @container (min-width: 720px) {
   .confirm .note[data-quiet="true"] {
     display: block;
@@ -317,9 +337,6 @@
 /* a narrow phone: four or five pill-shaped times to a row, never a squeezed circle; "Current" moves
    out of its chip into one line under the grid */
 @media (max-width: 389px) {
-  .days {
-    gap: 4px;
-  }
   .grid {
     grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
     gap: 6px;

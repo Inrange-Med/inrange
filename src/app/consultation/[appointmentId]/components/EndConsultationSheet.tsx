@@ -3,6 +3,7 @@
 /** The doctor's "End this consultation?" confirmation: it ends the call for both people. */
 
 import { useState } from "react";
+import { PhoneDisconnect } from "@phosphor-icons/react";
 import { errorMessage } from "@/lib/http/apiClient";
 import Sheet from "@/components/ui/Sheet";
 import ErrorNotice from "@/components/ui/ErrorNotice";
@@ -33,7 +34,15 @@ export default function EndConsultationSheet({
   };
 
   return (
-    <Sheet open={open} onClose={onClose} title="End this consultation?">
+    <Sheet
+      open={open}
+      onClose={onClose}
+      title="End this consultation?"
+      size="compact"
+    >
+      <div className={styles.confirmSymbol} aria-hidden="true">
+        <PhoneDisconnect size={25} />
+      </div>
       <p className={styles.confirmText}>
         The call ends for you and your patient.
       </p>
@@ -48,7 +57,7 @@ export default function EndConsultationSheet({
         </button>
         <button
           type="button"
-          className={styles.endButton}
+          className={styles.confirmEnd}
           onClick={end}
           disabled={ending}
           aria-busy={ending}

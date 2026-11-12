@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import OnboardingFlow from "./components/OnboardingFlow";
 
 export const metadata: Metadata = {
-  title: "Your health profile | InRange",
+  title: "Your health profile | inrange",
   robots: { index: false, follow: false },
 };
 

@@ -6,14 +6,21 @@
 
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
+import ClinicSkeleton from "@/app/doctor-dashboard/components/ClinicSkeleton";
+import clinicStyles from "@/app/doctor-dashboard/styles/ClinicSurfaces.module.css";
 import MessagesView from "./components/MessagesView";
 
-export const metadata: Metadata = { title: "Messages | InRange" };
+export const metadata: Metadata = { title: "Messages | inrange" };
 
 export default function MessagesPage() {
   return (
-    <Suspense fallback={<LoadingSkeleton />}>
+    <Suspense
+      fallback={
+        <main className={clinicStyles.page}>
+          <ClinicSkeleton />
+        </main>
+      }
+    >
       <MessagesView />
     </Suspense>
   );

@@ -13,6 +13,12 @@
   }
 }
 
+/* the head's Working hours link sits on the title's middle, as the prototype's month nav does */
+.headAction {
+  display: flex;
+  align-self: center;
+}
+
 .monthHead {
   display: flex;
   align-items: center;

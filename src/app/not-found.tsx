@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import NotFoundView from "./NotFoundView";
 
 export const metadata: Metadata = {
-  title: "Page not found | InRange",
+  title: "Page not found | inrange",
   robots: { index: false, follow: false },
 };
 

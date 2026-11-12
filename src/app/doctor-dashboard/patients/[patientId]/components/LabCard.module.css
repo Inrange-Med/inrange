@@ -197,3 +197,8 @@
   gap: 10px;
   justify-items: start;
 }
+
+/* "Open the report" inside a line of small text: a 44px target that does not stretch the line */
+.inlineOpen {
+  margin-block: -12px;
+}

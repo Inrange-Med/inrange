@@ -150,7 +150,7 @@ export default function TestedPersonStep({
       </label>
       {tried && problem && (
         <p className={formStyles.err} role="alert">
-          <WarningCircle size={16} weight="bold" aria-hidden="true" />
+          <WarningCircle size={16} weight="fill" aria-hidden="true" />
           <span>{problem}</span>
         </p>
       )}

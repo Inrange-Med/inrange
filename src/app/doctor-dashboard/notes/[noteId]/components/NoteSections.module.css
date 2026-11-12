@@ -467,7 +467,7 @@
 }
 
 .hint {
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   line-height: 1.45;
   color: var(--ink-3);
 }
@@ -642,6 +642,9 @@
   .iconBtn {
     width: 44px;
     height: 44px;
+  }
+  .menu > button {
+    min-height: 44px;
   }
   .editBtn,
   .inlineBtn {

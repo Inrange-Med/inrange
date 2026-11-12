@@ -1,92 +1,96 @@
-/* StatusTracker: a status step by step on one measured line: done in teal, now in the signal colour. */
+/* StatusTracker (Arhaan Care.module.css .steps): bars across the card at every width, done in
+   slate, the current step a thicker bar in the signal colour, so position never rests on a small
+   hue shift. Labels wrap inside their column where every label shows (the team's lab steps are
+   longer than the design's one-word ones). */
 
 .tracker {
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: minmax(0, 1fr);
-  gap: 6px;
+  gap: 4px 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 .tracker li {
   position: relative;
   display: grid;
   align-content: start;
-  gap: 6px;
+  gap: 2px;
   padding-top: 18px;
   min-width: 0;
 }
-.tracker li::before {
-  content: "";
+.tracker i {
   position: absolute;
-  top: 5px;
+  top: 3px;
   left: 0;
-  right: -6px;
-  height: 2px;
+  right: 0;
+  height: 4px;
   border-radius: 2px;
   background: var(--hair);
 }
-.tracker li:last-child::before {
-  right: 0;
-}
-.tracker li[data-state="done"]::before {
+.tracker li[data-state="done"] i {
   background: var(--slate-700);
 }
-.trackDot {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 12px;
-  height: 12px;
-  border-radius: 999px;
-  background: var(--paper);
-  box-shadow: inset 0 0 0 2px var(--hair-2);
-}
-[data-state="done"] > .trackDot {
-  background: var(--slate-700);
-  box-shadow: none;
-}
-[data-state="now"] > .trackDot {
-  background: var(--paper);
-  box-shadow: inset 0 0 0 3px var(--signal-ink);
+.tracker li[data-state="now"] i {
+  top: 2px;
+  height: 6px;
+  border-radius: 3px;
+  /* --signal is 1.3:1 on paper (never on light surfaces); ink-side slate reads as "now" */
+  background: var(--slate-800);
 }
 .trackLabel {
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   line-height: 1.3;
   color: var(--ink-3);
+  text-wrap: balance;
 }
-[data-state="done"] > .trackLabel,
+[data-state="done"] > .trackLabel {
+  font-weight: 450;
+  color: var(--ink-2);
+}
 [data-state="now"] > .trackLabel {
+  font-weight: 600;
   color: var(--ink);
-  font-weight: 560;
 }
 .trackWhen {
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   color: var(--ink-3);
+  white-space: nowrap;
 }
-@media (max-width: 559px) {
-  /* six steps do not fit across a phone: they stack, still one measured line */
-  .tracker {
-    grid-auto-flow: row;
-    gap: 0;
-  }
-  .tracker li {
-    grid-template-columns: 1fr auto;
-    padding: 0 0 14px 24px;
-  }
-  .tracker li::before {
-    top: 14px;
-    bottom: 0;
-    left: 5px;
-    right: auto;
-    width: 2px;
-    height: auto;
-  }
-  .tracker li:last-child::before {
-    display: none;
-  }
-  .trackDot {
-    top: 2px;
-  }
+/*
+  Phones: name only the current step and the last (every step keeps its bar, and the full status is
+  read out). The labels run on one line across the bars beside them; the last ends flush with its bar
+  and runs leftwards. When the current step sits just before the last, only it is named, so the two
+  never meet.
+*/
+@media (max-width: 767px) {
   .trackLabel {
-    font-size: 0.875rem;
+    white-space: nowrap;
+  }
+  .tracker li:last-child > :not(i) {
+    justify-self: end;
+    margin-left: -40px;
+  }
+  .tracker li:not([data-state="now"]):not(:last-child) .trackLabel,
+  .tracker:has(
+      li[data-state="now"]:nth-last-child(2),
+      li[data-state="now"]:nth-last-child(3)
+    )
+    li:last-child
+    .trackLabel {
+    /* transparent, not visibility:hidden, so screen readers still hear every step's name */
+    color: transparent;
+  }
+}
+/* phones under 390px: smaller labels and dates */
+@media (max-width: 389px) {
+  .tracker {
+    gap: 4px 6px;
+  }
+  /* the team's 13px floor holds (the design drops to 12px here) */
+  .trackLabel,
+  .trackWhen {
+    font-size: 0.8125rem;
   }
 }

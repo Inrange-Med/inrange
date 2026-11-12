@@ -19,6 +19,14 @@
     background: var(--bg);
   }
 }
+/* the blood test screens scroll through several screens: the bar goes solid, so nothing reads
+   through it under the progress ruler */
+.bar[data-phase="lab"],
+.bar[data-phase="upload"] {
+  background: var(--bg);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
 .barStart {
   display: flex;
   align-items: center;
@@ -60,6 +68,11 @@
   align-items: center;
   gap: 8px;
   height: 44px;
+}
+/* the report-sent screen keeps the bar's height so nothing shifts, but drops the finished ruler */
+.progress[hidden] {
+  display: flex;
+  visibility: hidden;
 }
 
 .chap {

@@ -1,67 +1,56 @@
-/** The InRange wordmark (geometry in wordmarkPaths). Black or white only: it draws in currentColor. */
+/**
+ * The inrange wordmark (brand guidelines v1.1): outlined from Jost Medium, with the drawn dot and the
+ * plus (geometry in wordmarkPaths). Ink or paper only: it draws in currentColor, and the plus is never red.
+ * Keep it at least 120px wide (height 34); below that the guidelines ask for the dot icon instead.
+ * With `sting`, the guidelines' animated logo plays once (keyframes in src/app/globals.css): the letters
+ * fade in, the dot rises, the plus pops in.
+ */
 
 import {
-  LOGO_ASPECT,
-  LOGO_BASELINE,
-  LOGO_DOT,
-  LOGO_FONT_SIZE,
-  LOGO_STEM,
-  LOGO_TEXT,
-  LOGO_TEXT_LENGTH,
-  LOGO_TEXT_X,
+  LOGO_BODY_PATH,
+  LOGO_DOT_PATH,
+  LOGO_H,
+  LOGO_PLUS_PATH,
   LOGO_VIEWBOX,
+  LOGO_W,
 } from "./wordmarkPaths";
 
 export default function Wordmark({
   className,
-  height = 30,
+  height = 34,
   dotClassName,
+  sting = false,
 }: {
   className?: string;
   height?: number;
-  /** the landing page's rising-dot sting */
+  /** a class on the dot alone, for a rising-dot animation */
   dotClassName?: string;
+  sting?: boolean;
 }) {
+  const dotClass =
+    [sting ? "sting" : "", dotClassName ?? ""].filter(Boolean).join(" ") ||
+    undefined;
   return (
     <svg
       className={className}
       height={height}
-      width={height * LOGO_ASPECT}
+      width={(height * LOGO_W) / LOGO_H}
       viewBox={LOGO_VIEWBOX}
       role="img"
-      aria-label="InRange"
+      aria-label="inrange"
       style={{ display: "block", overflow: "visible" }}
     >
-      <rect
-        x={LOGO_STEM.x}
-        y={LOGO_STEM.top}
-        width={LOGO_STEM.width}
-        height={LOGO_BASELINE - LOGO_STEM.top}
+      <path
+        d={LOGO_BODY_PATH}
         fill="currentColor"
+        className={sting ? "sting-word" : undefined}
       />
-      <circle
-        cx={LOGO_DOT.cx}
-        cy={LOGO_DOT.cy}
-        r={LOGO_DOT.r}
+      <path d={LOGO_DOT_PATH} fill="currentColor" className={dotClass} />
+      <path
+        d={LOGO_PLUS_PATH}
         fill="currentColor"
-        className={dotClassName}
+        className={sting ? "sting-plus" : undefined}
       />
-      <text
-        x={LOGO_TEXT_X}
-        y={LOGO_BASELINE}
-        fontSize={LOGO_FONT_SIZE}
-        textLength={LOGO_TEXT_LENGTH}
-        lengthAdjust="spacingAndGlyphs"
-        fill="currentColor"
-        aria-hidden="true"
-        style={{
-          fontFamily: "var(--font-display)",
-          fontWeight: 500,
-          letterSpacing: "-0.02em",
-        }}
-      >
-        {LOGO_TEXT}
-      </text>
     </svg>
   );
 }

@@ -90,9 +90,23 @@ export default function ContourField({
       const uPtr = uniform("uPtr");
       const uPtrAmt = uniform("uPtrAmt");
       const uDpr = uniform("uDpr");
-      gl.uniform3fv(uniform("uLine"), line);
-      gl.uniform3fv(uniform("uSig"), signal);
-      gl.uniform1f(uniform("uLineA"), lineAlpha);
+      // the palette colours the field through custom properties (--field-line, --field-signal,
+      // optional --field-line-a), as in the design repository; the props are the fallback
+      const css = getComputedStyle(canvas);
+      const rgb = (name: string, fallback: number[]) => {
+        const value = css
+          .getPropertyValue(name)
+          .trim()
+          .split(/\s+/)
+          .map(Number);
+        return value.length === 3 && value.every((x) => Number.isFinite(x))
+          ? value
+          : fallback;
+      };
+      const lineA = Number(css.getPropertyValue("--field-line-a")) || lineAlpha;
+      gl.uniform3fv(uniform("uLine"), rgb("--field-line", line));
+      gl.uniform3fv(uniform("uSig"), rgb("--field-signal", signal));
+      gl.uniform1f(uniform("uLineA"), lineA);
       gl.uniform1f(uniform("uSigA"), signalAlpha);
       gl.uniform1f(uniform("uDensity"), density);
       gl.uniform1f(uniform("uScan"), scan ? 1 : 0);

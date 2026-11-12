@@ -6,18 +6,18 @@
 
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
+import PageGhosts from "@/app/patient-dashboard/components/PageGhosts";
 import layoutStyles from "@/components/ui/styles/PageLayout.module.css";
 import CheckoutFlow from "./components/CheckoutFlow";
 import styles from "./CheckoutPage.module.css";
 
-export const metadata: Metadata = { title: "Checkout | InRange" };
+export const metadata: Metadata = { title: "Checkout | inrange" };
 
 export default function CheckoutPage() {
   return (
     <main className={`${layoutStyles.page} ${layoutStyles.narrow}`}>
       <div className={styles.column}>
-        <Suspense fallback={<LoadingSkeleton />}>
+        <Suspense fallback={<PageGhosts title heights={[300]} />}>
           <CheckoutFlow />
         </Suspense>
       </div>

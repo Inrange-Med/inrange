@@ -51,6 +51,22 @@
   align-items: center;
   gap: 6px;
 }
+/* focus mode (Arhaan Dashboard.module.css .focusBar): a close button, the task's name centred,
+   nothing else; the close is the kit's round button (FormControls .round) */
+.focusBar .barInner {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+}
+.focusTitle {
+  font-family: var(--font-display);
+  font-size: 1.0625rem;
+  font-weight: 520;
+  letter-spacing: -0.01em;
+  text-align: center;
+}
+.focusSpacer {
+  width: 44px;
+}
 .offline {
   max-width: calc(1180px + var(--gutter) * 2);
   margin: 8px auto 0;

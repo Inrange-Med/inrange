@@ -15,7 +15,8 @@
 
 .head {
   display: grid;
-  gap: 18px;
+  --stack-gap: 20px;
+  gap: 20px;
 }
 .lede {
   max-width: 30em;
@@ -76,13 +77,13 @@
   }
 }
 .maint {
-  fill: var(--mint-wash);
+  fill: var(--signal-wash);
 }
 .maintLabel {
   font-family: var(--font-text);
   font-weight: 560;
   font-size: 34px;
-  fill: var(--mint-ink);
+  fill: var(--signal-ink);
 }
 .maintSub {
   display: none;
@@ -118,22 +119,22 @@
   stroke-width: 2;
 }
 .lit .link {
-  stroke: rgb(28 64 70 / 0.28);
+  stroke: rgb(25 26 28 / 0.28);
 }
 .lit .you {
-  fill: var(--teal-800);
+  fill: var(--slate-800);
 }
 .lit .reply {
-  fill: var(--mint-ink);
+  fill: var(--signal-ink);
 }
 .lit .review {
   fill: var(--paper);
-  stroke: var(--teal-800);
+  stroke: var(--slate-800);
   stroke-width: 2.5;
 }
 .lit .lab {
-  fill: var(--mint);
-  stroke: var(--teal-900);
+  fill: var(--signal);
+  stroke: var(--slate-900);
   stroke-width: 2;
 }
 .cursor {
@@ -144,8 +145,8 @@
   width: 2px;
   margin-left: -1px;
   border-radius: 2px;
-  background: var(--mint);
-  box-shadow: 0 0 0 3px rgb(70 216 173 / 0.18);
+  background: var(--slate-800);
+  box-shadow: 0 0 0 3px rgb(24 25 27 / 0.1);
 }
 
 .dots {
@@ -167,16 +168,16 @@
     transform 400ms var(--ease-out);
 }
 .dot[data-on] {
-  background: var(--teal-800);
+  background: var(--slate-800);
   box-shadow:
     0 0 0 3px var(--paper),
-    inset 0 0 0 1.5px var(--teal-800);
+    inset 0 0 0 1.5px var(--slate-800);
 }
 .dot[data-current] {
-  background: var(--mint);
+  background: var(--signal);
   box-shadow:
     0 0 0 3px var(--paper),
-    0 0 0 4px var(--teal-800);
+    0 0 0 4px var(--slate-800);
   transform: scale(1.15);
 }
 
@@ -204,26 +205,26 @@
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: var(--teal-800);
+  background: var(--slate-800);
 }
 .kReply {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--mint-ink);
+  background: var(--signal-ink);
 }
 .kReview {
   width: 13px;
   height: 13px;
   border-radius: 50%;
-  box-shadow: inset 0 0 0 2px var(--teal-800);
+  box-shadow: inset 0 0 0 2px var(--slate-800);
 }
 .kLab {
   width: 10px;
   height: 10px;
   border-radius: 3px;
-  background: var(--mint);
-  box-shadow: inset 0 0 0 1.5px var(--teal-900);
+  background: var(--signal);
+  box-shadow: inset 0 0 0 1.5px var(--slate-900);
 }
 .note {
   margin-top: 10px;
@@ -249,7 +250,7 @@
 .rail {
   position: absolute;
   inset: 0;
-  background: var(--teal-800);
+  background: var(--slate-800);
   transform-origin: top;
 }
 .list {
@@ -274,14 +275,14 @@
     box-shadow 300ms ease;
 }
 .ev[data-on]::before {
-  background: var(--teal-800);
+  background: var(--slate-800);
   box-shadow: 0 0 0 3px var(--paper);
 }
 .ev[data-current]::before {
-  background: var(--mint);
+  background: var(--signal);
   box-shadow:
     0 0 0 3px var(--paper),
-    0 0 0 4px var(--teal-800);
+    0 0 0 4px var(--slate-800);
 }
 .prog {
   display: none;
@@ -304,7 +305,7 @@
 .when {
   font-size: 0.8125rem;
   font-weight: 560;
-  color: var(--mint-ink);
+  color: var(--signal-ink);
 }
 .title {
   font-family: var(--font-display);
@@ -345,12 +346,17 @@
     height: 100%;
     max-height: 780px;
   }
+  /* the heading on one line with its lede below, across the stage; the steps and the chart beneath */
   .head {
-    grid-column: 1;
+    grid-column: 1 / -1;
     grid-row: 1;
     align-self: start;
     gap: 14px;
     --stack-gap: 14px;
+    margin-bottom: 28px;
+  }
+  .head .lede {
+    max-width: 44em;
   }
   /* the same size as every other heading, capped only on short screens where the stage is pinned */
   .head :global(.h2) {
@@ -361,7 +367,7 @@
   }
   .chart {
     grid-column: 2;
-    grid-row: 1 / span 2;
+    grid-row: 2;
     align-self: center;
   }
   .cursor {
@@ -371,7 +377,7 @@
     grid-column: 1;
     grid-row: 2;
     align-self: start;
-    margin: 24px 0 0;
+    margin: 0;
     padding: 0;
   }
   .railTrack {
@@ -403,12 +409,12 @@
   .prog i {
     display: block;
     height: 100%;
-    background: var(--teal-800);
+    background: var(--slate-800);
     transform: scaleY(0);
     transform-origin: top;
   }
   .ev[data-current] .prog i {
-    background: var(--mint-ink);
+    background: var(--signal-ink);
   }
   .stepBtn {
     gap: 4px;

@@ -9,7 +9,7 @@
 
 import Card from "@/components/ui/Card";
 import ErrorNotice from "@/components/ui/ErrorNotice";
-import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
+import PageGhosts from "@/app/patient-dashboard/components/PageGhosts";
 import PageHead from "@/components/ui/PageHead";
 import { useApiResource } from "@/hooks/useApiResource";
 import { ApiError } from "@/lib/http/apiClient";
@@ -56,7 +56,7 @@ export default function PlansView() {
       return (
         <ErrorNotice message={planState.error} onRetry={planState.reload} />
       );
-    if (!planState.data) return <LoadingSkeleton />;
+    if (!planState.data) return <PageGhosts heights={[320]} />;
     const { plans, status, recommended } = planState.data;
     if (status?.hasActivePlan)
       return (
@@ -83,8 +83,11 @@ export default function PlansView() {
         {content()}
         {payments.error ? (
           <ErrorNotice message={payments.error} onRetry={payments.reload} />
+        ) : payments.loading ? (
+          // a card-shaped ghost holds the invoices' place, so the stack never jumps
+          <PageGhosts heights={[120]} />
         ) : (
-          !payments.loading && <InvoiceList payments={payments.data} />
+          <InvoiceList payments={payments.data} />
         )}
       </div>
     </main>

@@ -8,7 +8,7 @@ import type { ReactNode } from "react";
 import AppTheme from "@/components/ui/AppTheme";
 
 export const metadata: Metadata = {
-  title: "Consultation | InRange",
+  title: "Consultation | inrange",
   robots: { index: false, follow: false },
 };
 

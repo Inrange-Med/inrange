@@ -12,30 +12,30 @@ const EVENTS = [
   {
     when: "Two minutes, free",
     title: "An eligibility check",
-    body: "Your weight history, health conditions, current medicines and goals. A doctor reads every answer, and nothing is paid.",
+    body: "Your weight history, health conditions, medicines and goals, in the app. It costs nothing.",
   },
   {
-    when: "15 minutes, free",
-    title: "Your first consultation",
-    body: "On a secure video call with a registered doctor, who goes through your history with you and decides whether treatment fits.",
+    when: "First",
+    title: "Blood tests at home",
+    body: "Upload a report from the last three months, or a lab collects samples at your door. Your results are the first thing your doctor needs.",
   },
   {
-    when: "After your review",
-    title: "Your plan, paid upfront",
-    body: "Choose a 1, 4, 6 or 12-month plan and see the full price before you pay. Medicine, only if your doctor prescribes it, arrives sealed at your door.",
+    when: "Before you book",
+    title: "A review by our medical team",
+    body: "Our medical team reads your report and confirms the programme suits you, so your consultation starts where it matters.",
   },
   {
-    when: "Week one",
-    title: "Blood tests and a guided start",
-    body: "A partner lab collects samples at home, and the results go straight into your record. Short videos in the app walk you through your first days.",
+    when: "30 minutes, by video",
+    title: "Your doctor consultation",
+    body: "A registered doctor goes through your results with you and decides whether treatment fits. If a plan is right, you see its full price before you pay. Medicine, only if prescribed, comes sealed from our licensed pharmacy.",
   },
   {
     when: "Every week",
     title: "A one-minute check-in",
-    body: "Weight, meals and how you are feeling, logged in the app or sent on WhatsApp. Your care team replies within the day.",
+    body: "Weight, meals and how you feel, in the app or on WhatsApp. Your care team replies the same day.",
   },
   {
-    when: "Every 14 days",
+    when: "Every month",
     title: "Doctor reviews",
     body: "Your doctor reviews your readings and adjusts the plan as they change.",
   },
@@ -44,7 +44,7 @@ const EVENTS = [
     title: "Maintenance",
     body: (
       <>
-        When you and your doctor agree, the plan moves to a lighter maintenance rhythm, with fewer{" "}
+        When you and your doctor agree, the plan moves to a lighter rhythm, with fewer{" "}
         <span style={{ whiteSpace: "nowrap" }}>check-ins</span> and the same doctor.
       </>
     ),
@@ -60,24 +60,42 @@ const wx = (w: number) => W0 + (w / WEEKS) * (W1 - W0);
 const RAIL = 96;
 const YOU = 262;
 const TEAM = 420;
-// weekly while the plan is active, fortnightly once maintenance begins
+// check-ins weekly while the plan is active, fortnightly once maintenance begins; a doctor review
+// about every 30 days (on the check-in nearest each month), spaced further apart in maintenance
 const CHECKINS = [...Array.from({ length: 21 }, (_, i) => i + 1), 23, 25];
-const REVIEWS = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 24];
+const REVIEWS = [4, 9, 13, 17, 21];
 const LABS = [0.6, 12, 24];
 // the band has a soft left edge: its timing is set with your doctor, not by the calendar
 const MAINT = 21;
 // Each step owns a span of real weeks; the "now" line only moves within the
 // active step's span, so the highlighted step and the line always agree.
-// The first three steps all happen in week 0.
+// The assessment steps all happen in the first week.
 const SPANS: [number, number][] = [
   [0, 0.15],
   [0.15, 0.35],
-  [0.35, 0.6],
-  [0.6, 1.5],
+  [0.35, 0.8],
+  [0.8, 1.5],
   [1.5, 10],
   [10, 20],
   [20, 26],
 ];
+// The pin is short (client, 19 Oct 2026: "too slow and too controlling"): about one screen of
+// scrolling walks all seven steps, so the page still scrolls almost normally; every step stays
+// clickable. A visitor who has seen it once gets an even shorter pin on later visits.
+const SEEN_KEY = "inrange-seen-how";
+const seenBefore = () => {
+  try {
+    return localStorage.getItem(SEEN_KEY) === "1";
+  } catch {
+    return false;
+  }
+};
+const markSeen = () => {
+  try {
+    localStorage.setItem(SEEN_KEY, "1");
+  } catch {}
+};
+
 // Scroll share per step: the week-0 steps pass quickly, the long stretches get
 // more room, so the "now" line keeps moving at a steady, readable pace.
 const WEIGHTS = [0.7, 0.7, 0.7, 0.9, 1.4, 1.4, 1.2];
@@ -165,10 +183,13 @@ export default function Timeline() {
       const stage = el.querySelector<HTMLElement>("[data-stage]")!;
       const cursor = el.querySelector<HTMLElement>("[data-cursor]")!;
       const bars = Array.from(el.querySelectorAll<HTMLElement>("[data-prog]"));
+      // read once per page load, so the pin never changes length under the reader mid-scroll
+      const screens = seenBefore() ? 0.85 : 1.1;
+      let marked = false;
       const st = ScrollTrigger.create({
         trigger: stage,
         start: "top top",
-        end: () => `+=${window.innerHeight * 3}`,
+        end: () => `+=${window.innerHeight * screens}`,
         pin: true,
         scrub: true,
         onUpdate: (self) => {
@@ -179,6 +200,10 @@ export default function Timeline() {
           if (el.dataset.active !== String(idx)) setActive(idx, true);
           // how far through the current step you are, drawn beside it
           bars.forEach((b, k) => (b.style.transform = `scaleY(${k < idx ? 1 : k === idx ? within : 0})`));
+          if (!marked && self.progress > 0.9) {
+            marked = true;
+            markSeen();
+          }
         },
       });
       setActive(0, true);
@@ -261,10 +286,10 @@ export default function Timeline() {
         <div className={`wrap ${s.inner}`}>
           <div className={s.head}>
             <Tag>How it works</Tag>
-            <Mask id="how-title" className="h2" lines={["What the first", "months look like."]} />
-            <p className={`lede ${s.lede}`} data-reveal="rise">
-              One care team and one record, from your first questionnaire to maintenance. At every stage you know what comes
-              next and who is responsible for it.
+            <Mask id="how-title" className="h2" lines={["Your first months,", "step by step."]} soft={1} />
+            <p className={`lede ${s.lede}`} suppressHydrationWarning data-reveal="rise">
+              One care team and one record, from your free check to maintenance. You always know what comes next,
+              and who is doing it.
             </p>
           </div>
 
@@ -278,8 +303,8 @@ export default function Timeline() {
               </defs>
               <defs>
                 <linearGradient id="tl-maint" x1="0" x2="1">
-                  <stop offset="0" stopColor="var(--mint-wash)" stopOpacity="0" />
-                  <stop offset=".35" stopColor="var(--mint-wash)" />
+                  <stop offset="0" stopColor="var(--signal-wash)" stopOpacity="0" />
+                  <stop offset=".35" stopColor="var(--signal-wash)" />
                 </linearGradient>
               </defs>
               <rect x={wx(MAINT) - 40} y={RAIL + 44} width={W1 - wx(MAINT) + 60} height={TEAM - RAIL + 30} rx="10" fill="url(#tl-maint)" />
@@ -321,7 +346,7 @@ export default function Timeline() {
               <li><i className={s.kReview} /> Doctor review</li>
               <li><i className={s.kLab} /> Blood tests</li>
             </ul>
-            <figcaption className={s.note}>An example schedule. Your doctor sets the exact rhythm.</figcaption>
+            <figcaption className={s.note}>An example schedule. Your doctor sets the exact&nbsp;rhythm.</figcaption>
           </figure>
 
           <div className={s.listWrap}>

@@ -1,63 +1,104 @@
 /* ------------------------------------------------------------------
-   InRange design tokens
-   Clinical apothecary under teal light. Depth comes from tonal steps
-   and hairlines, never from heavy shadow. Mint is the only accent and
-   marks actions and live data.
+   inrange design tokens: In range (client's choice, Nov 2026)
+   The guidelines' ink and paper, and one light green, the colour a
+   reading takes when it is in range. Three swatches: a near-black
+   ground, white, and the green, which appears only where something is
+   live or asks to be pressed (the arrow well of every action). Depth
+   comes from tonal steps and hairlines, never from heavy shadow.
 ------------------------------------------------------------------- */
 
 :root {
-  --teal-950: #0b1e21;
-  --teal-900: #122c30;
-  --teal-850: #17363b;
-  --teal-800: #1c4046;
-  --teal-700: #244d54;
-  --teal-600: #3a656b;
+  --slate-950: #0a0b0a;
+  --slate-900: #0e0f0e;
+  --slate-850: #121312;
+  --slate-800: #151615;
+  --slate-700: #232523;
+  --slate-600: #393c39;
 
-  --mint: #46d8ad;
-  --mint-soft: #9be9d1;
-  --mint-ink: #0b7657;
-  --mint-wash: #e2f6ef;
+  /* the signal: light on carbon; its ink and wash are for paper */
+  --signal: #c3ecb2;
+  --signal-soft: #dcf5d0;
+  --signal-ink: #111111;
+  --signal-wash: #ebf7e4;
+  /* glacier white: the light action's finish, cool and faintly blue at its foot */
+  --glacier-hi: #d6f4c8;
+  --glacier: #bde8aa;
+  /* one muted alert, only for readings that need action now */
+  --alert: #b4442b;
 
-  --bg: #f1f4f3;
-  --bg-2: #e7eceb;
-  --paper: #fbfcfc;
-  --ink: #0f1c1e;
-  --ink-2: #465557;
-  --ink-3: #5e6d6f;
-  --hair: #d8e0df;
-  --hair-2: #c6d1d0;
+  --bg: #f4f4f2;
+  --bg-2: #e9e9e5;
+  --paper: #ffffff;
+  --ink: #111111;
+  --ink-2: #474845;
+  --ink-3: #63655f;
+  --hair: #e3e3de;
+  --hair-2: #d1d2cb;
 
-  --on-dark: #eef1f0;
-  --on-dark-2: rgb(238 241 240 / 0.72);
-  --on-dark-3: rgb(238 241 240 / 0.56);
-  --hair-dark: rgb(234 242 240 / 0.12);
+  --on-dark: #f4f5f2;
+  --on-dark-2: rgb(244 245 242 / 0.76);
+  --on-dark-3: rgb(244 245 242 / 0.64);
+  --hair-dark: rgb(255 255 255 / 0.13);
+  /* the soft second phrase of a heading on carbon */
+  --head-soft-dark: #c3ecb2;
+
+  /* carbon weave: a 2x2 twill of light and shade, 8px, under 3% contrast, so it reads as a matte
+     material up close and as flat black from a step away. Paint it under any large dark surface. */
+  --carbon: none;
+  /* the light that falls across a matte surface from the top left */
+  --sheen: radial-gradient(
+    120% 90% at 18% 0%,
+    rgb(255 255 255 / 0.055),
+    transparent 62%
+  );
 
   --font-display: "Jost", "Futura", "Century Gothic", system-ui, sans-serif;
-  --font-text: "Wix Madefor Text", system-ui, sans-serif;
+  /* inrange guidelines v1.1: Jost everywhere, body in Regular 400 */
+  --font-text: var(--font-display);
 
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-io: cubic-bezier(0.77, 0, 0.175, 1);
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
   --ease-soft: cubic-bezier(0.16, 1, 0.3, 1);
 
-  --gutter: 20px;
+  /* never less than the notch or rounded corner on a phone held sideways */
+  --gutter: max(20px, env(safe-area-inset-left), env(safe-area-inset-right));
   --max: 1280px;
   --r-surface: 16px;
   --r-media: 14px;
-  --section: clamp(88px, 12vw, 168px);
+  --section: clamp(88px, 3.2rem + 5.4vw, 136px);
 
   --nav-h: 60px;
+
+  /* app chrome: the frosted bar over the page, and the faint wash of a hovered control */
+  --chrome-bg: rgb(244 244 242 / 0.86);
+  --hover-wash: rgb(17 17 17 / 0.05);
+
+  /* the inset of every app surface (cards, plates, panels): 20 on phones, 28 on laptops */
+  --card-pad: 20px;
+  --field-line: 0.62 0.68 0.63;
+  --field-signal: 0.77 0.93 0.7;
+
+  /* the hero: her call seen through fluted glass (In range, chosen Nov 2026) */
+  --glass: url("/img/glass-range-d.jpg");
+  --glass-ground: #0b0c0b;
+  --glass-foot: 10 11 10;
 }
 
 @media (min-width: 768px) {
   :root {
-    --gutter: 40px;
+    --gutter: max(40px, env(safe-area-inset-left), env(safe-area-inset-right));
     --r-surface: 20px;
+  }
+}
+@media (min-width: 1024px) {
+  :root {
+    --card-pad: 28px;
   }
 }
 @media (min-width: 1200px) {
   :root {
-    --gutter: 64px;
+    --gutter: max(64px, env(safe-area-inset-left), env(safe-area-inset-right));
     --nav-h: 68px;
   }
 }
@@ -70,6 +111,8 @@
 
 html {
   -webkit-text-size-adjust: 100%;
+  /* no browser tap flash anywhere: every control draws its own press state */
+  -webkit-tap-highlight-color: transparent;
   text-size-adjust: 100%;
   scroll-padding-top: calc(var(--nav-h) + 24px + env(safe-area-inset-top));
 }
@@ -89,7 +132,6 @@ body {
   font-family: var(--font-text);
   font-size: 1rem;
   line-height: 1.6;
-  font-feature-settings: "ss01", "cv05";
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -143,13 +185,17 @@ dd {
 }
 
 ::selection {
-  background: var(--mint-soft);
-  color: var(--teal-950);
+  background: var(--signal-soft);
+  color: var(--slate-950);
 }
 
 :focus-visible {
-  outline: 2px solid var(--mint-ink);
+  outline: 2px solid var(--signal-ink);
   outline-offset: 3px;
+}
+/* the ring follows the control's own radius: the 6px corner adds no weight, so a pill or a rounded
+   card keeps its shape when focused, whatever order the stylesheets load in */
+:where(:focus-visible) {
   border-radius: 6px;
 }
 
@@ -195,7 +241,8 @@ html {
 .h2 {
   font-family: var(--font-display);
   font-weight: 500;
-  font-size: clamp(2.05rem, 1.35rem + 2.7vw, 3.6rem);
+  /* the floor lets a two-phrase heading break only at its phrase boundary on a 360px phone */
+  font-size: clamp(1.9rem, 1.35rem + 2.7vw, 3.6rem);
   line-height: 1.04;
   letter-spacing: -0.02em;
   text-wrap: balance;
@@ -252,10 +299,10 @@ html {
 ------------------------------------------------------------------- */
 
 .btn {
-  --btn-bg: var(--teal-900);
+  --btn-bg: var(--slate-900);
   --btn-fg: var(--on-dark);
-  --well-bg: var(--mint);
-  --well-fg: var(--teal-950);
+  --well-bg: var(--signal);
+  --well-fg: var(--ink);
   display: inline-flex;
   align-items: center;
   gap: 14px;
@@ -271,11 +318,13 @@ html {
   letter-spacing: -0.005em;
   line-height: 1;
   white-space: nowrap;
+  /* a button is never wider than the box it sits in, so a long label cannot push the page sideways */
+  max-width: 100%;
   text-decoration: none;
   cursor: pointer;
   transition:
     transform 160ms var(--ease-out),
-    background-color 240ms ease;
+    background-color 240ms var(--ease-out);
   -webkit-tap-highlight-color: transparent;
 }
 .btn:active {
@@ -296,19 +345,29 @@ html {
     transform: translateX(3px) rotate(-45deg);
   }
   .btn:hover {
-    --btn-bg: var(--teal-800);
+    --btn-bg: var(--slate-800);
   }
 }
 
-.btn--mint {
-  --btn-bg: var(--mint);
-  --btn-fg: var(--teal-950);
-  --well-bg: var(--teal-950);
-  --well-fg: var(--mint);
+/* the light action on carbon, in glacier white: a cool white that catches light along its top edge,
+   with a hairline inner highlight and a soft fall of shadow, so it reads as a polished object. Solid,
+   never see-through: the label keeps full contrast over the contour field. */
+.btn--signal {
+  --btn-bg: linear-gradient(180deg, var(--glacier-hi) 0%, var(--glacier) 100%);
+  --btn-fg: var(--slate-950);
+  /* the one accent sits in the arrow well of every action; the pill itself stays ground or white */
+  --well-bg: var(--signal);
+  --well-fg: var(--ink);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.4),
+    0 10px 28px -14px rgb(0 0 0 / 0.5);
+  transition:
+    transform 160ms var(--ease-out),
+    box-shadow 240ms var(--ease-out);
 }
 @media (hover: hover) and (pointer: fine) {
-  .btn--mint:hover {
-    --btn-bg: #5fe0b9;
+  .btn--signal:hover {
+    --btn-bg: linear-gradient(180deg, #ffffff 0%, var(--glacier-hi) 100%);
   }
 }
 
@@ -319,7 +378,7 @@ html {
   box-shadow: inset 0 0 0 1px var(--hair-2);
   transition:
     transform 160ms var(--ease-out),
-    box-shadow 240ms ease;
+    box-shadow 240ms var(--ease-out);
 }
 @media (hover: hover) and (pointer: fine) {
   .btn--ghost:hover {
@@ -331,11 +390,11 @@ html {
   --btn-bg: transparent;
   --btn-fg: var(--on-dark);
   padding: 6px 20px;
-  box-shadow: inset 0 0 0 1px rgb(234 242 240 / 0.28);
+  box-shadow: inset 0 0 0 1px rgb(236 237 239 / 0.28);
 }
 @media (hover: hover) and (pointer: fine) {
   .btn--ghost-dark:hover {
-    --btn-bg: rgb(234 242 240 / 0.06);
+    --btn-bg: rgb(236 237 239 / 0.06);
   }
 }
 
@@ -346,11 +405,22 @@ html {
 
 /* The padding gives descenders (g, y, p) room inside the clip on every
    engine; Safari ignores overflow-clip-margin, so it cannot be relied on. */
+/* two-tone headings: the payoff line in the brand's deep teal (a pale teal-grey on dark sections,
+   which set --head-soft). A solid tone, never a gradient; the words stay the loudest thing. */
+.soft {
+  color: var(--head-soft, var(--slate-600));
+}
+
 .js [data-reveal="mask"] .ln {
   display: block;
   overflow: clip;
   padding-bottom: 0.22em;
   margin-bottom: -0.22em;
+}
+/* joined headings: the phrases share a line wherever it fits, still rising one after another */
+.js .join[data-reveal="mask"] .ln {
+  display: inline-block;
+  vertical-align: top;
 }
 .js [data-reveal="mask"] .ln > span {
   display: block;
@@ -490,8 +560,8 @@ html {
   left: 12px;
   padding: 12px 18px;
   border-radius: 999px;
-  background: var(--mint);
-  color: var(--teal-950);
+  background: var(--signal);
+  color: var(--slate-950);
   font-weight: 560;
   text-decoration: none;
   transform: translateY(-160%);
@@ -513,6 +583,31 @@ html {
   border: 0;
 }
 
+/* the sign-in sheet's "Your code is on its way.": a quiet live dot while the text is arriving
+   (the /sign-in page has the same in CodeStep.module.css) */
+.on-way {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.on-way i {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--signal);
+  animation: on-way 900ms var(--ease-out) infinite alternate;
+}
+@keyframes on-way {
+  to {
+    opacity: 0.3;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .on-way i {
+    animation: none;
+  }
+}
+
 /* ------------------------------------------------------------------
    Section tag. Names what a section covers, in sentence case, on a
    tinted plate with the brand's measuring tick. 7px corners mark it as
@@ -526,9 +621,9 @@ html {
   height: 28px;
   padding: 0 11px 0 10px;
   border-radius: 7px;
-  background: rgb(28 64 70 / 0.065);
-  box-shadow: inset 0 0 0 1px rgb(28 64 70 / 0.08);
-  color: var(--teal-800);
+  background: rgb(25 26 28 / 0.065);
+  box-shadow: inset 0 0 0 1px rgb(25 26 28 / 0.08);
+  color: var(--slate-800);
   font-family: var(--font-text);
   font-size: 0.8125rem;
   font-weight: 580;
@@ -540,15 +635,15 @@ html {
 }
 .tag svg {
   flex: none;
-  color: var(--mint-ink);
+  color: var(--signal-ink);
 }
 .tag--dark {
-  background: rgb(234 242 240 / 0.07);
-  box-shadow: inset 0 0 0 1px rgb(234 242 240 / 0.1);
+  background: rgb(236 237 239 / 0.07);
+  box-shadow: inset 0 0 0 1px rgb(236 237 239 / 0.1);
   color: var(--on-dark);
 }
 .tag--dark svg {
-  color: var(--mint);
+  color: var(--signal);
 }
 
 /* ------------------------------------------------------------------
@@ -566,7 +661,7 @@ html {
   height: auto;
   overflow: visible;
   fill: none;
-  stroke: rgb(28 64 70 / 0.42);
+  stroke: rgb(25 26 28 / 0.42);
   stroke-width: 1.25;
   stroke-linecap: round;
 }
@@ -600,49 +695,67 @@ html {
 }
 
 /* ------------------------------------------------------------------
-   The rising dot (brand kit, section 06). The dot sits on the stem like
-   a normal i, then rises into its floating place with a small overshoot.
-   Distances are in the wordmark's own units: the stem top is at 700,
-   a seated tittle would sit 460 units lower than the floating dot.
+   The logo sting (inrange brand guidelines v1.1, "inrange-sting-animated"):
+   the letters fade in, the dot rises out of the stem of the i into its
+   place on the shared line with a small overshoot, then the plus pops in.
+   Distances are in the wordmark's own units (font size 1000): the dot's
+   centre sits 620 above the baseline; at +400 it is hidden inside the stem.
 ------------------------------------------------------------------- */
-@keyframes dot-rise {
-  0% {
-    transform: translateY(460px);
+@keyframes word-in {
+  from {
     opacity: 0;
   }
-  18% {
-    transform: translateY(460px);
-    opacity: 1;
-  }
-  34% {
-    transform: translateY(460px);
+}
+@keyframes dot-rise {
+  0%,
+  30% {
+    transform: translateY(400px);
   }
   72% {
-    transform: translateY(-54px);
+    transform: translateY(-48px);
   }
   86% {
-    transform: translateY(10px);
+    transform: translateY(9px);
   }
   100% {
     transform: none;
   }
 }
-.sting {
-  animation: dot-rise 1700ms cubic-bezier(0.25, 0.6, 0.2, 1) 350ms both;
+@keyframes plus-pop {
+  0% {
+    transform: scale(0);
+  }
+  60% {
+    transform: scale(1.18);
+  }
+  100% {
+    transform: none;
+  }
 }
-.js [data-reveal] .sting {
+.sting-word {
+  animation: word-in 520ms var(--ease-out) 350ms both;
+}
+.sting {
+  animation: dot-rise 1300ms cubic-bezier(0.25, 0.6, 0.2, 1) 350ms both;
+}
+.sting-plus {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: plus-pop 480ms var(--ease-out) 1350ms both;
+}
+.js [data-reveal] :is(.sting, .sting-word, .sting-plus) {
   animation-play-state: paused;
 }
-.js [data-reveal].in .sting {
+.js [data-reveal].in :is(.sting, .sting-word, .sting-plus) {
   animation-play-state: running;
 }
 @media (prefers-reduced-motion: reduce) {
-  .sting {
+  :is(.sting, .sting-word, .sting-plus) {
     animation: none;
   }
 }
 
-/* on teal surfaces the focus ring switches to mint so it stays visible (WCAG 1.4.11) */
+/* on carbon surfaces the focus ring turns light so it stays visible (WCAG 1.4.11) */
 #top :focus-visible,
 #foot :focus-visible,
 body > header :focus-visible,
@@ -650,6 +763,97 @@ body > header :focus-visible,
 [data-featured="true"] :focus-visible,
 [class*="dock"] :focus-visible,
 [class*="companion"] :focus-visible,
+[class*="planner"] :focus-visible,
+[class*="everyday"] :focus-visible,
+[data-dark] :focus-visible,
 [class*="maint"] :focus-visible {
-  outline-color: var(--mint);
+  outline-color: var(--signal);
+}
+
+/* an open sheet or dialog holds the page still behind it */
+html:has(dialog[open]) {
+  overflow: hidden;
+}
+
+/* taps act at once: no double-tap zoom wait on controls */
+a,
+button,
+summary,
+label,
+input,
+select {
+  touch-action: manipulation;
+}
+
+/* keyboard focus never lands under the patient app's bottom dock */
+@media (max-width: 899px) {
+  html:has(nav[class*="dock"]) {
+    scroll-padding-bottom: calc(96px + max(10px, env(safe-area-inset-bottom)));
+  }
+}
+
+/* read by screen readers, not drawn */
+.vh {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* "Coming soon" on a photo: one small, quiet plate tucked into the corner, light so it reads on any image */
+.soonchip {
+  position: absolute;
+  z-index: 2;
+  top: 12px;
+  left: 12px;
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 7px;
+  background: rgb(251 251 252 / 0.94);
+  box-shadow: 0 1px 2px rgb(10 11 12 / 0.12);
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 520;
+  letter-spacing: 0;
+  line-height: 1;
+  pointer-events: none;
+}
+
+/* A table wider than the phone fades at its right edge while there is more to scroll, and the fade
+   clears at the end (a scroll-driven custom property). Where the table fits, or the browser has no
+   scroll timelines, nothing fades. */
+@property --more {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+@keyframes tableMore {
+  from {
+    --more: 44px;
+  }
+  to {
+    --more: 0px;
+  }
+}
+@supports (animation-timeline: scroll()) {
+  [class*="__tableScroll"],
+  [class*="__tableWrap"] {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      #000 calc(100% - var(--more)),
+      transparent
+    );
+    mask-image: linear-gradient(
+      to right,
+      #000 calc(100% - var(--more)),
+      transparent
+    );
+    animation: tableMore linear both;
+    animation-timeline: scroll(self inline);
+  }
 }

@@ -21,8 +21,9 @@
   padding: clamp(10px, 2vh, 20px) 0 max(12px, env(safe-area-inset-bottom));
   background: var(--bg);
 }
-.dock > p {
-  font-size: 0.875rem;
+/* this dock is light: undo the global [class*="dock"] green ring, which is meant for dark docks */
+.dock :focus-visible {
+  outline-color: var(--ink);
 }
 @media (min-width: 768px) {
   .dock {

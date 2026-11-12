@@ -34,7 +34,7 @@ export type MedicineOrderStatus =
   | "DISPATCHED"
   | "DELIVERED";
 
-/** One delivery from InRange's pharmacy. `history` holds each status reached, oldest first. */
+/** One delivery from inrange's pharmacy. `history` holds each status reached, oldest first. */
 export type MedicineOrder = {
   id: string;
   status: MedicineOrderStatus;

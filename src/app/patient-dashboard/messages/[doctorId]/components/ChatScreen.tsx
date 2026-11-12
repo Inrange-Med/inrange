@@ -48,6 +48,8 @@ export default function ChatScreen({ doctorId }: { doctorId: string }) {
 
   const doctor = team.data?.find((member) => member.doctorId === doctorId);
   const doctorName = doctor?.name ?? "Your doctor";
+  // while the care team loads, the bar holds soft placeholders instead of a stand-in person
+  const teamWaiting = team.loading && !team.data;
   const messages = uniqueMessages([...(history.data ?? []), ...live]);
   const isMine = (message: ChatMessage) => message.senderRole === user?.role;
 
@@ -76,6 +78,18 @@ export default function ChatScreen({ doctorId }: { doctorId: string }) {
     if (atEnd.current) toEnd();
     else setNewBelow(true);
   }, [messages.length]);
+  // the thread shrinks when the composer grows (more lines, the 112 warning), or its content grows
+  // (a notice, a longer intro): a reader at the end stays at the end
+  useEffect(() => {
+    const el = scroller.current;
+    if (!el) return;
+    const observer = new ResizeObserver(() => {
+      if (atEnd.current) toEnd();
+    });
+    observer.observe(el);
+    if (el.firstElementChild) observer.observe(el.firstElementChild);
+    return () => observer.disconnect();
+  }, []);
 
   // keep the composer above the on-screen keyboard: iOS keeps the layout viewport tall and scrolls it
   useEffect(() => {
@@ -127,10 +141,22 @@ export default function ChatScreen({ doctorId }: { doctorId: string }) {
         </Link>
         <div className={styles.who}>
           <span className={styles.faces} aria-hidden="true">
-            <Avatar name={doctorName} src={doctor?.photoUrl} size={30} />
+            {teamWaiting ? (
+              <span className={styles.ghostFace} />
+            ) : (
+              <Avatar name={doctorName} src={doctor?.photoUrl} size={30} />
+            )}
           </span>
           <span className={styles.whoText}>
-            <h1 className={styles.title}>{doctorName}</h1>
+            <h1 className={styles.title}>
+              {teamWaiting ? (
+                <span className={styles.ghostTitle}>
+                  <span className="sr-only">Loading</span>
+                </span>
+              ) : (
+                doctorName
+              )}
+            </h1>
             {doctor?.specialization && (
               <span className={styles.sub}>{doctor.specialization}</span>
             )}
@@ -179,7 +205,7 @@ export default function ChatScreen({ doctorId }: { doctorId: string }) {
           {[session.error, history.error, socketError]
             .filter(Boolean)
             .map((message) => (
-              <p key={message} className={styles.system} role="alert">
+              <p key={message} className={styles.notice} role="alert">
                 <span>{message}</span>
               </p>
             ))}

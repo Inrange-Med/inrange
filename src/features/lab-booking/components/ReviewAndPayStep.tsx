@@ -182,7 +182,7 @@ export default function ReviewAndPayStep({
       {error && (
         <div>
           <p className={formStyles.err} role="alert">
-            <WarningCircle size={16} weight="bold" aria-hidden="true" />
+            <WarningCircle size={16} weight="fill" aria-hidden="true" />
             <span>{error}</span>
           </p>
           <button
@@ -208,7 +208,7 @@ export default function ReviewAndPayStep({
           </p>
           <Link
             href={checkoutHref(liveHold)}
-            className={`btn ${formStyles.go}`}
+            className={`btn ${formStyles.go} ${styles.payDock}`}
           >
             <span>Pay {formatRupees(liveHold.price.total)} and book</span>
             <span className="well" aria-hidden="true">
@@ -220,7 +220,7 @@ export default function ReviewAndPayStep({
         <>
           <button
             type="button"
-            className={`btn ${formStyles.go}`}
+            className={`btn ${formStyles.go} ${styles.payDock}`}
             onClick={hold}
             data-busy={busy}
             aria-busy={busy}

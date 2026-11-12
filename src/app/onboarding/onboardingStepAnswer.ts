@@ -47,7 +47,7 @@ export function stepAnswerFor(
         return { message: "Enter your age in years.", field: "ageYears" };
       if (age < AGE_MIN)
         return {
-          message: "InRange is for adults aged 18 and over.",
+          message: "inrange is for adults aged 18 and over.",
           field: "ageYears",
         };
       if (age > AGE_MAX)

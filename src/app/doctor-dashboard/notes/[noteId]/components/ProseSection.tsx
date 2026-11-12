@@ -175,7 +175,7 @@ export default function ProseSection({
               <Avatar
                 name={review.doctor.name}
                 src={review.doctor.photoUrl}
-                size={28}
+                size={24}
               />{" "}
               {review.doctor.name} · after your call
             </p>

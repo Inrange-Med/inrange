@@ -53,8 +53,8 @@ export default function NotFoundView() {
           lineAlpha={0.12}
           signalAlpha={0.5}
         />
-        <Link href="/" className={styles.brand} aria-label="InRange home">
-          <Wordmark height={26} />
+        <Link href="/" className={styles.brand} aria-label="inrange home">
+          <Wordmark />
         </Link>
 
         <section className={styles.panel} aria-labelledby="not-found-title">

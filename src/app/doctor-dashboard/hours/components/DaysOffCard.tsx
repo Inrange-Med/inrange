@@ -123,15 +123,13 @@ export default function DaysOffCard({
         </label>
         <button
           type="submit"
-          className="btn btn--ghost"
+          className={`btn btn--ghost ${styles.addBtn}`}
           data-busy={adding}
           aria-busy={adding}
         >
-          {adding ? (
-            <i className={formStyles.spin} aria-label="Adding" />
-          ) : (
-            "Add"
-          )}
+          {/* the label keeps the button's width while the spinner sits over it */}
+          <span data-hidden={adding}>Add</span>
+          {adding && <i className={formStyles.spin} aria-label="Adding" />}
         </button>
       </form>
 
