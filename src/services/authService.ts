@@ -5,10 +5,11 @@
  *                               provider "api": the API sent it (mock: pilot, the message names the code)
  *   POST /api/auth/verify-otp   checks an API code { mobile, otp } -> { data: { accessToken, refreshToken, user, nextScreen } }
  *   POST /api/auth/firebase     trades Firebase's ID token { idToken } -> the same
- *   POST /api/auth/logout       ends the session
+ *   POST /api/auth/logout       ends the session (sent in the background; sign-out never waits for it)
  */
 
-import { apiRequest } from "@/lib/http/apiClient";
+import { apiRequest, revokeSession } from "@/lib/http/apiClient";
+import { getAccessToken } from "@/lib/session/authSession";
 import {
   confirmFirebaseCode,
   sendFirebaseCode,
@@ -68,6 +69,9 @@ export async function verifyOtp(
     "ONBOARDING"
       ? "ONBOARDING"
       : "DASHBOARD";
+  // signing in over another account on this device: that account's session ends on the server too
+  const previous = getAccessToken();
+  if (previous && previous !== accessToken) revokeSession(previous);
   return {
     accessToken,
     refreshToken: body.data?.refreshToken ?? body.refreshToken ?? null,
@@ -76,6 +80,6 @@ export async function verifyOtp(
   };
 }
 
-export async function logout(): Promise<void> {
-  await apiRequest("/api/auth/logout", { method: "POST" });
+export function logout(token: string) {
+  revokeSession(token);
 }
