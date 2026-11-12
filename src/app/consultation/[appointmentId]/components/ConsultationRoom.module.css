@@ -203,6 +203,10 @@
   outline: 2px solid var(--signal-ink);
   outline-offset: 3px;
 }
+/* End sits in the carbon controls bar: an ink ring there is invisible */
+.endButton:focus-visible {
+  outline-color: var(--signal);
+}
 .endButton:disabled {
   cursor: default; /* the button's own spinner says it is working; no OS busy cursor */
   opacity: 0.6;

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Motion from "@/components/landing/Motion";
 import Nav from "@/components/landing/Nav";
 import Hero from "@/components/landing/Hero";
@@ -68,6 +69,8 @@ const jsonLd = {
     },
   ],
 };
+
+export const metadata: Metadata = { alternates: { canonical: "/" } };
 
 export default function Home() {
   return (

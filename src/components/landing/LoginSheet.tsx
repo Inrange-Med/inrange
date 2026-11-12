@@ -17,7 +17,7 @@ import { ChangeEvent, CSSProperties, FormEvent, PointerEvent, useCallback, useEf
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Check, WarningCircle, X } from "@phosphor-icons/react";
 import { sendOtp, verifyOtp } from "@/services/authService";
-import { homePathFor, saveSession } from "@/lib/session/authSession";
+import { getSessionUser, homePathFor, saveSession } from "@/lib/session/authSession";
 import ContourField from "./ContourField";
 import { ASSESSMENT_URL, Wordmark } from "./ui";
 import s from "./LoginSheet.module.css";
@@ -28,7 +28,9 @@ const CODE_ARRIVES_AFTER_MS = 1100;
 
 /** Opens the sign-in sheet from anywhere on the public site. */
 export function openLogin() {
-  window.dispatchEvent(new Event(OPEN_LOGIN_EVENT));
+  // next frame: a caller that also closes the nav menu lets the menu's scroll unlock land first,
+  // or the sheet saves the menu's overflow:hidden and puts it back on close (page frozen on phones)
+  requestAnimationFrame(() => window.dispatchEvent(new Event(OPEN_LOGIN_EVENT)));
 }
 
 type AuthStep = "mobile" | "otp";
@@ -74,12 +76,18 @@ export default function LoginSheet() {
   };
 
   const open = useCallback(() => {
+    // someone already signed in goes straight to their account, as /sign-in does
+    const signedIn = getSessionUser();
+    if (signedIn) {
+      router.push(homePathFor(signedIn.role));
+      return;
+    }
     window.clearTimeout(leaveTimer.current);
     setLeaving(false);
     returnTo.current = document.activeElement as HTMLElement | null;
     reset();
     setLoginOpen(true);
-  }, []);
+  }, [router]);
 
   useEffect(() => () => window.clearTimeout(leaveTimer.current), []);
 
@@ -235,9 +243,10 @@ export default function LoginSheet() {
       });
       setLoginOpen(false);
       reset();
-      if (sessionUser.role === "DOCTOR") router.replace(homePathFor("DOCTOR"));
-      else if (String(result.nextScreen).trim().toUpperCase() === "ONBOARDING") router.replace("/onboarding");
-      else router.replace(homePathFor("PATIENT"));
+      // same rule as /sign-in (useOtpSignIn): only a patient is sent to onboarding; admins go to /admin
+      if (sessionUser.role === "PATIENT" && String(result.nextScreen).trim().toUpperCase() === "ONBOARDING")
+        router.replace("/onboarding");
+      else router.replace(homePathFor(sessionUser.role));
     } catch (error) {
       console.error("OTP verification error:", error);
       setAuthError(error instanceof Error ? error.message : "OTP verification failed. Please try again.");

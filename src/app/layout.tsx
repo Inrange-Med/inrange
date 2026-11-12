@@ -14,7 +14,6 @@ const display = Jost({
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE),
-  alternates: { canonical: "/" },
   title: "Doctor-led weight and diabetes care in India | inrange",
   description:
     "Doctor-led care for obesity and type 2 diabetes in India. A free check, then a 30-minute video consultation with a doctor, blood tests at home, Indian nutrition and one care team.",

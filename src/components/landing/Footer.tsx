@@ -33,6 +33,7 @@ const COLS = [
       ["care@inrangemed.com", "mailto:care@inrangemed.com"],
       ["Privacy policy", "/privacy"],
       ["Terms of service", "/terms"],
+      ["Cancellation and refunds", "/refund"],
       ["Grievance officer", "/grievance"],
     ],
   },

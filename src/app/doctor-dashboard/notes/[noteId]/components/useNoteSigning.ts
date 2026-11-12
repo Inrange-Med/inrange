@@ -55,6 +55,8 @@ export function useNoteSigning({
 
   const sign = (sendToApp: boolean) => {
     setSheetOpen(false);
+    // the sheet can reopen (Cmd+Shift+Enter) while a sign is in flight; one sign at a time
+    if (signing) return;
     setSigning(true);
     const hasText = sectionOf(note, "patient").current.length > 0;
     const at = queue.findIndex((queued) => queued.id === note.id);

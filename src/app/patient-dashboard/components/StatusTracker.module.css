@@ -36,7 +36,8 @@
   top: 2px;
   height: 6px;
   border-radius: 3px;
-  background: var(--signal);
+  /* --signal is 1.3:1 on paper (never on light surfaces); ink-side slate reads as "now" */
+  background: var(--slate-800);
 }
 .trackLabel {
   font-size: 0.875rem;
@@ -78,7 +79,8 @@
     )
     li:last-child
     .trackLabel {
-    visibility: hidden;
+    /* transparent, not visibility:hidden, so screen readers still hear every step's name */
+    color: transparent;
   }
 }
 /* phones under 390px: smaller labels and dates */

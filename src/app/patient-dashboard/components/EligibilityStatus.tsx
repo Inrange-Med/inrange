@@ -51,7 +51,7 @@ export default function EligibilityStatus({
         })}
       </ol>
       {/* a short phone: the same steps, as one line */}
-      <p className={stepStyles.stepsLine} aria-hidden="true">
+      <p className={stepStyles.stepsLine}>
         {status.steps.map((step, i) => (
           <span key={step.label} data-state={stateOf(i, status.currentIndex)}>
             {i > 0 && <span className={stepStyles.sep}> · </span>}

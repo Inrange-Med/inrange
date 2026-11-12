@@ -61,7 +61,7 @@ const CONSULT = [
 const QA = [
   {
     q: "Are inrange doctors registered?",
-    a: "Yes. Every doctor is registered with the National Medical Commission or a State Medical Council, and each profile shows the council and registration number.",
+    a: "Yes. Every doctor is registered with the National Medical Commission or a State Medical Council.",
   },
   {
     q: "Will I see the same doctor every time?",

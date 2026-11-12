@@ -53,19 +53,8 @@
   color: var(--slate-800);
 }
 
-/* Home on a phone never scrolls (Arhaan Home.module.css .first): a mid-height phone lets the steps
-   say where things stand in place of the headline, and anything up to 879px tall drops the line.
-   Home only: the Book page has room for both. */
-@media (min-height: 700px) and (max-height: 799px) and (max-width: 1023px) {
-  :global(main[data-screen="home"]) .title {
-    display: none;
-  }
-}
-@media (max-height: 879px) and (max-width: 1023px) {
-  :global(main[data-screen="home"]) .text {
-    display: none;
-  }
-}
+/* ponytail: the design hid .title/.text on short phones so Home never scrolls; the line carries
+   state (the team's not-approved reason, the held collection time, when Join opens), so it stays. */
 
 @media (min-width: 1024px) {
   .status {
