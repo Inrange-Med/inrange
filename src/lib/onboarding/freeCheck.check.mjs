@@ -105,5 +105,30 @@ saveFreeCheck(good, t0);
 clearFreeCheck();
 assert.equal(readFreeCheck(t0), null);
 
+// the details from the check's last step: kept when usable, dropped (with the health answers kept)
+// when not; consents are filtered to known types
+const id = {
+  firstName: " Asha ",
+  lastName: "",
+  email: "asha@example.com",
+  consents: ["TERMS", "PRIVACY", "HEALTH_DATA", "TELECONSULT", "NOPE"],
+  consentVersion: "2026-09",
+};
+assert.deepEqual(checkedAnswers({ ...good, identity: id }).identity, {
+  ...id,
+  firstName: "Asha",
+  consents: ["TERMS", "PRIVACY", "HEALTH_DATA", "TELECONSULT"],
+});
+for (const bad of [
+  { ...id, firstName: " " },
+  { ...id, email: "asha@" },
+  { ...id, consentVersion: "" },
+])
+  assert.equal(checkedAnswers({ ...good, identity: bad }).identity, undefined);
+assert.equal(
+  checkedAnswers({ ...good, identity: { ...id, email: "x" } }).weightKg,
+  82,
+);
+
 assert.equal(bmiFrom(162.6, 82), 31);
 console.log("freeCheck: all checks passed");

@@ -1,27 +1,34 @@
 "use client";
 
 /*
-  The free check (/assessment), before any sign-in (client call, 12 Nov 2026, from how the industry's
-  booking forms work): the person's basics first, then what their BMI means for them, then their
-  health, then what happens next, and only then the mobile number. In order:
-    1-2  About you      which describes you, age
-    3-4  Measurements   height, weight
-    5    Your BMI       the number on the Indian scale, what it means, the risk, how much to lose
-    6-7  Health         conditions, what they have tried
-    8    Next steps     the first step, notes on what they told us, what doctors say, then booking
-  Everything is worked out on the device. The finished answers are kept in this tab only
-  (lib/onboarding/freeCheck) and saved to the profile by onboarding after sign-in, which then asks
-  only for name, email and consent. Browser Back moves between screens. Rules: process and sourced
-  facts only, never a prediction for this person (check-content.ts).
+  The free check (/assessment), where every "Book consultation" lands (client call, 12 Nov 2026,
+  from how the industry's booking forms work): the person's basics first, then what their BMI means,
+  then their health, then name and number, then what happens next. In order:
+    1  About you      which describes you, and age (one screen)
+    2  Measurements   height and weight (one screen)
+    3  Your BMI       the number on the Indian scale, what it means, the risk, how much to lose
+    4  Health         conditions
+    5  Health         what they have tried
+    6  Your details   name, email, mobile and consent, then the code, here (no separate sheet)
+    7  Next steps     signed in: what happens next, notes on what they told us, what doctors say,
+                      then the first step in onboarding, which has nothing left to ask
+  Screens were merged and the sign-in brought in to cut taps before payment (feedback, 14 Nov 2026)
+  without dropping a question. Everything up to the code is worked out on the device and kept in this
+  tab only (lib/onboarding/freeCheck); onboarding saves it after sign-in (freeCheckPrefill.ts).
+  Browser Back moves between screens. Signed-in visitors go straight to their account. A BMI below
+  18.5 without diabetes or prediabetes is not asked for details: weight care is not for them.
+  Rules: process and sourced facts only, never a prediction for this person (check-content.ts).
 */
 
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
-import { ArrowLeft, ArrowRight, Check, LockSimple, Minus, Plus, X } from "@phosphor-icons/react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, ArrowRight, LockSimple, Minus, Plus, X } from "@phosphor-icons/react";
 import {
   AGE_MAX,
   AGE_MIN,
   CONDITIONS,
   conditionsFor,
+  CONSENT_VERSION,
   EXPERIENCES,
   experienceToggled,
   GENDERS,
@@ -29,25 +36,25 @@ import {
   WEIGHT_KG,
 } from "@/lib/onboarding/answerLists";
 import { bmiFrom, readFreeCheck, saveFreeCheck, type FreeCheckAnswers } from "@/lib/onboarding/freeCheck";
+import { getSessionUser, homePathFor } from "@/lib/session/authSession";
 import type { Gender } from "@/types/onboarding";
 import ContourField from "../ContourField";
-import { openLogin } from "../LoginSheet";
 import { Wordmark } from "../ui";
 import { MeasureField } from "../tools/kit";
 import { healthyRange } from "../tools/data";
 import { kgTo, useUnits } from "../tools/units";
 import { CONDITION_NOTES, DOCTORS_SAY, EXPERIENCE_NOTES, SOURCES } from "./check-content";
+import CheckSignIn, { consentsOf, type Identity } from "./CheckSignIn";
 import s from "./FreeCheck.module.css";
 
-type Key = "gender" | "age" | "height" | "weight" | "bmi" | "conditions" | "tried" | "plan";
+type Key = "about" | "measures" | "bmi" | "conditions" | "tried" | "details" | "plan";
 const STEPS: { key: Key; chapter: string; q: string; why: string }[] = [
-  { key: "gender", chapter: "About you", q: "Which describes you?", why: "Waist limits differ for men and women, so your doctor reads your numbers against the right one." },
-  { key: "age", chapter: "About you", q: "How old are you?", why: "inrange is for adults 18 and over." },
-  { key: "height", chapter: "Measurements", q: "How tall are you?", why: "In feet or centimetres, whichever you know." },
-  { key: "weight", chapter: "Measurements", q: "What do you weigh?", why: "A recent reading is fine." },
+  { key: "about", chapter: "About you", q: "A little about you", why: "inrange is for adults 18 and over. Waist limits differ for men and women." },
+  { key: "measures", chapter: "Measurements", q: "Your height and weight", why: "In feet or centimetres, kilograms or pounds. A recent reading is fine." },
   { key: "bmi", chapter: "Your BMI", q: "Your BMI", why: "" },
   { key: "conditions", chapter: "Health", q: "Do you have any of these?", why: "Choose all that apply. It tells your doctor where to look first." },
   { key: "tried", chapter: "Health", q: "Have you tried to lose weight before?", why: "Choose all that apply." },
+  { key: "details", chapter: "Your details", q: "Where should your care team reach you?", why: "Your doctor uses your name on the call. Reports go to your email." },
   { key: "plan", chapter: "Next steps", q: "What happens next", why: "Your first step, then a plan only if it suits you." },
 ];
 const LAST = STEPS.length - 1;
@@ -79,6 +86,7 @@ const START: Draft = {
   otherText: "",
   experience: [],
 };
+const NO_IDENTITY: Identity = { firstName: "", lastName: "", email: "", mobile: "", consented: false, ai: false };
 
 /** BMI bands: the revised Indian definition (Misra et al., 2025) and, for comparison, the global chart. */
 const bandOf = (bmi: number) => (bmi < 18.5 ? "under" : bmi <= 23 ? "healthy" : "obesity");
@@ -87,8 +95,8 @@ const globalWord = (bmi: number) => (bmi < 25 ? "healthy" : bmi < 30 ? "overweig
 const SCALE = { min: 15, max: 40 };
 const onScale = (v: number) => `${((Math.min(SCALE.max, Math.max(SCALE.min, v)) - SCALE.min) / (SCALE.max - SCALE.min)) * 100}%`;
 
-/** The answers as onboarding will save them, or what is still missing. */
-function answersOf(d: Draft): FreeCheckAnswers | null {
+/** The answers as onboarding will save them, or null while something is missing. */
+function answersOf(d: Draft, identity?: Identity): FreeCheckAnswers | null {
   const age = Number(d.age);
   if (!d.gender || !Number.isInteger(age) || !d.heightSet || !d.weightSet || !d.experience.length) return null;
   const codes = conditionsFor(CONDITIONS, d.gender)
@@ -102,25 +110,33 @@ function answersOf(d: Draft): FreeCheckAnswers | null {
     weightLossExperience: d.experience,
     noConditions: d.noConditions,
     conditions: d.noConditions ? [] : codes.map((code) => (code === "OTHER" ? { code, otherText: d.otherText.trim() } : { code })),
+    ...(identity && {
+      identity: {
+        firstName: identity.firstName.trim(),
+        lastName: identity.lastName.trim(),
+        email: identity.email.trim(),
+        consents: consentsOf(identity),
+        consentVersion: CONSENT_VERSION,
+      },
+    }),
   };
 }
 
 /** What stops this screen's Continue, said plainly, or null when it can go on. */
 function problemOf(key: Key, d: Draft): string | null {
   switch (key) {
-    case "gender":
-      return d.gender ? null : "Choose one.";
-    case "age": {
+    case "about": {
+      if (!d.gender) return "Choose which describes you.";
       const age = Number(d.age);
       if (!d.age || !Number.isInteger(age)) return "Enter your age in years.";
       if (age < AGE_MIN) return "inrange is for adults aged 18 and over.";
       if (age > AGE_MAX) return `Enter an age from ${AGE_MIN} to ${AGE_MAX}.`;
       return null;
     }
-    case "height":
-      return d.heightSet ? null : "Move the ruler or type your height.";
-    case "weight":
-      return d.weightSet ? null : "Move the ruler or type your weight.";
+    case "measures":
+      if (!d.heightSet && !d.weightSet) return "Move each ruler or type your height and weight.";
+      if (!d.heightSet) return "Move the height ruler or type your height.";
+      return d.weightSet ? null : "Move the weight ruler or type your weight.";
     case "conditions": {
       if (d.noConditions) return null;
       const visible = conditionsFor(CONDITIONS, d.gender).filter((c) => d.conditions.includes(c.code));
@@ -151,17 +167,29 @@ function Cite({ id }: { id: string }) {
   );
 }
 
+function Fine() {
+  return (
+    <p className={`fineprint ${s.fine}`}>
+      This check gives general information and does not replace a consultation or diagnosis. Results vary between
+      individuals. For adults aged 18 and over, and not for emergencies: call 112. Care is provided by registered medical
+      practitioners, and video consultations follow the Telemedicine Practice Guidelines, 2020.
+    </p>
+  );
+}
+
 export default function FreeCheck() {
+  const router = useRouter();
   const [ready, setReady] = useState(false);
   const [step, setStep] = useState(0);
   const [dir, setDir] = useState<1 | -1>(1);
   const [d, setD] = useState<Draft>(START);
+  const [identity, setIdentity] = useState<Identity>(NO_IDENTITY);
   const [problem, setProblem] = useState<string | null>(null);
   const [kept, setKept] = useState(true);
+  const [leaving, setLeaving] = useState(false);
   const headingRef = useRef<HTMLHeadingElement>(null);
-  const advance = useRef<number | undefined>(undefined);
   // how many screens this page has pushed onto the browser's history, so Back never leaves the page
-  // by mistake (a check resumed on its last screen has none behind it)
+  // by mistake (a check resumed on a later screen has none behind it)
   const depth = useRef(0);
   const wu = useUnits().weight;
   const cur = STEPS[step];
@@ -171,11 +199,18 @@ export default function FreeCheck() {
     setProblem(null);
   };
 
-  // a finished check in this tab opens on its last screen (back from the doctors page, or after
-  // closing the sign-in sheet and reloading)
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- one read of the session and this tab's answers on arrival */
+    // someone already signed in goes to their account: a patient to onboarding (which goes on to the
+    // dashboard once the profile is done), anyone else to their own home
+    const user = getSessionUser();
+    if (user) {
+      setLeaving(true);
+      router.replace(user.role === "PATIENT" ? "/onboarding" : homePathFor(user.role));
+      return;
+    }
+    // a finished check in this tab opens at the details (back from the doctors page, or a reload)
     const saved = readFreeCheck();
-    /* eslint-disable react-hooks/set-state-in-effect -- one read of this tab's saved answers on arrival */
     if (saved) {
       const other = saved.conditions.find((c) => c.code === "OTHER")?.otherText ?? "";
       setD({
@@ -190,19 +225,20 @@ export default function FreeCheck() {
         otherText: other,
         experience: saved.weightLossExperience,
       });
-      setStep(LAST);
+      if (saved.identity)
+        setIdentity({ ...NO_IDENTITY, firstName: saved.identity.firstName, lastName: saved.identity.lastName, email: saved.identity.email });
+      setStep(at("details"));
     }
-    history.replaceState({ ...history.state, checkStep: saved ? LAST : 0 }, "");
+    history.replaceState({ ...history.state, checkStep: saved ? at("details") : 0 }, "");
     setReady(true);
     /* eslint-enable react-hooks/set-state-in-effect */
-  }, []);
+  }, [router]);
 
   // the browser's Back and Forward move between screens
   useEffect(() => {
     const onPop = (event: PopStateEvent) => {
       const to = (event.state as { checkStep?: number } | null)?.checkStep;
       if (typeof to !== "number") return;
-      window.clearTimeout(advance.current);
       depth.current = Math.max(0, depth.current + (to < step ? -1 : 1));
       setDir(to < step ? -1 : 1);
       setProblem(null);
@@ -220,21 +256,18 @@ export default function FreeCheck() {
     return () => window.clearTimeout(timer);
   }, [step, ready]);
 
-  useEffect(() => () => window.clearTimeout(advance.current), []);
-
-  const go = useCallback(
-    (to: number) => {
-      setDir(1);
-      setProblem(null);
-      setStep(to);
+  const go = useCallback((to: number, replace = false) => {
+    setDir(1);
+    setProblem(null);
+    setStep(to);
+    if (replace) history.replaceState({ ...history.state, checkStep: to }, "");
+    else {
       depth.current += 1;
       history.pushState({ ...history.state, checkStep: to }, "");
-    },
-    [],
-  );
+    }
+  }, []);
 
   const back = () => {
-    window.clearTimeout(advance.current);
     if (step === 0) return;
     // a screen this page pushed: Back is the browser's own, so the two never disagree
     if (depth.current > 0) history.back();
@@ -244,32 +277,6 @@ export default function FreeCheck() {
       setStep(step - 1);
       history.replaceState({ ...history.state, checkStep: step - 1 }, "");
     }
-  };
-
-  const next = (draft: Draft = d) => {
-    const why = problemOf(cur.key, draft);
-    if (why) {
-      setProblem(why);
-      return;
-    }
-    if (cur.key === "tried") {
-      const answers = answersOf(draft);
-      if (answers) setKept(saveFreeCheck(answers));
-    }
-    go(step + 1);
-  };
-
-  /** Single answers: show the tick, then move on a beat later. */
-  const pickThenGo = (patch: Partial<Draft>) => {
-    const draft = { ...d, ...patch };
-    update(patch);
-    window.clearTimeout(advance.current);
-    advance.current = window.setTimeout(() => next(draft), 260);
-  };
-
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
-    next();
   };
 
   const bmi = bmiFrom(d.heightCm, d.weightKg);
@@ -282,67 +289,119 @@ export default function FreeCheck() {
   // weight care is not for a BMI below the healthy range; diabetes care still can be
   const canBook = band !== "under" || diabetes;
 
-  if (!ready) return <main className={s.page} aria-busy="true" />;
+  const next = () => {
+    const why = problemOf(cur.key, d);
+    if (why) {
+      setProblem(why);
+      return;
+    }
+    if (cur.key === "tried") {
+      const answers = answersOf(d);
+      if (answers) setKept(saveFreeCheck(answers));
+      // nobody is asked for their details when the programme is not for them
+      go(canBook ? at("details") : at("plan"));
+      return;
+    }
+    go(step + 1);
+  };
 
-  const screen: Record<Key, ReactNode> = {
-    gender: (
-      <div className={s.options} role="radiogroup" aria-labelledby="check-q">
-        {GENDERS.map((g) => (
-          <button
-            key={g.code}
-            type="button"
-            role="radio"
-            aria-checked={d.gender === g.code}
-            className={s.option}
-            onClick={() => {
-              // PCOS is not asked of men: a tick left over from going back is dropped
-              const conditions = g.code === "Male" ? d.conditions.filter((c) => c !== "PCOS") : d.conditions;
-              pickThenGo({ gender: g.code, conditions });
-            }}
-          >
-            <i className={s.mark} aria-hidden="true" />
-            <span>{g.label}</span>
-          </button>
-        ))}
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    next();
+  };
+
+  if (!ready || leaving) return <main className={s.page} aria-busy="true" />;
+
+  const options = (
+    items: { code: string; label: string }[],
+    on: (code: string) => boolean,
+    toggle: (code: string) => void,
+  ) => (
+    <div className={s.options} role="group" aria-labelledby="check-q">
+      {items.map((item) => (
+        <button
+          key={item.code}
+          type="button"
+          role="checkbox"
+          aria-checked={on(item.code)}
+          className={s.option}
+          data-multi
+          onClick={() => toggle(item.code)}
+        >
+          <i className={s.mark} aria-hidden="true" />
+          <span>{item.label}</span>
+        </button>
+      ))}
+    </div>
+  );
+
+  const screen: Record<Exclude<Key, "details" | "plan">, ReactNode> = {
+    about: (
+      <div className={s.stack}>
+        <div className={s.group}>
+          <p className={s.groupK} id="check-gender">
+            Which describes you?
+          </p>
+          <div className={s.seg} role="radiogroup" aria-labelledby="check-gender">
+            {GENDERS.map((g) => (
+              <button
+                key={g.code}
+                type="button"
+                role="radio"
+                aria-checked={d.gender === g.code}
+                className={s.segBtn}
+                onClick={() =>
+                  // PCOS is not asked of men: a tick left over from going back is dropped
+                  update({ gender: g.code, conditions: g.code === "Male" ? d.conditions.filter((c) => c !== "PCOS") : d.conditions })
+                }
+              >
+                {g.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className={s.group}>
+          <label className={s.groupK} htmlFor="check-age">
+            Age
+          </label>
+          <div className={s.age}>
+            <button
+              type="button"
+              className={s.stepBtn}
+              aria-label="One year younger"
+              onClick={() => update({ age: String(Math.max(AGE_MIN, (Number(d.age) || 36) - 1)) })}
+            >
+              <Minus size={18} />
+            </button>
+            <span className={s.ageBox}>
+              <input
+                id="check-age"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                autoComplete="off"
+                maxLength={2}
+                value={d.age}
+                placeholder="35"
+                aria-invalid={(!!problem && !!d.gender) || undefined}
+                aria-describedby={problem ? "check-problem" : undefined}
+                onChange={(e) => update({ age: e.target.value.replace(/\D/g, "").slice(0, 2) })}
+              />
+              <span aria-hidden="true">years</span>
+            </span>
+            <button
+              type="button"
+              className={s.stepBtn}
+              aria-label="One year older"
+              onClick={() => update({ age: String(Math.min(AGE_MAX, (Number(d.age) || 34) + 1)) })}
+            >
+              <Plus size={18} />
+            </button>
+          </div>
+        </div>
       </div>
     ),
-    age: (
-      <div className={s.age}>
-        <button
-          type="button"
-          className={s.stepBtn}
-          aria-label="One year younger"
-          onClick={() => update({ age: String(Math.max(AGE_MIN, (Number(d.age) || 31) - 1)) })}
-        >
-          <Minus size={18} />
-        </button>
-        <label className={s.ageBox}>
-          <span className="sr-only">Age in years</span>
-          <input
-            inputMode="numeric"
-            pattern="[0-9]*"
-            autoComplete="off"
-            maxLength={2}
-            value={d.age}
-            placeholder="35"
-            aria-invalid={!!problem || undefined}
-            aria-describedby={problem ? "check-problem" : undefined}
-            onChange={(e) => update({ age: e.target.value.replace(/\D/g, "").slice(0, 2) })}
-          />
-          <span aria-hidden="true">years</span>
-        </label>
-        <button
-          type="button"
-          className={s.stepBtn}
-          aria-label="One year older"
-          onClick={() => update({ age: String(Math.min(AGE_MAX, (Number(d.age) || 29) + 1)) })}
-        >
-          <Plus size={18} />
-        </button>
-      </div>
-    ),
-    height: (
-      <div className={s.measure}>
+    measures: (
+      <div className={`${s.stack} ${s.measure}`}>
         <MeasureField
           kind="height"
           label="Height"
@@ -351,10 +410,6 @@ export default function FreeCheck() {
           max={HEIGHT_CM.max}
           onChange={(v) => update({ heightCm: v, heightSet: true })}
         />
-      </div>
-    ),
-    weight: (
-      <div className={s.measure}>
         <MeasureField
           kind="weight"
           label="Weight"
@@ -431,30 +486,18 @@ export default function FreeCheck() {
     ),
     conditions: (
       <div className={s.multi}>
-        <div className={s.options} role="group" aria-labelledby="check-q">
-          {conditionsFor(CONDITIONS, d.gender).map((c) => {
-            const on = !d.noConditions && d.conditions.includes(c.code);
-            return (
-              <button
-                key={c.code}
-                type="button"
-                role="checkbox"
-                aria-checked={on}
-                className={s.option}
-                data-multi
-                onClick={() =>
-                  update({
-                    noConditions: false,
-                    conditions: on ? d.conditions.filter((x) => x !== c.code) : [...d.conditions, c.code],
-                  })
-                }
-              >
-                <i className={s.mark} aria-hidden="true" />
-                <span>{c.label}</span>
-              </button>
-            );
-          })}
-        </div>
+        {options(
+          conditionsFor(CONDITIONS, d.gender),
+          (code) => !d.noConditions && d.conditions.includes(code),
+          (code) =>
+            update({
+              noConditions: false,
+              conditions:
+                d.conditions.includes(code) && !d.noConditions
+                  ? d.conditions.filter((x) => x !== code)
+                  : [...d.conditions.filter((x) => x !== code), code],
+            }),
+        )}
         {!d.noConditions && d.conditions.includes("OTHER") && (
           <label className={s.other}>
             <span>What is it?</span>
@@ -480,25 +523,7 @@ export default function FreeCheck() {
         </button>
       </div>
     ),
-    tried: (
-      <div className={s.options} role="group" aria-labelledby="check-q">
-        {EXPERIENCES.map((e) => (
-          <button
-            key={e.code}
-            type="button"
-            role="checkbox"
-            aria-checked={d.experience.includes(e.code)}
-            className={s.option}
-            data-multi
-            onClick={() => update({ experience: experienceToggled(d.experience, e.code) })}
-          >
-            <i className={s.mark} aria-hidden="true" />
-            <span>{e.label}</span>
-          </button>
-        ))}
-      </div>
-    ),
-    plan: null,
+    tried: options(EXPERIENCES, (code) => d.experience.includes(code), (code) => update({ experience: experienceToggled(d.experience, code) })),
   };
 
   const notes = [
@@ -512,8 +537,22 @@ export default function FreeCheck() {
       .map((code) => ({ key: code, name: EXPERIENCES.find((e) => e.code === code)!.label, text: EXPERIENCE_NOTES[code], source: undefined })),
   ];
 
-  const plan = (
+  const toFirstStep = (
+    <button type="button" className="btn btn--signal" onClick={() => router.push("/onboarding")}>
+      <span>Choose your first step</span>
+      <span className="well" aria-hidden="true">
+        <ArrowRight size={18} />
+      </span>
+    </button>
+  );
+
+  const plan = canBook ? (
     <>
+      <div className={s.close2} data-dark>
+        <p className={s.closeK}>You are signed in</p>
+        <p className={s.closeText}>Your answers are saved. Next, your first step: blood tests at home, or a recent report.</p>
+        {toFirstStep}
+      </div>
       <ol className={s.steps}>
         <li>
           <h2 className={s.stepK}>Blood tests at home</h2>
@@ -585,8 +624,80 @@ export default function FreeCheck() {
           </a>
         </p>
       </section>
+
+      <div className={s.again}>{toFirstStep}</div>
     </>
+  ) : (
+    <div className={s.close2} data-dark>
+      <p className={s.closeK}>Weight care is not for you right now</p>
+      <p className={s.closeText}>
+        Your BMI is below the healthy range, so losing weight is not advised. Please speak to your own doctor. Our free
+        tools and guides are open to everyone.
+      </p>
+      <a href="/tools" className="btn btn--signal">
+        <span>See the free tools</span>
+        <span className="well" aria-hidden="true">
+          <ArrowRight size={18} />
+        </span>
+      </a>
+      <p className={s.closeFine}>
+        <button type="button" className={s.change} onClick={() => go(0)}>
+          Change my answers
+        </button>
+      </p>
+    </div>
   );
+
+  const card =
+    cur.key === "plan" ? (
+      plan
+    ) : cur.key === "details" ? (
+      <>
+        <CheckSignIn
+          identity={identity}
+          onChange={(patch) => setIdentity((prev) => ({ ...prev, ...patch }))}
+          onVerified={({ role, nextScreen }) => {
+            if (role !== "PATIENT" || nextScreen !== "ONBOARDING") {
+              // an existing account: the profile is already done, so the check's answers are not used
+              setLeaving(true);
+              router.replace(homePathFor(role));
+              return;
+            }
+            const answers = answersOf(d, identity);
+            if (answers) setKept(saveFreeCheck(answers));
+            // replace: Back from the plan goes to the health questions, never to a used code
+            go(at("plan"), true);
+          }}
+        />
+        <p className={s.private}>
+          <LockSimple size={13} aria-hidden="true" />
+          {kept
+            ? "Your answers stay on this device until the code is checked."
+            : "This browser did not keep your answers, so you may be asked them again after the code."}
+        </p>
+      </>
+    ) : (
+      <>
+        {screen[cur.key]}
+        {problem && (
+          <p id="check-problem" className={s.problem} role="alert">
+            {problem}
+          </p>
+        )}
+        <div className={s.actions}>
+          <button type="submit" className={`btn ${s.go}`} aria-disabled={!!problemOf(cur.key, d) || undefined}>
+            <span>Continue</span>
+            <span className="well" aria-hidden="true">
+              <ArrowRight size={18} />
+            </span>
+          </button>
+          <p className={s.private}>
+            <LockSimple size={13} aria-hidden="true" />
+            Worked out on this device. Nothing is sent until you sign in.
+          </p>
+        </div>
+      </>
+    );
 
   return (
     <main className={s.page} data-step={cur.key}>
@@ -608,7 +719,7 @@ export default function FreeCheck() {
         </header>
 
         <div className={s.head} key={`h${step}`} style={{ "--dir": dir } as CSSProperties}>
-          {step > 0 ? (
+          {step > 0 && cur.key !== "plan" ? (
             <button type="button" className={s.back} onClick={back}>
               <ArrowLeft size={16} aria-hidden="true" />
               Back
@@ -651,92 +762,26 @@ export default function FreeCheck() {
           ) : (
             <>
               <h1 id="check-q" ref={headingRef} tabIndex={-1} className={s.q}>
-                {cur.q}
+                {cur.key === "plan" && !canBook ? "Your result" : cur.q}
               </h1>
-              {cur.why && <p className={s.why}>{cur.why}</p>}
+              {cur.why && (cur.key !== "plan" || canBook) && <p className={s.why}>{cur.why}</p>}
             </>
           )}
         </div>
       </div>
 
-      <form className={s.body} onSubmit={submit} noValidate key={`b${step}`} style={{ "--dir": dir } as CSSProperties}>
-        <div className={s.card}>
-          {cur.key === "plan" ? plan : screen[cur.key]}
-
-          {problem && (
-            <p id="check-problem" className={s.problem} role="alert">
-              {problem}
-            </p>
-          )}
-
-          {cur.key !== "plan" && cur.key !== "gender" && (
-            <div className={s.actions}>
-              <button type="submit" className={`btn ${s.go}`} aria-disabled={!!problemOf(cur.key, d) || undefined}>
-                <span>Continue</span>
-                <span className="well" aria-hidden="true">
-                  <ArrowRight size={18} />
-                </span>
-              </button>
-              <p className={s.private}>
-                <LockSimple size={13} aria-hidden="true" />
-                Worked out on this device. Nothing is sent until you sign in.
-              </p>
-            </div>
-          )}
+      {/* the details have their own form (the code is sent from it); the other questions share this one */}
+      {cur.key === "details" || cur.key === "plan" ? (
+        <div className={s.body} key={`b${step}`} style={{ "--dir": dir } as CSSProperties}>
+          <div className={s.card}>{card}</div>
+          <Fine />
         </div>
-
-        {cur.key === "plan" && (
-          <div className={s.close2} data-dark>
-            {canBook ? (
-              <>
-                <p className={s.closeK}>Book your first step</p>
-                <p className={s.closeText}>
-                  Next, your mobile number and a code. Then your name and email, and your answers here are already filled in.
-                </p>
-                <button type="button" className="btn btn--signal" onClick={() => openLogin()}>
-                  <span>Book consultation</span>
-                  <span className="well" aria-hidden="true">
-                    <ArrowRight size={18} />
-                  </span>
-                </button>
-              </>
-            ) : (
-              <>
-                <p className={s.closeK}>Weight care is not for you right now</p>
-                <p className={s.closeText}>
-                  Your BMI is below the healthy range, so losing weight is not advised. Please speak to your own doctor. Our
-                  free tools and guides are open to everyone.
-                </p>
-                <a href="/tools" className="btn btn--signal">
-                  <span>See the free tools</span>
-                  <span className="well" aria-hidden="true">
-                    <ArrowRight size={18} />
-                  </span>
-                </a>
-              </>
-            )}
-            <p className={s.closeFine}>
-              {kept ? (
-                <span className={s.kept}>
-                  <Check size={13} weight="bold" aria-hidden="true" />
-                  Your answers stay in this browser tab until you sign in.
-                </span>
-              ) : (
-                "This browser did not keep your answers, so you will be asked them again after signing in."
-              )}{" "}
-              <button type="button" className={s.change} onClick={() => go(0)}>
-                Change my answers
-              </button>
-            </p>
-          </div>
-        )}
-
-        <p className={`fineprint ${s.fine}`}>
-          This check gives general information and does not replace a consultation or diagnosis. Results vary between
-          individuals. For adults aged 18 and over, and not for emergencies: call 112. Care is provided by registered
-          medical practitioners, and video consultations follow the Telemedicine Practice Guidelines, 2020.
-        </p>
-      </form>
+      ) : (
+        <form className={s.body} onSubmit={submit} noValidate key={`b${step}`} style={{ "--dir": dir } as CSSProperties}>
+          <div className={s.card}>{card}</div>
+          <Fine />
+        </form>
+      )}
     </main>
   );
 }

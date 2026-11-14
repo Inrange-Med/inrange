@@ -5,7 +5,7 @@
  * sign-in, so it always uses these. Codes are what the backend stores; labels are what a person reads.
  */
 
-import type { Gender, OnboardingOption } from "@/types/onboarding";
+import type { ConsentText, Gender, OnboardingOption } from "@/types/onboarding";
 
 export const GENDERS: { code: Gender; label: string }[] = [
   { code: "Male", label: "Male" },
@@ -60,3 +60,51 @@ export const experienceToggled = (experience: string[], code: string) =>
     : code === FIRST_TIME
       ? [FIRST_TIME]
       : [...experience.filter((chosen) => chosen !== FIRST_TIME), code];
+
+/** The consent wording, shared by onboarding and the free check's last step. Bump the version when
+    the wording changes: a consent given to older wording is asked again. */
+export const CONSENT_VERSION = "2026-09";
+
+export const CONSENTS: ConsentText[] = [
+  {
+    type: "TERMS",
+    title: "Terms of service",
+    line: "How inrange works, what it costs and how to cancel.",
+    more: "You are 18 or over and the details you give are yours and true. Plans are paid only after your doctor's review, with an itemised price before you pay.",
+    required: true,
+  },
+  {
+    type: "PRIVACY",
+    title: "Privacy notice",
+    line: "What we collect, why, and how to delete it.",
+    more: "The full notice lists what we collect, why and who can see it. You can ask for a copy, a correction or deletion at any time, and complain to the Data Protection Board of India.",
+    required: true,
+  },
+  {
+    type: "HEALTH_DATA",
+    title: "Use of my health details",
+    line: "Your doctor and care team read your answers and readings.",
+    more: "Only the people treating you can see your health details. Every time a doctor opens your record, it is logged.",
+    required: true,
+  },
+  {
+    type: "TELECONSULT",
+    title: "Consultation by video",
+    line: "Under India's Telemedicine Practice Guidelines 2020.",
+    more: "Your doctor may decide a video consultation is not enough and ask you to see someone in person. inrange is not for emergencies: call 112.",
+    required: true,
+  },
+  {
+    // a separate, optional choice (DPDP Act 2023): recording a call is not the same as having an AI process it
+    type: "AI",
+    title: "Call transcription",
+    line: "An AI scribe drafts your doctor's notes from your video calls.",
+    more: "If you agree, your video calls are transcribed so an AI scribe can draft the notes. Your doctor reads, corrects and signs every note, and nothing reaches your record without them. If you say no, nothing about your care changes: your doctor writes the notes themselves.",
+    required: false,
+  },
+];
+
+/** The consents care needs (all but the optional AI scribe). */
+export const REQUIRED_CONSENTS = CONSENTS.filter((c) => c.required).map(
+  (c) => c.type,
+);

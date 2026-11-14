@@ -5,15 +5,21 @@
  * nothing is sent until the person signs in, and closing the tab forgets them. Onboarding saves them
  * to the profile, then clears them once the profile is complete.
  *
+ * The check's last step also takes the name, email and consent, with the mobile number and its
+ * code (`identity`), so onboarding after sign-in can save questions 1 to 8 and go straight to the
+ * first step (call, 12 Nov 2026: fewer clicks before payment). A consent is kept with the wording
+ * version it was given to; onboarding asks again if the backend's version differs.
+ *
  * Every read is checked again (ranges and codes as the backend accepts them), so a stale, edited or
  * older-format value is ignored rather than saved.
  */
 
-import type { ConditionAnswer, Gender } from "@/types/onboarding";
+import type { ConditionAnswer, ConsentType, Gender } from "@/types/onboarding";
 import {
   AGE_MAX,
   AGE_MIN,
   CONDITIONS,
+  CONSENTS,
   EXPERIENCES,
   FIRST_TIME,
   GENDERS,
@@ -26,6 +32,17 @@ const VERSION = 1;
 /** Older answers are dropped: a weight from yesterday's check should not become today's baseline. */
 const MAX_AGE_MS = 12 * 60 * 60 * 1000;
 
+/** Question 1 and question 8, given on the check's last step before the code is sent. */
+export type FreeCheckIdentity = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  consents: ConsentType[];
+  consentVersion: string;
+};
+
+export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
 export type FreeCheckAnswers = {
   gender: Gender;
   ageYears: number;
@@ -36,6 +53,7 @@ export type FreeCheckAnswers = {
   weightLossExperience: string[];
   noConditions: boolean;
   conditions: ConditionAnswer[];
+  identity?: FreeCheckIdentity;
 };
 
 type Stored = FreeCheckAnswers & { v: number; savedAt: number };
@@ -46,6 +64,30 @@ const inRange = (value: unknown, min: number, max: number) =>
   Number.isFinite(value) &&
   value >= min &&
   value <= max;
+
+/** Name, email and consents as onboarding will save them, or undefined when any is not usable. */
+function checkedIdentity(raw: unknown): FreeCheckIdentity | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const i = raw as Partial<FreeCheckIdentity>;
+  const firstName = typeof i.firstName === "string" ? i.firstName.trim() : "";
+  const lastName = typeof i.lastName === "string" ? i.lastName.trim() : "";
+  const email = typeof i.email === "string" ? i.email.trim() : "";
+  if (!firstName || firstName.length > 60 || lastName.length > 60)
+    return undefined;
+  if (!EMAIL_PATTERN.test(email) || email.length > 120) return undefined;
+  if (typeof i.consentVersion !== "string" || !i.consentVersion)
+    return undefined;
+  const consents = Array.isArray(i.consents)
+    ? CONSENTS.map((c) => c.type).filter((type) => i.consents!.includes(type))
+    : [];
+  return {
+    firstName,
+    lastName,
+    email,
+    consents,
+    consentVersion: i.consentVersion,
+  };
+}
 
 /** The answers as onboarding will save them, or null when anything is missing or out of range. */
 export function checkedAnswers(raw: unknown): FreeCheckAnswers | null {
@@ -92,6 +134,7 @@ export function checkedAnswers(raw: unknown): FreeCheckAnswers | null {
         ? { code: c.code, otherText: c.otherText!.trim().slice(0, 120) }
         : { code: c.code },
     ),
+    ...(a.identity ? { identity: checkedIdentity(a.identity) } : {}),
   };
 }
 

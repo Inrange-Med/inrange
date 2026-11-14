@@ -66,3 +66,32 @@ sheet wins and this doc is updated.
   new is needed; steps can now arrive before step 1, so do not assume they come in order.
 - **`NEXT_PUBLIC_ASSESSMENT_URL`.** Leave it unset (or `/assessment`) on Vercel, or the booking
   links skip the free check.
+
+## From the conversion research (14 Nov 2026)
+
+Ranked by likely effect on people who start the free check and never pay. Sources are in the PR.
+
+1. **OTP through an Indian SMS provider on DLT, with browser autofill.** Firebase sends Indian OTPs
+   at about US$0.07 each, its template cannot be changed, and it cannot carry the line browsers need
+   to fill the code. A DLT-registered provider (MSG91, Gupshup, 2Factor, Exotel) costs about ₹0.2 and
+   lets the template end with `@inrangemed.com #123456`, which Android Chrome fills in one tap (the app
+   already listens for it, WebOTP). Keep Firebase for the session if you like (`signInWithCustomToken`),
+   and rate-limit `send-otp` on the server in place of reCAPTCHA. Register the template as a service
+   message with the code tagged `#numeric#` (TRAI, Nov 2025).
+2. **Truecaller one-tap on Android, OTP as the fallback.** Free; partners report +16 to 21% verified
+   sign-ups. Needs a callback endpoint for the token; show the privacy line and keep only the number.
+3. **WhatsApp OTP as a fallback** after about 20 seconds without a code (Meta authentication
+   templates, from an India-registered WhatsApp business account).
+4. **Prefill Razorpay** with the verified mobile and email (`prefill.contact`, `prefill.email`,
+   `readonly.contact`), and keep UPI first. UPI collect is gone on Android since 28 Feb 2026, so intent
+   (opening the UPI app) is the path; Razorpay's standard checkout already does this.
+5. **Drop-off recovery.** Anyone who verified their number but did not pay is already a lead for
+   pre-sales. If they ticked an optional WhatsApp updates box (to add), send one message linking back
+   to their step, and a payment link after a failed payment.
+6. **Safety questions the check cannot ask yet.** Pregnancy or breastfeeding, type 1 diabetes, an
+   eating disorder (now or before), pancreatitis, and a personal or family history of medullary
+   thyroid cancer are reasons a doctor must look first. They need new condition codes in
+   `/api/onboarding/config` and step 7 (clinical sign-off from the medical team first). Tell me the
+   codes and I add them to the bundled list the free check uses (`src/lib/onboarding/answerLists.ts`).
+7. **Never send health answers to analytics or ad pixels** (the 2026 FTC case against Hims & Hers
+   alleges exactly this). Only page views and step names, never answers.

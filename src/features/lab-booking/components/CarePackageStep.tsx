@@ -126,7 +126,7 @@ export default function CarePackageStep({ onChoose }: Props) {
               data-busy={startingCode === care.code}
               aria-busy={startingCode === care.code}
             >
-              <span>Start your consultation</span>
+              <span>Book home blood tests</span>
               <span className="well" aria-hidden="true">
                 {startingCode === care.code ? (
                   <i className={formStyles.spin} />

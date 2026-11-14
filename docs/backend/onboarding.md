@@ -127,10 +127,18 @@ test is not available yet. `labPackageCode` must be a code `GET /api/labs/packag
 
 ## Notes
 
-- **Free check first (12 Nov 2026).** Signed-out visitors answer questions 2 to 7 on the public
-  `/assessment` page. After sign-in, onboarding saves those answers with `PATCH /api/onboarding/step`
-  (steps 2 to 7 in order) before showing anything, then asks only question 1 (name and email, unless
-  already saved) and question 8 (consent). So steps 2 to 7 can arrive before step 1.
+- **Free check first (12 and 14 Nov 2026).** Signed-out visitors answer questions 2 to 7 on the
+  public `/assessment` page, then give name, email, mobile and consent there and sign in with the OTP
+  on the same screen. Onboarding then saves everything with `PATCH /api/onboarding/step` in this order:
+  1 (name, email), 8 (consent, before any health answer), then 2 to 7, and calls
+  `POST /api/onboarding/complete`. The patient opens straight on question 9. Steps therefore arrive
+  out of order (8 before 2); please accept that. Consent is only sent if it was given to the current
+  `consentVersion`; otherwise question 8 is asked as before.
+- **Question 9 is the choice itself (14 Nov 2026).** It shows the care package with lab tests (price
+  from `GET /api/care-packages`) with "Book home blood tests", and a row "Had blood tests in the last 3
+  months? Upload the report instead". There is no yes/no screen any more. The lab booking then starts
+  at the address; the checkout opens Razorpay on arrival (`&pay=now`), since the review already showed
+  the bill.
 - **No consultation length anywhere (12 Nov 2026).** Package `description` and `includes` must not
   state a duration; the app strips one if it does. Never list lab tests by name in `includes`.
 

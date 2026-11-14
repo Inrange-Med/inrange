@@ -28,6 +28,8 @@ type Props = {
   /** what the status line says on arrival, in place of "Welcome back" (after the free check) */
   welcomeLine?: string;
   formRef: RefObject<HTMLFormElement | null>;
+  /** false: the answers are their own actions (question 9's cards), so no Continue */
+  dock?: boolean;
   headingRef: RefObject<HTMLHeadingElement | null>;
   onSubmit: () => void;
   children: ReactNode;
@@ -43,6 +45,7 @@ export default function QuestionScreen({
   welcomeBack,
   welcomeLine,
   formRef,
+  dock = true,
   headingRef,
   onSubmit,
   children,
@@ -82,38 +85,40 @@ export default function QuestionScreen({
         )}
       </div>
 
-      <div className={styles.dock}>
-        {/* looks unavailable until the answer is complete, but a tap still says what is missing */}
-        <button
-          type="submit"
-          className={`btn ${formStyles.go}`}
-          aria-disabled={!canContinue}
-          data-busy={busy}
-          aria-busy={busy}
-        >
-          <span>{busy ? "Saving" : "Continue"}</span>
-          <span className="well" aria-hidden="true">
-            {busy ? (
-              <i className={formStyles.spin} />
+      {dock && (
+        <div className={styles.dock}>
+          {/* looks unavailable until the answer is complete, but a tap still says what is missing */}
+          <button
+            type="submit"
+            className={`btn ${formStyles.go}`}
+            aria-disabled={!canContinue}
+            data-busy={busy}
+            aria-busy={busy}
+          >
+            <span>{busy ? "Saving" : "Continue"}</span>
+            <span className="well" aria-hidden="true">
+              {busy ? (
+                <i className={formStyles.spin} />
+              ) : (
+                <ArrowRight size={18} />
+              )}
+            </span>
+          </button>
+          <p
+            className={`${formStyles.demo} ${welcomeBack ? styles.back : ""}`}
+            role="status"
+          >
+            {welcomeBack ? (
+              <Check size={13} weight="bold" />
             ) : (
-              <ArrowRight size={18} />
+              <LockSimple size={13} />
             )}
-          </span>
-        </button>
-        <p
-          className={`${formStyles.demo} ${welcomeBack ? styles.back : ""}`}
-          role="status"
-        >
-          {welcomeBack ? (
-            <Check size={13} weight="bold" />
-          ) : (
-            <LockSimple size={13} />
-          )}
-          {welcomeBack
-            ? (welcomeLine ?? "Welcome back. Your answers are saved.")
-            : "Saved as you go."}
-        </p>
-      </div>
+            {welcomeBack
+              ? (welcomeLine ?? "Welcome back. Your answers are saved.")
+              : "Saved as you go."}
+          </p>
+        </div>
+      )}
     </form>
   );
 }

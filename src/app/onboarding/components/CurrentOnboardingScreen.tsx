@@ -25,7 +25,7 @@ import GenderQuestion from "./questions/GenderQuestion";
 import HeightQuestion from "./questions/HeightQuestion";
 import NameQuestion from "./questions/NameQuestion";
 import QuestionScreen from "./questions/QuestionScreen";
-import RecentReportQuestion from "./questions/RecentReportQuestion";
+import FirstStepChoice from "./questions/FirstStepChoice";
 import WeightLossExperienceQuestion from "./questions/WeightLossExperienceQuestion";
 import WeightQuestion from "./questions/WeightQuestion";
 import styles from "../OnboardingPage.module.css";
@@ -103,7 +103,12 @@ export default function CurrentOnboardingScreen({
         update={update}
       />
     ),
-    9: <RecentReportQuestion draft={draft} onPick={progress.pickPathThenGo} />,
+    9: (
+      <FirstStepChoice
+        onLab={progress.openLab}
+        onUpload={progress.openUpload}
+      />
+    ),
   }[step];
 
   return (
@@ -133,6 +138,7 @@ export default function CurrentOnboardingScreen({
           welcomeLine={progress.welcomeLine}
           formRef={formRef}
           headingRef={headingRef}
+          dock={step !== 9}
           onSubmit={() => progress.submit()}
         >
           {answers}

@@ -115,7 +115,9 @@ export function useOnboardingProgress(
       await saveOnboardingStep(answer, config.consentVersion);
       if (ticket !== navigation.current) return;
       // the profile is completed before the blood test step, so the backend has it for the review
-      if (answer.step === LAST_SAVED_STEP && !completed.current) {
+      // (the last question to answer, which is question 8 unless the free check saved it already)
+      const upNext = nextOpenStep(skip.current, answer.step);
+      if (upNext > LAST_SAVED_STEP && !completed.current) {
         await completeOnboarding(answersFrom(draft, config));
         completed.current = true;
         if (ticket !== navigation.current) return;
@@ -125,7 +127,7 @@ export function useOnboardingProgress(
         // the profile has everything the check held
         clearFreeCheck();
       }
-      setStep(nextOpenStep(skip.current, answer.step));
+      setStep(upNext);
       setDirection(1);
     } catch (error) {
       if (ticket === navigation.current)
@@ -139,13 +141,6 @@ export function useOnboardingProgress(
   const pickThenGo = (answer: OnboardingStepAnswer) => {
     if (advanceTimer.current) clearTimeout(advanceTimer.current);
     advanceTimer.current = setTimeout(() => submit(answer), 260);
-  };
-
-  /** Question 9: show the tick, then open the chosen path a beat later. */
-  const pickPathThenGo = (hasRecentReport: boolean) => {
-    update({ hasRecentReport });
-    if (advanceTimer.current) clearTimeout(advanceTimer.current);
-    advanceTimer.current = setTimeout(() => choosePath(hasRecentReport), 260);
   };
 
   /** One screen back: through the lab booking's steps, then to question 9, then question by question. */
@@ -183,7 +178,18 @@ export function useOnboardingProgress(
         : !isProblem(stepAnswerFor(step, draft, config)),
     submit,
     pickThenGo,
-    pickPathThenGo,
+    /** question 9's package card: straight into the booking, at the address */
+    openLab: (chosen: Parameters<typeof path.openLab>[0]) => {
+      setDirection(1);
+      setProblem(null);
+      path.openLab(chosen);
+    },
+    /** question 9's report row: the upload form */
+    openUpload: () => {
+      setDirection(1);
+      setProblem(null);
+      path.openPath(true);
+    },
     back,
     saveAndExit,
   };

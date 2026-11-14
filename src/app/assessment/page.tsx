@@ -1,12 +1,11 @@
 /**
  * The free check (every "Book consultation" on the public site lands here): height, weight, age and
- * health questions, the BMI explained on the Indian scale, what happens next, then the sign-in sheet
- * for the mobile number (client call, 12 Nov 2026). The check runs in the browser
+ * health questions, the BMI explained on the Indian scale, then name, email, mobile and the code on its
+ * last question, then what happens next (client call, 12 Nov 2026). The check runs in the browser
  * (components/landing/check/FreeCheck.tsx); without JavaScript the page offers the /sign-in page.
  */
 import type { Metadata } from "next";
 import FreeCheck from "@/components/landing/check/FreeCheck";
-import LoginSheet from "@/components/landing/LoginSheet";
 
 export const metadata: Metadata = {
   title: "Free check | inrange",
@@ -27,7 +26,6 @@ export default function AssessmentPage() {
         </p>
       </noscript>
       <FreeCheck />
-      <LoginSheet />
     </>
   );
 }
