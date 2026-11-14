@@ -8,16 +8,14 @@ import { kgTo, useUnits } from "./tools/units";
 import s from "./LossCalculator.module.css";
 
 /*
-  How much weight could you lose: the range published studies of doctor-led programmes report,
-  worked out for one weight. An estimate from averages, never a prediction, a timeline or a promise.
+  How much weight could you lose: what a published study of doctor-led care reports, worked out for one
+  weight. An estimate from an average, never a prediction, a timeline or a promise.
 
-  The range, 19.5% to 20.9% of body weight over about 16 months (client, 5 Oct 2026: one number or a
-  range no more than a few kilograms wide, at the upper end near 20%): the averages at the two higher
-  doses of a large trial where doctors prescribed medication alongside diet and activity support
-  (19.5% and 20.9% at 72 weeks, Jastreboff et al., NEJM 2022). That is 1 to 3 kg apart at any
-  realistic weight; when both ends round to the same figure, one number shows.
-  - 15% is drawn on the ruler for context: the average in another large trial (14.9% at 68 weeks,
-    Wilding et al., NEJM 2021) and at the lowest dose of the first.
+  The figure (client call, 12 Nov 2026: "15% is the realistic market standard"; it was about 20%, the
+  two best-performing study groups of one trial): 14.9% of body weight over about 16 months, the average
+  in a large trial where doctors prescribed medication alongside diet and activity support (14.9% at
+  68 weeks, Wilding et al., NEJM 2021). A second large trial supports it: 15.0% at 72 weeks in its study
+  group that lost the least (Jastreboff et al., NEJM 2022). Shown as "about 15%".
   - 5% is drawn on the ruler for context only: ADA Standards of Care 2026, section 8 (Diabetes Care
     2026;49(Suppl 1):S166), "a minimum weight loss of 5% or more seems necessary to achieve metabolic
     improvements".
@@ -25,17 +23,16 @@ import s from "./LossCalculator.module.css";
   visitor already in it is never shown a loss. BMI itself lives in the BMI tool.
 */
 
-const LOW = 0.195;
-const HIGH = 0.209;
-// the ruler shows today's weight on the right and 25% lower on the left
-const SPAN = 0.25;
+/** The share of body weight the calculator reports (14.9%, written "about 15%"). */
+const SHARE = 0.149;
+// the ruler shows today's weight on the right and 20% lower on the left
+const SPAN = 0.2;
 const at = (fraction: number) => `${(1 - fraction / SPAN) * 100}%`;
 
-// the three published reference points, drawn on the ruler and listed under it
+// the published reference points, drawn on the ruler and listed under it
 const MARKS = [
   { f: 0.05, pct: "5%", what: "The first milestone. Linked with better blood sugar, blood pressure and blood fats.", ref: 1 },
-  { f: 0.15, pct: "15%", what: "The average in a large trial where doctors prescribed medication, at 68 weeks.", ref: 2 },
-  { f: 0.209, pct: "20%", what: "The averages of the two study groups that lost the most in a second large trial, 19.5 to 20.9%, at 72 weeks.", ref: 3 },
+  { f: SHARE, pct: "15%", what: "The average in a large trial where doctors prescribed medication, at 68 weeks.", ref: 2 },
 ];
 
 // where the last two words start, so they and the footnote never break apart
@@ -75,18 +72,17 @@ export default function LossCalculator({ bare = false }: { bare?: boolean }) {
     const today = Math.round(kgTo(weight, wu));
     // whole units, rounded inward so the range never overstates
     const loss = (f: number) => Math.round(today * f);
-    const lo = loss(LOW);
-    const hi = loss(HIGH);
+    const kg = loss(SHARE);
     // healthy for this height, rounded inward so both ends sit inside it
     const okLo = Math.ceil(kgTo(18.5 * h2, wu));
     const okHi = Math.floor(kgTo(23 * h2, wu));
     const state = bmi < 18.5 ? "under" : bmi <= 23 ? "healthy" : "above";
-    return { today, lo, hi, loss, okLo, okHi, state };
+    return { today, kg, loss, okLo, okHi, state };
   }, [weight, height, wu]);
 
   const above = r.state === "above";
   const summary = above
-    ? `At ${r.today} ${wu}, you could lose about ${r.lo === r.hi ? r.hi : `${r.lo} to ${r.hi}`} ${wu}, or about 20% of your weight, over about 16 months.`
+    ? `At ${r.today} ${wu}, you could lose about ${r.kg} ${wu}, or about 15% of your weight, over about 16 months.`
     : r.state === "healthy"
       ? `At ${r.today} ${wu}, your weight is within the healthy range for your height, ${r.okLo} to ${r.okHi} ${wu}.`
       : `At ${r.today} ${wu}, your weight is below the healthy range for your height, ${r.okLo} to ${r.okHi} ${wu}.`;
@@ -112,14 +108,8 @@ export default function LossCalculator({ bare = false }: { bare?: boolean }) {
               You could lose about
             </p>
             <p className={s.big} aria-hidden="true">
-              <span key={`${r.lo}-${r.hi}${wu}`} className={s.roll}>
-                {r.lo !== r.hi && (
-                  <>
-                    {r.lo}
-                    <span className={s.to}>to</span>
-                  </>
-                )}
-                {r.hi}
+              <span key={`${r.kg}${wu}`} className={s.roll}>
+                {r.kg}
               </span>
               <span className={s.unit}>{wu}</span>
             </p>
@@ -129,12 +119,12 @@ export default function LossCalculator({ bare = false }: { bare?: boolean }) {
             {/* the qualifier stays beside the number at every width (ASCI: a claim's basis sits next to it):
                 which groups, that medication was prescribed, and the source, with nothing else */}
             <p className={s.sub}>
-              About 20% of your weight: the groups that lost most in a published trial, with{" "}
+              About 15% of your weight: the average in a large published trial, with{" "}
               <span className={s.nw}>
                 medication.
                 <sup className={s.sup}>
-                  <a href="#src-3" className={s.ref} onClick={openSources} aria-label="Source 3">
-                    3
+                  <a href="#src-2" className={s.ref} onClick={openSources} aria-label="Source 2">
+                    2
                   </a>
                 </sup>
               </span>
@@ -194,7 +184,8 @@ export default function LossCalculator({ bare = false }: { bare?: boolean }) {
               <span className={s.end}>Today</span>
             </div>
             <div className={s.track}>
-              <span className={s.band} style={{ "--a": at(HIGH), "--b": at(LOW) } as CSSProperties} />
+              {/* the loss itself, drawn from today back to about 15% */}
+              <span className={s.band} style={{ "--a": at(SHARE), "--b": at(0) } as CSSProperties} />
               {MARKS.map((m) => (
                 <span key={m.f} className={s.mark} style={{ "--x": at(m.f) } as CSSProperties} />
               ))}
@@ -284,11 +275,11 @@ export default function LossCalculator({ bare = false }: { bare?: boolean }) {
               </li>
               <li id="src-2">
                 Wilding JPH, et al. N Engl J Med 2021;384:989. 14.9% average loss at 68 weeks, with medication
-                alongside diet and activity support.
+                alongside diet and activity support. The calculator uses this figure.
               </li>
               <li id="src-3">
-                Jastreboff AM, et al. N Engl J Med 2022;387:205. 15.0 to 20.9% average loss at 72 weeks across its
-                study groups, 20.9% in the highest, alongside diet and activity support.
+                Jastreboff AM, et al. N Engl J Med 2022;387:205. 15.0% average loss at 72 weeks in the study group
+                that lost the least, with medication alongside diet and activity support.
               </li>
             </ol>
             {!above && (

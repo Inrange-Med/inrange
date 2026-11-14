@@ -8,18 +8,18 @@
   plate with the isolines and the wordmark, the phone pill with its tick, the light action with its
   arrow well, the six round code cells).
 
-  It opens three ways: openLogin() from any button, the nav's "Sign in", and any link to ASSESSMENT_URL
-  (every "Book consultation" on every public page). Without JavaScript those links still reach /assessment,
-  which sends people to the /sign-in page.
+  It opens from openLogin(): the nav's "Sign in", and the free check's last screen (/assessment), which
+  every "Book consultation" on the public site now leads to (client call, 12 Nov 2026: the questions
+  and the BMI come before the mobile number). Without JavaScript, /assessment offers the /sign-in page.
 */
 
 import { ChangeEvent, CSSProperties, FormEvent, PointerEvent, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Check, WarningCircle, X } from "@phosphor-icons/react";
-import { sendOtp, verifyOtp } from "@/services/authService";
+import { prepareSignIn, sendOtp, verifyOtp } from "@/services/authService";
 import { getSessionUser, homePathFor, saveSession } from "@/lib/session/authSession";
 import ContourField from "./ContourField";
-import { ASSESSMENT_URL, Wordmark } from "./ui";
+import { Wordmark } from "./ui";
 import s from "./LoginSheet.module.css";
 
 const OPEN_LOGIN_EVENT = "inrange:open-login";
@@ -86,6 +86,7 @@ export default function LoginSheet() {
     setLeaving(false);
     returnTo.current = document.activeElement as HTMLElement | null;
     reset();
+    prepareSignIn();
     setLoginOpen(true);
   }, [router]);
 
@@ -139,23 +140,10 @@ export default function LoginSheet() {
     if (released.velocity > 0.5 || released.offset > panel.offsetHeight / 3) close();
   };
 
-  // openLogin() and every booking link open the sheet
+  // openLogin() opens the sheet; booking links go to the free check first, which opens it at the end
   useEffect(() => {
-    const onClick = (event: MouseEvent) => {
-      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-      const link = (event.target as Element | null)?.closest?.("a");
-      // "/assessment", "/assessment/" and "/assessment?plan=4" all count
-      const path = (link?.getAttribute("href") ?? "").split(/[?#]/)[0].replace(/\/$/, "");
-      if (!link || path !== ASSESSMENT_URL.replace(/\/$/, "")) return;
-      event.preventDefault();
-      open();
-    };
     window.addEventListener(OPEN_LOGIN_EVENT, open);
-    document.addEventListener("click", onClick);
-    return () => {
-      window.removeEventListener(OPEN_LOGIN_EVENT, open);
-      document.removeEventListener("click", onClick);
-    };
+    return () => window.removeEventListener(OPEN_LOGIN_EVENT, open);
   }, [open]);
 
   // while open: the page behind holds still, Escape closes, Tab stays inside the sheet

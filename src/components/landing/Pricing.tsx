@@ -3,14 +3,13 @@
 import { useState } from "react";
 import { ArrowRight } from "@phosphor-icons/react";
 import { ASSESSMENT_URL, Art, Cta, Mask, Tag } from "./ui";
-import { includedIn, inr, PLANS } from "./plans";
+import { includedIn, PLANS } from "./plans";
 import s from "./Pricing.module.css";
 
-/* One package, four prepaid lengths, from plans.ts (shared with the patient app). A doctor review
-   about every 30 days (one a month), check-ins weekly. */
+/* One package, four prepaid lengths, from plans.ts. A doctor review about every 30 days (one a
+   month), check-ins weekly. No prices (client call, 12 Nov 2026): the plan is priced after the
+   doctor's review, itemised before anything is paid. */
 const LENGTHS = PLANS;
-/** A month's share of a prepaid plan, rounded, so anything longer than a month says "about". */
-const perMonth = (l: (typeof PLANS)[number]) => `${l.months > 1 ? "about " : ""}${inr(l.price / l.months)}`;
 const MAX_WEEKS = 52;
 // the week each monthly review lands on, the same for every length (4, 9, 13, 17, 22, 26 ... 52),
 // so marks keep their identity as the plan changes
@@ -81,11 +80,6 @@ export function Planner() {
     <>
       <span className={s.segNum}>{l.months}</span>
       <span className={s.segUnit}>months</span>
-      <span className={s.segPrice}>
-        {l.months > 1 && <span className={s.perMo}>about </span>}
-        {inr(l.price / l.months)}
-        <span className={s.perMo}>/mo</span>
-      </span>
     </>
   );
 
@@ -128,23 +122,10 @@ export function Planner() {
           </span>
         </div>
 
-        {/* the price for the chosen length sits with the choice, on the first screen */}
-        <div className={s.total} aria-live="polite">
-          <p className={s.totalK}>
-            {plan.months} months
-            <small>{perMonth(plan)} a month</small>
-          </p>
-          <p key={plan.price} className={s.totalV}>
-            <s className={s.mrp}>
-              <span className="sr-only">MRP </span>
-              {inr(plan.mrp)}
-            </s>
-            {inr(plan.price)}
-          </p>
-        </div>
+        {/* how the chosen length is priced, said once, beside the choice */}
         <p className={s.totalNote}>
-          <span className={s.indicative}>Indicative</span> You see the final, itemised price after your consultation, and pay nothing
-          for the plan until then.
+          Your doctor suggests the length that suits you. You see the itemised price after your consultation, and pay
+          nothing for a plan until then.
         </p>
         <Cta href={`${ASSESSMENT_URL}?plan=${plan.months}`} variant="light" className={s.cta}>
           Book consultation
@@ -220,7 +201,7 @@ export default function Pricing() {
         <Planner />
 
         <p className={`fineprint ${s.fine}`}>
-          Prices shown are indicative. Plans are paid upfront, after your doctor&rsquo;s review. Whether any medicine is suitable is decided by your
+          Plans are priced after your doctor&rsquo;s review and paid upfront, with an itemised price before you pay. Whether any medicine is suitable is decided by your
           doctor, and not everyone is prescribed medication. A glucose sensor, if your doctor recommends one, is extra and
           priced before you agree. Results vary between individuals. For adults aged 18 and over, and not for emergencies.
           Care is provided by registered medical practitioners, and video consultations follow the Telemedicine Practice

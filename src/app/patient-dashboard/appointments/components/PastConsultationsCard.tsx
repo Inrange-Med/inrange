@@ -5,7 +5,6 @@
  */
 
 import Card from "@/components/ui/Card";
-import { consultationMinutes } from "@/lib/consultations/consultationTime";
 import { shortDate } from "@/lib/format/dateTime";
 import type { Appointment } from "@/types/appointment";
 import styles from "../AppointmentsPage.module.css";
@@ -44,9 +43,7 @@ export default function PastConsultationsCard({
               </strong>
               <span className={styles.pastBy}>
                 <span className="num">{dateOf(appointment.startsAt)}</span>,{" "}
-                {appointment.doctorName},{" "}
-                <span className="num">{consultationMinutes(appointment)}</span>{" "}
-                minutes
+                {appointment.doctorName}
               </span>
             </li>
           ))}

@@ -25,6 +25,8 @@ type Props = {
   canContinue: boolean;
   problem: Problem | null;
   welcomeBack: boolean;
+  /** what the status line says on arrival, in place of "Welcome back" (after the free check) */
+  welcomeLine?: string;
   formRef: RefObject<HTMLFormElement | null>;
   headingRef: RefObject<HTMLHeadingElement | null>;
   onSubmit: () => void;
@@ -39,6 +41,7 @@ export default function QuestionScreen({
   canContinue,
   problem,
   welcomeBack,
+  welcomeLine,
   formRef,
   headingRef,
   onSubmit,
@@ -107,7 +110,7 @@ export default function QuestionScreen({
             <LockSimple size={13} />
           )}
           {welcomeBack
-            ? "Welcome back. Your answers are saved."
+            ? (welcomeLine ?? "Welcome back. Your answers are saved.")
             : "Saved as you go."}
         </p>
       </div>

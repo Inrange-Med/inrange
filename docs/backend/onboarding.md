@@ -119,13 +119,20 @@ test is not available yet. `labPackageCode` must be a code `GET /api/labs/packag
 {
   "success": true,
   "data": [
-    { "code": "CONSULT_ONLY", "name": "Consultation", "description": "A 30-minute video consultation with a doctor.", "priceRupees": 999, "includesLabTests": false, "labPackageCode": null, "includes": ["30-minute video consultation"] },
-    { "code": "LAB_AND_CONSULT", "name": "Lab tests and consultation", "description": "Home blood tests by Redcliffe Labs, then your consultation.", "priceRupees": 1499, "includesLabTests": true, "labPackageCode": "MD028", "includes": ["Home sample collection", "30-minute video consultation"] }
+    { "code": "CONSULT_ONLY", "name": "Consultation", "description": "A video consultation with a doctor.", "priceRupees": 999, "includesLabTests": false, "labPackageCode": null, "includes": ["Video consultation with a doctor", "A call with your health coach"] },
+    { "code": "LAB_AND_CONSULT", "name": "Lab tests and consultation", "description": "Home blood tests by Redcliffe Labs, then your consultation.", "priceRupees": 1499, "includesLabTests": true, "labPackageCode": "MD028", "includes": ["Blood tests at home", "Video consultation with a doctor", "A call with your health coach"] }
   ]
 }
 ```
 
 ## Notes
+
+- **Free check first (12 Nov 2026).** Signed-out visitors answer questions 2 to 7 on the public
+  `/assessment` page. After sign-in, onboarding saves those answers with `PATCH /api/onboarding/step`
+  (steps 2 to 7 in order) before showing anything, then asks only question 1 (name and email, unless
+  already saved) and question 8 (consent). So steps 2 to 7 can arrive before step 1.
+- **No consultation length anywhere (12 Nov 2026).** Package `description` and `includes` must not
+  state a duration; the app strips one if it does. Never list lab tests by name in `includes`.
 
 - **Order of calls.** (1) `status` and `config` together on open. When status says
   `completed: true`, or the URL is `/onboarding?step=report`, `GET /api/eligibility` decides: no path

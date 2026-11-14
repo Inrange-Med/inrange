@@ -32,23 +32,34 @@ import {
   type DraftChanges,
   type Problem,
 } from "./onboardingDraft";
+import { clearFreeCheck } from "@/lib/onboarding/freeCheck";
+import { nextOpenStep, type Prefilled } from "./freeCheckPrefill";
 import { LAST_SAVED_STEP, REPORT_STEP } from "./onboardingOptions";
 import { isProblem, stepAnswerFor } from "./onboardingStepAnswer";
 import { useBloodTestPath } from "./useBloodTestPath";
 
-/** `status` is null when the backend cannot resume yet: the patient starts at question 1. */
+/** `status` is null when the backend cannot resume yet: the patient starts at question 1.
+ *  `prefilled`: the free check's answers were saved on the way in; moving forward skips them. */
 export function useOnboardingProgress(
   status: OnboardingStatus | null,
   config: OnboardingConfig,
+  prefilled?: Prefilled,
 ) {
   const router = useRouter();
   const path = useBloodTestPath();
   const [step, setStep] = useState(status?.currentStep ?? 1);
   const [direction, setDirection] = useState<1 | -1>(1);
   const [busy, setBusy] = useState(false);
-  const [problem, setProblem] = useState<Problem | null>(null);
   const [welcomeBack, setWelcomeBack] = useState(
     (status?.lastCompletedStep ?? 0) > 0,
+  );
+  // the questions saved from the free check (and an earlier name), skipped when moving forward
+  const skip = useRef(prefilled?.done ?? []);
+  const welcomeLine = prefilled?.fromCheck
+    ? "Your answers from the check are saved."
+    : undefined;
+  const [problem, setProblem] = useState<Problem | null>(
+    prefilled?.problem ? { message: prefilled.problem } : null,
   );
   const [draft, setDraft] = useState(() => draftFrom(status?.answers));
   // complete runs once: going back to question 8 and on again does not repeat it
@@ -111,8 +122,10 @@ export function useOnboardingProgress(
         updateSessionUser({
           fullName: `${draft.firstName.trim()} ${draft.lastName.trim()}`.trim(),
         });
+        // the profile has everything the check held
+        clearFreeCheck();
       }
-      setStep(answer.step + 1);
+      setStep(nextOpenStep(skip.current, answer.step));
       setDirection(1);
     } catch (error) {
       if (ticket === navigation.current)
@@ -158,6 +171,7 @@ export function useOnboardingProgress(
     busy,
     problem,
     welcomeBack,
+    welcomeLine,
     draft,
     update,
     toggleExperience: (code: string) =>

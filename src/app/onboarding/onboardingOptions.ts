@@ -8,10 +8,17 @@
 import type {
   ConsentText,
   ConsentType,
-  Gender,
   OnboardingConfig,
-  OnboardingOption,
 } from "@/types/onboarding";
+import { CONDITIONS, EXPERIENCES, GENDERS } from "@/lib/onboarding/answerLists";
+
+// the answer lists are shared with the public free check, which runs before sign-in
+export {
+  AGE_MAX,
+  AGE_MIN,
+  conditionsFor,
+  FIRST_TIME,
+} from "@/lib/onboarding/answerLists";
 
 /** Questions 1 to 8 are saved with PATCH /api/onboarding/step; then the profile is completed. */
 export const LAST_SAVED_STEP = 8;
@@ -69,52 +76,9 @@ export const CHAPTERS = [
   { name: "Blood test", steps: [REPORT_STEP] },
 ];
 
-const GENDERS: OnboardingConfig["genders"] = [
-  { code: "Male", label: "Male" },
-  { code: "Female", label: "Female" },
-  { code: "Other", label: "Other" },
-];
-
-export const AGE_MIN = 18;
-export const AGE_MAX = 90;
-
 /** Where the height and weight rulers rest until the first touch; never saved unless the patient moves them. */
 export const HEIGHT_FROM_CM = 165;
 export const WEIGHT_FROM_KG = 78;
-
-export const FIRST_TIME = "FIRST_TIME";
-
-const EXPERIENCES: OnboardingOption[] = [
-  { code: FIRST_TIME, label: "This is my first real attempt" },
-  { code: "SELF_DIET", label: "Diet and exercise on my own" },
-  { code: "PROGRAMME", label: "A dietitian, gym programme or app" },
-  { code: "DOCTOR_MEDS", label: "Medicine prescribed by a doctor" },
-  { code: "SURGERY", label: "Weight-loss surgery" },
-];
-
-/** In pairs that share one phone row without breaking a label: a long name beside a short one. */
-const CONDITIONS: OnboardingOption[] = [
-  { code: "T2D", label: "Type 2 diabetes" },
-  { code: "PREDIABETES", label: "Prediabetes" },
-  { code: "BP", label: "High blood pressure" },
-  { code: "PCOS", label: "PCOS" },
-  { code: "THYROID", label: "Thyroid condition" },
-  { code: "FATTY_LIVER", label: "Fatty liver" },
-  { code: "LIPIDS", label: "High cholesterol" },
-  { code: "SLEEP_APNOEA", label: "Sleep apnoea" },
-  { code: "HEART", label: "Heart disease" },
-  { code: "KIDNEY", label: "Kidney disease" },
-  { code: "OTHER", label: "Something else" },
-];
-
-/** PCOS is asked only of people who did not answer Male. */
-export const conditionsFor = (
-  conditions: OnboardingOption[],
-  gender: Gender | null,
-) =>
-  conditions.filter(
-    (condition) => !(gender === "Male" && condition.code === "PCOS"),
-  );
 
 const CONSENTS: ConsentText[] = [
   {

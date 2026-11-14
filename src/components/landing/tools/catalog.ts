@@ -25,7 +25,7 @@ export const TOOLS: Resource[] = [
     href: "/tools/weight-loss-calculator",
     name: "Weight loss calculator",
     asks: "How much weight would make a difference for me?",
-    what: "What a large trial reports for your weight: about 20% over about 16 months.",
+    what: "What a large trial reports for your weight: about 15% over about 16 months.",
   },
   {
     href: "/tools/diabetes-risk-score",

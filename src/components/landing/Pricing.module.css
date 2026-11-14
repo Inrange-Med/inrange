@@ -110,29 +110,6 @@ span.flow {
   line-height: 1.2;
   letter-spacing: 0.01em;
 }
-/* the monthly equivalent, so all four plans compare at a glance */
-.segPrice {
-  margin-top: 3px;
-  font-size: 0.75rem;
-  font-weight: 560;
-  line-height: 1.2;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  opacity: 0.8;
-}
-/* narrow controls keep the 12px floor and win the width back by dropping "about" and "/mo" */
-@container (max-width: 479px) {
-  .perMo {
-    display: none;
-  }
-}
-/* narrow phones: each length shows only its number and unit, so two lines sit well inside the pill;
-   the chosen length's monthly figure is right below in the total */
-@container (max-width: 399px) {
-  .segPrice {
-    display: none;
-  }
-}
 @media (hover: hover) and (pointer: fine) {
   .segBtn {
     transition: color 200ms ease;
@@ -314,10 +291,6 @@ span.flow {
   .mark[data-on="false"] {
     transition: none;
   }
-  .num,
-  .totalV {
-    animation: none;
-  }
 }
 
 /* what is included, the price promise, the action */
@@ -365,68 +338,13 @@ span.flow {
   transform: translateY(-4px);
   background: var(--signal);
 }
-/* the total line: the ledger closes on the price promise */
-.total {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 16px;
-  padding-top: 14px;
-  border-top: 1px solid rgb(238 239 240 / 0.55);
-  /* sits exactly on the ledger's last rule: one stronger line closes the list */
-  margin-top: -23px;
-}
-.totalK {
-  font-family: var(--font-display);
-  font-size: 1.125rem;
-  font-weight: 500;
-  letter-spacing: -0.012em;
-}
-.totalK small {
-  display: block;
-  white-space: nowrap;
-  margin-top: 2px;
-  font-family: var(--font-text);
-  font-size: 0.8125rem;
-  letter-spacing: 0;
-  color: var(--on-dark-2);
-  font-variant-numeric: tabular-nums;
-}
-.indicative {
-  display: inline-block;
-  margin-right: 6px;
-  padding: 1px 8px;
-  border-radius: 999px;
-  border: 1px solid rgb(238 239 240 / 0.3);
-  font-size: 0.75rem;
-  font-weight: 560;
-  color: var(--on-dark);
-}
-.totalV {
-  font-family: var(--font-display);
-  font-size: 1.75rem;
-  font-variant-numeric: tabular-nums;
-  animation: num-in 520ms var(--ease-drawer) both;
-  font-weight: 500;
-  letter-spacing: -0.012em;
-  color: var(--signal);
-}
-/* MRP, struck through, before the price offered */
-.mrp {
-  display: block;
-  margin-bottom: 2px;
-  text-align: right;
-  font-size: 0.875rem;
-  font-weight: 400;
-  letter-spacing: 0;
-  color: var(--on-dark-3);
-  text-decoration-thickness: 1px;
-}
+
+/* how the plan is priced, in one line under the choice */
 .totalNote {
-  margin-top: -12px;
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
   line-height: 1.5;
   color: var(--on-dark-2);
+  text-wrap: pretty;
 }
 .cta {
   justify-content: space-between;
@@ -467,11 +385,11 @@ span.flow {
 }
 
 @media (min-width: 900px) {
-  /* left: the choice, its price and the action; right: what the plan holds. The figures and the
-     ruler then share one bottom row across both columns, so neither column ends in an empty corner */
+  /* left: the choice, how it is priced and the action; right: what the plan holds. The figures and
+     the ruler then share one bottom row across both columns, so neither column ends in an empty corner */
   .planner {
     grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
-    grid-template-rows: auto auto auto 1fr auto;
+    grid-template-rows: auto auto 1fr auto;
     column-gap: 56px;
     row-gap: 28px;
     padding: 40px 40px 44px;
@@ -484,18 +402,13 @@ span.flow {
     grid-column: 1;
     grid-row: 1;
   }
-  .tool .total {
+  .tool .totalNote {
     grid-column: 1;
     grid-row: 2;
   }
-  .tool .totalNote {
-    grid-column: 1;
-    grid-row: 3;
-    margin-top: -16px;
-  }
   .cta {
     grid-column: 1;
-    grid-row: 4;
+    grid-row: 3;
     width: auto;
     align-self: start;
     justify-self: start;
@@ -503,17 +416,17 @@ span.flow {
   }
   .figures {
     grid-column: 1;
-    grid-row: 5;
+    grid-row: 4;
     align-self: end;
   }
   .rulerWrap {
     grid-column: 2;
-    grid-row: 5;
+    grid-row: 4;
     align-self: end;
   }
   .side {
     grid-column: 2;
-    grid-row: 1 / span 4;
+    grid-row: 1 / span 3;
     padding-top: 2px;
   }
 }
@@ -551,15 +464,6 @@ span.flow {
   }
 }
 
-/* the total under the figures, divided from them by a rule */
-.tool .total {
-  margin-top: 0;
-  padding-top: 20px;
-  border-top: 1px solid var(--hair-dark);
-}
-.tool .totalNote {
-  margin-top: -12px;
-}
 
 /* phones, homepage only: the care rhythm is already drawn in How it works, so the plan keeps its
    weeks and reviews readout and drops the third copy of the ruler (/pricing keeps it) */

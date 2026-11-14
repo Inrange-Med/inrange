@@ -13,7 +13,7 @@ import { isValidMobile } from "@/lib/format/phone";
 import { errorMessage } from "@/lib/http/apiClient";
 import { pathAfterSignIn } from "@/lib/navigation/signInReturn";
 import { homePathFor, saveSession } from "@/lib/session/authSession";
-import { sendOtp, verifyOtp } from "@/services/authService";
+import { prepareSignIn, sendOtp, verifyOtp } from "@/services/authService";
 
 type Stage = "phone" | "code";
 
@@ -150,6 +150,9 @@ export function useOtpSignIn(next: string | null) {
   }, [stage]);
 
   useEffect(() => () => smsListener.current?.abort(), []);
+
+  // the code's sender gets ready while the number is typed, so Send is not the slow moment
+  useEffect(() => prepareSignIn(), []);
 
   return {
     stage,

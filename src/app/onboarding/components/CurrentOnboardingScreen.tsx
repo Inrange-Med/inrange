@@ -9,6 +9,7 @@
 
 import { useEffect, useLayoutEffect, useRef } from "react";
 import type { OnboardingConfig, OnboardingStatus } from "@/types/onboarding";
+import type { Prefilled } from "../freeCheckPrefill";
 import { CHAPTERS } from "../onboardingOptions";
 import { bmiOf } from "../onboardingDraft";
 import { useOnboardingProgress } from "../useOnboardingProgress";
@@ -35,11 +36,13 @@ const TYPING_STEPS = [1, 3];
 export default function CurrentOnboardingScreen({
   status,
   config,
+  prefilled,
 }: {
   status: OnboardingStatus | null;
   config: OnboardingConfig;
+  prefilled?: Prefilled;
 }) {
-  const progress = useOnboardingProgress(status, config);
+  const progress = useOnboardingProgress(status, config, prefilled);
   const { phase, step, draft, problem, update, lab } = progress;
   const formRef = useRef<HTMLFormElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -127,6 +130,7 @@ export default function CurrentOnboardingScreen({
           canContinue={progress.canContinue}
           problem={problem}
           welcomeBack={progress.welcomeBack}
+          welcomeLine={progress.welcomeLine}
           formRef={formRef}
           headingRef={headingRef}
           onSubmit={() => progress.submit()}
