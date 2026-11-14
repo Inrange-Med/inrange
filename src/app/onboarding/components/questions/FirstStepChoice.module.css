@@ -1,0 +1,59 @@
+/* the package card, then the report route as one quiet full-width row under it */
+.choice {
+  display: grid;
+  gap: 14px;
+}
+.upload {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 18px;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  min-height: 64px;
+  padding: 14px 18px;
+  border: 0;
+  border-radius: var(--r-surface);
+  background: var(--paper);
+  box-shadow: 0 0 0 1px var(--hair);
+  font: inherit;
+  text-align: left;
+  color: var(--ink);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: box-shadow 200ms var(--ease-out);
+}
+.upload:focus-visible {
+  outline: 2px solid var(--signal-ink);
+  outline-offset: 2px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .upload:hover {
+    box-shadow: 0 0 0 1px var(--hair-2);
+  }
+}
+.icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: var(--bg);
+}
+.text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.text strong {
+  font-size: 1rem;
+  font-weight: 560;
+  line-height: 1.35;
+}
+.text span {
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+.go {
+  color: var(--ink-3);
+}

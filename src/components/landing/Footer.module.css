@@ -109,8 +109,19 @@
 .legal > * {
   max-width: 72ch;
 }
+/* the company line: name, registered office, email and pharmacy licence, each its own phrase, wrapping
+   only between phrases */
 .copy {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 16px;
+  row-gap: 2px;
   margin-top: 8px;
+  font-style: normal;
+}
+.copy a {
+  color: var(--on-dark);
+  text-underline-offset: 3px;
 }
 
 @media (min-width: 768px) {

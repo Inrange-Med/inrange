@@ -10,7 +10,9 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,css,mjs}\" \"!src/components/landing/**\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css,mjs}\" \"!src/components/landing/**\"",
     "check:redcliffe": "node --no-warnings --conditions=react-server src/server/redcliffe/redcliffeClient.check.mjs",
-    "check:sign-in": "node --no-warnings src/lib/navigation/signInReturn.check.mjs"
+    "check:sign-in": "node --no-warnings src/lib/navigation/signInReturn.check.mjs",
+    "check:free-check": "node --no-warnings src/lib/onboarding/freeCheck.check.mjs",
+    "check:care-package": "node --no-warnings src/lib/format/carePackage.check.mjs"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",

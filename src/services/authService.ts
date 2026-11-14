@@ -12,6 +12,7 @@ import { apiRequest } from "@/lib/http/apiClient";
 import {
   confirmFirebaseCode,
   sendFirebaseCode,
+  warmFirebaseSignIn,
 } from "@/lib/auth/firebasePhone";
 import type { NextScreen, SignInResult } from "@/types/auth";
 
@@ -28,8 +29,15 @@ type VerifyOtpResponse = {
   nextScreen?: string;
 };
 
+/** Call when a sign-in screen opens: gets the code's sender ready while the number is typed. */
+export function prepareSignIn(): void {
+  warmFirebaseSignIn();
+}
+
 /** Sends the code. Returns the pilot hint ("Pilot mode: enter ...") when no SMS is sent, else null. */
 export async function sendOtp(mobile: string): Promise<string | null> {
+  // the API answers which sender to use; get Firebase ready meanwhile instead of after
+  warmFirebaseSignIn();
   const body = await apiRequest<{
     message?: string;
     data?: { mock?: boolean; provider?: string };

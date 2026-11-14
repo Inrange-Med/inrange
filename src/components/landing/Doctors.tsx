@@ -19,7 +19,7 @@ export const FACTS = [
   {
     icon: VideoCamera,
     lead: "By video, anywhere in India.",
-    text: "A secure 30-minute video call from home or work, with no waiting room.",
+    text: "A secure video call from home or work, with no waiting room.",
   },
   {
     icon: HouseLine,

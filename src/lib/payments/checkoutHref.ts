@@ -6,15 +6,19 @@ export function checkoutHref({
   purpose,
   referenceId,
   returnTo,
+  payNow = false,
 }: {
   purpose: PaymentPurpose;
   referenceId: string | number;
   returnTo: string;
+  /** the screen before already showed the bill: Razorpay opens on arrival, without a second tap */
+  payNow?: boolean;
 }): string {
   const query = new URLSearchParams({
     purpose,
     referenceId: String(referenceId),
     returnTo,
   });
+  if (payNow) query.set("pay", "now");
   return `/patient-dashboard/checkout?${query}`;
 }

@@ -19,6 +19,7 @@ status, service function, screen), **Requests and responses** (examples), **Note
 | [lab-tests-redcliffe.md](lab-tests-redcliffe.md) | Home blood tests: each route mapped to the Redcliffe client, the slot hold, webhooks, env vars |
 | [payments-razorpay.md](payments-razorpay.md) | Razorpay orders, signature verification, fulfilment (plan, lab booking, consultation fee), webhooks |
 | [doctor-dashboard.md](doctor-dashboard.md) | The doctor's day, patient record, call notes, doctor chat list |
+| [medicine-cart.md](medicine-cart.md) | The cart after a prescription (nano plan: 24 to 48 hours later; follow-ups: at once), plus the other backend asks from the 12 Nov call |
 
 ## Conventions the app expects
 

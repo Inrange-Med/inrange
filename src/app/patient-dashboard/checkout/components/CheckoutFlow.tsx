@@ -14,7 +14,7 @@
  * available yet. Nothing is ever activated without a verified payment.
  */
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import ErrorNotice from "@/components/ui/ErrorNotice";
 import PageGhosts from "@/app/patient-dashboard/components/PageGhosts";
@@ -94,6 +94,15 @@ export default function CheckoutFlow() {
   const purpose = asPurpose(params.get("purpose"));
   const referenceId = params.get("referenceId") ?? "";
   const returnTo = safeReturnPath(params.get("returnTo"));
+  // "pay=now": the screen before already showed the bill, so Razorpay opens on arrival (once; the
+  // address loses the flag, so a reload or a Back to here waits for the Pay button)
+  const [autoPay] = useState(() => params.get("pay") === "now");
+  useEffect(() => {
+    if (!autoPay) return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete("pay");
+    window.history.replaceState(window.history.state, "", url);
+  }, [autoPay]);
   const isComplete = purpose !== null && referenceId !== "";
   const words = purpose ? PURPOSE_WORDS[purpose] : PURPOSE_WORDS.PLAN;
   // Back is always a link to returnTo (plans, pricing, a lab booking...; Home when missing), never
@@ -184,6 +193,16 @@ export default function CheckoutFlow() {
     setBusyLabel(null);
   };
 
+  const current = order.data ?? null;
+  // stable, so the review's open-once effect does not fire again on every render
+  const payCurrent = useCallback(
+    (themeColour: string) => {
+      if (current) void pay(current, themeColour);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [current, unconfirmed],
+  );
+
   const content = () => {
     if (!isComplete)
       return (
@@ -214,16 +233,17 @@ export default function CheckoutFlow() {
           actionLabel="Go back"
         />
       );
-    const current = order.data;
+    const shown = order.data;
     return (
       <OrderReview
-        order={current}
+        order={shown}
         busyLabel={busyLabel}
         notice={notice}
         awaitingConfirmation={unconfirmed !== null}
-        paymentReady={usableRazorpayKey(current.razorpayKeyId) !== null}
-        pilotPayment={isMockPayment(current.razorpayKeyId)}
-        onPay={(themeColour) => pay(current, themeColour)}
+        paymentReady={usableRazorpayKey(shown.razorpayKeyId) !== null}
+        pilotPayment={isMockPayment(shown.razorpayKeyId)}
+        autoPay={autoPay && !unconfirmed && notice === null}
+        onPay={payCurrent}
       />
     );
   };

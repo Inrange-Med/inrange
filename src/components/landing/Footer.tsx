@@ -1,12 +1,13 @@
 import ContourField from "./ContourField";
 import { PROGRAMMES, programmeHref } from "./programme-data";
 import { Cta, Mask, Wordmark } from "./ui";
+import { COMPANY } from "./company";
 import s from "./Footer.module.css";
 
 const COLS = [
   {
     title: "Programmes",
-    links: [...PROGRAMMES.map((p) => [p.short, programmeHref(p)]), ["Pricing", "/#pricing"]],
+    links: [...PROGRAMMES.map((p) => [p.short, programmeHref(p)]), ["Plans", "/#pricing"]],
   },
   {
     title: "inrange",
@@ -30,7 +31,7 @@ const COLS = [
   {
     title: "Contact and legal",
     links: [
-      ["care@inrangemed.com", "mailto:care@inrangemed.com"],
+      [COMPANY.email, `mailto:${COMPANY.email}`],
       ["Privacy policy", "/privacy"],
       ["Terms of service", "/terms"],
       ["Cancellation and refunds", "/refund"],
@@ -62,7 +63,7 @@ export default function Footer({
         <div className={s.ctaSide} suppressHydrationWarning data-reveal="rise" style={{ "--d": "200ms" } as React.CSSProperties}>
           <p>
             {close?.text ??
-              "Answer a few questions in the app. Then come your blood tests and your doctor, with every fee shown first."}
+              "Answer a few questions and see what your BMI means. Then come your blood tests and your doctor, with every fee shown first."}
           </p>
           {close?.action ?? <Cta variant="light" />}
         </div>
@@ -107,7 +108,19 @@ export default function Footer({
             Results vary between individuals and no outcome is guaranteed. Available to adults aged 18 and over. In an emergency,
             go to your nearest hospital or call 112.
           </p>
-          <p className={s.copy}>© 2026 Novaxis Lifesciences Pvt Ltd.</p>
+          {/* who runs the service and where to reach it; each line shows once company.ts has it */}
+          <address className={s.copy}>
+            <span>© 2026 {COMPANY.legalName}.</span>
+            {COMPANY.registeredOffice && <span>Registered office: {COMPANY.registeredOffice}.</span>}
+            <span>
+              Email: <a href={`mailto:${COMPANY.email}`}>{COMPANY.email}</a>
+            </span>
+            {COMPANY.drugLicence && (
+              <span>
+                Pharmacy: {COMPANY.drugLicence.holder}, drug licence {COMPANY.drugLicence.numbers}.
+              </span>
+            )}
+          </address>
         </div>
       </div>
     </footer>

@@ -119,13 +119,28 @@ test is not available yet. `labPackageCode` must be a code `GET /api/labs/packag
 {
   "success": true,
   "data": [
-    { "code": "CONSULT_ONLY", "name": "Consultation", "description": "A 30-minute video consultation with a doctor.", "priceRupees": 999, "includesLabTests": false, "labPackageCode": null, "includes": ["30-minute video consultation"] },
-    { "code": "LAB_AND_CONSULT", "name": "Lab tests and consultation", "description": "Home blood tests by Redcliffe Labs, then your consultation.", "priceRupees": 1499, "includesLabTests": true, "labPackageCode": "MD028", "includes": ["Home sample collection", "30-minute video consultation"] }
+    { "code": "CONSULT_ONLY", "name": "Consultation", "description": "A video consultation with a doctor.", "priceRupees": 999, "includesLabTests": false, "labPackageCode": null, "includes": ["Video consultation with a doctor", "A call with your health coach"] },
+    { "code": "LAB_AND_CONSULT", "name": "Lab tests and consultation", "description": "Home blood tests by Redcliffe Labs, then your consultation.", "priceRupees": 1499, "includesLabTests": true, "labPackageCode": "MD028", "includes": ["Blood tests at home", "Video consultation with a doctor", "A call with your health coach"] }
   ]
 }
 ```
 
 ## Notes
+
+- **Free check first (12 and 14 Nov 2026).** Signed-out visitors answer questions 2 to 7 on the
+  public `/assessment` page, then give name, email, mobile and consent there and sign in with the OTP
+  on the same screen. Onboarding then saves everything with `PATCH /api/onboarding/step` in this order:
+  1 (name, email), 8 (consent, before any health answer), then 2 to 7, and calls
+  `POST /api/onboarding/complete`. The patient opens straight on question 9. Steps therefore arrive
+  out of order (8 before 2); please accept that. Consent is only sent if it was given to the current
+  `consentVersion`; otherwise question 8 is asked as before.
+- **Question 9 is the choice itself (14 Nov 2026).** It shows the care package with lab tests (price
+  from `GET /api/care-packages`) with "Book home blood tests", and a row "Had blood tests in the last 3
+  months? Upload the report instead". There is no yes/no screen any more. The lab booking then starts
+  at the address; the checkout opens Razorpay on arrival (`&pay=now`), since the review already showed
+  the bill.
+- **No consultation length anywhere (12 Nov 2026).** Package `description` and `includes` must not
+  state a duration; the app strips one if it does. Never list lab tests by name in `includes`.
 
 - **Order of calls.** (1) `status` and `config` together on open. When status says
   `completed: true`, or the URL is `/onboarding?step=report`, `GET /api/eligibility` decides: no path

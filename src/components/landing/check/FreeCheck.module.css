@@ -1,0 +1,1020 @@
+/*
+  The free check. Each screen is two parts: the question on the brand's dark ground under the moving
+  isolines (client call, 12 Nov 2026: the booking form was "all white"; this is the In range look of
+  the homepage and the programme heads), and the answer on a paper card below. Mobile first: one
+  column at 390px, the card centred and capped from 768px. The light green sits only on the dark
+  ground, as everywhere.
+*/
+
+.page {
+  min-height: 100svh;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+/* ---------- the dark band: bar, progress and question ---------- */
+.band {
+  position: relative;
+  isolation: isolate;
+  overflow: clip;
+  background: var(--slate-800);
+  background-image: var(--sheen), var(--carbon);
+  color: var(--on-dark);
+  padding-bottom: 40px;
+}
+.field {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.bar {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 20px;
+  max-width: calc(720px + var(--gutter) * 2);
+  margin-inline: auto;
+  padding: calc(14px + env(safe-area-inset-top)) var(--gutter) 0;
+  min-height: 64px;
+}
+.brand {
+  display: inline-flex;
+  color: var(--on-dark);
+  border-radius: 6px;
+}
+/* one tick per screen, the ruler language of the brand: done ticks in paper, this one in green */
+.progress {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 4px;
+  align-items: center;
+  height: 12px;
+  max-width: 240px;
+  justify-self: center;
+  width: 100%;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.progress li {
+  height: 3px;
+  border-radius: 2px;
+  background: rgb(244 245 242 / 0.18);
+  transition:
+    background-color 320ms var(--ease-out),
+    transform 320ms var(--ease-out);
+}
+.progress li[data-state="done"] {
+  background: rgb(244 245 242 / 0.62);
+}
+.progress li[data-state="now"] {
+  background: var(--signal);
+  transform: scaleY(1.6);
+}
+.close {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 4px;
+  font-size: 0.875rem;
+  color: var(--on-dark-2);
+  text-decoration: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  .close:hover {
+    color: var(--on-dark);
+  }
+}
+
+.head {
+  display: grid;
+  justify-items: start;
+  gap: 14px;
+  max-width: calc(720px + var(--gutter) * 2);
+  margin-inline: auto;
+  padding: 18px var(--gutter) 0;
+  animation: arrive 460ms var(--ease-drawer) both;
+}
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  margin: -6px 0 -4px -2px;
+  padding: 0 2px;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.9375rem;
+  color: var(--on-dark-2);
+  cursor: pointer;
+}
+span.back {
+  visibility: hidden;
+}
+@media (hover: hover) and (pointer: fine) {
+  button.back:hover {
+    color: var(--on-dark);
+  }
+}
+.q {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(1.85rem, 1.45rem + 1.8vw, 2.75rem);
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+  outline: none;
+}
+.why {
+  max-width: 36em;
+  font-size: 1rem;
+  line-height: 1.55;
+  color: var(--on-dark-2);
+  text-wrap: pretty;
+}
+
+/* the BMI as the heading itself: the number in green, the band in words under it */
+.bmi {
+  display: block;
+  font-size: clamp(3.4rem, 2.6rem + 3.6vw, 5rem);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: var(--signal);
+}
+.bmiBand {
+  display: block;
+  margin-top: 10px;
+  font-size: clamp(1.15rem, 1.05rem + 0.5vw, 1.4rem);
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  color: var(--on-dark);
+}
+
+/* the Indian scale: three bands, the visitor's band lit, a pin at their BMI */
+.scale {
+  width: 100%;
+  margin-top: 6px;
+}
+.track {
+  position: relative;
+  height: 10px;
+  border-radius: 999px;
+}
+.track > span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 999px;
+  background: rgb(244 245 242 / 0.14);
+  box-shadow: 0 0 0 1px var(--slate-800);
+}
+.track > span[data-on="true"] {
+  background: rgb(195 236 178 / 0.42);
+}
+.pin {
+  position: absolute;
+  top: 50%;
+  left: var(--x);
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--signal);
+  box-shadow:
+    0 0 0 3px var(--slate-800),
+    0 4px 14px -4px rgb(0 0 0 / 0.6);
+  translate: -50% -50%;
+  animation: pin-in 900ms var(--ease-drawer) 160ms both;
+}
+.axis {
+  position: relative;
+  height: 22px;
+  margin-top: 8px;
+  font-size: 0.75rem;
+  color: var(--on-dark-3);
+}
+.axis span {
+  position: absolute;
+  top: 0;
+  translate: -50% 0;
+}
+.scaleKey {
+  margin-top: 4px;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--on-dark-3);
+}
+
+/* ---------- the answer card ---------- */
+.body {
+  display: grid;
+  gap: 20px;
+  max-width: calc(720px + var(--gutter) * 2);
+  margin: -20px auto 0;
+  padding: 0 var(--gutter) calc(40px + env(safe-area-inset-bottom));
+  animation: arrive 460ms var(--ease-drawer) 60ms both;
+}
+.card {
+  position: relative;
+  display: grid;
+  gap: 22px;
+  min-width: 0;
+  padding: 22px 18px 20px;
+  border-radius: var(--r-surface);
+  background: var(--paper);
+  box-shadow:
+    0 0 0 1px var(--hair),
+    0 18px 40px -28px rgb(17 17 17 / 0.35);
+}
+@media (min-width: 768px) {
+  .card {
+    padding: 32px 32px 28px;
+  }
+}
+
+/* single and multiple choices share one row style: a ring for one answer, a square for many */
+.options {
+  display: grid;
+  border-radius: var(--r-media);
+  background: var(--paper);
+  box-shadow: 0 0 0 1px var(--hair);
+  overflow: hidden;
+}
+.option {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  min-height: 56px;
+  padding: 12px 16px;
+  border: 0;
+  background: none;
+  text-align: left;
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1.35;
+  color: var(--ink-2);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background-color 180ms var(--ease-out),
+    color 180ms var(--ease-out);
+}
+.options .option + .option {
+  box-shadow: inset 0 1px 0 var(--hair);
+}
+.option[aria-checked="true"] {
+  background: var(--signal-wash);
+  color: var(--ink);
+}
+.option:focus-visible {
+  outline: 2px solid var(--signal-ink);
+  outline-offset: -3px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .option:not([aria-checked="true"]):hover {
+    background: var(--hover-wash);
+  }
+}
+.mark {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--paper);
+  box-shadow: inset 0 0 0 1.5px var(--hair-2);
+  transition:
+    box-shadow 200ms var(--ease-out),
+    background 200ms var(--ease-out);
+}
+.option[aria-checked="true"] .mark {
+  background: radial-gradient(circle, var(--signal) 0 3.5px, var(--slate-900) 4px);
+  box-shadow: none;
+}
+.option[data-multi] .mark {
+  border-radius: 6px;
+}
+.option[data-multi][aria-checked="true"] .mark {
+  background: var(--slate-900)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M5.5 10.4l3 3 6-6.6' fill='none' stroke='%23c3ecb2' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+    center / 20px no-repeat;
+}
+.multi {
+  display: grid;
+  gap: 12px;
+}
+.none {
+  border-radius: var(--r-media);
+  box-shadow: 0 0 0 1px var(--hair);
+}
+.other {
+  display: grid;
+  gap: 6px;
+  font-size: 0.875rem;
+  color: var(--ink-2);
+}
+.other input,
+.ageBox input {
+  font: inherit;
+  color: var(--ink);
+  background: var(--paper);
+  border: 0;
+  outline: none;
+}
+.other input {
+  min-height: 48px;
+  padding: 0 14px;
+  border-radius: var(--r-media);
+  box-shadow: inset 0 0 0 1px var(--hair-2);
+  font-size: 1rem;
+}
+.other input:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--signal-ink);
+}
+
+/* age: a big number between two round buttons */
+.age {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) 52px;
+  align-items: center;
+  gap: 12px;
+  max-width: 360px;
+}
+.stepBtn {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--hair-2);
+  cursor: pointer;
+  transition: transform 160ms var(--ease-out);
+}
+.stepBtn:active {
+  transform: scale(0.94);
+}
+.stepBtn:focus-visible {
+  outline: 2px solid var(--signal-ink);
+  outline-offset: 2px;
+}
+.ageBox {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+  min-height: 72px;
+  padding: 8px 12px;
+  border-radius: var(--r-media);
+  box-shadow: inset 0 0 0 1px var(--hair-2);
+  cursor: text;
+}
+.ageBox:focus-within {
+  box-shadow: inset 0 0 0 2px var(--signal-ink);
+}
+.ageBox input {
+  width: 2.4ch;
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.ageBox input::placeholder {
+  color: var(--hair-2);
+}
+.ageBox span {
+  font-size: 1rem;
+  color: var(--ink-3);
+}
+
+.measure {
+  min-width: 0;
+}
+
+/* two questions on one screen: each a labelled group, a hairline between them */
+.stack {
+  display: grid;
+  gap: 26px;
+}
+.stack > * + * {
+  padding-top: 24px;
+  border-top: 1px solid var(--hair);
+}
+.group {
+  display: grid;
+  gap: 12px;
+}
+.groupK {
+  font-size: 0.9375rem;
+  font-weight: 560;
+  color: var(--ink);
+}
+/* one of three, as a segmented row of pills (a tap chooses; Continue moves on) */
+.seg {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.segBtn {
+  min-height: 52px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--paper);
+  box-shadow: inset 0 0 0 1px var(--hair-2);
+  font: inherit;
+  font-size: 1rem;
+  color: var(--ink-2);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background-color 200ms var(--ease-out),
+    color 200ms var(--ease-out),
+    box-shadow 200ms var(--ease-out);
+}
+.segBtn[aria-checked="true"] {
+  background: var(--slate-900);
+  color: var(--on-dark);
+  box-shadow: none;
+}
+.segBtn:focus-visible {
+  outline: 2px solid var(--signal-ink);
+  outline-offset: 2px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .segBtn:not([aria-checked="true"]):hover {
+    box-shadow: inset 0 0 0 1px var(--ink-3);
+  }
+}
+
+/* ---------- your details, then the code ---------- */
+.signin {
+  display: grid;
+  gap: 18px;
+}
+.pair {
+  display: grid;
+  gap: 18px;
+}
+@media (min-width: 560px) {
+  .pair {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+}
+.entry {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  font-size: 0.9375rem;
+  font-weight: 560;
+  color: var(--ink);
+}
+.entry small {
+  font-weight: 400;
+  color: var(--ink-3);
+}
+.entry input,
+.phone {
+  min-height: 52px;
+  border-radius: var(--r-media);
+  background: var(--paper);
+  box-shadow: inset 0 0 0 1px var(--hair-2);
+}
+.entry input {
+  width: 100%;
+  padding: 0 14px;
+  border: 0;
+  outline: none;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--ink);
+}
+.entry input:focus-visible,
+.phone:focus-within {
+  box-shadow: inset 0 0 0 2px var(--signal-ink);
+}
+.entry input[aria-invalid="true"] {
+  box-shadow: inset 0 0 0 2px var(--alert);
+}
+.phone {
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+.phone input {
+  min-height: 0;
+  box-shadow: none;
+  background: none;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+.phone input:focus-visible {
+  box-shadow: none;
+}
+.cc {
+  flex: none;
+  align-self: stretch;
+  display: grid;
+  place-items: center;
+  padding: 0 12px 0 14px;
+  border-right: 1px solid var(--hair);
+  font-weight: 400;
+  color: var(--ink-2);
+}
+.fieldWhy {
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+.fieldErr {
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.45;
+  color: var(--alert);
+}
+/* consent: one tick for what care needs, a quieter one for the optional scribe */
+.tick {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  padding: 14px 16px;
+  border-radius: var(--r-media);
+  box-shadow: inset 0 0 0 1px var(--hair-2);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.tick strong {
+  font-weight: 560;
+  color: var(--ink);
+}
+.tick a {
+  color: var(--ink);
+  text-underline-offset: 3px;
+}
+.tick input {
+  width: 20px;
+  height: 20px;
+  margin: 1px 0 0;
+  accent-color: var(--slate-900);
+  cursor: pointer;
+}
+.tickQuiet {
+  box-shadow: none;
+  background: var(--bg);
+  font-size: 0.875rem;
+}
+.codeLede {
+  font-size: 1rem;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+.codeLede strong {
+  font-weight: 560;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.inlineLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 560;
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.inlineLink:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.codeBox {
+  display: block;
+  max-width: 320px;
+}
+.codeBox input {
+  width: 100%;
+  min-height: 68px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: var(--r-media);
+  background: var(--paper);
+  box-shadow: inset 0 0 0 1px var(--hair-2);
+  outline: none;
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 500;
+  letter-spacing: 0.4em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.codeBox input::placeholder {
+  color: var(--hair-2);
+}
+.codeBox input:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--signal-ink);
+}
+.codeBox input[aria-invalid="true"] {
+  box-shadow: inset 0 0 0 2px var(--alert);
+}
+.codeFoot {
+  font-size: 0.875rem;
+  color: var(--ink-3);
+}
+.spin {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  animation: spin 700ms linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+.go[data-busy="true"] {
+  pointer-events: none;
+}
+.again {
+  padding-top: 4px;
+}
+.again :global(.btn--signal) {
+  --btn-bg: var(--slate-900);
+  --btn-fg: var(--on-dark);
+  box-shadow: none;
+}
+
+/* ---------- result and next steps ---------- */
+.result {
+  display: grid;
+  gap: 22px;
+}
+.meaning {
+  font-family: var(--font-display);
+  font-size: clamp(1.15rem, 1.05rem + 0.45vw, 1.35rem);
+  font-weight: 500;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  text-wrap: pretty;
+}
+.block {
+  display: grid;
+  gap: 10px;
+  padding-top: 20px;
+  border-top: 1px solid var(--hair);
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+.result > .block:first-child,
+.steps + .block:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+.blockK {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 520;
+  line-height: 1.3;
+  letter-spacing: -0.008em;
+  color: var(--ink);
+}
+.ledger {
+  display: grid;
+  border-top: 1px solid var(--hair);
+}
+.ledger > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--hair);
+}
+.ledger dt {
+  min-width: 0;
+  color: var(--ink-2);
+}
+.ledger dd {
+  flex: none;
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 520;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.small {
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+.cite {
+  display: block;
+  font-size: 0.8125rem;
+  font-style: normal;
+  line-height: 1.5;
+  color: var(--ink-3);
+}
+.cite a {
+  color: inherit;
+  text-underline-offset: 3px;
+}
+
+/* the first step and what follows: a ruled line with a tick for each stop, never a numbered card */
+.steps {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.steps li {
+  position: relative;
+  display: grid;
+  gap: 4px;
+  padding: 0 0 20px 26px;
+  font-size: 1rem;
+  line-height: 1.55;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+.steps li::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 8px;
+  bottom: -8px;
+  width: 1px;
+  background: var(--hair-2);
+}
+.steps li:last-child::before {
+  display: none;
+}
+.steps li::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 5px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--paper);
+  box-shadow: inset 0 0 0 1.5px var(--slate-800);
+}
+.steps li:first-child::after {
+  background: var(--slate-900);
+}
+.stepK {
+  font-family: var(--font-display);
+  font-size: 1.0625rem;
+  font-weight: 520;
+  line-height: 1.35;
+  color: var(--ink);
+}
+.notes {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.notes li {
+  display: grid;
+  gap: 4px;
+}
+.notes strong {
+  font-weight: 560;
+  color: var(--ink);
+}
+.says {
+  display: grid;
+  gap: 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.says li {
+  display: grid;
+  gap: 6px;
+  padding-left: 16px;
+  border-left: 2px solid var(--slate-800);
+}
+.says blockquote,
+.sayPlain {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: -0.008em;
+  color: var(--ink);
+}
+.by {
+  font-size: 0.875rem;
+  color: var(--ink-2);
+}
+/* the first stop is the one being bought: a quiet label says so */
+.here {
+  justify-self: start;
+  margin-bottom: 2px;
+  padding: 2px 8px;
+  border-radius: 7px;
+  background: var(--slate-900);
+  color: var(--signal);
+  font-size: 0.75rem;
+  font-weight: 560;
+  line-height: 1.5;
+}
+/* the doctors: faces in a grid, name and qualifications under each, top-aligned so names line up */
+.faces {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  align-items: start;
+  gap: 18px 14px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.faces li {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.face {
+  width: 56px;
+  height: 56px;
+  margin-bottom: 8px;
+  border-radius: 999px;
+  object-fit: cover;
+  object-position: 50% 28%;
+  background: var(--slate-900);
+}
+.faceName {
+  font-size: 0.875rem;
+  font-weight: 560;
+  line-height: 1.3;
+  color: var(--ink);
+}
+.faceDeg {
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--ink-3);
+}
+.doctors {
+  font-size: 1rem;
+}
+.doctors a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  font-weight: 560;
+  color: var(--ink);
+  text-underline-offset: 4px;
+}
+
+.problem {
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--alert);
+}
+
+.actions {
+  display: grid;
+  justify-items: start;
+  gap: 14px;
+}
+.go {
+  justify-content: space-between;
+  width: 100%;
+}
+.go[aria-disabled="true"] {
+  --btn-bg: var(--slate-600);
+}
+@media (min-width: 768px) {
+  .go {
+    width: auto;
+    min-width: 240px;
+  }
+}
+.private {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8125rem;
+  color: var(--ink-3);
+}
+
+/* the close: the booking on the dark ground, like the site's closing call */
+.close2 {
+  position: relative;
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+  padding: 26px 20px 22px;
+  border-radius: var(--r-surface);
+  background: var(--slate-800);
+  background-image: var(--sheen), var(--carbon);
+  color: var(--on-dark);
+}
+@media (min-width: 768px) {
+  .close2 {
+    padding: 32px 32px 26px;
+  }
+}
+.closeK {
+  font-family: var(--font-display);
+  font-size: clamp(1.4rem, 1.2rem + 0.9vw, 1.85rem);
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+}
+.closeText {
+  max-width: 36em;
+  font-size: 1rem;
+  line-height: 1.55;
+  color: var(--on-dark-2);
+  text-wrap: pretty;
+}
+.close2 .btn {
+  margin-top: 6px;
+}
+.closeFine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--on-dark-3);
+}
+.kept {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.kept svg {
+  flex: none;
+  translate: 0 2px;
+}
+.change {
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--on-dark);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.fine {
+  margin-top: 4px;
+}
+
+@keyframes arrive {
+  from {
+    opacity: 0;
+    transform: translateX(calc(var(--dir, 1) * 18px));
+  }
+}
+@keyframes pin-in {
+  from {
+    opacity: 0;
+    scale: 0.4;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .head,
+  .body,
+  .pin {
+    animation: none;
+  }
+  .progress li {
+    transition: none;
+  }
+}

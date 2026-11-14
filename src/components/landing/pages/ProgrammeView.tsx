@@ -11,7 +11,7 @@ import WaitlistButton from "../Waitlist";
 import DoctorBench from "../DoctorBench";
 import { LISTED_DOCTORS } from "../doctor-data";
 import { Art, Cta, Mask, Tag } from "../ui";
-import { FIRST_STEP, INCLUDED, inr, PLANS } from "../plans";
+import { INCLUDED } from "../plans";
 import { Planner } from "../Pricing";
 import { PROGRAMMES, programmeHref, type Programme } from "../programme-data";
 import { SITE, find } from "../tools/catalog";
@@ -25,7 +25,7 @@ const UPDATED_LABEL = "16 October 2026";
 
 const LIVE_STEPS = [
   { name: "Eligibility check", text: "Two minutes online, before anything is booked." },
-  { name: "First step", text: "Blood tests at home or a recent report, a review by our medical team, then 30 minutes by video with your doctor." },
+  { name: "First step", text: "Blood tests at home or a recent report, a review by our medical team, then a video consultation with your doctor." },
   { name: "Your plan", text: "Food, strength, sleep and, only if clinically appropriate, medicine. You pay only once your doctor recommends it." },
   { name: "Every month", text: "Your doctor reviews your readings and adjusts the plan. A one-minute check-in each week keeps it on track." },
 ];
@@ -48,7 +48,6 @@ export default function ProgrammeView({ programme }: { programme: Programme }) {
   const steps = live ? LIVE_STEPS : SOON_STEPS;
   const others = PROGRAMMES.filter((x) => x.key !== programme.key);
   const related = d.related.map(find).filter((r) => r !== undefined);
-  const from = PLANS[PLANS.length - 1];
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -109,7 +108,7 @@ export default function ProgrammeView({ programme }: { programme: Programme }) {
                 <>
                   <Cta variant="light" />
                   <Link href="/#pricing" className={p.quiet}>
-                    See pricing
+                    See the plans
                     <ArrowRight size={15} aria-hidden="true" />
                   </Link>
                 </>
@@ -127,8 +126,8 @@ export default function ProgrammeView({ programme }: { programme: Programme }) {
             <dl className={v.facts}>
               {(live
                 ? [
-                    ["Plans from", `${inr(from.price / from.months)} a month`],
-                    ["First step", `${inr(FIRST_STEP.withTests)}, once`],
+                    ["Consultations", "By video"],
+                    ["Plans", "3 to 12 months"],
                     ["Your doctor", "Every month"],
                     ["Blood tests", "At home"],
                   ]
@@ -147,7 +146,7 @@ export default function ProgrammeView({ programme }: { programme: Programme }) {
             </dl>
             {live && (
               <p className={v.factsNote}>
-                Indicative prices. Medication only if your doctor judges it clinically appropriate, billed separately. Not everyone is prescribed medication.
+                Priced after your doctor&rsquo;s review, with an itemised price before you pay. Medication only if your doctor judges it clinically appropriate, billed separately. Not everyone is prescribed medication.
               </p>
             )}
             <p className={p.byline}>
@@ -343,14 +342,14 @@ export default function ProgrammeView({ programme }: { programme: Programme }) {
             <div className={`${p.secHead} ${p.secHeadSplit}`}>
               <Tag>What it costs</Tag>
               {live ? (
-                <Mask id="cost-title" className="h2" lines={["One package,", `from ${inr(from.price / from.months)} a month.`]} soft={1} />
+                <Mask id="cost-title" className="h2" lines={["One package,", "four lengths."]} soft={1} />
               ) : (
-                <Mask id="cost-title" className="h2" lines={["Prices before", "it opens."]} soft={1} />
+                <Mask id="cost-title" className="h2" lines={["What it", "will hold."]} soft={1} />
               )}
               <p className="lede" suppressHydrationWarning data-reveal="rise" style={{ "--d": "160ms" } as React.CSSProperties}>
                 {live
-                  ? "Indicative prices. Choose a length to see what it covers. You pay only after your doctor's review."
-                  : "We publish the itemised price before the programme opens. The waitlist is free."}
+                  ? "Choose a length to see what it covers. Your plan is priced after your doctor's review, and you pay only then."
+                  : "You see the itemised price before you pay for anything. The waitlist is free."}
               </p>
             </div>
             {live ? (

@@ -32,23 +32,34 @@ import {
   type DraftChanges,
   type Problem,
 } from "./onboardingDraft";
+import { clearFreeCheck } from "@/lib/onboarding/freeCheck";
+import { nextOpenStep, type Prefilled } from "./freeCheckPrefill";
 import { LAST_SAVED_STEP, REPORT_STEP } from "./onboardingOptions";
 import { isProblem, stepAnswerFor } from "./onboardingStepAnswer";
 import { useBloodTestPath } from "./useBloodTestPath";
 
-/** `status` is null when the backend cannot resume yet: the patient starts at question 1. */
+/** `status` is null when the backend cannot resume yet: the patient starts at question 1.
+ *  `prefilled`: the free check's answers were saved on the way in; moving forward skips them. */
 export function useOnboardingProgress(
   status: OnboardingStatus | null,
   config: OnboardingConfig,
+  prefilled?: Prefilled,
 ) {
   const router = useRouter();
   const path = useBloodTestPath();
   const [step, setStep] = useState(status?.currentStep ?? 1);
   const [direction, setDirection] = useState<1 | -1>(1);
   const [busy, setBusy] = useState(false);
-  const [problem, setProblem] = useState<Problem | null>(null);
   const [welcomeBack, setWelcomeBack] = useState(
     (status?.lastCompletedStep ?? 0) > 0,
+  );
+  // the questions saved from the free check (and an earlier name), skipped when moving forward
+  const skip = useRef(prefilled?.done ?? []);
+  const welcomeLine = prefilled?.fromCheck
+    ? "Your answers from the check are saved."
+    : undefined;
+  const [problem, setProblem] = useState<Problem | null>(
+    prefilled?.problem ? { message: prefilled.problem } : null,
   );
   const [draft, setDraft] = useState(() => draftFrom(status?.answers));
   // complete runs once: going back to question 8 and on again does not repeat it
@@ -104,15 +115,19 @@ export function useOnboardingProgress(
       await saveOnboardingStep(answer, config.consentVersion);
       if (ticket !== navigation.current) return;
       // the profile is completed before the blood test step, so the backend has it for the review
-      if (answer.step === LAST_SAVED_STEP && !completed.current) {
+      // (the last question to answer, which is question 8 unless the free check saved it already)
+      const upNext = nextOpenStep(skip.current, answer.step);
+      if (upNext > LAST_SAVED_STEP && !completed.current) {
         await completeOnboarding(answersFrom(draft, config));
         completed.current = true;
         if (ticket !== navigation.current) return;
         updateSessionUser({
           fullName: `${draft.firstName.trim()} ${draft.lastName.trim()}`.trim(),
         });
+        // the profile has everything the check held
+        clearFreeCheck();
       }
-      setStep(answer.step + 1);
+      setStep(upNext);
       setDirection(1);
     } catch (error) {
       if (ticket === navigation.current)
@@ -126,13 +141,6 @@ export function useOnboardingProgress(
   const pickThenGo = (answer: OnboardingStepAnswer) => {
     if (advanceTimer.current) clearTimeout(advanceTimer.current);
     advanceTimer.current = setTimeout(() => submit(answer), 260);
-  };
-
-  /** Question 9: show the tick, then open the chosen path a beat later. */
-  const pickPathThenGo = (hasRecentReport: boolean) => {
-    update({ hasRecentReport });
-    if (advanceTimer.current) clearTimeout(advanceTimer.current);
-    advanceTimer.current = setTimeout(() => choosePath(hasRecentReport), 260);
   };
 
   /** One screen back: through the lab booking's steps, then to question 9, then question by question. */
@@ -158,6 +166,7 @@ export function useOnboardingProgress(
     busy,
     problem,
     welcomeBack,
+    welcomeLine,
     draft,
     update,
     toggleExperience: (code: string) =>
@@ -169,7 +178,18 @@ export function useOnboardingProgress(
         : !isProblem(stepAnswerFor(step, draft, config)),
     submit,
     pickThenGo,
-    pickPathThenGo,
+    /** question 9's package card: straight into the booking, at the address */
+    openLab: (chosen: Parameters<typeof path.openLab>[0]) => {
+      setDirection(1);
+      setProblem(null);
+      path.openLab(chosen);
+    },
+    /** question 9's report row: the upload form */
+    openUpload: () => {
+      setDirection(1);
+      setProblem(null);
+      path.openPath(true);
+    },
     back,
     saveAndExit,
   };

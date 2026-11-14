@@ -204,7 +204,7 @@ export default function Page() {
                   <a href="/tools/weight-loss-calculator">
                     weight loss calculator
                   </a>{" "}
-                  shows what about 20% of your weight comes to, in kilograms.
+                  shows what about 15% of your weight comes to, in kilograms.
                 </li>
                 <li>
                   At least 150 minutes a week of brisk activity, such as

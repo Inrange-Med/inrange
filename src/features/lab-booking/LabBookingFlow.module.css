@@ -209,6 +209,32 @@
   background: var(--signal-ink);
 }
 
+/* the first step's blood test: how much it reads and what it is for, on a carbon plate so the card
+   carries the brand's colour (client call, 12 Nov 2026: "everything is white"); the light green sits
+   only on carbon, as everywhere */
+.markers {
+  display: grid;
+  gap: 6px;
+  padding: 16px 18px 18px;
+  border-radius: var(--r-media);
+  background: var(--sheen), var(--slate-900);
+  color: var(--on-dark);
+}
+.markersCount {
+  font-family: var(--font-display);
+  font-size: 1.375rem;
+  font-weight: 520;
+  letter-spacing: -0.012em;
+  line-height: 1.2;
+  color: var(--signal);
+}
+.markersWhy {
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--on-dark-2);
+  text-wrap: pretty;
+}
+
 /* ---------- forms ---------- */
 .fields {
   display: grid;

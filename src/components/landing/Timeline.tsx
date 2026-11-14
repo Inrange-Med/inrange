@@ -25,9 +25,9 @@ const EVENTS = [
     body: "Our medical team reads your report and confirms the programme suits you, so your consultation starts where it matters.",
   },
   {
-    when: "30 minutes, by video",
+    when: "By video, from home",
     title: "Your doctor consultation",
-    body: "A registered doctor goes through your results with you and decides whether treatment fits. If a plan is right, you see its full price before you pay. Medicine, only if prescribed, comes sealed from our licensed pharmacy.",
+    body: "A registered doctor goes through your results with you and decides whether treatment fits, then your health coach plans the next steps with you. If a plan is right, you see its full price before you pay. Medicine, only if prescribed, comes sealed from our licensed pharmacy.",
   },
   {
     when: "Every week",
