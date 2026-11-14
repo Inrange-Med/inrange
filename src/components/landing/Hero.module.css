@@ -61,6 +61,13 @@
   margin-top: 8px;
 }
 
+.assure {
+  margin-top: -2px;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--on-dark-3);
+}
+
 /* the programmes, named once in the first screen; each opens its tile further down */
 /* the programme index: a band ruled top and bottom, on the panel's own colour, so the scan lines stop
    at its rules without a visible box; the first name sits exactly on the headline's left edge */

@@ -21,6 +21,7 @@
 */
 
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, LockSimple, Minus, Plus, X } from "@phosphor-icons/react";
 import {
@@ -39,6 +40,7 @@ import { bmiFrom, readFreeCheck, saveFreeCheck, type FreeCheckAnswers } from "@/
 import { getSessionUser, homePathFor } from "@/lib/session/authSession";
 import type { Gender } from "@/types/onboarding";
 import ContourField from "../ContourField";
+import { LISTED_DOCTORS } from "../doctor-data";
 import { Wordmark } from "../ui";
 import { MeasureField } from "../tools/kit";
 import { healthyRange } from "../tools/data";
@@ -554,7 +556,8 @@ export default function FreeCheck() {
         {toFirstStep}
       </div>
       <ol className={s.steps}>
-        <li>
+        <li data-next>
+          <p className={s.here}>Your next step</p>
           <h2 className={s.stepK}>Blood tests at home</h2>
           <p>
             A partner lab collects samples at your door, or you upload a report from the last three months. The tests look
@@ -613,6 +616,16 @@ export default function FreeCheck() {
               )}
               <p className={s.by}>{x.by}</p>
               <Cite id={x.source} />
+            </li>
+          ))}
+        </ul>
+        {/* the doctors themselves, as on /doctors: face, name and qualifications only (NMC 2026) */}
+        <ul className={s.faces} aria-label="Doctors on the care team">
+          {LISTED_DOCTORS.filter((doc) => doc.photo).map((doc) => (
+            <li key={doc.name}>
+              <Image src={doc.photo!} alt="" width={56} height={70} className={s.face} />
+              <span className={s.faceName}>{doc.name}</span>
+              <span className={s.faceDeg}>{doc.degrees}</span>
             </li>
           ))}
         </ul>
