@@ -74,15 +74,17 @@ export default function CartView() {
     }
   };
 
-  const openPrescription = prescription?.pdf ? (
-    <FileOpenButton
-      load={() => getFile(prescription.pdf!)}
-      className={styles.pdfLink}
-    >
-      <FilePdf size={16} aria-hidden="true" />
-      <span>Prescription</span>
-    </FileOpenButton>
-  ) : null;
+  // a text link beside a card title; a pill beside "Call me" on the held screen
+  const openPrescription = (className: string) =>
+    prescription?.pdf ? (
+      <FileOpenButton
+        load={() => getFile(prescription.pdf!)}
+        className={className}
+      >
+        <FilePdf size={16} aria-hidden="true" />
+        <span>Prescription</span>
+      </FileOpenButton>
+    ) : null;
 
   const sub = prescription
     ? `${prescription.doctorName} prescribed these on ${shortDate(prescription.signedAt)}.`
@@ -122,7 +124,7 @@ export default function CartView() {
             </>
           )}
           <div className={styles.heldActions}>
-            {openPrescription}
+            {openPrescription(`btn btn--ghost ${styles.secondary}`)}
             {availableAt && (
               <button
                 type="button"
@@ -143,7 +145,7 @@ export default function CartView() {
           <Card
             title="Prescribed for you"
             className={styles.lines}
-            action={openPrescription}
+            action={openPrescription(styles.pdfLink)}
           >
             <ul className={styles.list}>
               {cart.lines.map((line) => (
