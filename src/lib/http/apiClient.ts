@@ -95,6 +95,24 @@ function messageFrom(body: unknown, status: number) {
   return "Something went wrong. Please try again.";
 }
 
+/**
+ * Ends a session on the server without waiting: sign-out clears this device first and moves on, and
+ * keepalive lets the request finish after the page changes. A failure is ignored (the session then
+ * ends on its own: 12 hours for staff, 14 days for patients).
+ */
+export function revokeSession(token: string) {
+  fetch(buildUrl("/api/auth/logout"), {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "x-region": "ap-south-1",
+      Authorization: `Bearer ${token}`,
+    },
+    keepalive: true,
+    cache: "no-store",
+  }).catch(() => {});
+}
+
 export async function apiRequest<TBody = ApiEnvelope<unknown>>(
   path: string,
   options: RequestOptions = {},

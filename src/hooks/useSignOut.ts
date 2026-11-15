@@ -1,27 +1,26 @@
 "use client";
 
 /**
- * Signing out, the same for both dashboards: end the session on the server (POST /api/auth/logout
- * via authService), then on this device, then land on sign-in. `leaving` is true while it runs.
+ * Signing out, the same for every dashboard: this device forgets the session at once (so every open
+ * tab signs out too, through the storage event), the server ends it in the background (authService
+ * logout, never awaited, so a slow or offline network cannot hold anyone signed in), then sign-in.
+ * `leaving` is true until the page changes.
  */
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { clearSession } from "@/lib/session/authSession";
+import { clearSession, getAccessToken } from "@/lib/session/authSession";
 import { logout } from "@/services/authService";
 
 export function useSignOut() {
   const router = useRouter();
   const [leaving, setLeaving] = useState(false);
 
-  const signOut = async () => {
+  const signOut = () => {
     setLeaving(true);
-    try {
-      await logout();
-    } catch {
-      // the server session may already be gone; this device signs out either way
-    }
+    const token = getAccessToken();
     clearSession();
+    if (token) logout(token);
     router.replace("/sign-in?out=1");
   };
 

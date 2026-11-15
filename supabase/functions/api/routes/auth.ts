@@ -71,7 +71,8 @@ auth.post("/send-otp", async (c) => {
       sends_in_window = excluded.sends_in_window, window_started_at = excluded.window_started_at, last_sent_at = now()`;
   if (!testing) await sendOtpSms(mobile, code);
   return ok(c, { provider: "api", mock, codeLength: CODE_LENGTH },
-    testing ? "Test account: enter the test code." : mock ? `Pilot mode: enter ${env.pilotOtp} to sign in.` : "We sent a 6-digit code to your phone.");
+    // the pilot code is never shown: whoever knows it is the person it was given to
+    testing ? "Test account: enter the test code." : mock ? "Enter your 6-digit sign-in code." : "We sent a 6-digit code to your phone.");
 });
 
 auth.post("/verify-otp", async (c) => {

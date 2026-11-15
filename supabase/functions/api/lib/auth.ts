@@ -9,7 +9,10 @@ import { fail } from "./http.ts";
 export type Role = "PATIENT" | "DOCTOR" | "ADMIN";
 export type AuthUser = { id: number; role: Role; mobile: string; fullName: string | null; sid: string };
 
-const key = () => new TextEncoder().encode(env.jwtSecret || "missing-secret");
+const key = () => {
+  if (!env.jwtSecret) throw new Error("APP_JWT_SECRET is not set"); // fail closed, never a guessable key
+  return new TextEncoder().encode(env.jwtSecret);
+};
 const TOKEN_DAYS = 14; // pilot: one sign-in lasts two weeks
 
 export async function issueToken(user: { id: number; role: Role; full_name: string | null }, sid: string) {
@@ -27,10 +30,12 @@ export async function optionalUser(c: Context): Promise<AuthUser | null> {
   const token = header.startsWith("Bearer ") ? header.slice(7) : "";
   if (!token) return null;
   try {
-    const { payload } = await jwtVerify(token, key(), { issuer: "inrange-api" });
+    const { payload } = await jwtVerify(token, key(), { issuer: "inrange-api", algorithms: ["HS256"] });
     const [row] = await sql`
       select u.id, u.role, u.mobile, u.full_name from auth_sessions s join users u on u.id = s.user_id
-      where s.id = ${String(payload.sid)} and s.revoked_at is null and u.id = ${Number(payload.sub)}`;
+      where s.id = ${String(payload.sid)} and s.revoked_at is null and u.id = ${Number(payload.sub)}
+        -- staff sessions last one working day; patients keep the token's two weeks
+        and (u.role = 'PATIENT' or s.created_at > now() - interval '12 hours')`;
     if (!row) return null;
     return { id: row.id, role: row.role, mobile: row.mobile, fullName: row.full_name, sid: String(payload.sid) };
   } catch {
