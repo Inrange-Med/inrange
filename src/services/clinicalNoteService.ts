@@ -4,7 +4,7 @@
  *   GET  /api/doctor/notes                   PROPOSED. The doctor's drafts, and notes signed in the last 30 days
  *   GET  /api/doctor/notes/:noteId           PROPOSED. One note with its transcript
  *   PUT  /api/doctor/notes/:noteId           PROPOSED. Saves the doctor's edits to a draft (ClinicalNoteChanges)
- *   POST /api/doctor/notes/:noteId/sign      PROPOSED. Signs it into the patient's record { sendToApp }
+ *   POST /api/doctor/notes/:noteId/sign      Signs it into the record { sendToApp, rxMonths }; also signs the prescription
  *   POST /api/doctor/notes/:noteId/addenda   PROPOSED. Adds a signed addendum to a signed note { text }
  * Each write answers with the whole updated note. Reads return null on 404, so screens can say so.
  */
@@ -61,11 +61,12 @@ export async function saveClinicalNote(
 export async function signClinicalNote(
   noteId: string,
   sendToApp: boolean,
+  rxMonths: number,
 ): Promise<ClinicalNote> {
   return noteFrom(
     await apiRequest(`/api/doctor/notes/${noteId}/sign`, {
       method: "POST",
-      body: { sendToApp },
+      body: { sendToApp, rxMonths },
     }),
   );
 }

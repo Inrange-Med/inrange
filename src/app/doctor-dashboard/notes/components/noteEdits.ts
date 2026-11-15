@@ -196,7 +196,10 @@ export const ADDED_MEDICINE_PREFIX = "added-";
 
 export function addMedicine(
   note: ClinicalNote,
-  medicine: Pick<MedicineChange, "action" | "name" | "strength" | "detail">,
+  medicine: Pick<
+    MedicineChange,
+    "action" | "name" | "strength" | "detail" | "medicineId" | "quantity"
+  >,
 ): NoteEdit {
   const added: MedicineChange = {
     ...medicine,

@@ -18,6 +18,7 @@ never calls a service. Each `X.tsx` default-exports `X`; its styles sit beside i
 | `LoadingSkeleton.tsx` | The waiting state for a whole page. |
 | `PageHead.tsx` | Every dashboard page's head: Back, title, action, line under it. `className` swaps its spacing (the doctor dashboard passes `clinicStyles.pageHead` for its larger title). |
 | `SegmentedControl.tsx` | The one segmented control. |
+| `QuantityStepper.tsx` | A count with minus and plus (the doctor's pack count, the patient's cart). |
 | `Sheet.tsx` | Bottom sheet on a phone, centred panel on a laptop. |
 | `SlotPicker.tsx` | Week, day, time, confirm; days come from `@/lib/calendar/bookingWeeks` (India time). |
 | `ToastProvider.tsx` | The confirmation toast; pages call `useToast()`. |

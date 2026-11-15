@@ -10,6 +10,9 @@
 //   GET    /care-team                                 patient: the care-team doctor
 //   GET    /care/prescription/current                 patient: latest signed prescription
 //   GET    /care/medicine-orders                      patient: deliveries, newest first
+//   GET    /care/cart                                 patient: the prescription's prefilled cart, or null (+ availableAt while held back)
+//   PATCH  /care/cart                                 patient: { lines?: [{ medicineId, quantity }], addressId? } within the prescription
+//                                                     (checkout: POST /payments/orders { purpose: "MEDICINE_ORDER", referenceId: cartId })
 //   POST   /chat/init                                 { doctorId } (patient) or { patientId } (doctor) -> { sessionId }
 //   GET    /chat/sessions/:sessionId/messages?afterId= messages oldest first (polling: only id > afterId)
 //   POST   /chat/sessions/:sessionId/messages         { messageText, messageType?, fileUrl? } -> the saved message
@@ -26,6 +29,7 @@ import { body, fail, intParam, ok, todayIST } from "../lib/http.ts";
 import { type AuthUser, requireDoctor, requirePatient, requireUser } from "../lib/auth.ts";
 import { setEligibility } from "../lib/eligibility.ts";
 import { signedUrl } from "../lib/storage.ts";
+import { priceCart, type CartLine } from "../lib/pharmacy.ts";
 import { bookAppointment } from "../lib/booking.ts";
 import { createRoom, endRoom, hmsLive, joinLink, mockJoinLink } from "../integrations/hms.ts";
 
@@ -458,4 +462,65 @@ careRoutes.post("/video/appointments/:appointmentId/end", async (c) => {
   });
   await endRoom(a.video_room_id);
   return ok(c, null, "Consultation ended");
+});
+
+// ---------- the medicine cart ----------
+
+const addressLine = (a: Record<string, unknown>) =>
+  [a.line1, a.line2, a.landmark, a.city, a.pincode].filter(Boolean).join(", ");
+
+/** The patient's open cart as the cart page shows it (customer prices only), or null with availableAt. */
+async function cartView(patientId: number) {
+  const [k] = await sql`
+    select k.*, p.months, ${iso("p.valid_until")} as valid_iso, p.valid_until, ${iso("k.available_at")} as available_iso
+    from medicine_carts k join prescriptions p on p.id = k.prescription_id
+    where k.patient_id = ${patientId} and k.status = 'OPEN' order by k.id desc limit 1`;
+  if (!k || (k.valid_until && new Date(k.valid_until) <= new Date())) return { data: null };
+  if (new Date(k.available_at) > new Date()) return { data: null, availableAt: k.available_iso };
+  const [priced, [address]] = await Promise.all([
+    priceCart(sql, k.lines as CartLine[], k.months),
+    sql`select * from addresses where user_id = ${patientId}
+        order by (id = ${k.address_id ?? 0}) desc, is_default desc, id desc limit 1`,
+  ]);
+  return {
+    data: {
+      id: String(k.id), prescriptionId: String(k.prescription_id), months: k.months, validUntil: k.valid_iso, ...priced,
+      address: address ? { id: String(address.id), label: address.label, name: address.full_name ?? "", line: addressLine(address) } : null,
+    },
+  };
+}
+
+careRoutes.get("/care/cart", async (c) => {
+  const me = await requirePatient(c);
+  const { data, availableAt } = await cartView(me.id);
+  return ok(c, data, "OK", availableAt ? { availableAt } : {});
+});
+
+careRoutes.patch("/care/cart", async (c) => {
+  const me = await requirePatient(c);
+  const input = await body<{ lines?: { medicineId?: unknown; quantity?: unknown }[]; addressId?: unknown }>(c);
+  const [k] = await sql`
+    select k.* from medicine_carts k join prescriptions p on p.id = k.prescription_id
+    where k.patient_id = ${me.id} and k.status = 'OPEN' and k.available_at <= now()
+      and (p.valid_until is null or p.valid_until > now()) order by k.id desc limit 1`;
+  if (!k) fail(404, "There is no cart to change.");
+  let lines = k.lines as CartLine[];
+  if (Array.isArray(input.lines)) {
+    const asked = new Map(input.lines.map((l) => [Number(l.medicineId), Number(l.quantity)]));
+    lines = lines.map((l) => {
+      if (!asked.has(l.medicineId)) return l;
+      const q = asked.get(l.medicineId)!;
+      // only within the prescription: never more than prescribed, never an item it does not name
+      if (!Number.isInteger(q) || q < 0 || q > l.prescribed) fail(400, "That quantity is more than your doctor prescribed.");
+      return { ...l, quantity: q };
+    });
+  }
+  let addressId = k.address_id;
+  if (input.addressId != null) {
+    const [a] = await sql`select id from addresses where id = ${Number(input.addressId) || 0} and user_id = ${me.id}`;
+    if (!a) fail(400, "That address was not found.");
+    addressId = a.id;
+  }
+  await sql`update medicine_carts set lines = ${sql.json(lines)}, address_id = ${addressId} where id = ${k.id}`;
+  return ok(c, (await cartView(me.id)).data, "Saved");
 });

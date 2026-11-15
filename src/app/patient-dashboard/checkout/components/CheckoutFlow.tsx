@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * The checkout for every purpose (PLAN, LAB_BOOKING, CONSULTATION_FEE), driven by the URL:
+ * The checkout for every purpose (PLAN, LAB_BOOKING, CONSULTATION_FEE, MEDICINE_ORDER), driven by the URL:
  *   ?purpose=PLAN&referenceId=<id>&returnTo=/patient-dashboard
  *
  * 1. Asks the backend for an order (it decides the amount), and shows it for review.
@@ -60,6 +60,11 @@ const PURPOSE_WORDS: Record<
     title: "Pay for your consultation",
     sub: "Your consultation time is held while you pay.",
     paid: "Your consultation is booked. You can join from Appointments 10 minutes before it starts.",
+  },
+  MEDICINE_ORDER: {
+    title: "Pay for your medicines",
+    sub: null,
+    paid: "Your order is with our pharmacy. Care shows the delivery as it moves.",
   },
 };
 

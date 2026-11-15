@@ -6,6 +6,7 @@ create temp table t on commit drop as
 update doctor_slots set status = 'Available', held_by = null, held_until = null
   where held_by in (select id from t) or id in (select slot_id from appointments where patient_id in (select id from t));
 delete from medicine_orders where patient_id in (select id from t);
+delete from medicine_carts where patient_id in (select id from t);
 delete from clinical_notes where patient_id in (select id from t);
 delete from prescriptions where patient_id in (select id from t);
 delete from chat_sessions where patient_id in (select id from t);

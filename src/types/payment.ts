@@ -5,12 +5,17 @@
  */
 
 /** What a payment is for. The backend fulfils each one differently once it is verified. */
-export type PaymentPurpose = "PLAN" | "LAB_BOOKING" | "CONSULTATION_FEE";
+export type PaymentPurpose =
+  | "PLAN"
+  | "LAB_BOOKING"
+  | "CONSULTATION_FEE"
+  | "MEDICINE_ORDER";
 
 export const PAYMENT_PURPOSES: readonly PaymentPurpose[] = [
   "PLAN",
   "LAB_BOOKING",
   "CONSULTATION_FEE",
+  "MEDICINE_ORDER",
 ];
 
 export type PaymentLineItem = {

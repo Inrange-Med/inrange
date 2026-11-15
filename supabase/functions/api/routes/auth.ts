@@ -41,9 +41,14 @@ function randomCode() {
   return String(n).padStart(CODE_LENGTH, "0");
 }
 
+/** A test account (env.testMobiles): signs in with TEST_OTP, nothing is sent. */
+const isTestMobile = (mobile: string) =>
+  Boolean(env.testOtp) && env.testMobiles.some((m) => (m.endsWith("*") ? mobile.startsWith(m.slice(0, -1)) : m === mobile));
+
 auth.post("/send-otp", async (c) => {
   const mobile = normaliseMobile((await body(c)).mobile);
-  if (live.firebase() && !env.reviewerMobiles.includes(mobile))
+  const testing = isTestMobile(mobile);
+  if (live.firebase() && !testing && !env.reviewerMobiles.includes(mobile))
     return ok(c, { provider: "firebase", mock: false, codeLength: CODE_LENGTH }, "We are sending a 6-digit code to your phone.");
   const [prev] = await sql`select * from otp_codes where mobile = ${mobile}`;
   const now = Date.now();
@@ -57,16 +62,16 @@ auth.post("/send-otp", async (c) => {
     windowStart = inWindow ? new Date(prev.window_started_at) : new Date(now);
     if (sends > SENDS_PER_HOUR) fail(429, "Too many codes asked for. Try again in an hour.");
   }
-  const mock = !smsLive();
-  const code = mock ? env.pilotOtp : randomCode();
+  const mock = testing || !smsLive();
+  const code = testing ? env.testOtp : mock ? env.pilotOtp : randomCode();
   await sql`
     insert into otp_codes (mobile, code_hash, expires_at, attempts, sends_in_window, window_started_at, last_sent_at)
     values (${mobile}, ${await hash(code, mobile)}, ${new Date(now + CODE_MINUTES * 60_000)}, 0, ${sends}, ${windowStart}, now())
     on conflict (mobile) do update set code_hash = excluded.code_hash, expires_at = excluded.expires_at, attempts = 0,
       sends_in_window = excluded.sends_in_window, window_started_at = excluded.window_started_at, last_sent_at = now()`;
-  await sendOtpSms(mobile, code);
+  if (!testing) await sendOtpSms(mobile, code);
   return ok(c, { provider: "api", mock, codeLength: CODE_LENGTH },
-    mock ? `Pilot mode: enter ${env.pilotOtp} to sign in.` : "We sent a 6-digit code to your phone.");
+    testing ? "Test account: enter the test code." : mock ? `Pilot mode: enter ${env.pilotOtp} to sign in.` : "We sent a 6-digit code to your phone.");
 });
 
 auth.post("/verify-otp", async (c) => {

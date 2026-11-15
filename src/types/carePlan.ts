@@ -1,6 +1,6 @@
 /**
- * The patient's treatment on the Care tab: the signed prescription and the medicine deliveries.
- * The backend does not serve these yet; see docs/backend/consultations-and-care.md.
+ * The patient's treatment on the Care tab: the signed prescription, its prefilled medicine cart and the
+ * deliveries. Docs: docs/backend/consultations-and-care.md, docs/backend/medicine-cart.md.
  */
 
 /** One medicine on a signed prescription. */
@@ -46,9 +46,45 @@ export type MedicineOrder = {
   history: { status: MedicineOrderStatus; at: string; note: string }[];
 };
 
+/** One prescribed item in the cart. Prices are what the patient pays, in paise, per pack. */
+export type CartLine = {
+  medicineId: string;
+  brand: string;
+  molecule: string;
+  strength: string;
+  form: string;
+  pack: string; // "pen (4 weekly doses)"
+  quantity: number;
+  prescribed: number; // the most the patient may buy
+  mrpPaise: number;
+  pricePaise: number; // after the default discount
+  available: boolean; // false once the pharmacy stops stocking it
+};
+
+/** The cart a signed prescription prefills (GET /api/care/cart). */
+export type MedicineCart = {
+  id: string;
+  prescriptionId: string;
+  months: number;
+  validUntil: string | null; // ISO
+  lines: CartLine[];
+  discountPercent: number;
+  mrpTotalPaise: number;
+  discountPaise: number;
+  totalPaise: number;
+  address: { id: string; label: string; name: string; line: string } | null;
+};
+
+/** The cart, or when it opens (a first consultation's cart waits for the programme call). */
+export type CartState = {
+  cart: MedicineCart | null;
+  availableAt: string | null; // ISO, while held back
+};
+
 /** What the Care tab shows about treatment. `available` is false until the backend serves it. */
 export type CarePlan = {
   available: boolean;
   prescription: Prescription | null;
   orders: MedicineOrder[];
+  cart: CartState;
 };

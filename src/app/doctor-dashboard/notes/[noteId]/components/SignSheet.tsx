@@ -1,6 +1,10 @@
 "use client";
 
-/** Before signing: everything the signature writes and where it goes, then the signature itself. */
+/**
+ * Before signing: everything the signature writes and where it goes, then the signature itself. One
+ * signature also signs the prescription and sends it (15 Nov 2026: no second "Review and sign"); on a
+ * plan the doctor picks how many months it covers, which sets the cart and its discount.
+ */
 
 import { useEffect, useRef, useState } from "react";
 import {
@@ -12,6 +16,7 @@ import {
   Signature,
   WarningCircle,
 } from "@phosphor-icons/react";
+import SegmentedControl from "@/components/ui/SegmentedControl";
 import Sheet from "@/components/ui/Sheet";
 import { shortDate } from "@/lib/format/dateTime";
 import type { ClinicalNote } from "@/types/clinicalNote";
@@ -48,11 +53,13 @@ export default function SignSheet({
   flaggedSymptoms: Symptom[];
   open: boolean;
   onClose: () => void;
-  onSign: (sendToApp: boolean) => void;
+  onSign: (sendToApp: boolean, rxMonths: number) => void;
   unchecked: string[];
   nextPrescriptionVersion: number;
 }) {
   const [sendToApp, setSendToApp] = useState(true);
+  const [rxMonths, setRxMonths] = useState("1");
+  const onPlan = note.patientOnPlan === true;
   const primary = useRef<HTMLButtonElement>(null);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -107,9 +114,25 @@ export default function SignSheet({
         {changes.length ? (
           <SignSheetRow
             icon={<Prescription size={17} />}
-            title={`Prescription version ${nextPrescriptionVersion}, draft`}
-            where={`For you to sign separately. ${first} sees it only after that.`}
-          />
+            title={`Prescription version ${nextPrescriptionVersion}, signed and sent`}
+            where={
+              onPlan
+                ? `To ${their} app, with a cart of what our pharmacy stocks`
+                : `One month, as a first consultation. ${first}'s medicine quote follows after the programme call`
+            }
+          >
+            {onPlan && (
+              <SegmentedControl
+                label="Months the prescription covers"
+                value={rxMonths}
+                onChange={setRxMonths}
+                options={["1", "2", "3", "6"].map((months) => ({
+                  value: months,
+                  label: `${months} mo`,
+                }))}
+              />
+            )}
+          </SignSheetRow>
         ) : (
           <SignSheetRow
             icon={<Prescription size={17} />}
@@ -190,7 +213,7 @@ export default function SignSheet({
           ref={primary}
           type="button"
           className="btn"
-          onClick={() => onSign(forPatient && sendToApp)}
+          onClick={() => onSign(forPatient && sendToApp, Number(rxMonths))}
         >
           <span>Sign as {doctor.name}</span>
           <span className="well" aria-hidden="true">

@@ -9,6 +9,7 @@
  *   PUT    /api/doctor/availability                 replaces the weekly hours ([] is the default week)
  *   PUT    /api/doctor/days-off/:date               marks a day off
  *   DELETE /api/doctor/days-off/:date               works that day again
+ *   GET    /api/pharmacy/inventory?query=           what the pharmacy stocks, for the e-prescription (doc: medicine-cart.md)
  */
 
 import { apiRequest, listFrom, type ApiEnvelope } from "@/lib/http/apiClient";
@@ -22,6 +23,7 @@ import type {
   DoctorAvailability,
   DoctorPatient,
   DoctorProfile,
+  InventoryItem,
   WorkingRange,
 } from "@/types/doctor";
 
@@ -140,5 +142,14 @@ export async function removeDayOff(date: string): Promise<DoctorAvailability> {
       `/api/doctor/days-off/${date}`,
       { method: "DELETE" },
     ),
+  );
+}
+
+export async function searchInventory(
+  query: string,
+  signal?: AbortSignal,
+): Promise<InventoryItem[]> {
+  return listFrom<InventoryItem>(
+    await apiRequest("/api/pharmacy/inventory", { query: { query }, signal }),
   );
 }

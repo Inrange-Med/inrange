@@ -6,6 +6,8 @@ export type SubscriptionPlan = {
   name: string;
   durationMonths: number;
   priceRupees: number | null;
+  /** the plan's MRP, shown struck through above the price; null when there is none */
+  mrpRupees: number | null;
   isActive: boolean;
   perks: string[];
 };

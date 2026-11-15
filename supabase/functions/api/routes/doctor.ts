@@ -11,25 +11,30 @@
 //   POST   /doctor/patients/:patientId/symptoms/:symptomId/acknowledgement   { outcome }
 //   DELETE /doctor/patients/:patientId/symptoms/:symptomId/acknowledgement
 //   POST   /doctor/patients/:patientId/labs/:labId/review                    { comment }
-//   POST   /doctor/patients/:patientId/prescriptions/:prescriptionId/sign
+//   POST   /doctor/patients/:patientId/prescriptions/:prescriptionId/sign      { months? }
+//   GET    /pharmacy/inventory?query=                                        what the warehouse stocks
 //   POST   /doctor/patients/:patientId/private-notes                         { text }
 //   POST   /doctor/patients/:patientId/plan-recommendation                   { planId, note? }
 //   DELETE /doctor/patients/:patientId/plan-recommendation
 //   GET    /doctor/notes
 //   GET    /doctor/notes/:noteId
 //   PUT    /doctor/notes/:noteId                                             ClinicalNoteChanges
-//   POST   /doctor/notes/:noteId/sign                                        { sendToApp }
+//   POST   /doctor/notes/:noteId/sign                                        { sendToApp, rxMonths? }
 //   POST   /doctor/notes/:noteId/addenda                                     { text }
 // How notes and prescriptions come to exist: the pilot has no scribe, so when a consultation ends
 // (status Completed or ended_at set) the first notes/queue/count read opens an empty DRAFT note for it,
 // with the patient's current medicines listed as CONTINUE. Signing a note turns its included medicine
-// changes into a DRAFT prescription (next version), which the doctor signs from the record.
+// changes into the next prescription and signs it in the same step (one signature, 15 Nov 2026): the PDF,
+// the patient's copy, and a cart prefilled with every prescribed item the pharmacy stocks. If the PDF
+// cannot be made, the prescription stays a DRAFT the doctor signs from the record.
 import { Hono } from "hono";
 import type { Context } from "hono";
 import { sql } from "../lib/db.ts";
 import { body, fail, intParam, ok } from "../lib/http.ts";
 import { requireDoctor } from "../lib/auth.ts";
 import { signedUrl, uploadFile } from "../lib/storage.ts";
+import { cartAvailableAt, medicineColumns, searchInventory, type CartLine } from "../lib/pharmacy.ts";
+import { prescriptionPdf, type RxPdfItem } from "../lib/prescriptionPdf.ts";
 
 export const doctorRoutes = new Hono();
 
@@ -106,6 +111,7 @@ async function openDraftNotes(doctorId: number) {
     const medicines = ((rx?.items ?? []) as Row[]).map((item, i) => ({
       id: `m${i + 1}`, action: "CONTINUE", name: item.medicineName ?? "", strength: item.strength ?? "",
       detail: item.frequency ?? "", was: null, evidence: [], include: true,
+      medicineId: item.medicineId ?? null, quantity: item.quantity ?? null,
     }));
     const callAt = a.started_at ?? a.slot_at ?? a.created_at;
     const minutes = a.started_at && a.ended_at
@@ -134,7 +140,8 @@ async function loadNote(noteId: number, doctorId: number, withTranscript = true)
   const addenda = await sql`
     select a.at, a.text, d.full_name from note_addenda a join doctors d on d.id = a.doctor_id
     where a.note_id = ${noteId} order by a.at`;
-  return toNote(n, addenda, withTranscript);
+  const [plan] = await sql`select 1 from subscriptions where user_id = ${n.patient_id} and status = 'Active' and ends_at > now()`;
+  return { ...toNote(n, addenda, withTranscript), patientOnPlan: Boolean(plan) };
 }
 
 function toNote(n: Row, addenda: Row[] = [], withTranscript = true) {
@@ -235,7 +242,8 @@ doctorRoutes.put("/doctor/notes/:noteId", async (c) => {
 doctorRoutes.post("/doctor/notes/:noteId/sign", async (c) => {
   const doctor = await doctorOf(c);
   const noteId = intParam(c.req.param("noteId"), "note");
-  const sendToApp = (await body<Row>(c)).sendToApp !== false;
+  const input = await body<Row>(c);
+  const sendToApp = input.sendToApp !== false;
   const [n] = await sql`select * from clinical_notes where id = ${noteId} and doctor_id = ${doctor.id}`;
   if (!n) fail(404, "That call note was not found.");
   if (n.status === "SIGNED") fail(409, "This note is already signed.");
@@ -245,22 +253,23 @@ doctorRoutes.post("/doctor/notes/:noteId/sign", async (c) => {
   if (!sentences(sections, "summary").length || !sentences(sections, "plan").length)
     fail(422, "Write the visit summary and the plan before signing.");
 
+  let prescriptionId: number | null = null;
   await sql.begin(async (tx) => {
-    // included medicine changes become the next DRAFT prescription, applied to the current signed one
+    // included medicine changes become the next prescription, applied to the current signed one
     const changes = (n.medicines as Row[]).filter((m) => m.include && m.action !== "CONTINUE");
-    let prescriptionId: number | null = null;
     if (changes.length) {
       const [current] = await tx`
         select items, version from prescriptions where patient_id = ${n.patient_id} and status = 'SIGNED'
         order by version desc limit 1`;
       const [{ next }] = await tx`select coalesce(max(version), 0) + 1 as next from prescriptions where patient_id = ${n.patient_id}`;
-      let items = [...((current?.items ?? []) as Row[])];
-      for (const m of changes) {
-        items = items.filter((i) => String(i.medicineName).toLowerCase() !== String(m.name).toLowerCase());
-        if (m.action !== "STOP")
-          items.push({ medicineName: m.name, strength: m.strength, dose: "", frequency: m.detail, route: "",
-                       instructions: m.detail, reason: "", genericName: null });
-      }
+      // every name this note touches leaves the old list; then each start or change joins it, so two
+      // strengths started together (a dose step-up over two months) both stay
+      const touched = new Set(changes.map((m) => String(m.name).toLowerCase()));
+      const items = ((current?.items ?? []) as Row[]).filter((i) => !touched.has(String(i.medicineName).toLowerCase()));
+      const ids = changes.map((m) => Number(m.medicineId)).filter((id) => Number.isInteger(id) && id > 0);
+      const stocked = new Map((ids.length ? await tx`select ${medicineColumns(tx)} from medicines m where m.id in ${tx(ids)}` : [])
+        .map((m) => [m.id, m]));
+      for (const m of changes.filter((x) => x.action !== "STOP")) items.push(rxItem(m, stocked.get(Number(m.medicineId))));
       const [rx] = await tx`
         insert into prescriptions (patient_id, doctor_id, appointment_id, status, version, items)
         values (${n.patient_id}, ${doctor.id}, ${n.appointment_id}, 'DRAFT', ${next}, ${tx.json(items)}) returning id`;
@@ -285,6 +294,10 @@ doctorRoutes.post("/doctor/notes/:noteId/sign", async (c) => {
       where id = ${noteId}`;
     await tx`insert into audit_log (patient_id, actor_id, action) values (${n.patient_id}, ${doctor.id}, ${`Signed the call note, ${doctor.name}`})`;
   });
+  // the same signature signs the prescription; a failure here leaves a draft to sign from the record
+  if (prescriptionId)
+    await signRx(doctor, n.patient_id, prescriptionId, Number(input.rxMonths) || 1)
+      .catch((e) => console.error("note sign: prescription left as draft", prescriptionId, e));
   return ok(c, await loadNote(noteId, doctor.id), "Signed");
 });
 
@@ -447,8 +460,9 @@ doctorRoutes.get("/doctor/patients/:patientId/record", async (c) => {
     }))),
     prescriptions: rxs.map((x) => ({
       id: String(x.id), version: x.version, status: x.status, date: ist(x.signed_at ?? x.created_at),
+      months: x.months, validUntil: ist(x.valid_until),
       items: (x.items as Row[]).map((i) => ({ name: i.medicineName ?? "", strength: i.strength ?? "", dose: i.dose ?? "",
-        frequency: i.frequency ?? "", duration: i.duration ?? "" })),
+        frequency: i.frequency ?? "", duration: i.duration ?? "", quantity: i.quantityLabel ?? "" })),
       // instructions that only repeat the frequency (doctor-added medicines) are not shown twice
       advice: (x.items as Row[]).filter((i) => i.instructions && i.instructions !== i.frequency).map((i) => i.instructions).join(" "),
     })),
@@ -565,68 +579,132 @@ doctorRoutes.delete("/doctor/patients/:patientId/plan-recommendation", async (c)
 doctorRoutes.post("/doctor/patients/:patientId/prescriptions/:prescriptionId/sign", async (c) => {
   const { doctor, patientId } = await forPatient(c);
   const rxId = intParam(c.req.param("prescriptionId"), "prescription");
+  const months = Number((await body<Row>(c)).months) || 1;
+  return ok(c, await signRx(doctor, patientId, rxId, months), "Signed");
+});
+
+doctorRoutes.get("/pharmacy/inventory", async (c) => {
+  await requireDoctor(c);
+  return ok(c, await searchInventory(String(c.req.query("query") ?? "").slice(0, 60)));
+});
+
+// ---------- prescriptions ----------
+
+const IST = { timeZone: "Asia/Kolkata" } as const;
+const dayOf = (d: Date) => new Intl.DateTimeFormat("en-IN", { ...IST, day: "numeric", month: "short", year: "numeric" }).format(d);
+const timeOf = (d: Date) => new Intl.DateTimeFormat("en-IN", { ...IST, hour: "numeric", minute: "2-digit", hour12: true }).format(d).toLowerCase();
+const monthsWord = (m: number) => `${m} ${m === 1 ? "month" : "months"}`;
+const daysWord = (d: number) => (d % 7 === 0 ? `${d / 7} ${d === 7 ? "week" : "weeks"}` : `${d} days`);
+
+/** A note's medicine as a prescription line; a catalogue item brings its generic name, form, route and pack. */
+function rxItem(m: Row, stocked: Row | undefined): Row {
+  if (!stocked)
+    return { medicineName: m.name, strength: m.strength, dose: "", frequency: m.detail, route: "", instructions: "",
+             reason: "", genericName: null, form: "", medicineId: null, quantity: null };
+  const quantity = Math.min(12, Math.max(1, Math.round(Number(m.quantity) || 1)));
+  // "pen (4 weekly doses)": the unit counts in Qty, its contents read with the form
+  const [, unit, contents] = /^(.*?)\s*(?:\((.*)\))?$/.exec(stocked.pack) ?? [];
+  return {
+    medicineId: stocked.id, medicineName: stocked.brand, genericName: stocked.molecule,
+    form: contents ? `${stocked.form}, ${contents} a ${unit}` : stocked.form,
+    strength: stocked.strength, dose: "", frequency: m.detail || stocked.default_frequency, route: stocked.route,
+    instructions: "", reason: "", quantity, quantityLabel: `${quantity} x ${unit || stocked.pack}`,
+    duration: daysWord(quantity * stocked.pack_days),
+  };
+}
+
+/**
+ * Signs a draft prescription: the PDF, the patient's copy and, for everything the pharmacy stocks, a cart
+ * at the prescribed quantities with the default discount. The first consultation without a plan (the nano
+ * plan) is one month and its cart waits NANO_CART_DELAY_HOURS (12 Nov 2026 call); on a plan, the doctor's
+ * months stand and the cart is ready at once. A newer prescription closes the patient's unpaid cart.
+ */
+async function signRx(doctor: { id: number; name: string; qualification: string }, patientId: number, rxId: number, monthsAsked: number) {
   const [rx] = await sql`select * from prescriptions where id = ${rxId} and patient_id = ${patientId}`;
   if (!rx) fail(400, "That prescription was not found for this patient.");
   if (rx.status !== "DRAFT") fail(409, "Only a draft prescription can be signed.");
   const items = rx.items as Row[];
   if (!items.length) fail(422, "This prescription has no medicines to sign.");
-  const [d] = await sql`select registration_no from doctors where id = ${doctor.id}`;
-  const [u] = await sql`
-    select coalesce(u.full_name, nullif(concat_ws(' ', p.first_name, p.last_name), '')) as full_name, p.age_years, p.gender
-    from users u left join patient_profiles p on p.user_id = u.id where u.id = ${patientId}`;
   const signedAt = new Date();
-  const path = `${patientId}/rx-${rxId}-v${rx.version}.pdf`;
-  const pdf = prescriptionPdf([
-    "InRange prescription",
-    `Version ${rx.version}   Signed ${ist(signedAt)?.slice(0, 16).replace("T", " ")} IST`,
-    "",
-    `Patient: ${u?.full_name ?? ""}${u?.age_years ? `, ${u.age_years} years` : ""}${u?.gender ? `, ${u.gender}` : ""}`,
-    `Doctor: ${doctor.name}${doctor.qualification ? `, ${doctor.qualification}` : ""}`,
-    `Registration no: ${d?.registration_no ?? "not recorded"}`,
-    "",
-    ...items.flatMap((i, n) => [
-      `${n + 1}. ${i.medicineName ?? ""} ${i.strength ?? ""}`.trim(),
-      `   ${[i.dose, i.frequency, i.route].filter(Boolean).join(", ")}`,
-      ...(i.instructions ? [`   ${i.instructions}`] : []),
-    ]),
-    "",
-    "Signed electronically under the Telemedicine Practice Guidelines 2020.",
+  const { onPlan, availableAt } = await cartAvailableAt(sql, patientId, signedAt);
+  const months = onPlan ? Math.min(12, Math.max(1, Math.round(monthsAsked))) : 1;
+  const validUntil = new Date(signedAt);
+  validUntil.setMonth(validUntil.getMonth() + months);
+
+  const [[d], [u], [addr], [appt], [note], [clinical], [weight]] = await Promise.all([
+    sql`select full_name, qualification, specialization, registration_no from doctors where id = ${doctor.id}`,
+    sql`select u.mobile, coalesce(u.full_name, nullif(concat_ws(' ', p.first_name, p.last_name), '')) as full_name,
+          p.age_years, p.gender, p.height_cm, p.weight_kg, p.conditions, p.conditions_text
+        from users u left join patient_profiles p on p.user_id = u.id where u.id = ${patientId}`,
+    sql`select * from addresses where user_id = ${patientId} order by is_default desc, id desc limit 1`,
+    sql`select a.visit_type, a.reason, coalesce(a.started_at, (s.slot_date + s.start_time) at time zone 'Asia/Kolkata', a.created_at) as at
+        from appointments a left join doctor_slots s on s.id = a.slot_id where a.id = ${rx.appointment_id}`,
+    sql`select sections, follow_ups from clinical_notes where prescription_id = ${rxId} or appointment_id = ${rx.appointment_id}
+        order by id desc limit 1`,
+    sql`select allergies, outside_medicines from patient_clinical where patient_id = ${patientId}`,
+    sql`select weight_kg from weight_logs where user_id = ${patientId} order by logged_at desc limit 1`,
   ]);
-  await uploadFile("prescriptions", path, new Blob([pdf], { type: "application/pdf" }), "application/pdf");
+  const sections = (note?.sections ?? []) as Row[];
+  const said = (key: string) => sentences(sections, key).map((x) => String(x.text));
+  const kg = weight?.weight_kg ?? u?.weight_kg;
+  const bmi = kg && u?.height_cm ? (kg / (u.height_cm / 100) ** 2).toFixed(1) : null;
+  const history = [...conditionLabels(u?.conditions), u?.conditions_text].filter(Boolean).join(", ");
+  const outside = clinical?.outside_medicines as string[] | null | undefined;
+  const callAt = appt?.at ? new Date(appt.at) : signedAt;
+  const pdfItems: RxPdfItem[] = items.map((i) => ({
+    brand: i.medicineName ?? "", generic: i.genericName ?? null, form: i.form ?? "", strength: i.strength ?? "",
+    dose: i.dose ?? "", frequency: i.frequency ?? "", route: i.route ?? "",
+    duration: i.duration ?? monthsWord(months), quantity: i.quantityLabel ?? "", instructions: i.instructions ?? "",
+  }));
+  const followUps = ((note?.follow_ups ?? []) as Row[]).filter((f) => f.include).map((f) => String(f.text));
+  const pdf = await prescriptionPdf({
+    id: rxId, version: rx.version,
+    practice: { name: "inrange, by Novaxis Lifesciences Pvt Ltd", email: "care@inrangemed.com",
+      // ponytail: placeholders until inrange confirms (15 Nov 2026); set the secrets to replace them, no deploy needed
+      address: Deno.env.get("PRACTICE_ADDRESS")?.trim() || "Registered office: to be confirmed",
+      pharmacyLicence: Deno.env.get("PHARMACY_LICENCE")?.trim() || "Pharmacy drug licence (Forms 20, 21): to be confirmed" },
+    doctor: { name: d?.full_name ?? doctor.name, qualification: d?.qualification ?? "", specialization: d?.specialization ?? "",
+      registrationNo: d?.registration_no ?? "not recorded" },
+    patient: {
+      name: u?.full_name ?? `Patient ${patientId}`,
+      ageSex: [u?.age_years ? `${u.age_years} years` : null, u?.gender].filter(Boolean).join(", ") || "Not recorded",
+      patientId: `IR-${String(patientId).padStart(6, "0")}`, mobile: u?.mobile ? `+91 ${u.mobile}` : "",
+      address: addr ? [addr.line1, addr.line2, addr.landmark, addr.city, addr.state, addr.pincode].filter(Boolean).join(", ") : null,
+      vitals: [kg ? `Weight ${kg} kg` : null, u?.height_cm ? `Height ${u.height_cm} cm` : null, bmi ? `BMI ${bmi}` : null]
+        .filter(Boolean).join("  ·  ") || null,
+    },
+    consult: { mode: "Video teleconsultation", type: appt?.visit_type === "FOLLOW_UP" ? "Follow-up" : "First consultation",
+      date: dayOf(callAt), time: timeOf(callAt), signedAt: `${dayOf(signedAt)}, ${timeOf(signedAt)}` },
+    clinical: {
+      complaint: String(appt?.reason ?? "").split(" | Note:")[0] || "Weight and metabolic care",
+      diagnosis: said("assessment").join(" ") || "Not recorded", history: history || "None reported",
+      allergies: clinical?.allergies || "Not recorded",
+      currentMedicines: outside == null ? "Not recorded" : outside.length ? outside.join(", ") : "None",
+    },
+    items: pdfItems,
+    advice: said("patient").length ? said("patient") : said("plan"),
+    followUp: followUps.join("; ") || "A review with your doctor in a month",
+    validUntil: dayOf(validUntil),
+  });
+  const path = `${patientId}/rx-${rxId}-v${rx.version}.pdf`;
+  await uploadFile("prescriptions", path, new Blob([pdf as Uint8Array<ArrayBuffer>], { type: "application/pdf" }), "application/pdf");
+
+  const merged = new Map<number, CartLine>();
+  for (const i of items.filter((x) => x.medicineId)) {
+    const id = Number(i.medicineId), q = Number(i.quantity) || 1;
+    const prev = merged.get(id);
+    merged.set(id, { medicineId: id, quantity: (prev?.quantity ?? 0) + q, prescribed: (prev?.prescribed ?? 0) + q });
+  }
   await sql.begin(async (tx) => {
     await tx`update prescriptions set status = 'SUPERSEDED' where patient_id = ${patientId} and status = 'SIGNED'`;
-    await tx`update prescriptions set status = 'SIGNED', signed_at = ${signedAt}, pdf_path = ${path} where id = ${rxId}`;
-    await tx`
-      insert into medicine_orders (patient_id, prescription_id, status, expected_at, items, history)
-      values (${patientId}, ${rxId}, 'PLACED', ${new Date(signedAt.getTime() + 3 * 864e5)},
-        ${tx.json(items.map((i) => ({ name: `${i.medicineName ?? ""} ${i.strength ?? ""}`.trim(), quantity: "As prescribed" })))},
-        ${tx.json([{ status: "PLACED", at: ist(signedAt), note: "Order received by the pharmacy" }])})`;
+    await tx`update prescriptions set status = 'SIGNED', signed_at = ${signedAt}, pdf_path = ${path}, months = ${months},
+               valid_until = ${validUntil} where id = ${rxId}`;
+    await tx`update medicine_carts set status = 'CLOSED' where patient_id = ${patientId} and status = 'OPEN'`;
+    if (merged.size)
+      await tx`insert into medicine_carts (patient_id, prescription_id, available_at, lines, address_id)
+               values (${patientId}, ${rxId}, ${availableAt}, ${tx.json([...merged.values()])}, ${addr?.id ?? null})`;
     await tx`insert into audit_log (patient_id, actor_id, action) values (${patientId}, ${doctor.id}, ${`Signed prescription version ${rx.version}, ${doctor.name}`})`;
   });
-  return ok(c, { id: String(rxId), version: rx.version, status: "SIGNED", signedAt: ist(signedAt) }, "Signed");
-});
-
-/** A one-page A4 PDF of plain text lines (Helvetica, ASCII). Enough for a pilot prescription. */
-function prescriptionPdf(lines: string[]): string {
-  const esc = (s: string) => s.replace(/[^\x20-\x7e]/g, "?").replace(/([\\()])/g, "\\$1");
-  const stream = ["BT", "/F1 11 Tf", "14 TL", "56 780 Td",
-    ...lines.map((l, i) => (i === 0 ? `/F1 16 Tf (${esc(l)}) Tj /F1 11 Tf T* T*` : `(${esc(l)}) Tj T*`)), "ET"].join("\n");
-  const objects = [
-    "<< /Type /Catalog /Pages 2 0 R >>",
-    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
-    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
-    `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`,
-  ];
-  let out = "%PDF-1.4\n";
-  const offsets: number[] = [];
-  objects.forEach((o, i) => {
-    offsets.push(out.length);
-    out += `${i + 1} 0 obj\n${o}\nendobj\n`;
-  });
-  const xref = out.length;
-  out += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n` +
-    offsets.map((o) => `${String(o).padStart(10, "0")} 00000 n \n`).join("") +
-    `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
-  return out; // ASCII only, so string length = byte length for the xref offsets
+  return { id: String(rxId), version: rx.version, status: "SIGNED", signedAt: ist(signedAt), months,
+           validUntil: ist(validUntil), cartAvailableAt: merged.size ? ist(availableAt) : null };
 }

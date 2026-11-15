@@ -2,45 +2,78 @@
 
 ## Purpose
 
-What the call with Shivam, Aamer and Sachchidanand (12 Nov 2026) decided for the backend, written as
-the rules the app will follow once the endpoints exist. Nothing here is built in the app yet: the
-patient app has the prescription card (`GET /api/care/prescription/current`) and deliveries, and no
-cart. Sachchidanand is writing the full post-lead flow (his "master sheet"); where it differs, his
-sheet wins and this doc is updated.
+What the call with Shivam, Aamer and Sachchidanand (12 Nov 2026) decided for medicine after a
+consultation, and how it is built (15 Nov 2026). Sachchidanand is writing the full post-lead flow (his
+"master sheet"); where it differs, his sheet wins and this doc is updated.
 
-- Screens (to come): Care, the cart page opened from WhatsApp, the doctor's e-prescription.
-- Services (to come): `carePlanService` (cart), `doctorPortalService` (inventory search).
+- Screens: the call note's Add a medicine and Sign sheet (doctor), Care and Your medicines
+  (`/patient-dashboard/care/cart`, the page the WhatsApp link opens), the shared checkout.
+- Code: `supabase/functions/api/lib/pharmacy.ts` (search, pricing, when a cart opens),
+  `lib/prescriptionPdf.ts` (the PDF), `routes/doctor.ts` (signing), `routes/care.ts` (the cart),
+  `routes/payments.ts` (`MEDICINE_ORDER`). Schema: `migrations/20261115000100_medicine_cart.sql`.
 
 ## Endpoints
 
 | Method | Path | Status | Used for |
 | --- | --- | --- | --- |
-| GET | `/api/pharmacy/inventory?query=` | PROPOSED | The doctor's e-prescription: a dropdown of what the PDPL warehouse stocks |
-| GET | `/api/care/cart` | PROPOSED | The patient's prefilled cart, or `data: null` while it is held back |
-| PATCH | `/api/care/cart` | PROPOSED | The patient adds or removes lines within the prescription |
-| POST | `/api/care/cart/checkout` | PROPOSED | Starts payment (Razorpay, `purpose=MEDICINE_ORDER`, see payments-razorpay.md) |
+| GET | `/api/pharmacy/inventory?query=` | LIVE (doctor) | Add a medicine: what the pharmacy stocks, matched on brand, molecule and strength. Customer MRP only |
+| POST | `/api/doctor/notes/:noteId/sign` | LIVE, `{ sendToApp, rxMonths }` | One signature: the note, then the prescription (PDF, cart) |
+| POST | `/api/doctor/patients/:patientId/prescriptions/:id/sign` | LIVE, `{ months }` | Fallback for a draft left when the PDF could not be made |
+| GET | `/api/care/cart` | LIVE (patient) | The open cart, or `{ data: null, availableAt }` while held back, or `{ data: null }` |
+| PATCH | `/api/care/cart` | LIVE (patient) | `{ lines: [{ medicineId, quantity }], addressId }`: 0 up to the prescribed quantity |
+| POST | `/api/payments/orders` | LIVE, `purpose: "MEDICINE_ORDER"`, `referenceId`: the cart id | Checkout; paying creates the delivery (`medicine_orders`) |
 
-## The rules
+`/api/care/cart/checkout` (proposed earlier) is not needed: the cart pays through the shared checkout.
 
-1. **The doctor prescribes from stock.** Typing in the e-prescription searches the warehouse's
-   master data; each line is an inventory item. Signing the prescription creates a prefilled cart for
-   the prescription's length (30 days, 60 days), with the default discount applied.
-2. **First consultation (the nano plan): prescription only, cart later.** The prescription is
-   valid for **one month**. The patient gets the prescription at once (WhatsApp and the app) with a
-   call-back option. The cart, its quotation and the payment link are sent **24 to 48 hours later**,
-   so the counsellors can explain the full programme first (Sachchidanand's data: moving medicine to 24
-   hours raised programme conversion by 1 to 2 points, to 48 hours by 3 to 4). Make the delay a
-   setting (`NANO_CART_DELAY_HOURS`, default 48) so it can be piloted. Until then
-   `GET /api/care/cart` answers `{ "data": null, "availableAt": "<ISO time>" }`.
-3. **Nobody calls a nano plan patient about medicine in the first 48 hours.** Any sales or
-   pharmacy task created for them is scheduled after `availableAt`.
-4. **Follow-up consultations (patients on a plan): cart at once.** The cart and quotation go out
-   right after the consultation, with call-back and chat options. If nothing is bought within 24
-   hours, a task asks an agent to call and guide the patient to check out themselves (the agent never
-   places the order for them). After that, a reminder every 6 to 12 hours, with a cap and a stop the
-   moment they buy or say no.
-5. **Self-checkout everywhere.** The WhatsApp link opens the same cart page; card or UPI.
-6. **Medicine prices never reach the public site.** Only the signed-in cart shows them.
+## The rules, as built
+
+1. **The doctor prescribes from stock.** Add a medicine searches `medicines` (14 items from the
+   pricing sheet: Wegovy FlexTouch, Ozempic, Mounjaro KwikPen at each strength). A picked item carries its
+   generic name, form, route, usual frequency and a pack quantity. A name typed that the pharmacy does not
+   stock goes on the prescription only, never in the cart (the patient may fill it anywhere).
+2. **One signature.** Signing the note signs the prescription too: the PDF, the patient's copy and a
+   cart of every stocked item at its prescribed quantity, with the default discount. A newer prescription
+   closes the unpaid cart. If the PDF fails, the prescription stays a draft the doctor signs from the record.
+3. **First consultation without a plan (the nano plan): one month, cart later.** The prescription is
+   one month whatever the doctor picked, valid one month, and the cart opens
+   `NANO_CART_DELAY_HOURS` (secret, default 48) after signing. Until then `GET /api/care/cart` answers
+   `availableAt`; Care and Your medicines show the date, the prescription and "Call me" (a support request).
+4. **Patients on a plan: cart at once,** for the 1, 2, 3 or 6 months the doctor picked in the Sign sheet.
+5. **Self-checkout.** Your medicines arrives filled in (quantities, discount, the default address), so
+   Pay is the one required tap; it opens Razorpay straight away.
+6. **Medicine prices never reach the public site.** Only the doctor's search (MRP) and the signed-in cart show them.
+
+## Prices
+
+| What | Where | Who sees it |
+| --- | --- | --- |
+| Medicine MRP | `medicines.mrp_paise` | Doctor (search), patient (cart, struck through) |
+| Default discount | `medicine_discounts` (1+ months 13%, 6+ months 14%; edit rows to change) | Patient (cart) |
+| Medicine cost (PTS incl. GST) | `medicine_costs` | **Nobody.** Read only by the guard that never sells a line below cost |
+| Plan MRP and price | `plans.mrp_rupees`, `plans.price_rupees` (the sheet's floor; 3, 6, 9, 12 months) | Patient (Plans: MRP struck, price charged) |
+| Plan service cost | `plan_costs` (the sheet's package value) | **Nobody.** For margin decisions in the database only |
+
+Internal prices live in their own tables so no `select *` on `medicines` or `plans` can leak them; no
+route returns them. Change prices in the Supabase SQL editor.
+
+## The prescription PDF
+
+Telemedicine Practice Guidelines 2020 format: the practice and the prescriber (name, qualification,
+registration number), the patient (name, age, sex, ID, mobile, address, vitals), the consultation
+(video, type, date, time, signed at), complaint, diagnosis (the note's assessment), history, allergies,
+other medicines, the medicines (brand, GENERIC in capitals, form, strength, dose and frequency, route,
+duration, quantity), advice (the patient summary, else the plan), follow-up, valid until, the digital
+signature and the legal notes. inrange wordmark, Jost (function static files in `assets/`).
+CONFIRM and set as secrets: `PRACTICE_ADDRESS` (the registered office) and `PHARMACY_LICENCE` (licence
+numbers and holder); each line prints only once set. No drawn signature image is used: the TPG allow a
+digital signature, and the PDF says "Digitally signed" with the prescriber's details and time.
+
+## Not built yet
+
+- WhatsApp (Meta Cloud API): the prescription and cart messages, the 24-hour agent call task and the
+  6 to 12-hour reminders (rules 3 and 4 of the call) need the Meta integration and a scheduler. The cart
+  already carries `available_at`, which is when the message should go.
+- Program + medicine bundles (sheet Step 4): sales quotes, not an app purchase.
 
 ## Other asks from the call
 

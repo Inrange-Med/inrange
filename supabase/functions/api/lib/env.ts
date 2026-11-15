@@ -20,6 +20,13 @@ export const env = {
    * the payment gateway's reviewer account. Comma-separated 10-digit numbers.
    */
   reviewerMobiles: get("REVIEWER_MOBILES").split(",").map((m) => m.trim()).filter(Boolean),
+  /**
+   * Test accounts for end-to-end runs (15 Nov 2026): these numbers sign in with TEST_OTP, never by SMS or
+   * Firebase. Comma-separated; an entry ending in * is a prefix ("98000*", the test patients). Both must be
+   * set; unset them (or drop the pilot doctors) before live patients use the doctors listed here.
+   */
+  testMobiles: get("TEST_MOBILES").split(",").map((m) => m.trim()).filter(Boolean),
+  testOtp: /^\d{6}$/.test(get("TEST_OTP")) ? get("TEST_OTP") : "",
 
   msg91AuthKey: get("MSG91_AUTH_KEY"),
   msg91TemplateId: get("MSG91_TEMPLATE_ID"),

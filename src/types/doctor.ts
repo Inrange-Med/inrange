@@ -48,3 +48,17 @@ export type DoctorAvailability = {
   usesDefault: boolean;
   bookedOutside: number;
 };
+
+/** One item the pharmacy stocks (GET /api/pharmacy/inventory). The price is the customer MRP, in paise. */
+export type InventoryItem = {
+  id: string;
+  brand: string;
+  molecule: string;
+  form: string;
+  strength: string;
+  pack: string;
+  packDays: number;
+  route: string;
+  defaultFrequency: string;
+  mrpPaise: number;
+};

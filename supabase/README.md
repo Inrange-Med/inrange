@@ -51,6 +51,9 @@ Register these webhooks with the vendors once their keys are in:
 | `APP_URL` | `https://inrange-pilot.vercel.app` | Links the API hands out (the mock video room). |
 | `DB_POOLER_URL` | set | Postgres through the transaction pooler (port 6543). |
 | `APP_JWT_SECRET` | set | Signs sign-in tokens (14 days). Changing it signs everyone out. |
+| `NANO_CART_DELAY_HOURS` | `48` | Hours between a first consultation's prescription and its cart (pilot 24 or 48). |
+| `PRACTICE_ADDRESS` | placeholder | The registered office, printed on prescriptions (CONFIRM first). |
+| `PHARMACY_LICENCE` | placeholder | The pharmacy's drug licence line, printed on prescriptions (CONFIRM first). |
 
 ## Doctors
 
@@ -67,9 +70,11 @@ insert into doctors (id, full_name, specialization, qualification, registration_
 select id, 'Dr. Full Name', 'Endocrinology', 'MBBS, MD', 'DMC/R/00000', 499 from u;
 ```
 
-Writing a prescription: in the note after the call, add the medicine under Medicines (or write a Plan sentence
-such as "Start Metformin 500 mg, twice a day after meals."), sign the note, then "Review and sign" the
-prescription on the patient's record. Signing creates the PDF and the delivery order the patient sees in Care.
+Writing a prescription: in the note after the call, "Add a medicine" and pick it from the pharmacy list (or
+write a Plan sentence such as "Start Metformin 500 mg, twice a day after meals." for something not stocked),
+then sign the note. The one signature signs the prescription: the PDF, the patient's copy and a prefilled
+cart (held back `NANO_CART_DELAY_HOURS` for a first consultation without a plan). The delivery order is
+created when the patient pays. Prices and internal costs: `docs/backend/medicine-cart.md`.
 
 ## Security
 
@@ -92,6 +97,7 @@ prescription on the patient's record. Signing creates the PDF and the delivery o
 supabase db push --linked          # migrations
 supabase functions deploy api --use-api
 python3 supabase/tests/journey.py  # the whole patient and doctor journey against the deployed API
+JOURNEY_OTP=<TEST_OTP> python3 supabase/tests/journey.py; python3 supabase/tests/cart_journey.py <TEST_OTP> /tmp  # the medicine cart
 ```
 
 `journey.py` creates a test patient whose number starts `98000`. Delete test patients afterwards with
