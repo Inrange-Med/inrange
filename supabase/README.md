@@ -52,8 +52,10 @@ Register these webhooks with the vendors once their keys are in:
 | `DB_POOLER_URL` | set | Postgres through the transaction pooler (port 6543). |
 | `APP_JWT_SECRET` | set | Signs sign-in tokens (14 days). Changing it signs everyone out. |
 | `NANO_CART_DELAY_HOURS` | `48` | Hours between a first consultation's prescription and its cart (pilot 24 or 48). |
-| `PRACTICE_ADDRESS` | placeholder | The registered office, printed on prescriptions (CONFIRM first). |
-| `PHARMACY_LICENCE` | placeholder | The pharmacy's drug licence line, printed on prescriptions (CONFIRM first). |
+| `PRACTICE_ADDRESS` | placeholder | The registered office, printed on prescriptions (CONFIRM first). Each doctor's practice address and contact are `doctors.practice_address` and `doctors.contact`. |
+| `PHARMACY_LICENCE` | placeholder | The pharmacy's drug licence numbers (Forms 20, 21), printed on prescriptions (CONFIRM first). |
+| `SUPPORT_PHONE` | placeholder | The support number on prescriptions (header and the grievance line); there is no care@ inbox. |
+| `ESIGN_METHOD` | placeholder | How prescriptions are signed ("Aadhaar eSign" or "DSC"), printed beside "Digitally signed". |
 
 ## Doctors
 
