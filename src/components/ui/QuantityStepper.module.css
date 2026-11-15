@@ -1,0 +1,46 @@
+/* QuantityStepper: one pill track like SegmentedControl, the count between two round buttons. */
+
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--bg-2);
+}
+.stepper button {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform 160ms var(--ease-out),
+    opacity 160ms var(--ease-out);
+}
+/* the visible button is 36px; the hit area reaches 44px */
+.stepper button {
+  position: relative;
+}
+.stepper button::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+}
+.stepper button:active:not(:disabled) {
+  transform: scale(0.94);
+}
+.stepper button:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+.stepper output {
+  min-width: 32px;
+  text-align: center;
+  font-weight: 560;
+}

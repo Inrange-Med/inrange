@@ -7,7 +7,6 @@ import Nav from "@/components/landing/Nav";
 import Footer from "@/components/landing/Footer";
 import Programmes from "@/components/landing/Programmes";
 import { Cta, Mask, Tag } from "@/components/landing/ui";
-import { inr, PLANS } from "@/components/landing/plans";
 import { PROGRAMMES, programmeHref } from "@/components/landing/programme-data";
 import { SITE } from "@/components/landing/tools/catalog";
 import p from "@/components/landing/pages/Page.module.css";
@@ -61,7 +60,6 @@ const jsonLd = {
   ],
 };
 
-const from = PLANS[PLANS.length - 1];
 const FOR_SHORT = {
   weight: "A BMI over 23 on the Indian scale",
   diabetes: "Type 2 diabetes or prediabetes",
@@ -73,31 +71,31 @@ const CHOOSE = {
     for: "Adults with a BMI over 23 on the Indian scale, or a waist over 90 cm (men) or 80 cm (women)",
     rhythm: "A review every month",
     tests:
-      "HbA1c, lipids, liver and thyroid tests, with waist and blood pressure",
+      "Sugar, heart, liver and thyroid markers, with waist and blood pressure",
   },
   diabetes: {
     for: "Adults with type 2 diabetes or prediabetes (HbA1c 5.7% or more)",
     rhythm: "A review every month, HbA1c every 3 months",
-    tests: "HbA1c, kidney tests and lipids, with blood pressure",
+    tests: "Sugar, kidney and heart markers, with blood pressure",
   },
   pcos: {
     for: "Adult women with PCOS or PCOD, or its signs",
     rhythm: "Video consultations with the same doctor",
-    tests: "Hormone tests, blood sugar and lipids",
+    tests: "Hormone, sugar and heart markers",
   },
   sexual: {
     for: "Adult men and women with a sexual health concern",
     rhythm: "Private video consultations with the same doctor",
     tests:
-      "Blood sugar, lipids and blood pressure, and testosterone where indicated",
+      "Sugar and heart markers and blood pressure, and hormones where indicated",
   },
 } as const;
 
 function Status({ live }: { live: boolean }) {
   return live ? (
     <span>
-      <span className={v.open}>Open now</span>, from{" "}
-      {inr(from.price / from.months)} a month
+      <span className={v.open}>Open now</span>, priced after your doctor&rsquo;s
+      review
     </span>
   ) : (
     <span>Coming soon, waitlist open</span>
@@ -168,9 +166,7 @@ export default function ProgrammesPage() {
                         className={p.specState}
                         data-live={x.live || undefined}
                       >
-                        {x.live
-                          ? `Open, from ${inr(from.price / from.months)}/mo`
-                          : "Coming soon"}
+                        {x.live ? "Open now" : "Coming soon"}
                       </span>
                     </a>
                   </li>
@@ -209,9 +205,10 @@ export default function ProgrammesPage() {
             <div className={`${p.tableWrap} ${v.chooseWrap}`}>
               <table className={`${p.table} ${v.choose}`}>
                 <caption>
-                  Indicative prices for the open programmes. Medicine, only if
-                  prescribed, is billed separately. Tests follow the Indian and
-                  international guidelines listed on each programme page.
+                  Plans are priced after your doctor&rsquo;s review. Medicine,
+                  only if prescribed, is billed separately. Checks follow the
+                  Indian and international guidelines listed on each programme
+                  page.
                 </caption>
                 <thead>
                   <tr>
@@ -235,7 +232,7 @@ export default function ProgrammesPage() {
                     ))}
                   </tr>
                   <tr>
-                    <th scope="row">First tests</th>
+                    <th scope="row">First checks</th>
                     {PROGRAMMES.map((x) => (
                       <td key={x.key} data-label={x.name}>
                         {CHOOSE[x.key].tests}
@@ -275,7 +272,7 @@ export default function ProgrammesPage() {
                       <dd>{CHOOSE[x.key].for}</dd>
                     </div>
                     <div>
-                      <dt>First tests</dt>
+                      <dt>First checks</dt>
                       <dd>{CHOOSE[x.key].tests}</dd>
                     </div>
                     <div>

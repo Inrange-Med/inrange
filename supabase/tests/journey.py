@@ -3,18 +3,20 @@
 Usage: python3 supabase/tests/journey.py [patient_mobile]
 Walks: patient sign-in -> onboarding -> eligibility report -> pay + book first consultation ->
 doctor sees it -> video links -> chat both ways -> doctor ends the call -> draft note -> sign note
-with a medicine in the plan -> sign the prescription -> patient sees prescription and delivery ->
-patient buys a plan -> invoices. Prints PASS/FAIL per step; exits 1 on the first failure.
+with medicines from the pharmacy and from the plan -> the one signature signs the prescription (PDF,
+first consultation: one month, cart held back) -> patient buys a plan -> invoices. Prints PASS/FAIL per step; exits 1 on the first failure.
 Needs the pilot OTP (123456, SMS mocked). With Razorpay live (test keys) a payment needs the checkout
 window, so the journey checks the live order and that an unsigned payment is refused, then stops: pay
 in the browser instead (test card 4100 2800 0000 1007).
 """
-import json, sys, time, uuid, urllib.request, urllib.error
+import json, os, sys, time, uuid, urllib.request, urllib.error
 from datetime import datetime, timedelta, timezone
 
 BASE = "https://wcsglsrjixfrobujchen.supabase.co/functions/v1"
 PATIENT = sys.argv[1] if len(sys.argv) > 1 else "98000099" + str(int(time.time()) % 100).zfill(2)
 IST = timezone(timedelta(hours=5, minutes=30))
+# the sign-in code: TEST_OTP for test accounts (TEST_MOBILES, e.g. "98000*"), else the pilot code
+OTP = os.environ.get("JOURNEY_OTP", "123456")
 
 
 def call(method, path, token=None, body=None, raw=None, ctype=None):
@@ -45,7 +47,7 @@ def sign_in(mobile):
         time.sleep(31)
         s, b = call("POST", "/api/auth/send-otp", body={"mobile": mobile})
     step(f"send-otp {mobile}", s == 200 and b["data"]["mock"] is True, b)
-    s, b = call("POST", "/api/auth/verify-otp", body={"mobile": mobile, "otp": "123456"})
+    s, b = call("POST", "/api/auth/verify-otp", body={"mobile": mobile, "otp": OTP})
     step(f"verify-otp {mobile}", s == 200 and b["data"]["accessToken"], b)
     return b["data"]["accessToken"], b["data"]
 
@@ -101,7 +103,7 @@ if b["data"]["razorpayKeyId"] != "rzp_mock":
     step("live Razorpay order", b["data"]["razorpayKeyId"].startswith("rzp_") and order.startswith("order_"), b)
     s, b = call("POST", "/api/payments/verify", pt, {"orderId": order, "razorpayPaymentId": "pay_forged", "razorpaySignature": "forged"})
     step("unsigned payment refused", s == 400, b)
-    print(f"\nSTOP  Razorpay is live: finish the journey in the browser as {PATIENT} (code 123456).")
+    print(f"\nSTOP  Razorpay is live: finish the journey in the browser as {PATIENT} (test code).")
     sys.exit(0)
 s, b = call("POST", "/api/payments/verify", pt, {"orderId": order, "razorpayPaymentId": "pay_mock_journey", "razorpaySignature": "mock"})
 step("payment verified", s == 200 and b["data"]["status"] == "PAID", b)
@@ -147,19 +149,33 @@ for sec in note["sections"]:
 # exactly what the note screen's "Add a medicine" sheet appends (noteEdits.addMedicine)
 note["medicines"].append({"id": "added-" + uuid.uuid4().hex[:8], "action": "START", "name": "Vitamin D3", "strength": "60000 IU",
                           "detail": "once a week after lunch", "was": None, "evidence": [], "include": True})
+# two strengths picked from the pharmacy (a step-up over two months): both stay, both reach the cart
+s, b = call("GET", "/api/pharmacy/inventory?query=mounjaro", dt); step("inventory search", s == 200 and len(b["data"]) >= 2, b)
+stock = {i["strength"]: i for i in b["data"]}
+step("no internal price in the inventory", "cost" not in json.dumps(b).lower() and "pts" not in json.dumps(b).lower(), b["data"][0])
+for strength in ("2.5 mg", "5 mg"):
+    item = stock[strength]
+    note["medicines"].append({"id": "added-" + uuid.uuid4().hex[:8], "action": "START", "name": item["brand"], "strength": strength,
+                              "detail": item["defaultFrequency"], "was": None, "evidence": [], "include": True,
+                              "medicineId": item["id"], "quantity": 1})
 change = {k: note[k] for k in ["sections", "medicines", "followUps", "recordUpdates", "checks"]}
 s, b = call("PUT", f"/api/doctor/notes/{nid}", dt, {**change, "change": "Wrote the summary and plan"}); step("save note", s == 200, b)
 s, b = call("GET", f"/api/doctor/notes/{nid}", dt)
 step("plan sentence became a medicine", any("Metformin" in json.dumps(m) for m in b["data"]["medicines"]), b["data"]["medicines"])
-s, b = call("POST", f"/api/doctor/notes/{nid}/sign", dt, {"sendToApp": True}); step("sign note", s == 200, b)
+s, b = call("POST", f"/api/doctor/notes/{nid}/sign", dt, {"sendToApp": True, "rxMonths": 3}); step("sign note", s == 200, b)
+step("the note's signature signed the prescription", b["data"]["signed"]["prescriptionStatus"] == "SIGNED", b["data"]["signed"])
 s, b = call("GET", f"/api/doctor/patients/{patient_id}/record", dt); step("patient record loads", s == 200, b)
-rx = [p for p in b["data"].get("prescriptions", []) if p.get("status") in ("DRAFT", "PENDING", "UNSIGNED") or not p.get("signedAt")]
-step("draft prescription waiting", len(rx) >= 1, b["data"].get("prescriptions"))
-s, b = call("POST", f"/api/doctor/patients/{patient_id}/prescriptions/{rx[0]['id']}/sign", dt); step("sign prescription", s == 200, b)
+signed = [p for p in b["data"]["prescriptions"] if p["status"] == "SIGNED"]
+step("first consultation: one month, whatever was asked", signed and signed[0]["months"] == 1, signed)
 s, b = call("GET", "/api/care/prescription/current", pt); step("patient sees prescription + PDF", b["data"] and b["data"]["pdfUrl"], b)
 names = json.dumps(b["data"]["items"])
-step("prescription has the added and the plan medicine", "Vitamin D3" in names and "Metformin" in names, b["data"]["items"])
-s, b = call("GET", "/api/care/medicine-orders", pt); step("patient sees delivery", len(b["data"]) >= 1, b)
+step("prescription has the added, the plan and both pharmacy medicines",
+     all(n in names for n in ("Vitamin D3", "Metformin", "2.5 mg", "5 mg")), b["data"]["items"])
+if len(sys.argv) > 2:  # save the PDF to look at it: journey.py <mobile> <out.pdf>
+    with urllib.request.urlopen(b["data"]["pdfUrl"], timeout=30) as r, open(sys.argv[2], "wb") as f: f.write(r.read())
+s, b = call("GET", "/api/care/cart", pt)
+step("first consultation: cart held back until after the programme call", s == 200 and b["data"] is None and b.get("availableAt"), b)
+s, b = call("GET", "/api/care/medicine-orders", pt); step("no delivery before payment", len(b["data"]) == 0, b)
 
 # --- plan purchase -------------------------------------------------------------------------------
 s, b = call("GET", "/api/subscriptions/plans"); plan = b["data"][0]

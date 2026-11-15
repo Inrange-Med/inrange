@@ -17,10 +17,11 @@ import { bookAppointment, holdSlot } from "../lib/booking.ts";
 import * as rzp from "../integrations/razorpay.ts";
 import { applyLabEvent, fulfilLabBooking, type LabEvent } from "./labs.ts";
 import * as rc from "../integrations/redcliffe.ts";
+import { priceCart, type CartLine } from "../lib/pharmacy.ts";
 
 export const paymentRoutes = new Hono();
 
-const PURPOSES = ["PLAN", "LAB_BOOKING", "CONSULTATION_FEE"] as const;
+const PURPOSES = ["PLAN", "LAB_BOOKING", "CONSULTATION_FEE", "MEDICINE_ORDER"] as const;
 type Purpose = typeof PURPOSES[number];
 type Priced = { amountPaise: number; title: string; lineItems: { label: string; amountPaise: number }[]; meta?: Record<string, unknown> };
 
@@ -66,6 +67,28 @@ async function price(tx: TransactionSql, userId: number, purpose: Purpose, refer
     const amountPaise = rupees(p.total);
     if (lineItems.reduce((n, l) => n + l.amountPaise, 0) !== amountPaise) lineItems = [{ label: b.package_name ?? "Home blood test", amountPaise }];
     return { amountPaise, title: b.care_package_code ? lineItems[0].label : `Home blood test: ${b.package_name ?? b.lab_package_code}`, lineItems };
+  }
+
+  if (purpose === "MEDICINE_ORDER") {
+    // referenceId: the cart. Priced from the live catalogue; the order keeps the lines it charged for.
+    const [k] = await tx`
+      select k.*, p.months, p.valid_until from medicine_carts k join prescriptions p on p.id = k.prescription_id
+      where k.id = ${Number(referenceId) || 0} for update of k`;
+    if (!k || k.patient_id !== userId) fail(400, "That cart was not found.");
+    if (k.status === "PAID") fail(409, "These medicines are already paid for.");
+    if (k.status !== "OPEN" || (k.valid_until && new Date(k.valid_until) <= new Date()))
+      fail(400, "This prescription has ended. Your doctor will send a new one.");
+    if (new Date(k.available_at) > new Date()) fail(400, "Your medicine quote is not ready yet.");
+    if (!k.address_id) fail(400, "Add a delivery address first.");
+    const priced = await priceCart(tx, k.lines as CartLine[], k.months);
+    const bought = priced.lines.filter((l) => l.quantity > 0);
+    if (!bought.length) fail(400, "Your cart is empty.");
+    const lineItems = bought.map((l) => ({ label: `${l.brand} ${l.strength} x ${l.quantity}`, amountPaise: l.mrpPaise * l.quantity }));
+    if (priced.discountPaise > 0) lineItems.push({ label: `Discount, ${priced.discountPercent}%`, amountPaise: -priced.discountPaise });
+    return {
+      amountPaise: priced.totalPaise, title: "Your medicines", lineItems,
+      meta: { addressId: k.address_id, lines: bought.map((l) => ({ name: `${l.brand} ${l.strength}`, quantity: `${l.quantity} x ${l.pack}` })) },
+    };
   }
 
   // CONSULTATION_FEE: a paid consultation (first or follow-up), for a patient cleared to book
@@ -146,6 +169,13 @@ async function fulfil(orderId: string, paymentId: string) {
       await tx`insert into subscriptions (user_id, plan_id, status, starts_at, ends_at, payment_order_id)
         values (${o.user_id}, ${Number(o.reference_id)}, 'Active', now(),
           now() + make_interval(months => ${plan?.duration_months ?? 1}), ${o.id})`;
+    } else if (o.purpose === "MEDICINE_ORDER") {
+      const [k] = await tx`update medicine_carts set status = 'PAID', paid_at = now() where id = ${Number(o.reference_id)}
+                           returning prescription_id`;
+      await tx`insert into medicine_orders (patient_id, prescription_id, cart_id, address_id, payment_order_id, status, expected_at, items, history)
+        values (${o.user_id}, ${k?.prescription_id ?? null}, ${Number(o.reference_id)}, ${(meta.addressId as number) ?? null}, ${o.id},
+          'PLACED', now() + interval '3 days', ${tx.json((meta.lines ?? []) as never)},
+          ${tx.json([{ status: "PLACED", at: new Date().toISOString(), note: "Order received by the pharmacy" }])})`;
     } else if (o.purpose === "LAB_BOOKING") {
       await fulfilLabBooking(tx, o.reference_id, o.user_id);
     } else {

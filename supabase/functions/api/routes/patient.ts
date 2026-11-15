@@ -413,7 +413,7 @@ patientRoutes.get("/subscriptions/plans", async (c) => {
   const rows = await sql`select * from plans where active order by sort_order, duration_months`;
   return ok(c, rows.map((p) => ({
     PlanId: p.id, PlanName: p.name, Description: p.description, DurationMonths: p.duration_months,
-    Price: p.price_rupees, IsActive: p.active, Perks: p.features ?? [],
+    Price: p.price_rupees, Mrp: p.mrp_rupees ?? null, IsActive: p.active, Perks: p.features ?? [],
   })));
 });
 

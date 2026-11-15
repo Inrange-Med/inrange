@@ -86,7 +86,7 @@ function nextStepFor(
     sub:
       stage === "in-programme"
         ? "With your doctor, by video"
-        : "30 min with a doctor",
+        : "By video, with a doctor",
     href: "/patient-dashboard/appointments/book",
   };
 }

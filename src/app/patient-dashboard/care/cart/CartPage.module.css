@@ -1,0 +1,259 @@
+/*
+  Your medicines (the cart). Phone first: one column, the lines, then the address, then the bill with
+  Pay directly under it, so a two-line cart shows Pay on the first screen. From 1024px the lines take
+  the left and the address and bill sit in a sticky column on the right (Arhaan's checkout column width).
+*/
+
+.page {
+  display: grid;
+  gap: 16px;
+}
+.page :is(p, li, dd) {
+  text-wrap: wrap;
+}
+.layout {
+  display: grid;
+  gap: 12px;
+}
+.side {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+@media (min-width: 1024px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 400px);
+    gap: 20px;
+    align-items: start;
+  }
+  .side {
+    position: sticky;
+    top: calc(var(--nav-h) + 24px);
+    gap: 20px;
+  }
+}
+
+.text {
+  font-size: 1rem;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+.foot {
+  margin-top: 4px;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--ink-3);
+  text-wrap: pretty;
+}
+.small {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--ink-3);
+  text-align: center;
+  text-wrap: pretty;
+}
+
+/* ---- the lines */
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "text price"
+    "qty qty";
+  gap: 12px 16px;
+  padding: 16px 0;
+  transition: opacity 240ms var(--ease-out);
+}
+.line + .line {
+  border-top: 1px solid var(--hair);
+}
+.line:first-child {
+  padding-top: 4px;
+}
+.line[data-out] .lineText,
+.line[data-out] .linePrice {
+  opacity: 0.45;
+}
+.lineText {
+  grid-area: text;
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.lineText strong {
+  font-weight: 560;
+  font-size: 1rem;
+}
+.lineText small,
+.lineQty small {
+  font-size: 0.8125rem;
+  color: var(--ink-3);
+}
+.linePrice {
+  grid-area: price;
+  display: grid;
+  justify-items: end;
+  align-content: start;
+  gap: 2px;
+}
+.linePrice s {
+  font-size: 0.8125rem;
+  color: var(--ink-3);
+}
+.linePrice strong {
+  font-weight: 560;
+}
+.lineQty {
+  grid-area: qty;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+@media (min-width: 640px) {
+  .line {
+    grid-template-columns: minmax(0, 1fr) auto 104px;
+    grid-template-areas: "text qty price";
+    align-items: center;
+  }
+  .lineQty {
+    flex-direction: row-reverse;
+  }
+}
+
+/* ---- the address */
+.address {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.address p {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  color: var(--ink-2);
+  line-height: 1.5;
+}
+.address strong {
+  color: var(--ink);
+  font-weight: 560;
+}
+.change {
+  flex: none;
+  min-height: 44px;
+  margin: -12px -4px -12px 0;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 560;
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.addressList {
+  display: grid;
+  gap: 8px;
+}
+.addressOption {
+  display: grid;
+  gap: 2px;
+  min-height: 56px;
+  padding: 12px 16px;
+  border: 1px solid var(--hair);
+  border-radius: 14px;
+  background: var(--paper);
+  font: inherit;
+  text-align: left;
+  color: var(--ink);
+  cursor: pointer;
+  transition:
+    border-color 160ms var(--ease-out),
+    background-color 160ms var(--ease-out);
+}
+.addressOption[aria-pressed="true"] {
+  border-color: var(--slate-800);
+  box-shadow: inset 0 0 0 1px var(--slate-800);
+}
+.addressOption:hover {
+  background: var(--hover-wash);
+}
+.addressOption small {
+  font-size: 0.8125rem;
+  color: var(--ink-3);
+}
+.addNew {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 560;
+}
+
+/* ---- the bill and Pay */
+.billCard {
+  display: grid;
+  gap: 16px;
+}
+/* the bill is the card's first thing: no rule above its first line */
+.billCard dl:first-child {
+  border-top: 0;
+}
+.billCard dl:first-child > div:first-child {
+  padding-top: 0;
+}
+/* the prescription PDF beside a card title: a quiet text link, so the title keeps one line on a phone */
+.pdfLink {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  margin-block: -11px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 560;
+  color: var(--slate-800);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.pay {
+  width: 100%;
+  justify-content: space-between;
+}
+.secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ---- held back, or nothing to order */
+.held {
+  display: grid;
+  gap: 12px;
+}
+.heldTitle {
+  font-size: 1.25rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+.heldActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+@media (max-width: 639px) {
+  .heldActions > * {
+    flex: 1 1 0;
+    justify-content: center;
+  }
+}

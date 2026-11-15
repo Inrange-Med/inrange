@@ -61,7 +61,7 @@ export default function Measures() {
                 Lab tests, meter or sensor
               </p>
               <h3 className="h3">Blood sugar, if you have diabetes</h3>
-              <p>HbA1c is repeated at home as often as your doctor advises. If a glucose sensor is recommended, you see its cost first.</p>
+              <p>Your sugar markers are rechecked at home as often as your doctor advises. If a glucose sensor is recommended, you see its cost first.</p>
             </div>
           </article>
 

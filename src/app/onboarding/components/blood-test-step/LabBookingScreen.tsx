@@ -29,11 +29,13 @@ type Props = {
   headingRef: RefObject<HTMLHeadingElement | null>;
 };
 
+// the review step just showed the bill, so the checkout opens Razorpay without a second Pay tap
 const labCheckoutHref = (booking: LabBooking) =>
   checkoutHref({
     purpose: "LAB_BOOKING",
     referenceId: booking.id,
     returnTo: "/patient-dashboard",
+    payNow: true,
   });
 const toDashboard = () => "/patient-dashboard";
 

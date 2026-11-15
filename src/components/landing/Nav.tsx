@@ -15,7 +15,7 @@ const LINKS = [
   { href: "#how", label: "How it works" },
   { href: "#measures", label: "What we measure" },
   { href: "/doctors", label: "Doctors" },
-  { href: "#pricing", label: "Pricing" },
+  { href: "#pricing", label: "Plans" },
 ];
 const hrefOf = (h: string, base: string) => (h.startsWith("#") ? base + h : h);
 
@@ -23,8 +23,10 @@ const hrefOf = (h: string, base: string) => (h.startsWith("#") ? base + h : h);
 export default function Nav({ home = true }: { home?: boolean }) {
   const base = home ? "" : "/";
   const path = usePathname() ?? "";
-  // the free tools, guides and editorial pages all sit under the one "Free tools" link
-  const onTools = ["/tools", "/guides", "/editorial-standards"].some((p) => path.startsWith(p));
+  // the free tools and the editorial pages sit under "Free tools"; the guides are the Blog (client
+  // call, 12 Nov 2026: a blog link in the top bar)
+  const onTools = ["/tools", "/editorial-standards"].some((p) => path.startsWith(p));
+  const onBlog = path.startsWith("/guides");
   // the page link this page belongs to, if any: /programmes/pcos sits under Programmes
   const onPage = LINKS.find((l) => l.href.startsWith("/") && path.startsWith(l.href))?.href ?? null;
   const [prog, setProg] = useState(false);
@@ -87,6 +89,8 @@ export default function Nav({ home = true }: { home?: boolean }) {
     moveLamp(
       onTools
         ? (linksRef.current?.querySelector<HTMLElement>('a[href="/tools"]') ?? null)
+        : onBlog
+          ? (linksRef.current?.querySelector<HTMLElement>('a[href="/guides"]') ?? null)
         : onPage
           ? (linksRef.current?.querySelector<HTMLElement>(`[data-href="${onPage}"]`) ?? null)
           : current
@@ -297,7 +301,7 @@ export default function Nav({ home = true }: { home?: boolean }) {
                         <ArrowRight size={14} aria-hidden="true" />
                       </a>
                       <a href={hrefOf("#pricing", base)} onClick={() => setProg(false)}>
-                        Pricing
+                        Plans
                         <ArrowRight size={14} aria-hidden="true" />
                       </a>
                     </div>
@@ -325,6 +329,15 @@ export default function Nav({ home = true }: { home?: boolean }) {
               onBlur={restLamp}
             >
               Free tools
+            </a>
+            <a
+              href="/guides"
+              aria-current={onBlog ? "page" : undefined}
+              onPointerEnter={(e) => moveLamp(e.currentTarget)}
+              onFocus={(e) => moveLamp(e.currentTarget)}
+              onBlur={restLamp}
+            >
+              Blog
             </a>
           </nav>
           {/* the team's sign-in sheet (LoginSheet): mobile number, then a code */}
@@ -394,8 +407,11 @@ export default function Nav({ home = true }: { home?: boolean }) {
           <a href="/tools" style={{ "--i": LINKS.length } as React.CSSProperties} onClick={() => setOpen(false)} tabIndex={open ? 0 : -1}>
             Free tools
           </a>
+          <a href="/guides" style={{ "--i": LINKS.length + 1 } as React.CSSProperties} onClick={() => setOpen(false)} tabIndex={open ? 0 : -1}>
+            Blog
+          </a>
         </nav>
-        <div className={s.menuFoot} style={{ "--i": LINKS.length + 1 } as React.CSSProperties}>
+        <div className={s.menuFoot} style={{ "--i": LINKS.length + 2 } as React.CSSProperties}>
           <a href={ASSESSMENT_URL} className="btn btn--signal" onClick={() => setOpen(false)} tabIndex={open ? 0 : -1}>
             <span>Book consultation</span>
             <span className="well" aria-hidden="true">
@@ -419,7 +435,7 @@ export default function Nav({ home = true }: { home?: boolean }) {
 
       <div ref={dockRef} className={s.dock} data-show={dock && !open} aria-hidden={!dock}>
         <p>
-          <strong>30 minutes, by video</strong> With a doctor
+          <strong>By video</strong> With a doctor, from home
         </p>
         <a href={ASSESSMENT_URL} className="btn btn--signal" tabIndex={dock ? 0 : -1}>
           <span>Book consultation</span>

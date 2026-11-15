@@ -18,6 +18,7 @@ type RawPlan = {
   PlanName: string;
   DurationMonths: number;
   Price: number | null;
+  Mrp?: number | null;
   IsActive: boolean;
   Perks?: string[];
 };
@@ -36,6 +37,7 @@ export async function listPlans(): Promise<SubscriptionPlan[]> {
     name: raw.PlanName,
     durationMonths: raw.DurationMonths,
     priceRupees: raw.Price,
+    mrpRupees: raw.Mrp ?? null,
     isActive: raw.IsActive,
     perks: raw.Perks ?? [],
   }));

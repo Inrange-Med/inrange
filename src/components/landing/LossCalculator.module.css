@@ -246,7 +246,7 @@
   background: var(--slate-800);
   clip-path: inset(0 calc(100% - var(--b)) 0 var(--a) round 999px);
 }
-/* the authored moment: when the ruler itself arrives, the range draws out from the 5% milestone to 15% */
+/* the authored moment: when the ruler arrives, the loss draws out from today back to about 15% */
 :global(.js) .meter:global(.in) .band {
   animation: band-draw 1200ms var(--ease-drawer) 420ms backwards;
 }

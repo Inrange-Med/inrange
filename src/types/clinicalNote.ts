@@ -65,6 +65,10 @@ export type MedicineChange = {
   was: string | null;
   evidence: Evidence[];
   include: boolean;
+  /** the pharmacy item it was picked from (GET /api/pharmacy/inventory); null when typed in, so not in the cart */
+  medicineId?: string | null;
+  /** packs to dispense (pens, strips); goes into the patient's cart as the most they can buy */
+  quantity?: number | null;
 };
 
 export type NoteFollowUp = {
@@ -98,6 +102,8 @@ export type NoteSignature = {
 /** GET /api/doctor/notes/:noteId */
 export type ClinicalNote = {
   id: string;
+  /** whether the patient has an active plan: off the plan (first consultation), a prescription is one month */
+  patientOnPlan?: boolean;
   patientId: string;
   patientName: string;
   type: VisitType;

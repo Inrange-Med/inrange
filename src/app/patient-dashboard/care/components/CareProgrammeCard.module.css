@@ -159,6 +159,11 @@
   -webkit-tap-highlight-color: transparent;
   transition: transform 160ms var(--ease-out);
 }
+/* the cart row is a link: no underline, ink like the delivery row */
+a.dRow {
+  color: inherit;
+  text-decoration: none;
+}
 .dRow:active {
   transform: scale(0.985);
 }

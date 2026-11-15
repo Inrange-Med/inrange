@@ -65,6 +65,11 @@ export default function Hero() {
               See what you could lose
             </a>
           </div>
+          {/* what the button costs: nothing yet (Elevate Now's "free assessment" ends at a paywall; ours says
+              exactly where the first fee comes) */}
+          <p className={s.assure} suppressHydrationWarning data-reveal="rise" style={{ "--d": "700ms" } as React.CSSProperties}>
+            Starts with a free two-minute check. Every fee is shown before you pay.
+          </p>
           {index(s.indexTop, "760ms")}
         </div>
         <Ruler />

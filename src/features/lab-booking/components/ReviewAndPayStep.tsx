@@ -16,6 +16,7 @@ import { ArrowRight, WarningCircle } from "@phosphor-icons/react";
 import { useNow } from "@/hooks/useNow";
 import { errorMessage } from "@/lib/http/apiClient";
 import { clockTime, spokenDay, timeUntil } from "@/lib/format/dateTime";
+import { markerCount } from "@/lib/format/carePackage";
 import { formatRupees } from "@/lib/format/money";
 import type { LabBooking } from "@/types/labTest";
 import { useToast } from "@/components/ui/ToastProvider";
@@ -66,6 +67,7 @@ export default function ReviewAndPayStep({
   // a care package is billed at its own price, which covers the tests and the consultation
   const billName = carePackage?.name ?? packageName(labPackage.name);
   const listedPrice = carePackage?.priceRupees ?? labPackage.price;
+  const markers = markerCount(labPackage.testCount);
 
   const hold = async () => {
     if (busy) return;
@@ -122,10 +124,19 @@ export default function ReviewAndPayStep({
         ))}
       </dl>
 
-      <PackageTestsDetails
-        code={labPackage.code}
-        testCount={labPackage.testCount}
-      />
+      {/* the first step reads markers, never a list of tests by name (client call, 12 Nov 2026);
+          a test booked from the dashboard keeps its full list */}
+      {carePackage ? (
+        <p className={styles.sheetMeta}>
+          {markers ? `${markers}, tested at home.` : "Tested at home."} Your
+          doctor goes through every result with you.
+        </p>
+      ) : (
+        <PackageTestsDetails
+          code={labPackage.code}
+          testCount={labPackage.testCount}
+        />
+      )}
 
       <dl className={styles.bill}>
         <div>

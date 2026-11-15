@@ -257,3 +257,88 @@
 .addLink {
   margin-top: 6px;
 }
+
+/* Add a medicine: the pharmacy's matches as one list under the search, each row one tap */
+.picks {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  max-height: 288px;
+  overflow-y: auto;
+  border: 1px solid var(--hair);
+  border-radius: 14px;
+  background: var(--paper);
+}
+.picks li + li {
+  border-top: 1px solid var(--hair);
+}
+.pick {
+  display: flex;
+  width: 100%;
+  min-height: 48px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 0;
+  background: none;
+  font: inherit;
+  text-align: left;
+  color: var(--ink);
+  cursor: pointer;
+  transition: background-color 160ms var(--ease-out);
+}
+.pick:hover,
+.pick:focus-visible {
+  background: var(--hover-wash);
+}
+.pick small,
+.picked small {
+  color: var(--ink-3);
+  font-size: 0.8125rem;
+}
+.picked {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--bg);
+}
+.picked > span {
+  display: grid;
+  gap: 2px;
+}
+.pickAgain {
+  min-height: 44px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 560;
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.typedNote {
+  margin-top: 6px;
+  font-size: 0.8125rem;
+  color: var(--ink-3);
+}
+.qtyRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.qtyRow > span:first-child {
+  display: grid;
+  gap: 2px;
+}
+.qtyRow small {
+  font-weight: 400;
+  color: var(--ink-3);
+  font-size: 0.8125rem;
+}

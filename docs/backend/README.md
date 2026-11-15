@@ -19,6 +19,7 @@ status, service function, screen), **Requests and responses** (examples), **Note
 | [lab-tests-redcliffe.md](lab-tests-redcliffe.md) | Home blood tests: each route mapped to the Redcliffe client, the slot hold, webhooks, env vars |
 | [payments-razorpay.md](payments-razorpay.md) | Razorpay orders, signature verification, fulfilment (plan, lab booking, consultation fee), webhooks |
 | [doctor-dashboard.md](doctor-dashboard.md) | The doctor's day, patient record, call notes, doctor chat list |
+| [medicine-cart.md](medicine-cart.md) | LIVE: the pharmacy catalogue, the one-signature prescription and PDF, the prefilled cart (nano plan: held back; on a plan: at once), medicine checkout; internal prices; plus the other asks from the 12 Nov call |
 
 ## Conventions the app expects
 
@@ -60,6 +61,9 @@ the team's original "Free" label for a null price, so set real prices before lau
 | GET | `/api/care-team` | Care, Messages, chat header | [consultations-and-care](consultations-and-care.md) |
 | GET | `/api/care/prescription/current` | Care | [consultations-and-care](consultations-and-care.md) |
 | GET | `/api/care/medicine-orders` | Care | [consultations-and-care](consultations-and-care.md) |
+| GET | `/api/care/cart` | Care, Your medicines (the WhatsApp link) | [medicine-cart](medicine-cart.md) |
+| PATCH | `/api/care/cart` | Your medicines: quantity, address | [medicine-cart](medicine-cart.md) |
+| GET | `/api/pharmacy/inventory?query=` | Call note, Add a medicine | [medicine-cart](medicine-cart.md) |
 | GET | `/api/chat/sessions/:sessionId/messages` | Chat (patient and doctor) | [consultations-and-care](consultations-and-care.md) |
 | GET | `/api/onboarding/config` | Onboarding | [onboarding](onboarding.md) |
 | GET | `/api/onboarding/status` | Onboarding | [onboarding](onboarding.md) |

@@ -63,7 +63,7 @@ export const GUIDES: Guide[] = [
   {
     slug: "how-inrange-works",
     title: "How inrange works",
-    line: "The counsellor's call, your first consultation, the plan and your reviews.",
+    line: "Your blood tests, your first consultation, the plan and your reviews.",
     minutes: 2,
     video: {
       label: "Meet inrange",
@@ -73,7 +73,7 @@ export const GUIDES: Guide[] = [
         "Your first consultation, how a plan is decided and who looks after you.",
     },
     short: [
-      "A counsellor calls you first to check the programme suits you and to pass your details to your doctor. If you have no blood tests from the last 90 days, we book a home test before your consultation. Then your first consultation: 30 minutes by video with a doctor, with your results. The fee is shown before you book.",
+      "Your blood tests come first: upload a report from the last 90 days, or a partner lab comes home. Our medical team reviews them. Then your first consultation, by video with a doctor who has your results, followed by a call with your health coach. The fee is shown before you pay.",
       "If a plan suits you, your doctor suggests one. You see the itemised price before you pay anything.",
       "Medicine is prescribed only if your doctor judges it right for you. Not everyone is prescribed medication.",
     ],
@@ -81,15 +81,15 @@ export const GUIDES: Guide[] = [
       {
         h: "Before your first consultation",
         list: [
-          "A counsellor calls you for a short chat to check the programme suits you, and passes your details to your doctor",
-          "Blood tests from the last 90 days count; send a photo in Chat. If you have none, a partner lab comes home",
-          "Then your first consultation: 30 minutes by video with your doctor, who reads your results with you. Ask anything; there is no plan to sign up to on the call",
+          "Blood tests from the last 90 days count; upload the report. If you have none, a partner lab comes home",
+          "Our medical team reviews your results and passes them to your doctor",
+          "Then your first consultation, by video: your doctor reads your results with you, and your health coach plans the next steps. Ask anything; there is no plan to sign up to on the call",
         ],
       },
       {
         h: "After your first consultation",
         p: [
-          "Your doctor may suggest a plan. A plan runs for 1, 4, 6 or 12 months, paid in advance, and the price is itemised before you pay. Medicine, if prescribed, comes from inrange's own licensed pharmacy, or any licensed pharmacy you prefer.",
+          "Your doctor may suggest a plan. A plan runs for 3, 6, 9 or 12 months, paid in advance, and the price is itemised before you pay. Medicine, if prescribed, comes from inrange's own licensed pharmacy, or any licensed pharmacy you prefer.",
         ],
       },
       {

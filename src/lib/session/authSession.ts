@@ -5,7 +5,7 @@
  * Everything else calls these functions. Never read or write these keys anywhere else.
  */
 
-type UserRole = "PATIENT" | "DOCTOR" | "ADMIN";
+export type UserRole = "PATIENT" | "DOCTOR" | "ADMIN";
 
 /** What we keep about the signed-in person between page loads. */
 type SessionUser = {

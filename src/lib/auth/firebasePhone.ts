@@ -33,7 +33,7 @@ function friendly(error: unknown, fallback: string): Error {
   return new Error(MESSAGES[code] ?? fallback);
 }
 
-async function firebaseAuth() {
+async function loadFirebaseAuth() {
   const [{ getApps, initializeApp }, firebaseAuthModule] = await Promise.all([
     import("firebase/app"),
     import("firebase/auth"),
@@ -42,6 +42,43 @@ async function firebaseAuth() {
   const auth = firebaseAuthModule.getAuth(app);
   auth.languageCode = "en";
   return { auth, ...firebaseAuthModule };
+}
+
+/** One load per page: the SDK and its setup are shared by every send. A failed load can be retried. */
+let loading: ReturnType<typeof loadFirebaseAuth> | null = null;
+function firebaseAuth() {
+  loading ??= loadFirebaseAuth().catch((error) => {
+    loading = null;
+    throw error;
+  });
+  return loading;
+}
+
+/** The hosts the invisible reCAPTCHA check and Firebase's phone sign-in call, connected to early. */
+const HOSTS = [
+  "https://www.google.com",
+  "https://www.gstatic.com",
+  "https://identitytoolkit.googleapis.com",
+];
+
+/**
+ * Starts the slow parts of a Firebase send before the person asks for a code (client call, 12 Nov
+ * 2026: "the code comes very slowly"): the SDK download and setup, and connections to the hosts the
+ * security check uses. Safe to call often; it does nothing without a Firebase key, on the server, or
+ * a second time. The text message itself is Firebase's and the network's.
+ */
+export function warmFirebaseSignIn(): void {
+  if (typeof window === "undefined" || !FIREBASE_CONFIG.apiKey) return;
+  for (const href of HOSTS) {
+    if (document.head.querySelector(`link[rel="preconnect"][href="${href}"]`))
+      continue;
+    const link = document.createElement("link");
+    link.rel = "preconnect";
+    link.href = href;
+    link.crossOrigin = "anonymous";
+    document.head.appendChild(link);
+  }
+  void firebaseAuth().catch(() => undefined);
 }
 
 /** Has Firebase text a 6-digit code to +91 `mobile`. */

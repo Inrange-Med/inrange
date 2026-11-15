@@ -1,12 +1,14 @@
 /**
  * "Your programme" on Care: the active plan (or how a programme starts), and under it the current
- * medicine and the latest delivery. Medicine and deliveries come from the PROPOSED care-plan
- * endpoints; until the backend serves them the card says so.
+ * medicine, the cart the prescription filled (one tap to the cart page) and the latest delivery.
+ * Medicine, cart and deliveries come from carePlanService; until the backend serves them the card says so.
  */
 
 import Link from "next/link";
 import { ArrowRight, CaretRight } from "@phosphor-icons/react/dist/ssr";
 import Card from "@/components/ui/Card";
+import { spokenDay } from "@/lib/format/dateTime";
+import { formatRupees } from "@/lib/format/money";
 import ErrorNotice from "@/components/ui/ErrorNotice";
 import type { CarePlan, MedicineOrder } from "@/types/carePlan";
 import type { SubscriptionPlan } from "@/types/subscription";
@@ -44,6 +46,8 @@ export default function CareProgrammeCard({
 }) {
   const medicine = carePlan?.prescription?.items[0] ?? null;
   const moving = !!order && order.status !== "DELIVERED";
+  const cart = carePlan?.cart.cart ?? null;
+  const cartOpensAt = carePlan?.cart.availableAt ?? null;
   return (
     <Card
       title="Your programme"
@@ -105,6 +109,27 @@ export default function CareProgrammeCard({
             </button>
           </p>
         </div>
+      )}
+
+      {cart && cart.totalPaise > 0 && (
+        <div className={pageStyles.delivery}>
+          <Link href="/patient-dashboard/care/cart" className={styles.dRow}>
+            <span className={styles.dText}>
+              <strong>Medicines ready to order</strong>{" "}
+              <span className="num">{formatRupees(cart.totalPaise / 100)}</span>
+            </span>
+            <CaretRight
+              size={16}
+              className={pageStyles.go}
+              aria-hidden="true"
+            />
+          </Link>
+        </div>
+      )}
+      {!cart && cartOpensAt && (
+        <p className={pageStyles.foot}>
+          Your medicine quote opens {spokenDay(new Date(cartOpensAt))}.
+        </p>
       )}
 
       {order && (

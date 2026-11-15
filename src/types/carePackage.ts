@@ -10,6 +10,7 @@ export type CarePackage = {
   priceRupees: number;
   includesLabTests: boolean;
   labPackageCode: string | null;
-  /** short lines shown on the card, for example "30-minute video consultation" */
+  /** short lines shown on the card, for example "Video consultation with a doctor". The app drops any
+   *  stated length ("30-minute"): consultations show no duration (client call, 12 Nov 2026). */
   includes: string[];
 };

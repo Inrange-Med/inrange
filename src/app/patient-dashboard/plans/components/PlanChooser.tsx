@@ -112,7 +112,24 @@ export default function PlanChooser({
           </ul>
         )}
         <ItemisedBill
-          lines={[]}
+          lines={
+            plan.mrpRupees &&
+            plan.priceRupees &&
+            plan.mrpRupees > plan.priceRupees
+              ? [
+                  {
+                    key: "mrp",
+                    label: "MRP",
+                    amount: <s>{formatRupees(plan.mrpRupees)}</s>,
+                  },
+                  {
+                    key: "off",
+                    label: "You save",
+                    amount: formatRupees(plan.mrpRupees - plan.priceRupees),
+                  },
+                ]
+              : []
+          }
           total={{
             label: "Plan price",
             note: perMonth,

@@ -5,9 +5,12 @@
  * note on who processes the payment, and one pay button styled as Arhaan's primary action.
  * `onPay` receives the button's resolved colour so Razorpay's window matches it. When online
  * payment is not switched on (no real Razorpay key yet), the review still shows and the button
- * says so instead of opening Razorpay.
+ * says so instead of opening Razorpay. `autoPay`: the patient already checked the bill on the screen
+ * before (a lab booking's review), so Razorpay opens once on arrival instead of asking for a second
+ * tap; closing it leaves this review with its Pay button.
  */
 
+import { useEffect, useRef } from "react";
 import { ArrowRight, LockSimple } from "@phosphor-icons/react";
 import ItemisedBill from "@/app/patient-dashboard/components/ItemisedBill";
 import Card from "@/components/ui/Card";
@@ -26,6 +29,7 @@ export default function OrderReview({
   awaitingConfirmation,
   paymentReady,
   pilotPayment,
+  autoPay = false,
   onPay,
 }: {
   order: PaymentOrder;
@@ -35,8 +39,22 @@ export default function OrderReview({
   paymentReady: boolean;
   /** pilot: the payment is simulated and nothing is charged */
   pilotPayment: boolean;
+  autoPay?: boolean;
   onPay: (themeColour: string) => void;
 }) {
+  const payButton = useRef<HTMLButtonElement>(null);
+  const autoPaid = useRef(false);
+  const themeOf = (button: HTMLButtonElement) =>
+    getComputedStyle(button).getPropertyValue("--btn-bg").trim();
+
+  // once, when the order is ready: Razorpay opens without a second "Pay" tap
+  useEffect(() => {
+    if (!autoPay || !paymentReady || autoPaid.current || !payButton.current)
+      return;
+    autoPaid.current = true;
+    onPay(themeOf(payButton.current));
+  }, [autoPay, paymentReady, onPay]);
+
   const total = formatRupees(order.amountPaise / 100);
   const idleLabel = awaitingConfirmation
     ? "Confirm payment"
@@ -78,18 +96,14 @@ export default function OrderReview({
             </p>
           ))}
         <button
+          ref={payButton}
           type="button"
           className={`btn ${formStyles.go} ${styles.payDock}`}
           data-busy={busyLabel !== null}
           aria-busy={busyLabel !== null}
           disabled={!paymentReady}
           onClick={(event) =>
-            busyLabel === null &&
-            onPay(
-              getComputedStyle(event.currentTarget)
-                .getPropertyValue("--btn-bg")
-                .trim(),
-            )
+            busyLabel === null && onPay(themeOf(event.currentTarget))
           }
         >
           <span>

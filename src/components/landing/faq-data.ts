@@ -11,11 +11,11 @@ export const QA = [
   },
   {
     q: "How do consultations work?",
-    a: "By secure video, from anywhere in India. First come your blood tests: upload a report from the last three months, or a lab collects samples at home. Our medical team reads them and confirms the programme suits you. Then you have a 30-minute consultation with your doctor. After that your doctor reviews your plan every month, and your care team is in the app and on WhatsApp in between.",
+    a: "By secure video, from anywhere in India. First come your blood tests: upload a report from the last three months, or a lab collects samples at home. Our medical team reads them and confirms the programme suits you. Then you have a video consultation with your doctor, and a call with your health coach about what comes next. After that your doctor reviews your plan every month, and your care team is in the app and on WhatsApp in between.",
   },
   {
     q: "How much does it cost?",
-    a: "Your check is free. Your first step, blood tests at home and a doctor consultation, is ₹1,499, or ₹999 if you upload a recent report, shown before you pay. If your doctor recommends a plan, you choose 3, 6, 9 or 12 months, paid upfront, and see the full price, itemised, before you pay. The plan covers reviews, blood tests at home, your nutrition plan, the app and delivery.",
+    a: "Your check is free. Your first step, blood tests at home and a doctor consultation, has one fee, lower if you upload a recent report, and you see it before you pay. If your doctor recommends a plan, you choose 3, 6, 9 or 12 months, paid upfront, and see the full price, itemised, before you pay. The plan covers reviews, blood tests at home, your nutrition plan, the app and delivery.",
   },
   {
     q: "Am I talking to a person or to AI?",

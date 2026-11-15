@@ -9,7 +9,7 @@ import type {
   OnboardingAnswers,
   OnboardingConfig,
 } from "@/types/onboarding";
-import { conditionsFor, FIRST_TIME } from "./onboardingOptions";
+import { conditionsFor } from "./onboardingOptions";
 
 /** A problem to show: under the box named by `field`, or under the answers when there is none. */
 export type Problem = {
@@ -104,12 +104,7 @@ export function answersFrom(
 }
 
 /** Question 6 with `code` ticked or unticked: a first attempt and past attempts each clear the other. */
-export const experienceToggled = (experience: string[], code: string) =>
-  experience.includes(code)
-    ? experience.filter((chosen) => chosen !== code)
-    : code === FIRST_TIME
-      ? [FIRST_TIME]
-      : [...experience.filter((chosen) => chosen !== FIRST_TIME), code];
+export { experienceToggled } from "@/lib/onboarding/answerLists";
 
 /** Body mass index to one decimal, or null until both height and weight are answered. */
 export const bmiOf = (heightCm: number | null, weightKg: number | null) =>

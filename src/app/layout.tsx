@@ -16,11 +16,11 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE),
   title: "Doctor-led weight and diabetes care in India | inrange",
   description:
-    "Doctor-led care for obesity and type 2 diabetes in India. A free check, then a 30-minute video consultation with a doctor, blood tests at home, Indian nutrition and one care team.",
+    "Doctor-led care for obesity and type 2 diabetes in India. A free check, then a video consultation with a doctor, blood tests at home, Indian nutrition and one care team.",
   openGraph: {
     title: "inrange: doctor-led care for weight and blood sugar",
     description:
-      "Doctor-led care for obesity and type 2 diabetes. A free check, then a 30-minute video consultation with a doctor, blood tests at home and one care team.",
+      "Doctor-led care for obesity and type 2 diabetes. A free check, then a video consultation with a doctor, blood tests at home and one care team.",
     locale: "en_IN",
     type: "website",
   },

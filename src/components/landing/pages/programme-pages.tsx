@@ -63,13 +63,13 @@ export const PAGES: Record<ProgrammeKey, ProgrammePage> = {
     key: "weight",
     seo: "Doctor-led weight care in India | inrange",
     description:
-      "Doctor-led weight care in India by video: a 30‑minute consultation, blood tests at home, a monthly doctor review and a plan built on Indian food. Medication only if your doctor judges it clinically appropriate.",
+      "Doctor-led weight care in India by video: a doctor consultation, blood tests at home, a monthly doctor review and a plan built on Indian food. Medication only if your doctor judges it clinically appropriate.",
     title: ["Weight care,", "led by a doctor."],
     heads: { who: ["Who weight care", "is for."], checks: ["What your doctor", "measures first."], life: ["Planned around", "your kitchen."], faq: ["Weight care,", "your questions."] },
     answer: (
       <>
         Doctor-led care for adults with a <strong>BMI over 23</strong>, India&rsquo;s line for obesity since 2025. A{" "}
-        <strong>30‑minute video consultation</strong>, home blood tests, then a doctor review <strong>every month</strong>.
+        <strong>video consultation</strong> with a doctor, home blood tests, then a doctor review <strong>every month</strong>.
         Medication only if your doctor judges it clinically appropriate.
       </>
     ),
@@ -107,10 +107,10 @@ export const PAGES: Record<ProgrammeKey, ProgrammePage> = {
       { measure: "Weight, as a seven-day average", why: "Daily readings swing with water and salt", when: "Every week" },
       { measure: "Waist and waist-to-height ratio", why: "Fat around the organs carries most of the risk", when: "At reviews" },
       { measure: "Blood pressure", why: "It often rises with weight", when: "At reviews" },
-      { measure: "HbA1c and fasting sugar", why: "Extra weight raises diabetes risk", when: "At the start, then as your doctor advises" },
-      { measure: "Lipid profile", why: "Cholesterol and triglycerides add to heart risk", when: "At the start, then as your doctor advises" },
-      { measure: "Liver tests", why: "Fatty liver is common and often silent", when: "At the start" },
-      { measure: "Thyroid (TSH)", why: "A slow thyroid adds weight, and is simple to rule out", when: "At the start" },
+      { measure: "Blood sugar markers", why: "Extra weight raises diabetes risk, often before sugar feels high", when: "At the start, then as your doctor advises" },
+      { measure: "Heart markers", why: "Blood fats add to heart risk", when: "At the start, then as your doctor advises" },
+      { measure: "Liver markers", why: "Fatty liver is common and often silent", when: "At the start" },
+      { measure: "Thyroid marker", why: "A slow thyroid adds weight, and is simple to rule out", when: "At the start" },
     ],
     checksCaption: "What your doctor looks at. Your doctor sets the schedule. Thresholds: Misra A, et al., 2025.",
     life: [
@@ -159,7 +159,7 @@ export const PAGES: Record<ProgrammeKey, ProgrammePage> = {
     answer: (
       <>
         Doctor-led care for adults with <strong>type 2 diabetes or prediabetes</strong>. Your doctor reads your HbA1c, sugar
-        readings, and kidney and lipid tests, all done at home, and <strong>reviews your plan every month</strong>. Medication
+        readings, and kidney and heart markers, all done at home, and <strong>reviews your plan every month</strong>. Medication
         only if your doctor judges it clinically appropriate. Keep your own diabetologist if you have one.
       </>
     ),
@@ -192,8 +192,8 @@ export const PAGES: Record<ProgrammeKey, ProgrammePage> = {
     checks: [
       { measure: "HbA1c", why: "Your average sugar over three months", when: "Every 3 months, then every 6 once on target" },
       { measure: "Home sugar readings", why: "Show what moves your sugar", when: "As your doctor advises" },
-      { measure: "Kidney: creatinine, eGFR and urine albumin", why: "Kidney changes start long before symptoms", when: "Every year" },
-      { measure: "Lipid profile", why: "Heart risk rises with diabetes", when: "Every year" },
+      { measure: "Kidney markers", why: "Kidney changes start long before symptoms", when: "Every year" },
+      { measure: "Heart markers", why: "Heart risk rises with diabetes", when: "Every year" },
       { measure: "Blood pressure", why: "Protects the heart, kidneys and eyes", when: "At reviews" },
       { measure: "Eyes", why: "The retina can change before your vision does", when: "Every 1 to 2 years, by referral" },
       { measure: "Feet", why: "Nerve and circulation changes show first in the feet", when: "A daily self-check, and a yearly exam by referral" },

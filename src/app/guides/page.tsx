@@ -22,7 +22,7 @@ export default function Page() {
   return (
     <Hub
       path="/guides"
-      tag="Guides"
+      tag="Blog"
       title={["Plain answers,", "with the numbers."]}
       lede="Short guides to the reports and readings people bring to a doctor, written for adults in India. Each one opens with the answer, shows the numbers in a table and lists its sources."
       items={GUIDES}

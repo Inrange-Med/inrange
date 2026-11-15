@@ -25,6 +25,8 @@ const NOT_SERVED = "Our partner lab does not collect in this area yet.";
 export function useNewAddressForm(
   isFirst: boolean,
   onSaved: (addressId: number | null) => Promise<void>,
+  /** false for a medicine delivery address: the courier reaches places the lab's collectors do not */
+  labReach = true,
 ) {
   const [query, setQuery] = useState("");
   const [found, setFound] = useState<{
@@ -69,7 +71,9 @@ export function useNewAddressForm(
     setError(null);
     try {
       const point = await getLabLocationCoordinates(match.eloc);
-      const reach = await checkLabServiceability(point);
+      const reach = labReach
+        ? await checkLabServiceability(point)
+        : { serviceable: true };
       if (!reach.serviceable) setError(NOT_SERVED);
       else {
         setPlace({ ...match, ...point });

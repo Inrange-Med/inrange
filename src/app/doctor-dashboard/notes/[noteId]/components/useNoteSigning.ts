@@ -53,7 +53,7 @@ export function useNoteSigning({
       (other) => other.id === afterSigning && other.status === "DRAFT",
     ) ?? others(queue);
 
-  const sign = (sendToApp: boolean) => {
+  const sign = (sendToApp: boolean, rxMonths: number) => {
     setSheetOpen(false);
     // the sheet can reopen (Cmd+Shift+Enter) while a sign is in flight; one sign at a time
     if (signing) return;
@@ -63,11 +63,12 @@ export function useNoteSigning({
     // the next note waiting after this one, else the first before it
     setAfterSigning((others(queue.slice(at + 1)) ?? others(queue))?.id ?? null);
     saved()
-      .then(() => signClinicalNote(note.id, sendToApp))
+      .then(() => signClinicalNote(note.id, sendToApp, rxMonths))
       .then((signed) => {
         setNote(signed);
+        const sent = signed.signed?.prescriptionStatus === "SIGNED";
         toast(
-          `Signed. In ${firstName(note)}'s record${sendToApp && hasText ? `, and ${their} summary is in ${their} app` : ""}`,
+          `Signed. In ${firstName(note)}'s record${sent ? ", and the prescription is sent" : ""}${sendToApp && hasText ? `; ${their} summary is in ${their} app` : ""}`,
         );
         scrollPageTop();
       })

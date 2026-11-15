@@ -6,7 +6,7 @@ import s from "@/components/landing/tools/ToolPage.module.css";
 
 const TITLE = "Weight loss calculator for Indians";
 const DESC =
-  "See how much weight you could lose: about 20% of your body weight over about 16 months, the averages of the two study groups that lost the most in a large trial of doctor-led care, in kilograms for your weight. Free, private, no sign-up.";
+  "See how much weight you could lose: about 15% of your body weight over about 16 months, the average in a large trial of doctor-led care, in kilograms for your weight. Free, private, no sign-up.";
 
 export const metadata: Metadata = {
   title: `${TITLE} | inrange`,
@@ -40,24 +40,24 @@ export default function Page() {
       answer={
         <>
           In a large trial of doctor-led care where medication was prescribed,
-          average losses in the two study groups that lost the most were{" "}
-          <strong>19.5 to 20.9% of body weight</strong> over about 16 months.
-          For someone who weighs 80 kg, that is about 16 to 17 kg. Results vary,
-          and your doctor sets your target.
+          the average loss was <strong>about 15% of body weight</strong> (14.9%)
+          over about 16 months. For someone who weighs 80 kg, that is about 12
+          kg. Results vary, and your doctor sets your target.
         </>
       }
       sections={[
         {
-          q: "Where does about 20% come from?",
+          q: "Where does about 15% come from?",
           body: (
             <>
               <p>
                 In a large trial where doctors prescribed medication alongside
-                diet and activity support, average losses at 72 weeks were
-                15.0%, 19.5% and 20.9% across its three study groups. The
-                calculator shows the range between the two higher averages, so
-                the answer stays within a few kilograms. Another large trial
-                reported 14.9% at 68 weeks, which the ruler also marks.
+                diet and activity support, the average loss was 14.9% of body
+                weight at 68 weeks, about 16 months. The calculator uses that
+                figure. A second large trial reported 15.0% at 72 weeks in its
+                study group that lost the least. Other groups in that trial lost
+                more. The calculator stays with about 15%, the figure both
+                trials reach.
               </p>
               <p>
                 The ruler also marks 5%: the American Diabetes

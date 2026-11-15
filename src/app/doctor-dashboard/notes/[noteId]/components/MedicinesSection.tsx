@@ -1,4 +1,4 @@
-/** Medicine changes found in the call. Included ones become a draft prescription, signed separately. */
+/** Medicine changes found in the call. Included ones become the next prescription, signed with the note. */
 
 import { useState } from "react";
 import { Plus } from "@phosphor-icons/react";
@@ -64,7 +64,12 @@ export default function MedicinesSection({
                     <strong>
                       {medicine.name} {medicine.strength}
                     </strong>
-                    <span>{medicine.detail}</span>
+                    <span>
+                      {medicine.detail}
+                      {medicine.quantity && medicine.action !== "STOP"
+                        ? `${medicine.detail ? ". " : ""}Quantity ${medicine.quantity}`
+                        : ""}
+                    </span>
                     {medicine.was && <em>Was: {medicine.was}</em>}
                   </span>
                   <span className={styles.rowTools}>
@@ -135,10 +140,12 @@ export default function MedicinesSection({
         <p className={styles.foot}>
           {done
             ? signedVersion !== null
-              ? `The changes became prescription version ${signedVersion}, for you to sign separately.`
+              ? note.signed?.prescriptionStatus === "SIGNED"
+                ? `Signed and sent as prescription version ${signedVersion}.`
+                : `Prescription version ${signedVersion} is a draft. Sign it from the record.`
               : "No change to the prescription."
             : changes
-              ? `Included changes become prescription version ${nextPrescriptionVersion}, a draft you sign separately.`
+              ? `Included changes become prescription version ${nextPrescriptionVersion}, signed and sent with this note.`
               : "No change to the prescription."}
         </p>
       </div>

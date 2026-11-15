@@ -3,7 +3,8 @@
  *   POST /api/payments/orders   PROPOSED. Creates an order { purpose, referenceId, reason? } -> { data: PaymentOrder }
  *   POST /api/payments/verify   PROPOSED. Checks the signature and fulfils { orderId, razorpayPaymentId, razorpaySignature }
  *   GET  /api/payments          PROPOSED. The patient's paid orders (invoices) -> { data: PaymentRecord[] }
- * referenceId: the plan id (PLAN), the lab booking id (LAB_BOOKING) or the slot id (CONSULTATION_FEE).
+ * referenceId: the plan id (PLAN), the lab booking id (LAB_BOOKING), the slot id (CONSULTATION_FEE) or the
+ * medicine cart id (MEDICINE_ORDER).
  * The backend computes every amount and fulfils the purpose after verifying the signature, so this
  * file never sends a price and never activates anything itself.
  */

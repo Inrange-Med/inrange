@@ -1,8 +1,9 @@
 /*
   Home's third card before the first consultation (Arhaan HomeView "Before your plan"): the three
-  steps in their order, a counsellor's call, blood tests only if none in the last 90 days, then the
-  doctor. The card opens how inrange works; the blood-test step leads to booking a home test or
-  uploading a recent report.
+  steps in the product's order (11 Nov 2026), blood tests first (a home test, or a report from the
+  last 90 days), then the medical team's review, then the doctor, with the health coach on the same
+  call (client call, 12 Nov 2026). No duration is shown: the call runs as long as it needs. The card
+  opens how inrange works; the blood-test step leads to booking a home test or uploading a report.
 */
 
 import type { ReactNode } from "react";
@@ -10,7 +11,7 @@ import Link from "next/link";
 import { CaretRight } from "@phosphor-icons/react";
 import { clockTime } from "@/lib/format/dateTime";
 import type { Appointment } from "@/types/appointment";
-import { consultationMinutes, dayLabel } from "./careStage";
+import { dayLabel } from "./careStage";
 import pageStyles from "@/app/patient-dashboard/HomePage.module.css";
 import styles from "./FirstStepsCard.module.css";
 
@@ -22,8 +23,8 @@ export default function FirstStepsCard({
   upcoming: Appointment | null;
 }) {
   const consultation = upcoming
-    ? `${dayLabel(upcoming.startsAt)}, ${clockTime(new Date(upcoming.startsAt))}, ${consultationMinutes(upcoming)} min by video`
-    : "30 min by video with a doctor";
+    ? `${dayLabel(upcoming.startsAt)}, ${clockTime(new Date(upcoming.startsAt))}, by video`
+    : "By video, with your doctor and then your health coach";
   const steps: {
     label: string;
     short: string;
@@ -32,14 +33,9 @@ export default function FirstStepsCard({
     href?: string;
   }[] = [
     {
-      label: "A call from a counsellor",
-      short: "Counsellor call",
-      state: "now",
-    },
-    {
       label: "Blood tests, if none in 90 days",
       short: "Blood tests",
-      state: "next",
+      state: "now",
       href: "/patient-dashboard/lab-tests",
       detail: (
         <Link href="/patient-dashboard/reports" className={styles.stepLink}>
@@ -47,6 +43,11 @@ export default function FirstStepsCard({
           <CaretRight size={14} aria-hidden="true" />
         </Link>
       ),
+    },
+    {
+      label: "A review by our medical team",
+      short: "Review",
+      state: "next",
     },
     {
       label: "Your first consultation",

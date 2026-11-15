@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * The checkout for every purpose (PLAN, LAB_BOOKING, CONSULTATION_FEE), driven by the URL:
+ * The checkout for every purpose (PLAN, LAB_BOOKING, CONSULTATION_FEE, MEDICINE_ORDER), driven by the URL:
  *   ?purpose=PLAN&referenceId=<id>&returnTo=/patient-dashboard
  *
  * 1. Asks the backend for an order (it decides the amount), and shows it for review.
@@ -14,7 +14,7 @@
  * available yet. Nothing is ever activated without a verified payment.
  */
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import ErrorNotice from "@/components/ui/ErrorNotice";
 import PageGhosts from "@/app/patient-dashboard/components/PageGhosts";
@@ -61,6 +61,11 @@ const PURPOSE_WORDS: Record<
     sub: "Your consultation time is held while you pay.",
     paid: "Your consultation is booked. You can join from Appointments 10 minutes before it starts.",
   },
+  MEDICINE_ORDER: {
+    title: "Pay for your medicines",
+    sub: null,
+    paid: "Your order is with our pharmacy. Care shows the delivery as it moves.",
+  },
 };
 
 const asPurpose = (value: string | null) =>
@@ -94,6 +99,15 @@ export default function CheckoutFlow() {
   const purpose = asPurpose(params.get("purpose"));
   const referenceId = params.get("referenceId") ?? "";
   const returnTo = safeReturnPath(params.get("returnTo"));
+  // "pay=now": the screen before already showed the bill, so Razorpay opens on arrival (once; the
+  // address loses the flag, so a reload or a Back to here waits for the Pay button)
+  const [autoPay] = useState(() => params.get("pay") === "now");
+  useEffect(() => {
+    if (!autoPay) return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete("pay");
+    window.history.replaceState(window.history.state, "", url);
+  }, [autoPay]);
   const isComplete = purpose !== null && referenceId !== "";
   const words = purpose ? PURPOSE_WORDS[purpose] : PURPOSE_WORDS.PLAN;
   // Back is always a link to returnTo (plans, pricing, a lab booking...; Home when missing), never
@@ -184,6 +198,16 @@ export default function CheckoutFlow() {
     setBusyLabel(null);
   };
 
+  const current = order.data ?? null;
+  // stable, so the review's open-once effect does not fire again on every render
+  const payCurrent = useCallback(
+    (themeColour: string) => {
+      if (current) void pay(current, themeColour);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [current, unconfirmed],
+  );
+
   const content = () => {
     if (!isComplete)
       return (
@@ -214,16 +238,17 @@ export default function CheckoutFlow() {
           actionLabel="Go back"
         />
       );
-    const current = order.data;
+    const shown = order.data;
     return (
       <OrderReview
-        order={current}
+        order={shown}
         busyLabel={busyLabel}
         notice={notice}
         awaitingConfirmation={unconfirmed !== null}
-        paymentReady={usableRazorpayKey(current.razorpayKeyId) !== null}
-        pilotPayment={isMockPayment(current.razorpayKeyId)}
-        onPay={(themeColour) => pay(current, themeColour)}
+        paymentReady={usableRazorpayKey(shown.razorpayKeyId) !== null}
+        pilotPayment={isMockPayment(shown.razorpayKeyId)}
+        autoPay={autoPay && !unconfirmed && notice === null}
+        onPay={payCurrent}
       />
     );
   };

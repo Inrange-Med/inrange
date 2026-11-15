@@ -16,12 +16,14 @@ export default function NewAddressForm({
   isFirst,
   onSaved,
   onCancel,
+  labReach = true,
 }: {
   isFirst: boolean;
+  labReach?: boolean;
   onSaved: (addressId: number | null) => Promise<void>;
   onCancel?: () => void;
 }) {
-  const form = useNewAddressForm(isFirst, onSaved);
+  const form = useNewAddressForm(isFirst, onSaved, labReach);
   // keyed by the view, so the search and the details each drop in as they swap. With no saved address
   // the form is the step itself, so its first view arrives with the step instead.
   const [stillView] = useState(

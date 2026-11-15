@@ -6,7 +6,8 @@
  * patient left off at (Save and exit, then the dashboard's link back here). A finished profile opens
  * at question 9 (the blood test) until the patient has chosen a path (GET /api/eligibility), then
  * goes to /patient-dashboard; /onboarding?step=report asks for question 9 when the backend cannot
- * say how far the profile got. The answer lists come from the backend (or the bundled copy).
+ * say how far the profile got. The answer lists come from the backend (or the bundled copy). After
+ * the public free check, its answers are saved first (freeCheckPrefill.ts) and those questions skipped.
  */
 
 import { useEffect, type CSSProperties } from "react";
@@ -21,6 +22,7 @@ import {
   homePathFor,
   isSignedIn,
 } from "@/lib/session/authSession";
+import { readFreeCheck } from "@/lib/onboarding/freeCheck";
 import { getMyEligibility } from "@/services/eligibilityService";
 import {
   getOnboardingConfig,
@@ -37,13 +39,19 @@ import {
   LAST_SAVED_STEP,
   REPORT_STEP,
 } from "../onboardingOptions";
+import { prefillFromFreeCheck, type Prefilled } from "../freeCheckPrefill";
 import CurrentOnboardingScreen from "./CurrentOnboardingScreen";
 import styles from "../OnboardingPage.module.css";
 import barStyles from "./OnboardingTopBar.module.css";
 
 type Start =
   | { redirectTo: string }
-  | { status: OnboardingStatus | null; config: OnboardingConfig };
+  | {
+      status: OnboardingStatus | null;
+      config: OnboardingConfig;
+      /** set when the free check's answers were saved on the way in */
+      prefilled?: Prefilled;
+    };
 
 /** The answers for question 9 when the status endpoint cannot give them: name, age and the BMI's inputs from the profile. */
 async function answersFromProfile(): Promise<OnboardingAnswers> {
@@ -81,6 +89,13 @@ async function loadStart(): Promise<Start> {
   ]);
   // a list the backend leaves out falls back to the bundled one
   const config = { ...BUNDLED_CONFIG, ...served };
+  // the free check, done on the site before signing in: its answers are saved now, so only what it
+  // never asked is left (name and email, consent). Not for a finished profile.
+  const check = status?.completed ? null : readFreeCheck();
+  if (check) {
+    const prefilled = await prefillFromFreeCheck(check, status, config);
+    return { status: prefilled.status, config, prefilled };
+  }
   // a saved but unfinished profile always resumes at its question, even from a ?step=report link
   if (status && !status.completed) return { status, config };
   const askedForReport =
@@ -146,6 +161,7 @@ export default function OnboardingFlow() {
     <CurrentOnboardingScreen
       status={start.data.status}
       config={start.data.config}
+      prefilled={start.data.prefilled}
     />
   );
 }

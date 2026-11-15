@@ -45,14 +45,9 @@ export default function ConsultationVisit({
           </span>
         </p>
         <p className={styles.visitMeta}>
-          {callOpen ? (
-            <>
-              By video, <span className="num">{minutes}</span> minutes. The call
-              is open now.
-            </>
-          ) : (
-            "By video. Join opens 10 minutes before."
-          )}
+          {callOpen
+            ? "By video. The call is open now."
+            : "By video. Join opens 10 minutes before."}
         </p>
       </div>
       <div className={styles.actions}>

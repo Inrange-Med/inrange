@@ -45,8 +45,8 @@ const CONSULT = [
     text: "You upload a report from the last three months, or a lab comes home for blood tests. Our medical team reviews it, and your doctor reads it before you meet.",
   },
   {
-    name: "Thirty minutes",
-    text: "By video, from home or work. Your doctor goes through your results and what you want to change, and explains every option.",
+    name: "By video",
+    text: "From home or work. Your doctor goes through your results and what you want to change, and explains every option. Your health coach then plans the next steps with you.",
   },
   {
     name: "Your plan",
@@ -199,7 +199,7 @@ export default function DoctorsPage() {
                   ["Name", "As registered"],
                   ["Qualifications", "As on the medical register"],
                   ["Registered with", "NMC or a State Medical Council"],
-                  ["Consults", "By video, 30 minutes"],
+                  ["Consults", "By video"],
                 ].map(([k, v]) => (
                   <div key={k}>
                     <dt>{k}</dt>
@@ -294,7 +294,7 @@ export default function DoctorsPage() {
               <Mask
                 id="consult-title"
                 className="h2"
-                lines={["Thirty minutes,", "and a plan you agree."]}
+                lines={["One call,", "and a plan you agree."]}
                 soft={1}
               />
               <p
