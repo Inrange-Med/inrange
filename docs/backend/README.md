@@ -20,6 +20,7 @@ status, service function, screen), **Requests and responses** (examples), **Note
 | [payments-razorpay.md](payments-razorpay.md) | Razorpay orders, signature verification, fulfilment (plan, lab booking, consultation fee), webhooks |
 | [doctor-dashboard.md](doctor-dashboard.md) | The doctor's day, patient record, call notes, doctor chat list |
 | [medicine-cart.md](medicine-cart.md) | LIVE: the pharmacy catalogue, the one-signature prescription and PDF, the prefilled cart (nano plan: held back; on a plan: at once), medicine checkout; internal prices; plus the other asks from the 12 Nov call |
+| [medicine-flow-prd.md](medicine-flow-prd.md) | The shared medicine flow PRD mapped to inrange: what is built, what to build next in order (WhatsApp check-ins, order updates, ops queue, coach view, refills, adherence), what does not apply, conflicts to settle; the prescription tool asks from the 16 Nov call |
 
 ## Conventions the app expects
 
