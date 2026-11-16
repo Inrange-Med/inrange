@@ -1,6 +1,6 @@
 /**
- * The second part of adding an address: the chosen place, then house and street and a landmark
- * (Redcliffe requires one). The PIN code comes from the chosen place and shows as text with Edit;
+ * The second part of adding an address: the chosen place, then house and street. A landmark is
+ * optional behind a link (Redcliffe agreed; the backend sends the address when it is empty). The PIN code comes from the chosen place and shows as text with Edit;
  * it is a field only when the place had none or the patient edits it.
  */
 
@@ -39,6 +39,7 @@ export default function AddressDetailsFields({
 }) {
   const [pinStartsOpen] = useState(() => !/^\d{6}$/.test(pincode));
   const [editingPin, setEditingPin] = useState(pinStartsOpen);
+  const [addingLandmark, setAddingLandmark] = useState(landmark !== "");
   return (
     <>
       <p className={styles.place}>
@@ -64,15 +65,29 @@ export default function AddressDetailsFields({
             autoFocus
           />
         </label>
-        <label className={formStyles.field}>
-          <span className={formStyles.label}>Landmark</span>
-          <input
-            className={formStyles.input}
-            value={landmark}
-            onChange={(event) => onLandmark(event.target.value)}
-            placeholder="For example, near the metro station"
-          />
-        </label>
+        {/* optional: left empty, the address goes to the lab as the landmark */}
+        {addingLandmark ? (
+          <div className={styles.drop}>
+            <label className={formStyles.field}>
+              <span className={formStyles.label}>Landmark (optional)</span>
+              <input
+                className={formStyles.input}
+                value={landmark}
+                onChange={(event) => onLandmark(event.target.value)}
+                placeholder="For example, near the metro station"
+                autoFocus
+              />
+            </label>
+          </div>
+        ) : (
+          <button
+            type="button"
+            className={`${formStyles.link} ${styles.addLandmark}`}
+            onClick={() => setAddingLandmark(true)}
+          >
+            Add a landmark for the collector
+          </button>
+        )}
         {/* the PIN code drops in when Edit opens it (the details as a whole already arrive) */}
         {editingPin ? (
           <div className={pinStartsOpen ? undefined : styles.drop}>

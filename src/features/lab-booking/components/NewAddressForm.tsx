@@ -3,7 +3,7 @@
 /**
  * Adding a collection address: search the area (Redcliffe's place search, through the backend),
  * choose the right place, and the collectors' reach is checked straight away. Then the house and
- * street, a landmark and the PIN code, saved with the place's map location (useNewAddressForm).
+ * street, an optional landmark and the PIN code, saved with the place's map location (useNewAddressForm).
  */
 
 import { useState } from "react";

@@ -45,7 +45,7 @@ export default function CollectionAddressStep({
 
   const choose = async (address: Address) => {
     if (checkingId !== null) return;
-    // Redcliffe books by map point, landmark and PIN: say what is missing before asking the lab
+    // Redcliffe books by map point and PIN: say what is missing before asking the lab
     const missing = labAddressProblem(address);
     if (missing || address.latitude === null || address.longitude === null) {
       setProblem({

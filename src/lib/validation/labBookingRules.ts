@@ -22,14 +22,12 @@ export function labPatientProblem(patient: LabPatient): string | null {
   return null;
 }
 
-/** The first thing Redcliffe would refuse about a saved address (it books by map point, landmark and PIN), or null. */
+/** The first thing Redcliffe would refuse about a saved address (it books by map point and PIN; an empty landmark is filled from the address), or null. */
 export function labAddressProblem(address: Address): string | null {
   if (address.latitude === null || address.longitude === null)
     return "This address has no map location. Add it again with the area search.";
   if (!address.addressLine.trim())
     return "Add the house or flat and street to this address.";
-  if (!address.landmark.trim())
-    return "Add a landmark to this address. The lab needs one.";
   if (!/^\d{6}$/.test(address.pincode))
     return "Add the 6-digit PIN code to this address.";
   return null;

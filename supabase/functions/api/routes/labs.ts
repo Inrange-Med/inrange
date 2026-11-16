@@ -192,7 +192,6 @@ labRoutes.post("/labs/bookings", async (c) => {
     if (care!.lab_package_code !== packageCode) fail(400, "That test package is not part of this care package.");
   }
   const a = await ownedAddress(me.id, input.addressId);
-  if (!String(a.landmark ?? "").trim()) fail(400, "Add a landmark to this address. The lab needs one.");
   const pkg = await lab(rc.findPackage(packageCode));
   const slot = await findSlot(collectionDate, slotId, a);
 
@@ -216,7 +215,7 @@ labRoutes.post("/labs/bookings", async (c) => {
     partner = await lab(rc.createBooking({
       collectionDate, slotId, packageCode, patient, clientRefId: row.id,
       address: {
-        line: a.line1, line2: [a.city, a.state].filter(Boolean).join(", "), landmark: a.landmark, pincode: a.pincode ?? "",
+        line: a.line1, line2: [a.city, a.state].filter(Boolean).join(", "), landmark: a.landmark ?? "", pincode: a.pincode ?? "",
         latitude: Number(a.latitude), longitude: Number(a.longitude),
       },
     }));

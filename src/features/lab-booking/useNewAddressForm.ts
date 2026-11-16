@@ -120,7 +120,6 @@ export function useNewAddressForm(
 
   const complete =
     line.trim().length > 0 &&
-    landmark.trim().length > 0 &&
     /^\d{6}$/.test(pincode);
 
   const save = async () => {

@@ -517,3 +517,9 @@
     animation: fade 200ms var(--ease-out) backwards;
   }
 }
+
+/* the optional landmark, one quiet line until tapped */
+.addLandmark {
+  justify-self: start;
+  margin-top: -6px;
+}

@@ -377,13 +377,16 @@ type RcSlot = { id: number; available_slot: number; format_24_hrs: { start_time:
 
 // ---------------------------------------------------------------- bookings
 
+/** Redcliffe requires a landmark; the patient may leave it out (agreed with Redcliffe), so the address stands in. */
+export const landmarkFor = (a: { landmark?: string | null; line: string; line2: string }) =>
+  (a.landmark ?? "").trim() || [a.line, a.line2].map((x) => x.trim()).filter(Boolean).join(", ").slice(0, 200);
+
 /** A TEMPORARY booking: Redcliffe locks the slot for 30 minutes until confirmBooking(id, true). */
 export async function createBooking(b: NewPartnerBooking): Promise<PartnerBooking> {
   checkCollectionDate(b.collectionDate);
   ensure(Number.isInteger(b.slotId) && b.slotId > 0, "Choose a collection time.");
   checkPatient(b.patient);
   ensure(b.address.line.trim() !== "", "The address needs a street line.");
-  ensure(b.address.landmark.trim() !== "", "Add a landmark to this address. The lab needs one.");
   ensure(/^\d{6}$/.test(b.address.pincode), "The address needs a 6-digit pincode.");
   ensure(Number.isFinite(b.address.latitude) && Number.isFinite(b.address.longitude), "Pick this address on the map first.");
   if (!redcliffeLive()) {
@@ -400,7 +403,7 @@ export async function createBooking(b: NewPartnerBooking): Promise<PartnerBookin
       customer_name: b.patient.name.trim(), customer_age: b.patient.age, customer_gender: gender,
       customer_email: b.patient.email.trim(), customer_phonenumber: b.patient.mobile,
       customer_altphonenumber: b.patient.mobile, customer_whatsapppnumber: b.patient.mobile, // sic, three p's
-      customer_address: b.address.line, address_line2: b.address.line2, customer_landmark: b.address.landmark,
+      customer_address: b.address.line, address_line2: b.address.line2, customer_landmark: landmarkFor(b.address),
       pincode: b.address.pincode, customer_latitude: b.address.latitude, customer_longitude: b.address.longitude,
       is_credit: true, client_refid: b.clientRefId, reference_data: b.clientRefId, additional_member: [],
     },

@@ -49,10 +49,7 @@ required; `isPrimary` replaces the old primary) answering `201 { data: { address
 `GET /api/address/my-addresses` answering `AddressId, AddressLine, City, State, Pincode, Latitude,
 Longitude, IsPrimary`; `DELETE /api/address/:addressId`.
 
-**One field to add: `landmark`.** Redcliffe's create booking requires `customer_landmark`, so the
-app also sends `landmark` on add and reads `Landmark` from the list. Please store it (column
-`Landmark`, string) and return it. Until then a saved address comes back without it, the address step
-shows "Add a landmark to this address. The lab needs one." and that address cannot be booked. Also: `my-addresses` answered 404 on https://mediapi.unios.in on 28 Oct 2026, so
+**Landmark is optional (agreed with Redcliffe, 16 Nov 2026).** The app sends `landmark` only when the patient adds one (a link under the street line). Redcliffe still requires `customer_landmark`, so `landmarkFor` in `integrations/redcliffe.ts` sends the street line and city when it is empty. Also: `my-addresses` answered 404 on https://mediapi.unios.in on 28 Oct 2026, so
 deploy these routes to the hosted backend.
 
 ## Requests and responses
