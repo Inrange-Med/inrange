@@ -21,7 +21,7 @@ type Settings = Pick<
 
 const SWITCHES: { key: keyof Settings; label: string }[] = [
   { key: "remindersEnabled", label: "Enable reminders" },
-  { key: "whatsappReminders", label: "WhatsApp reminders" },
+  { key: "whatsappReminders", label: "Updates on WhatsApp" },
   { key: "emailReminders", label: "Email reminders" },
 ];
 

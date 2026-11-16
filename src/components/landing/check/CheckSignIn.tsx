@@ -23,7 +23,7 @@ import type { NextScreen } from "@/types/auth";
 import type { UserRole } from "@/lib/session/authSession";
 import s from "./FreeCheck.module.css";
 
-export type Identity = { firstName: string; lastName: string; email: string; mobile: string; consented: boolean; ai: boolean };
+export type Identity = { firstName: string; lastName: string; email: string; mobile: string; consented: boolean; ai: boolean; whatsapp: boolean };
 
 const RESEND_AFTER_S = 30;
 type Field = "firstName" | "email" | "mobile" | "consent";
@@ -165,6 +165,12 @@ export function CheckDetails({
         <input type="checkbox" checked={identity.ai} onChange={(e) => change({ ai: e.target.checked })} />
         <span>
           <strong>Optional.</strong> {CONSENTS.find((c) => c.type === "AI")?.line}
+        </span>
+      </label>
+      <label className={`${s.tick} ${s.tickQuiet}`}>
+        <input type="checkbox" checked={identity.whatsapp} onChange={(e) => change({ whatsapp: e.target.checked })} />
+        <span>
+          <strong>Optional.</strong> Send my prescription, order updates and reminders on WhatsApp. Reply STOP any time.
         </span>
       </label>
 
@@ -369,4 +375,7 @@ export function CheckCode({
 }
 
 /** The consents to keep with the check, as onboarding saves them. */
-export const consentsOf = (id: Identity) => (id.consented ? [...REQUIRED_CONSENTS, ...(id.ai ? (["AI"] as const) : [])] : []);
+export const consentsOf = (id: Identity) =>
+  id.consented
+    ? [...REQUIRED_CONSENTS, ...(id.ai ? (["AI"] as const) : []), ...(id.whatsapp ? (["WHATSAPP"] as const) : [])]
+    : [];

@@ -212,7 +212,7 @@ opsRoutes.get("/admin/medicine/patients/:patientId", async (c) => {
     sql`select f.*, ${iso("f.next_at")} as next_iso from medicine_followups f where f.patient_id = ${p.id} order by f.id desc limit 5`,
     sql`select o.*, ${iso("o.placed_at")} as placed_iso, ${iso("o.expected_at")} as expected_iso, ${iso("o.delivered_at")} as delivered_iso
         from medicine_orders o where o.patient_id = ${p.id} order by o.id desc limit 10`,
-    sql`select id, kind, status, skip_reason, vars, error, ${iso("created_at")} as created, ${iso("sent_at")} as sent,
+    sql`select id, kind, status, skip_reason, vars, error, ${iso("created_at")} as created, ${iso("sent_at")} as sent, ${iso("send_after")} as send_after,
           ${iso("read_at")} as read, cart_id, medicine_order_id, dose_event_id
         from patient_messages where patient_id = ${p.id} order by id desc limit 60`,
     sql`select id, message_id, action, text, outcome, ${iso("received_at")} as at from patient_message_replies
@@ -240,7 +240,8 @@ opsRoutes.get("/admin/medicine/patients/:patientId", async (c) => {
       expectedAt: o.expected_iso, deliveredAt: o.delivered_iso, courier: o.courier, trackingNo: o.tracking_no, trackingUrl: o.tracking_url,
       items: o.items, history: o.history, feedback: o.feedback, feedbackNote: o.feedback_note, supplyDays: o.supply_days })),
     messages: messages.map((m) => ({ id: String(m.id), kind: m.kind, status: m.status, skipReason: m.skip_reason, error: m.error,
-      values: m.vars?.values ?? null, text: m.vars?.text ?? null, createdAt: m.created, sentAt: m.sent, readAt: m.read,
+      values: m.vars?.values ?? null, text: m.vars?.text ?? null, choices: m.vars?.rows ?? null,
+      createdAt: m.created, sentAt: m.sent, readAt: m.read, sendAfter: m.send_after,
       replies: replies.filter((r) => r.message_id === m.id).map((r) => ({ action: r.action, text: r.text, outcome: r.outcome, at: r.at })) })),
     looseReplies: replies.filter((r) => !r.message_id).map((r) => ({ text: r.text, outcome: r.outcome, at: r.at })),
     tasks: tasks.map((t) => ({ id: String(t.id), kind: t.kind, priority: t.priority, title: t.title, status: t.status, outcome: t.outcome,

@@ -94,7 +94,7 @@ const START: Draft = {
   otherText: "",
   experience: [],
 };
-const NO_IDENTITY: Identity = { firstName: "", lastName: "", email: "", mobile: "", consented: false, ai: false };
+const NO_IDENTITY: Identity = { firstName: "", lastName: "", email: "", mobile: "", consented: false, ai: false, whatsapp: false };
 
 /** BMI bands: the revised Indian definition (Misra et al., 2025) and, for comparison, the global chart. */
 const bandOf = (bmi: number) => (bmi < 18.5 ? "under" : bmi <= 23 ? "healthy" : "obesity");
@@ -255,6 +255,7 @@ export default function FreeCheck() {
           mobile: saved.identity.mobile ?? "",
           consented: saved.identity.consents.length > 0,
           ai: saved.identity.consents.includes("AI"),
+          whatsapp: saved.identity.consents.includes("WHATSAPP"),
         });
       setStep(at("details"));
     }

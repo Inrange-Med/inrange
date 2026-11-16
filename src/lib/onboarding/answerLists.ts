@@ -102,6 +102,15 @@ export const CONSENTS: ConsentText[] = [
     more: "If you agree, your video calls are transcribed so an AI scribe can draft the notes. Your doctor reads, corrects and signs every note, and nothing reaches your record without them. If you say no, nothing about your care changes: your doctor writes the notes themselves.",
     required: false,
   },
+  {
+    // optional (DPDP Act 2023, WhatsApp's opt-in rule): without it nothing is sent on WhatsApp and the app
+    // shows everything; the profile's "Updates on WhatsApp" switch and a STOP reply turn it off
+    type: "WHATSAPP",
+    title: "Updates on WhatsApp",
+    line: "Your prescription, where your order is, and reminders, on WhatsApp.",
+    more: "We send your prescription, your order's progress, and the reminders you choose, from inrange's WhatsApp number. Messages never name a medicine or a price. Reply STOP at any time, or turn it off in your profile.",
+    required: false,
+  },
 ];
 
 /** The consents care needs (all but the optional AI scribe). */

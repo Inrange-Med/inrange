@@ -257,3 +257,28 @@
     justify-content: center;
   }
 }
+
+/* a quiet action inside a sentence: "Order now instead", "I already have these" */
+.inlineLink {
+  display: inline;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 560;
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--hair-2);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.inlineLink:disabled {
+  color: var(--ink-3);
+  cursor: default;
+}
+@media (hover: hover) and (pointer: fine) {
+  .inlineLink:not(:disabled):hover {
+    text-decoration-color: currentColor;
+  }
+}
