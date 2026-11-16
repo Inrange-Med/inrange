@@ -727,7 +727,8 @@ span.back {
 }
 .cite {
   display: block;
-  font-size: 0.8125rem;
+  margin-top: 4px;
+  font-size: 0.75rem;
   font-style: normal;
   line-height: 1.5;
   color: var(--ink-3);

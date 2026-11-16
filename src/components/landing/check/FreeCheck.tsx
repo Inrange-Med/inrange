@@ -156,13 +156,15 @@ function Cite({ id }: { id: string }) {
   const src = SOURCES[id];
   if (!src) return null;
   return (
-    <cite className={s.cite}>
+    // the short name on screen, the full reference on hover and for screen readers
+    <cite className={s.cite} title={src.label}>
+      Source:{" "}
       {src.href ? (
-        <a href={src.href} target="_blank" rel="noopener noreferrer">
-          {src.label}
+        <a href={src.href} target="_blank" rel="noopener noreferrer" aria-label={src.label}>
+          {src.short}
         </a>
       ) : (
-        src.label
+        <span aria-label={src.label}>{src.short}</span>
       )}
     </cite>
   );
