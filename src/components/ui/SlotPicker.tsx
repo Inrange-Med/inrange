@@ -237,7 +237,7 @@ export default function SlotPicker({
               ))}
             {slots !== null && groups.length === 0 && (
               <p className={styles.empty}>
-                No open times on this day. Try another day.
+                No times left on this day.
               </p>
             )}
             {groups.map((group) => (

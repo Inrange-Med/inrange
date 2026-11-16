@@ -26,8 +26,8 @@ export default function FirstStepChoice({
           <FileArrowUp size={20} />
         </span>
         <span className={styles.text}>
-          <strong>Had blood tests in the last 3 months?</strong>
-          <span>Upload the report instead. No home test needed.</span>
+          <strong>Have a recent blood report?</strong>
+          <span>Upload it instead, from the last 3 months.</span>
         </span>
         <ArrowRight size={18} className={styles.go} aria-hidden="true" />
       </button>

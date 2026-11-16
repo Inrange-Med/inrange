@@ -40,7 +40,7 @@ export default function CollectionTimeStep({
     <>
       {fastingSentence(labPackage.fastingNote) && (
         <p className={styles.fast}>
-          {fastingSentence(labPackage.fastingNote)} A morning time is easiest.
+          {fastingSentence(labPackage.fastingNote)}
         </p>
       )}
       <SlotPicker
@@ -49,7 +49,7 @@ export default function CollectionTimeStep({
         confirmLabel="Continue with"
         dayCount={4}
         closedWeekdays={NO_CLOSED_DAYS}
-        note="Times are India time (IST). The collector arrives within the hour you choose."
+        note="The collector comes within the hour you pick."
       />
     </>
   );

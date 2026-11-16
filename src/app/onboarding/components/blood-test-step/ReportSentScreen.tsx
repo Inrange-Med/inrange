@@ -38,7 +38,7 @@ export default function ReportSentScreen({
             Report sent
           </h1>
           <p className={pageStyles.why}>
-            Your report is in. Your account shows when you can book your
+            Our doctors will review it. We will let you know when to book your
             consultation.
           </p>
         </div>

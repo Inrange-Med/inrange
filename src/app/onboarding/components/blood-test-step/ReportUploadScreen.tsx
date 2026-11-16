@@ -26,7 +26,7 @@ export default function ReportUploadScreen({
       screenKey="upload"
       direction={direction}
       title="Upload your report"
-      why="A PDF or a photo of a blood test from the last 3 months. Our medical team reviews it."
+      why="A PDF or photo, from the last 3 months."
       headingRef={headingRef}
     >
       <LabReportUpload

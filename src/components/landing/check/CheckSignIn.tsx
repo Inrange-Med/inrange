@@ -29,8 +29,8 @@ type Field = "firstName" | "email" | "mobile" | "consent";
 function problemOf(id: Identity): { field: Field; message: string } | null {
   if (!id.firstName.trim()) return { field: "firstName", message: "Add your first name." };
   if (!EMAIL_PATTERN.test(id.email.trim())) return { field: "email", message: id.email.trim() ? "That email does not look right." : "Add your email." };
-  if (!isValidMobile(id.mobile)) return { field: "mobile", message: "Enter the 10-digit mobile number, without the 0 or +91." };
-  if (!id.consented) return { field: "consent", message: "Tick the box to agree, so your doctor can see your details." };
+  if (!isValidMobile(id.mobile)) return { field: "mobile", message: "Enter a 10-digit mobile number." };
+  if (!id.consented) return { field: "consent", message: "Tick the box to continue." };
   return null;
 }
 
@@ -206,7 +206,7 @@ export default function CheckSignIn({
             "Checking the code"
           ) : resendIn > 0 ? (
             <>
-              No code yet? You can ask again in <span className="num">{resendIn}</span> s.
+              Resend in <span className="num">{resendIn}</span> s
             </>
           ) : (
             <button type="button" className={s.inlineLink} onClick={() => void send()}>
@@ -281,7 +281,7 @@ export default function CheckSignIn({
           />
         </span>
         <small id="check-mobile-why" className={s.fieldWhy}>
-          We text a code to check it is yours. Your care team calls this number.
+          We will text you a code.
         </small>
         {err("mobile")}
       </label>
@@ -306,7 +306,7 @@ export default function CheckSignIn({
       <label className={`${s.tick} ${s.tickQuiet}`}>
         <input type="checkbox" checked={identity.ai} onChange={(e) => change({ ai: e.target.checked })} />
         <span>
-          <strong>Optional.</strong> {CONSENTS.find((c) => c.type === "AI")?.line} Your doctor reads and signs every note.
+          <strong>Optional.</strong> {CONSENTS.find((c) => c.type === "AI")?.line}
         </span>
       </label>
 

@@ -71,7 +71,7 @@ export default function QuestionScreen({
           <h1 ref={headingRef} tabIndex={-1} className={pageStyles.q}>
             {question}
           </h1>
-          <p className={pageStyles.why}>{why}</p>
+          {why && <p className={pageStyles.why}>{why}</p>}
         </div>
         {children}
         {problem && !problem.field && (
@@ -114,8 +114,8 @@ export default function QuestionScreen({
               <LockSimple size={13} />
             )}
             {welcomeBack
-              ? (welcomeLine ?? "Welcome back. Your answers are saved.")
-              : "Saved as you go."}
+              ? (welcomeLine ?? "Welcome back.")
+              : "Private. Only your care team sees this."}
           </p>
         </div>
       )}

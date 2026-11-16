@@ -33,11 +33,11 @@ export const STEP_QUESTIONS: Record<number, { question: string; why: string }> =
   {
     1: {
       question: "What should we call you?",
-      why: "Your doctor uses your name on the call. Reports go to your email.",
+      why: "",
     },
     2: {
       question: "Which describes you?",
-      why: "Waist limits differ for men and women, so your doctor reads your numbers against the right one.",
+      why: "",
     },
     3: {
       question: "How old are you?",
@@ -45,19 +45,19 @@ export const STEP_QUESTIONS: Record<number, { question: string; why: string }> =
     },
     4: {
       question: "How tall are you?",
-      why: "In feet or centimetres, whichever you know.",
+      why: "",
     },
     5: {
       question: "What do you weigh?",
-      why: "A recent reading is fine. You can log a fresh one later.",
+      why: "A recent reading is fine.",
     },
     6: {
       question: "Have you tried to lose weight before?",
-      why: "Choose all that apply. It tells your doctor where to start.",
+      why: "Choose all that apply.",
     },
     7: {
       question: "Do you have any of these?",
-      why: "Choose all that apply. Only your care team can see this.",
+      why: "Choose all that apply.",
     },
     8: {
       question: "Before your doctor sees your details",
@@ -65,7 +65,7 @@ export const STEP_QUESTIONS: Record<number, { question: string; why: string }> =
     },
     9: {
       question: "Your first step",
-      why: "Blood tests at home, then your doctor and health coach on one video call. You see the fee before you pay.",
+      why: "Start with a blood test at home.",
     },
   };
 

@@ -84,7 +84,7 @@ export default function TestedPersonStep({
   return (
     <form className={styles.fields} onSubmit={submit} noValidate>
       <p className={styles.sheetMeta}>
-        The lab needs these details for the sample and the report.
+        For the sample and the report.
       </p>
       <label className={formStyles.field}>
         <span className={formStyles.label}>Full name</span>

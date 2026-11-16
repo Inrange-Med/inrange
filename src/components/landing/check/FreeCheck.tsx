@@ -10,7 +10,7 @@
     4  Health         conditions
     5  Health         what they have tried
     6  Your details   name, email, mobile and consent, then the code, here (no separate sheet)
-    7  Next steps     signed in: what happens next, notes on what they told us, what doctors say,
+    7  Next steps     signed in: what happens next and the doctors,
                       then the first step in onboarding, which has nothing left to ask
   Screens were merged and the sign-in brought in to cut taps before payment (feedback, 14 Nov 2026)
   without dropping a question. Everything up to the code is worked out on the device and kept in this
@@ -45,19 +45,19 @@ import { Wordmark } from "../ui";
 import { MeasureField } from "../tools/kit";
 import { healthyRange } from "../tools/data";
 import { kgTo, useUnits } from "../tools/units";
-import { CONDITION_NOTES, DOCTORS_SAY, EXPERIENCE_NOTES, SOURCES } from "./check-content";
+import { SOURCES } from "./check-content";
 import CheckSignIn, { consentsOf, type Identity } from "./CheckSignIn";
 import s from "./FreeCheck.module.css";
 
 type Key = "about" | "measures" | "bmi" | "conditions" | "tried" | "details" | "plan";
 const STEPS: { key: Key; chapter: string; q: string; why: string }[] = [
-  { key: "about", chapter: "About you", q: "A little about you", why: "inrange is for adults 18 and over. Waist limits differ for men and women." },
-  { key: "measures", chapter: "Measurements", q: "Your height and weight", why: "In feet or centimetres, kilograms or pounds. A recent reading is fine." },
+  { key: "about", chapter: "About you", q: "A little about you", why: "" },
+  { key: "measures", chapter: "Measurements", q: "Your height and weight", why: "A recent reading is fine." },
   { key: "bmi", chapter: "Your BMI", q: "Your BMI", why: "" },
-  { key: "conditions", chapter: "Health", q: "Do you have any of these?", why: "Choose all that apply. It tells your doctor where to look first." },
+  { key: "conditions", chapter: "Health", q: "Do you have any of these?", why: "Choose all that apply." },
   { key: "tried", chapter: "Health", q: "Have you tried to lose weight before?", why: "Choose all that apply." },
-  { key: "details", chapter: "Your details", q: "Where should your care team reach you?", why: "Your doctor uses your name on the call. Reports go to your email." },
-  { key: "plan", chapter: "Next steps", q: "What happens next", why: "Your first step, then a plan only if it suits you." },
+  { key: "details", chapter: "Your details", q: "Where can we reach you?", why: "" },
+  { key: "plan", chapter: "Next steps", q: "What happens next", why: "" },
 ];
 const LAST = STEPS.length - 1;
 const at = (key: Key) => STEPS.findIndex((x) => x.key === key);
@@ -92,7 +92,6 @@ const NO_IDENTITY: Identity = { firstName: "", lastName: "", email: "", mobile: 
 
 /** BMI bands: the revised Indian definition (Misra et al., 2025) and, for comparison, the global chart. */
 const bandOf = (bmi: number) => (bmi < 18.5 ? "under" : bmi <= 23 ? "healthy" : "obesity");
-const globalWord = (bmi: number) => (bmi < 25 ? "healthy" : bmi < 30 ? "overweight" : "obesity");
 // the scale runs from BMI 15 to 40
 const SCALE = { min: 15, max: 40 };
 const onScale = (v: number) => `${((Math.min(SCALE.max, Math.max(SCALE.min, v)) - SCALE.min) / (SCALE.max - SCALE.min)) * 100}%`;
@@ -172,9 +171,8 @@ function Cite({ id }: { id: string }) {
 function Fine() {
   return (
     <p className={`fineprint ${s.fine}`}>
-      This check gives general information and does not replace a consultation or diagnosis. Results vary between
-      individuals. For adults aged 18 and over, and not for emergencies: call 112. Care is provided by registered medical
-      practitioners, and video consultations follow the Telemedicine Practice Guidelines, 2020.
+      General information, not a diagnosis. Results vary. Adults 18 and over. Not for emergencies: call 112. Care by
+      registered doctors, under the Telemedicine Practice Guidelines 2020.
     </p>
   );
 }
@@ -187,7 +185,6 @@ export default function FreeCheck() {
   const [d, setD] = useState<Draft>(START);
   const [identity, setIdentity] = useState<Identity>(NO_IDENTITY);
   const [problem, setProblem] = useState<string | null>(null);
-  const [kept, setKept] = useState(true);
   const [leaving, setLeaving] = useState(false);
   const headingRef = useRef<HTMLHeadingElement>(null);
   // how many screens this page has pushed onto the browser's history, so Back never leaves the page
@@ -286,7 +283,6 @@ export default function FreeCheck() {
   const range = useMemo(() => healthyRange(d.heightCm, wu), [d.heightCm, wu]);
   const today = Math.round(kgTo(d.weightKg, wu));
   const milestone = Math.round(today * 0.05);
-  const toHealthy = Math.max(0, today - range.hi);
   const diabetes = d.conditions.includes("T2D") || d.conditions.includes("PREDIABETES");
   // weight care is not for a BMI below the healthy range; diabetes care still can be
   const canBook = band !== "under" || diabetes;
@@ -299,7 +295,7 @@ export default function FreeCheck() {
     }
     if (cur.key === "tried") {
       const answers = answersOf(d);
-      if (answers) setKept(saveFreeCheck(answers));
+      if (answers) saveFreeCheck(answers);
       // nobody is asked for their details when the programme is not for them
       go(canBook ? at("details") : at("plan"));
       return;
@@ -426,32 +422,19 @@ export default function FreeCheck() {
       <div className={s.result}>
         <p className={s.meaning}>
           {band === "obesity"
-            ? bmi >= 30
-              ? "Both the 2025 Indian definition and the global chart call this obesity."
-              : `By the 2025 Indian definition, a BMI over 23 is obesity. The global chart would call it ${globalWord(bmi)}.`
+            ? "For Indians, a BMI over 23 is above the healthy range. It is common, and a doctor can help."
             : band === "healthy"
-              ? "Your BMI is within the healthy range for Asian Indians, 18.5 to 23."
-              : "Your BMI is below the healthy range for Asian Indians, 18.5 to 23."}
+              ? "You are in the healthy range for Indians, 18.5 to 23."
+              : "You are below the healthy range for Indians, 18.5 to 23."}
+          {band === "obesity" && <Cite id="misra" />}
         </p>
-
-        {band === "obesity" && (
-          <div className={s.block}>
-            <h2 className={s.blockK}>Why it matters</h2>
-            <p>
-              At the same weight, South Asians carry more fat around the organs, so risks such as type 2 diabetes, high
-              blood pressure and fatty liver start at a lower BMI. Whether it is stage 1 or stage 2 depends on your waist and
-              any related conditions, which a doctor checks.
-            </p>
-            <Cite id="misra" />
-          </div>
-        )}
 
         {band === "obesity" ? (
           <div className={s.block}>
-            <h2 className={s.blockK}>How much to lose</h2>
+            <h2 className={s.blockK}>Your first goal</h2>
             <dl className={s.ledger}>
               <div>
-                <dt>First milestone, 5% of your weight</dt>
+                <dt>5% of your weight</dt>
                 <dd className="num">
                   {milestone}&nbsp;{wu}
                 </dd>
@@ -462,25 +445,17 @@ export default function FreeCheck() {
                   {range.lo} to {range.hi}&nbsp;{wu}
                 </dd>
               </div>
-              <div>
-                <dt>Above the top of that range</dt>
-                <dd className="num">
-                  {toHealthy}&nbsp;{wu}
-                </dd>
-              </div>
             </dl>
             <p className={s.small}>
-              A loss of 5% or more is the minimum linked with better blood sugar, blood pressure and blood fats. Your
-              doctor sets your own target with you.
+              Your doctor sets your target with you. <Cite id="ada" />
             </p>
-            <Cite id="ada" />
           </div>
         ) : (
           <div className={s.block}>
             <p>
               {band === "healthy"
-                ? "Weight is one measure. Your waist and blood sugar matter too, and a doctor can check them."
-                : "Losing weight is not advised at this BMI. Please speak to your own doctor about it."}
+                ? "Your waist and blood sugar matter too. A doctor can check them."
+                : "Losing weight is not advised at this BMI."}
             </p>
           </div>
         )}
@@ -528,17 +503,6 @@ export default function FreeCheck() {
     tried: options(EXPERIENCES, (code) => d.experience.includes(code), (code) => update({ experience: experienceToggled(d.experience, code) })),
   };
 
-  const notes = [
-    ...(d.noConditions ? [] : conditionsFor(CONDITIONS, d.gender).filter((c) => d.conditions.includes(c.code))).map((c) => ({
-      key: c.code,
-      name: c.label,
-      ...CONDITION_NOTES[c.code],
-    })),
-    ...d.experience
-      .filter((code) => EXPERIENCE_NOTES[code])
-      .map((code) => ({ key: code, name: EXPERIENCES.find((e) => e.code === code)!.label, text: EXPERIENCE_NOTES[code], source: undefined })),
-  ];
-
   const toFirstStep = (
     <button type="button" className="btn btn--signal" onClick={() => router.push("/onboarding")}>
       <span>Choose your first step</span>
@@ -551,74 +515,34 @@ export default function FreeCheck() {
   const plan = canBook ? (
     <>
       <div className={s.close2} data-dark>
-        <p className={s.closeK}>You are signed in</p>
-        <p className={s.closeText}>Your answers are saved. Next, your first step: blood tests at home, or a recent report.</p>
+        <p className={s.closeK}>You are all set</p>
+        <p className={s.closeText}>Next, a blood test at home.</p>
         {toFirstStep}
       </div>
       <ol className={s.steps}>
         <li data-next>
           <p className={s.here}>Your next step</p>
           <h2 className={s.stepK}>Blood tests at home</h2>
-          <p>
-            A partner lab collects samples at your door, or you upload a report from the last three months. The tests look
-            for what may be behind your weight.
-          </p>
+          <p>A lab collects a sample at your door. Or upload a recent report.</p>
         </li>
         <li>
-          <h2 className={s.stepK}>A review by our medical team</h2>
-          <p>They read your results and confirm the programme suits you.</p>
+          <h2 className={s.stepK}>A review by our doctors</h2>
+          <p>They check the programme suits you.</p>
         </li>
         <li>
           <h2 className={s.stepK}>A video consultation with your doctor</h2>
-          <p>
-            Your doctor goes through every result with you and explains what to do about it. Then your health coach plans
-            the next steps with you.
-          </p>
+          <p>Your doctor and health coach, on one call.</p>
         </li>
         <li>
           <h2 className={s.stepK}>A plan, only if it suits you</h2>
-          <p>
-            You see the itemised price before you pay. Medication only if your doctor judges it clinically appropriate. Not
-            everyone is prescribed medication.
-          </p>
+          <p>You see the price before you pay. Not everyone is prescribed medication.</p>
         </li>
       </ol>
 
-      {notes.length > 0 && (
-        <section className={s.block} aria-labelledby="notes-k">
-          <h2 id="notes-k" className={s.blockK}>
-            From what you told us
-          </h2>
-          <ul className={s.notes}>
-            {notes.map((n) => (
-              <li key={n.key}>
-                <strong>{n.name}.</strong> {n.text}
-                {n.source && <Cite id={n.source} />}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
       <section className={s.block} aria-labelledby="say-k">
         <h2 id="say-k" className={s.blockK}>
-          What doctors say about obesity
+          Your doctors
         </h2>
-        <ul className={s.says}>
-          {DOCTORS_SAY.map((x) => (
-            <li key={x.source}>
-              {x.verbatim ? (
-                <blockquote cite={SOURCES[x.source].href}>
-                  <p>&ldquo;{x.text}&rdquo;</p>
-                </blockquote>
-              ) : (
-                <p className={s.sayPlain}>{x.text}</p>
-              )}
-              <p className={s.by}>{x.by}</p>
-              <Cite id={x.source} />
-            </li>
-          ))}
-        </ul>
         {/* the doctors themselves, as on /doctors: face, name and qualifications only (NMC 2026) */}
         <ul className={s.faces} aria-label="Doctors on the care team">
           {LISTED_DOCTORS.filter((doc) => doc.photo).map((doc) => (
@@ -630,7 +554,7 @@ export default function FreeCheck() {
           ))}
         </ul>
         <p className={s.doctors}>
-          Your doctor is an endocrinologist or an internal medicine physician, registered in India.{" "}
+          Endocrinologists and internal medicine physicians, registered in India.{" "}
           <a href="/doctors">
             Meet the doctors
             <ArrowRight size={14} aria-hidden="true" />
@@ -643,10 +567,7 @@ export default function FreeCheck() {
   ) : (
     <div className={s.close2} data-dark>
       <p className={s.closeK}>Weight care is not for you right now</p>
-      <p className={s.closeText}>
-        Your BMI is below the healthy range, so losing weight is not advised. Please speak to your own doctor. Our free
-        tools and guides are open to everyone.
-      </p>
+      <p className={s.closeText}>Losing weight is not advised at your BMI. Our free tools are open to everyone.</p>
       <a href="/tools" className="btn btn--signal">
         <span>See the free tools</span>
         <span className="well" aria-hidden="true">
@@ -677,16 +598,14 @@ export default function FreeCheck() {
               return;
             }
             const answers = answersOf(d, identity);
-            if (answers) setKept(saveFreeCheck(answers));
+            if (answers) saveFreeCheck(answers);
             // replace: Back from the plan goes to the health questions, never to a used code
             go(at("plan"), true);
           }}
         />
         <p className={s.private}>
           <LockSimple size={13} aria-hidden="true" />
-          {kept
-            ? "Your answers stay on this device until the code is checked."
-            : "This browser did not keep your answers, so you may be asked them again after the code."}
+          Private. Only your care team sees your details.
         </p>
       </>
     ) : (
@@ -706,7 +625,7 @@ export default function FreeCheck() {
           </button>
           <p className={s.private}>
             <LockSimple size={13} aria-hidden="true" />
-            Worked out on this device. Nothing is sent until you sign in.
+            Private and free
           </p>
         </div>
       </>
@@ -769,7 +688,6 @@ export default function FreeCheck() {
                     </span>
                   ))}
                 </div>
-                <p className={s.scaleKey}>Indian definition: over 23 is obesity. The global chart starts at 25 and 30.</p>
               </div>
             </>
           ) : (

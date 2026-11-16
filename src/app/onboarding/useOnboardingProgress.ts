@@ -56,7 +56,7 @@ export function useOnboardingProgress(
   // the questions saved from the free check (and an earlier name), skipped when moving forward
   const skip = useRef(prefilled?.done ?? []);
   const welcomeLine = prefilled?.fromCheck
-    ? "Your answers from the check are saved."
+    ? "Welcome back."
     : undefined;
   const [problem, setProblem] = useState<Problem | null>(
     prefilled?.problem ? { message: prefilled.problem } : null,

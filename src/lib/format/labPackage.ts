@@ -35,11 +35,11 @@ export function fastingHours(raw: string): string | null {
   return m[3] ?? `${m[1]} to ${m[2]}`;
 }
 
-/** The before-collection instruction, or null: "Fast for 12 hours before the collection. Water is fine." */
+/** The before-collection instruction, or null: "Fast for 12 hours before. Water is fine." */
 export function fastingSentence(raw: string): string | null {
   const hours = fastingHours(raw);
   return hours
-    ? `Fast for ${hours} hours before the collection. Water is fine.`
+    ? `Fast for ${hours} hours before. Water is fine.`
     : null;
 }
 

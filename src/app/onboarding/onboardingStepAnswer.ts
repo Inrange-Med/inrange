@@ -91,7 +91,7 @@ export function stepAnswerFor(
       )
         return {
           message:
-            "Tick the box to agree, so your doctor can see your details.",
+            "Tick the box to continue.",
         };
       return { step: 8, consents: draft.consents };
   }

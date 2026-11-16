@@ -108,9 +108,7 @@ export default function CarePackageStep({ onChoose }: Props) {
                 <p className={`${styles.markersCount} num`}>{markers}</p>
               )}
               <p className={styles.markersWhy}>
-                Your blood tests look for what may be behind your weight. Your
-                doctor goes through every result with you, then explains what to
-                do about it.
+                Your doctor goes through every result with you.
               </p>
             </div>
             {problem?.code === care.code && (

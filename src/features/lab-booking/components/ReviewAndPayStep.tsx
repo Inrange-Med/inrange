@@ -253,10 +253,10 @@ export default function ReviewAndPayStep({
           </button>
           <p className={styles.foot}>
             {held
-              ? "The 30-minute hold ended. Continue to hold this time again."
+              ? "Your time was released. Continue to hold it again."
               : covered
                 ? "Your plan covers this test."
-                : "The lab holds your time for 30 minutes while you pay, and confirms the price."}
+                : "We hold this time for 30 minutes while you pay."}
           </p>
         </>
       )}

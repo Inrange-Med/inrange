@@ -204,12 +204,6 @@ span.back {
   top: 0;
   translate: -50% 0;
 }
-.scaleKey {
-  margin-top: 4px;
-  font-size: 0.8125rem;
-  line-height: 1.5;
-  color: var(--on-dark-3);
-}
 
 /* ---------- the answer card ---------- */
 .body {
@@ -793,48 +787,6 @@ span.back {
   font-weight: 520;
   line-height: 1.35;
   color: var(--ink);
-}
-.notes {
-  display: grid;
-  gap: 14px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.notes li {
-  display: grid;
-  gap: 4px;
-}
-.notes strong {
-  font-weight: 560;
-  color: var(--ink);
-}
-.says {
-  display: grid;
-  gap: 18px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.says li {
-  display: grid;
-  gap: 6px;
-  padding-left: 16px;
-  border-left: 2px solid var(--slate-800);
-}
-.says blockquote,
-.sayPlain {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: 1.125rem;
-  font-weight: 500;
-  line-height: 1.4;
-  letter-spacing: -0.008em;
-  color: var(--ink);
-}
-.by {
-  font-size: 0.875rem;
-  color: var(--ink-2);
 }
 /* the first stop is the one being bought: a quiet label says so */
 .here {
