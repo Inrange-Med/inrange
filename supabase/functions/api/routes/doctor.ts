@@ -35,6 +35,8 @@ import { requireDoctor } from "../lib/auth.ts";
 import { signedUrl, uploadFile } from "../lib/storage.ts";
 import { cartAvailableAt, medicineColumns, searchInventory, type CartLine } from "../lib/pharmacy.ts";
 import { prescriptionPdf, type RxPdfItem } from "../lib/prescriptionPdf.ts";
+import { startMedicineFlow } from "../lib/medicineFlow.ts";
+import { deliver } from "../lib/notify.ts";
 
 export const doctorRoutes = new Hono();
 
@@ -749,16 +751,23 @@ async function signRx(doctor: { id: number; name: string; qualification: string 
     const prev = merged.get(id);
     merged.set(id, { medicineId: id, quantity: (prev?.quantity ?? 0) + q, prescribed: (prev?.prescribed ?? 0) + q });
   }
-  await sql.begin(async (tx) => {
+  const messageId = await sql.begin(async (tx) => {
     await tx`update prescriptions set status = 'SUPERSEDED' where patient_id = ${patientId} and status = 'SIGNED'`;
     await tx`update prescriptions set status = 'SIGNED', signed_at = ${signedAt}, pdf_path = ${path}, months = ${months},
                valid_until = ${validUntil} where id = ${rxId}`;
     await tx`update medicine_carts set status = 'CLOSED' where patient_id = ${patientId} and status = 'OPEN'`;
-    if (merged.size)
-      await tx`insert into medicine_carts (patient_id, prescription_id, available_at, lines, address_id)
-               values (${patientId}, ${rxId}, ${availableAt}, ${tx.json([...merged.values()])}, ${addr?.id ?? null})`;
+    const [cart] = merged.size
+      ? await tx`insert into medicine_carts (patient_id, prescription_id, available_at, lines, address_id)
+               values (${patientId}, ${rxId}, ${availableAt}, ${tx.json([...merged.values()])}, ${addr?.id ?? null}) returning id`
+      : [];
     await tx`insert into audit_log (patient_id, actor_id, action) values (${patientId}, ${doctor.id}, ${`Signed prescription version ${rx.version}, ${doctor.name}`})`;
+    // the prescription on WhatsApp now, and the follow-up about the order (lib/medicineFlow.ts)
+    return await startMedicineFlow(tx, {
+      patientId, prescriptionId: rxId, version: rx.version, cartId: cart?.id ?? null, onPlan, signedAt, availableAt,
+      doctorName: doctor.name, pdfPath: path,
+    });
   });
+  if (messageId) await deliver(messageId).catch((e) => console.error("prescription message", e.message));
   return { id: String(rxId), version: rx.version, status: "SIGNED", signedAt: ist(signedAt), months,
            validUntil: ist(validUntil), cartAvailableAt: merged.size ? ist(availableAt) : null };
 }

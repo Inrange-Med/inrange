@@ -56,6 +56,9 @@ const CONSENTS = [
     more: "Your doctor may decide a video consultation is not enough and ask you to see someone in person. InRange is not for emergencies: call 112.", required: true },
   { type: "AI", title: "Call transcription", line: "An AI scribe drafts your doctor's notes from your video calls.",
     more: "If you agree, your video calls are transcribed so an AI scribe can draft the notes. Your doctor reads, corrects and signs every note, and nothing reaches your record without them. If you say no, nothing about your care changes: your doctor writes the notes themselves.", required: false },
+  // optional (DPDP Act 2023 and WhatsApp's opt-in rule): without it nothing goes to WhatsApp, and the app shows everything
+  { type: "WHATSAPP", title: "Updates on WhatsApp", line: "Your prescription, where your order is, and reminders, on WhatsApp.",
+    more: "We send your prescription, your order's progress, and the reminders you choose, from inrange's WhatsApp number. Messages never name a medicine or a price. Reply STOP at any time, or turn it off in your profile.", required: false },
 ];
 const CONSENT_TYPES = CONSENTS.map((c) => c.type);
 const EXPERIENCE_CODES = EXPERIENCES.map((e) => e.code);
@@ -287,7 +290,8 @@ patientRoutes.get("/patient/profile", async (c) => {
     planName: plan?.name ?? "",
     planStatus: plan?.status ?? "",
     remindersEnabled: reminders.remindersEnabled ?? true,
-    whatsappReminders: reminders.whatsappReminders ?? true,
+    // WhatsApp is on only with the consent (a STOP reply or the profile switch revokes it)
+    whatsappReminders: consents.some((x) => x.consent_type === "WHATSAPP"),
     emailReminders: reminders.emailReminders ?? false,
     consentGiven: privacy.consentGiven ?? consents.some((x) => x.consent_type === "HEALTH_DATA"),
   });
@@ -341,7 +345,14 @@ patientRoutes.patch("/patient/reminders", async (c) => {
     whatsappReminders: Boolean(b.whatsappReminders),
     emailReminders: Boolean(b.emailReminders),
   };
-  await sql`update patient_profiles set reminders = ${sql.json(reminders)}, updated_at = now() where user_id = ${me.id}`;
+  await sql.begin(async (tx) => {
+    await tx`update patient_profiles set reminders = ${tx.json(reminders)}, updated_at = now() where user_id = ${me.id}`;
+    // the switch is the WhatsApp consent: on records it (once), off revokes it
+    if (reminders.whatsappReminders) {
+      const [active] = await tx`select 1 from consents where user_id = ${me.id} and consent_type = 'WHATSAPP' and revoked_at is null`;
+      if (!active) await tx`insert into consents (user_id, consent_type, version) values (${me.id}, 'WHATSAPP', ${CONSENT_VERSION})`;
+    } else await tx`update consents set revoked_at = now() where user_id = ${me.id} and consent_type = 'WHATSAPP' and revoked_at is null`;
+  });
   return ok(c, reminders, "Reminders saved");
 });
 

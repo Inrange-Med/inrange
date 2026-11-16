@@ -307,8 +307,15 @@ careRoutes.get("/care/prescription/current", async (c) => {
 careRoutes.get("/care/medicine-orders", async (c) => {
   const me = await requirePatient(c);
   const rows = await sql`
-    select id::text as id, status, ${iso("placed_at")} as "placedAt", ${iso("expected_at")} as "expectedAt",
-      tracking_no as "trackingNo", tracking_url as "trackingUrl", items, history
+    select id::text as id, 'MED-' || lpad(id::text, 5, '0') as "orderNumber", status,
+      ${iso("placed_at")} as "placedAt", ${iso("expected_at")} as "expectedAt",
+      ${iso("dispatched_at")} as "dispatchedAt", ${iso("delivered_at")} as "deliveredAt",
+      courier, tracking_no as "trackingNo", tracking_url as "trackingUrl", items, history,
+      feedback, cancel_reason as "cancelReason", refunded_paise as "refundedPaise",
+      case when supply_days is not null and delivered_at is not null
+        then to_char((delivered_at + make_interval(days => supply_days)) at time zone 'Asia/Kolkata', 'YYYY-MM-DD') end as "runOutOn",
+      -- a delivered order can be rated for two weeks
+      (status = 'DELIVERED' and feedback is null and delivered_at > now() - interval '14 days') as "canGiveFeedback"
     from medicine_orders where patient_id = ${me.id} order by placed_at desc`;
   return ok(c, rows);
 });
@@ -485,6 +492,8 @@ async function cartView(patientId: number) {
   return {
     data: {
       id: String(k.id), prescriptionId: String(k.prescription_id), months: k.months, validUntil: k.valid_iso, ...priced,
+      // a refill is the next supply on the same prescription (lib/medicineFlow.ts checkRefills)
+      kind: k.kind, boughtElsewhere: Boolean(k.elsewhere_at),
       address: address ? { id: String(address.id), label: address.label, name: address.full_name ?? "", line: addressLine(address) } : null,
     },
   };

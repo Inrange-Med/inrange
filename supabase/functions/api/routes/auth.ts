@@ -13,7 +13,7 @@ import type { Context } from "hono";
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import { sql } from "../lib/db.ts";
 import { body, fail, ok } from "../lib/http.ts";
-import { issueToken, requireUser } from "../lib/auth.ts";
+import { issueToken, requireUser, type Role } from "../lib/auth.ts";
 import { env, live } from "../lib/env.ts";
 import { sendOtpSms, smsLive } from "../integrations/sms.ts";
 
@@ -127,7 +127,7 @@ async function signIn(c: Context, mobile: string) {
     on conflict (mobile) do update set mobile = excluded.mobile
     returning id, role, full_name, mobile, onboarding_completed`;
   const [session] = await sql`insert into auth_sessions (user_id) values (${user.id}) returning id`;
-  const accessToken = await issueToken(user as unknown as { id: number; role: "PATIENT" | "DOCTOR" | "ADMIN"; full_name: string | null }, session.id);
+  const accessToken = await issueToken(user as unknown as { id: number; role: Role; full_name: string | null }, session.id);
   const nextScreen = user.role === "PATIENT" && !user.onboarding_completed ? "ONBOARDING" : "DASHBOARD";
   return ok(c, {
     accessToken,

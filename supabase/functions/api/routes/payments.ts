@@ -18,6 +18,7 @@ import * as rzp from "../integrations/razorpay.ts";
 import { applyLabEvent, fulfilLabBooking, type LabEvent } from "./labs.ts";
 import * as rc from "../integrations/redcliffe.ts";
 import { priceCart, type CartLine } from "../lib/pharmacy.ts";
+import { deliverQueued, onMedicinePaid, onMedicinePaymentFailed } from "../lib/medicineFlow.ts";
 
 export const paymentRoutes = new Hono();
 
@@ -154,8 +155,9 @@ paymentRoutes.post("/payments/orders", async (c) => {
  * /payments/verify and the webhook, so whichever arrives second does nothing. A fulfilment the
  * world refuses (slot taken, lab hold gone) keeps the payment PAID and is flagged in meta.needsAttention.
  */
-async function fulfil(orderId: string, paymentId: string) {
-  return await sql.begin(async (tx) => {
+export async function fulfil(orderId: string, paymentId: string) {
+  let medicineOrderId: number | null = null;
+  const done = await sql.begin(async (tx) => {
     const [o] = await tx`select * from payment_orders where id = ${orderId} for update`;
     if (!o) throw new HttpError(400, "That payment was not found.");
     if (o.fulfilled_at) return o;
@@ -172,10 +174,14 @@ async function fulfil(orderId: string, paymentId: string) {
     } else if (o.purpose === "MEDICINE_ORDER") {
       const [k] = await tx`update medicine_carts set status = 'PAID', paid_at = now() where id = ${Number(o.reference_id)}
                            returning prescription_id`;
-      await tx`insert into medicine_orders (patient_id, prescription_id, cart_id, address_id, payment_order_id, status, expected_at, items, history)
+      const [mo] = await tx`insert into medicine_orders (patient_id, prescription_id, cart_id, address_id, payment_order_id, status, expected_at, items, history)
         values (${o.user_id}, ${k?.prescription_id ?? null}, ${Number(o.reference_id)}, ${(meta.addressId as number) ?? null}, ${o.id},
           'PLACED', now() + interval '3 days', ${tx.json((meta.lines ?? []) as never)},
-          ${tx.json([{ status: "PLACED", at: new Date().toISOString(), note: "Order received by the pharmacy" }])})`;
+          ${tx.json([{ status: "PLACED", at: new Date().toISOString(), note: "Order received by the pharmacy" }])})
+        returning id`;
+      // the follow-up closes, the supply and the dose rhythm are worked out, the confirmation is queued (lib/medicineFlow.ts)
+      await onMedicinePaid(tx, mo.id);
+      medicineOrderId = mo.id;
     } else if (o.purpose === "LAB_BOOKING") {
       await fulfilLabBooking(tx, o.reference_id, o.user_id);
     } else {
@@ -196,6 +202,9 @@ async function fulfil(orderId: string, paymentId: string) {
       where id = ${o.id} returning *`;
     return done;
   });
+  // the order confirmation goes once the payment is committed
+  if (medicineOrderId) await deliverQueued({ medicineOrderId }).catch((e) => console.error("order confirmation", e.message));
+  return done;
 }
 
 paymentRoutes.post("/payments/verify", async (c) => {
@@ -256,6 +265,8 @@ paymentRoutes.post("/webhooks/razorpay", async (c) => {
   } else if (event.event === "payment.failed" && o.status === "CREATED") {
     // not final: a UPI retry can still be captured later, and the order stays payable
     await sql`update payment_orders set failure_reason = ${payment.error_description ?? "Payment failed"} where id = ${o.id}`;
+    // medicines: the patient hears how to try again, and the team checks in if it stays unpaid
+    if (o.purpose === "MEDICINE_ORDER") await onMedicinePaymentFailed(o.id).catch((e) => console.error("payment failed message", e.message));
   }
   if (eventId) await sql`insert into razorpay_events (id) values (${eventId}) on conflict do nothing`;
   return c.json({ success: true });

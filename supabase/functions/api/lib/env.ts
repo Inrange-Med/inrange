@@ -45,6 +45,16 @@ export const env = {
   hmsSecret: get("HMS_SECRET"),
   hmsTemplateId: get("HMS_TEMPLATE_ID"),
   hmsSubdomain: get("HMS_SUBDOMAIN"),
+
+  /** WhatsApp (Meta Cloud API): the system user's token and the business number's id (docs/backend/medicine-flow.md). */
+  whatsappToken: get("WHATSAPP_TOKEN"),
+  whatsappPhoneNumberId: get("WHATSAPP_PHONE_NUMBER_ID"),
+  /** signs Meta's webhook calls (X-Hub-Signature-256) */
+  whatsappAppSecret: get("WHATSAPP_APP_SECRET"),
+  /** the word Meta echoes back when the webhook is registered */
+  whatsappVerifyToken: get("WHATSAPP_VERIFY_TOKEN"),
+  /** POST /api/jobs/tick needs it in x-jobs-secret (Supabase cron sends it); unset, the tick refuses */
+  jobsSecret: get("JOBS_SECRET"),
 };
 
 export const live = {
@@ -53,4 +63,5 @@ export const live = {
   razorpay: () => Boolean(env.razorpayKeyId && env.razorpayKeySecret),
   redcliffe: () => Boolean(env.redcliffeApiKey),
   hms: () => Boolean(env.hmsAccessKey && env.hmsSecret && env.hmsTemplateId && env.hmsSubdomain),
+  whatsapp: () => Boolean(env.whatsappToken && env.whatsappPhoneNumberId),
 };
