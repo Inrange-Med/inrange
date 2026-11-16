@@ -47,7 +47,7 @@
 .lane,
 .week {
   font-family: var(--font-text);
-  fill: var(--ink-3);
+  fill: var(--ink-2);
   font-size: 36px;
   paint-order: stroke;
   stroke: var(--paper);
@@ -70,10 +70,10 @@
 }
 @media (min-width: 768px) {
   .lane {
-    font-size: 21px;
+    font-size: 24px;
   }
   .week {
-    font-size: 19px;
+    font-size: 22px;
   }
 }
 .maint {
@@ -104,37 +104,42 @@
 .dim .link {
   stroke: var(--hair);
 }
-.dim .you,
+/* one colour per kind of event (call, 16 Nov 2026: "make the graphs colourful", they were hard to
+   read in grey): you blue, coach green, doctor coral, blood tests amber. The weeks still ahead keep
+   their colour, faint, so the pattern reads before the line reaches them. */
+.dim .you {
+  fill: color-mix(in srgb, var(--data-low) 30%, var(--paper));
+}
 .dim .reply {
-  fill: var(--hair-2);
+  fill: color-mix(in srgb, var(--data-ok) 34%, var(--paper));
 }
 .dim .review {
   fill: none;
-  stroke: var(--hair-2);
-  stroke-width: 2;
+  stroke: color-mix(in srgb, var(--data-strong) 38%, var(--paper));
+  stroke-width: 2.5;
 }
 .dim .lab {
-  fill: none;
-  stroke: var(--hair-2);
+  fill: color-mix(in srgb, var(--data-high) 14%, var(--paper));
+  stroke: color-mix(in srgb, var(--data-high) 45%, var(--paper));
   stroke-width: 2;
 }
 .lit .link {
-  stroke: rgb(25 26 28 / 0.28);
+  stroke: rgb(25 26 28 / 0.22);
 }
 .lit .you {
-  fill: var(--slate-800);
+  fill: var(--data-low);
 }
 .lit .reply {
-  fill: var(--signal-ink);
+  fill: var(--data-ok);
 }
 .lit .review {
   fill: var(--paper);
-  stroke: var(--slate-800);
-  stroke-width: 2.5;
+  stroke: var(--data-strong);
+  stroke-width: 3;
 }
 .lit .lab {
-  fill: var(--signal);
-  stroke: var(--slate-900);
+  fill: var(--data-high);
+  stroke: var(--data-high);
   stroke-width: 2;
 }
 .cursor {
@@ -186,10 +191,10 @@
   display: grid;
   grid-template-columns: repeat(2, max-content);
   justify-content: start;
-  gap: 8px 22px;
-  margin-top: 6px;
-  font-size: 0.8125rem;
-  color: var(--ink-2);
+  gap: 10px 24px;
+  margin-top: 10px;
+  font-size: 0.9375rem;
+  color: var(--ink);
 }
 .key li {
   display: grid;
@@ -202,33 +207,32 @@
   justify-self: center;
 }
 .kYou {
-  width: 9px;
-  height: 9px;
+  width: 11px;
+  height: 11px;
   border-radius: 50%;
-  background: var(--slate-800);
+  background: var(--data-low);
 }
 .kReply {
-  width: 7px;
-  height: 7px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  background: var(--signal-ink);
+  background: var(--data-ok);
 }
 .kReview {
-  width: 13px;
-  height: 13px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
-  box-shadow: inset 0 0 0 2px var(--slate-800);
+  box-shadow: inset 0 0 0 2.5px var(--data-strong);
 }
 .kLab {
-  width: 10px;
-  height: 10px;
+  width: 11px;
+  height: 11px;
   border-radius: 3px;
-  background: var(--signal);
-  box-shadow: inset 0 0 0 1.5px var(--slate-900);
+  background: var(--data-high);
 }
 .note {
-  margin-top: 10px;
-  font-size: 0.8125rem;
+  margin-top: 12px;
+  font-size: 0.875rem;
   color: var(--ink-3);
 }
 

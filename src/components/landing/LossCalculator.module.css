@@ -191,9 +191,9 @@
 .axis {
   position: relative;
   height: 1.2em;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   line-height: 1.2;
-  color: var(--ink-3);
+  color: var(--ink-2);
 }
 .axis > span {
   position: absolute;
@@ -243,7 +243,8 @@
   position: absolute;
   inset: 3px 0;
   border-radius: 999px;
-  background: var(--slate-800);
+  /* in the data green (call, 16 Nov 2026: colour in the graphs), deepest at about 15% */
+  background: linear-gradient(90deg, var(--data-ok) var(--a), color-mix(in srgb, var(--data-ok) 62%, var(--paper)));
   clip-path: inset(0 calc(100% - var(--b)) 0 var(--a) round 999px);
 }
 /* the authored moment: when the ruler arrives, the loss draws out from today back to about 15% */

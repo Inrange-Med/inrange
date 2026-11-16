@@ -134,6 +134,20 @@ test is not available yet. `labPackageCode` must be a code `GET /api/labs/packag
   `POST /api/onboarding/complete`. The patient opens straight on question 9. Steps therefore arrive
   out of order (8 before 2); please accept that. Consent is only sent if it was given to the current
   `consentVersion`; otherwise question 8 is asked as before.
+- **The code comes last (16 Nov 2026).** The call agreed to ask for the OTP as late as possible,
+  right before booking, because people drop off at the code. The check now takes name, email, mobile
+  and consent without sending anything, shows the plan, and asks the person to choose the first step
+  there (home blood tests, or a report upload). Only then is `POST /api/auth/send-otp` called. After
+  `verify-otp` onboarding saves the answers as above and opens the chosen path at once: the care
+  package is booked without a tap when there is exactly one (the booking starts at the address), or the
+  upload form opens. Nothing changes in the API.
+- **Ask: keep the lead before the code (16 Nov 2026).** Today a person who fills in their details and
+  never enters the code leaves nothing behind, because nothing is sent before `send-otp`. Proposed:
+  `POST /api/leads` (no auth, rate-limited by IP and number) with `{ firstName, lastName, email,
+  mobile, consents, consentVersion, source: "free-check" }`, called when they tap "See my next step".
+  It stores only those fields, never a health answer (DPDP Act: the consent tick on that screen
+  covers being contacted about care; confirm the wording with counsel), and pre-sales can call anyone
+  who stopped there. `send-otp` could then reuse it. Until it exists the app sends nothing early.
 - **Question 9 is the choice itself (14 Nov 2026).** It shows the care package with lab tests (price
   from `GET /api/care-packages`) with "Book home blood tests", and a row "Had blood tests in the last 3
   months? Upload the report instead". There is no yes/no screen any more. The lab booking then starts

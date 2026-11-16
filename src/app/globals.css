@@ -26,6 +26,19 @@
   /* one muted alert, only for readings that need action now */
   --alert: #b4442b;
 
+  /* data colours (call, 16 Nov 2026: "make the graphs a bit colourful", the site read as black and
+     white). Only for charts, scales and their keys, never for text, buttons or the wordmark. On
+     paper each is at least 3.5:1 against --bg (non-text 3:1); the -d set is for dark surfaces.
+     low: below a range; ok: in range; high: above a range; strong: a second series beside ok. */
+  --data-low: #4f7699;
+  --data-ok: #2e8549;
+  --data-high: #b8700c;
+  --data-strong: #c4452f;
+  --data-low-d: #a9c4de;
+  --data-ok-d: var(--signal);
+  --data-high-d: #f2c06b;
+  --data-strong-d: #f09a84;
+
   --bg: #f4f4f2;
   --bg-2: #e9e9e5;
   --paper: #ffffff;

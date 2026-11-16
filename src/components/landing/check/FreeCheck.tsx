@@ -9,12 +9,16 @@
     3  Your BMI       the number on the Indian scale, what it means, the risk, how much to lose
     4  Health         conditions
     5  Health         what they have tried
-    6  Your details   name, email, mobile and consent, then the code, here (no separate sheet)
-    7  Next steps     signed in: what happens next and the doctors,
-                      then the first step in onboarding, which has nothing left to ask
+    6  Your details   name, email, mobile and consent (nothing is sent yet)
+    7  Next steps     what happens next and the doctors, and the first step to choose: home blood
+                      tests, or a recent report to upload
+    8  Your code      the 6-digit code, sent as the screen opens; then onboarding, which saves the
+                      answers and opens the chosen first step at once (the booking, or the upload)
   Screens were merged and the sign-in brought in to cut taps before payment (feedback, 14 Nov 2026)
-  without dropping a question. Everything up to the code is worked out on the device and kept in this
-  tab only (lib/onboarding/freeCheck); onboarding saves it after sign-in (freeCheckPrefill.ts).
+  without dropping a question. The code comes last, right before booking (call, 16 Nov 2026: people
+  drop off at the code, so it is asked once they have seen their plan and chosen). Everything up to
+  the code is worked out on the device and kept in this tab only (lib/onboarding/freeCheck);
+  onboarding saves it after sign-in (freeCheckPrefill.ts).
   Browser Back moves between screens. Signed-in visitors go straight to their account. A BMI below
   18.5 without diabetes or prediabetes is not asked for details: weight care is not for them.
   Rules: process and sourced facts only, never a prediction for this person (check-content.ts).
@@ -23,7 +27,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, LockSimple, Minus, Plus, X } from "@phosphor-icons/react";
+import { ArrowLeft, ArrowRight, FileArrowUp, LockSimple, Minus, Plus, X } from "@phosphor-icons/react";
 import {
   AGE_MAX,
   AGE_MIN,
@@ -36,7 +40,8 @@ import {
   HEIGHT_CM,
   WEIGHT_KG,
 } from "@/lib/onboarding/answerLists";
-import { bmiFrom, readFreeCheck, saveFreeCheck, type FreeCheckAnswers } from "@/lib/onboarding/freeCheck";
+import { bmiFrom, readFreeCheck, saveFreeCheck, type FirstStep, type FreeCheckAnswers } from "@/lib/onboarding/freeCheck";
+import { isValidMobile } from "@/lib/format/phone";
 import { getSessionUser, homePathFor } from "@/lib/session/authSession";
 import type { Gender } from "@/types/onboarding";
 import ContourField from "../ContourField";
@@ -46,10 +51,10 @@ import { MeasureField } from "../tools/kit";
 import { healthyRange } from "../tools/data";
 import { kgTo, useUnits } from "../tools/units";
 import { SOURCES } from "./check-content";
-import CheckSignIn, { consentsOf, type Identity } from "./CheckSignIn";
+import { CheckCode, CheckDetails, consentsOf, type Identity, type LastSend } from "./CheckSignIn";
 import s from "./FreeCheck.module.css";
 
-type Key = "about" | "measures" | "bmi" | "conditions" | "tried" | "details" | "plan";
+type Key = "about" | "measures" | "bmi" | "conditions" | "tried" | "details" | "plan" | "code";
 const STEPS: { key: Key; chapter: string; q: string; why: string }[] = [
   { key: "about", chapter: "About you", q: "A little about you", why: "" },
   { key: "measures", chapter: "Measurements", q: "Your height and weight", why: "A recent reading is fine." },
@@ -58,6 +63,7 @@ const STEPS: { key: Key; chapter: string; q: string; why: string }[] = [
   { key: "tried", chapter: "Health", q: "Have you tried to lose weight before?", why: "Choose all that apply." },
   { key: "details", chapter: "Your details", q: "Where can we reach you?", why: "" },
   { key: "plan", chapter: "Next steps", q: "What happens next", why: "" },
+  { key: "code", chapter: "Your details", q: "Confirm your number", why: "Then you book your blood test." },
 ];
 const LAST = STEPS.length - 1;
 const at = (key: Key) => STEPS.findIndex((x) => x.key === key);
@@ -92,12 +98,23 @@ const NO_IDENTITY: Identity = { firstName: "", lastName: "", email: "", mobile: 
 
 /** BMI bands: the revised Indian definition (Misra et al., 2025) and, for comparison, the global chart. */
 const bandOf = (bmi: number) => (bmi < 18.5 ? "under" : bmi <= 23 ? "healthy" : "obesity");
+/** The Indian categories as the BMI screen lists them (Misra et al., 2025). */
+const BANDS: { band: ReturnType<typeof bandOf>; range: string; name: string; line: string }[] = [
+  { band: "under", range: "Below 18.5", name: "Underweight", line: "Losing weight is not advised." },
+  { band: "healthy", range: "18.5 to 23", name: "Healthy", line: "The healthy range for Indians." },
+  {
+    band: "obesity",
+    range: "Over 23",
+    name: "Obesity",
+    line: "The risk of type 2 diabetes, high blood pressure and fatty liver rises. A doctor checks your waist and health to judge how far.",
+  },
+];
 // the scale runs from BMI 15 to 40
 const SCALE = { min: 15, max: 40 };
 const onScale = (v: number) => `${((Math.min(SCALE.max, Math.max(SCALE.min, v)) - SCALE.min) / (SCALE.max - SCALE.min)) * 100}%`;
 
 /** The answers as onboarding will save them, or null while something is missing. */
-function answersOf(d: Draft, identity?: Identity): FreeCheckAnswers | null {
+function answersOf(d: Draft, identity?: Identity, firstStep?: FirstStep): FreeCheckAnswers | null {
   const age = Number(d.age);
   if (!d.gender || !Number.isInteger(age) || !d.heightSet || !d.weightSet || !d.experience.length) return null;
   const codes = conditionsFor(CONDITIONS, d.gender)
@@ -116,10 +133,12 @@ function answersOf(d: Draft, identity?: Identity): FreeCheckAnswers | null {
         firstName: identity.firstName.trim(),
         lastName: identity.lastName.trim(),
         email: identity.email.trim(),
+        mobile: identity.mobile,
         consents: consentsOf(identity),
         consentVersion: CONSENT_VERSION,
       },
     }),
+    ...(firstStep && { firstStep }),
   };
 }
 
@@ -188,6 +207,8 @@ export default function FreeCheck() {
   const [identity, setIdentity] = useState<Identity>(NO_IDENTITY);
   const [problem, setProblem] = useState<string | null>(null);
   const [leaving, setLeaving] = useState(false);
+  const [firstStep, setFirstStep] = useState<FirstStep | null>(null);
+  const lastSend = useRef<LastSend | null>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   // how many screens this page has pushed onto the browser's history, so Back never leaves the page
   // by mistake (a check resumed on a later screen has none behind it)
@@ -227,7 +248,14 @@ export default function FreeCheck() {
         experience: saved.weightLossExperience,
       });
       if (saved.identity)
-        setIdentity({ ...NO_IDENTITY, firstName: saved.identity.firstName, lastName: saved.identity.lastName, email: saved.identity.email });
+        setIdentity({
+          firstName: saved.identity.firstName,
+          lastName: saved.identity.lastName,
+          email: saved.identity.email,
+          mobile: saved.identity.mobile ?? "",
+          consented: saved.identity.consents.length > 0,
+          ai: saved.identity.consents.includes("AI"),
+        });
       setStep(at("details"));
     }
     history.replaceState({ ...history.state, checkStep: saved ? at("details") : 0 }, "");
@@ -279,6 +307,11 @@ export default function FreeCheck() {
       history.replaceState({ ...history.state, checkStep: step - 1 }, "");
     }
   };
+
+  // the code screen needs a number to send to (a stale Forward after a reload has none): back to the details
+  useEffect(() => {
+    if (ready && STEPS[step].key === "code" && !isValidMobile(identity.mobile)) go(at("details"), true);
+  }, [ready, step, identity.mobile, go]);
 
   const bmi = bmiFrom(d.heightCm, d.weightKg);
   const band = bandOf(bmi);
@@ -335,7 +368,7 @@ export default function FreeCheck() {
     </div>
   );
 
-  const screen: Record<Exclude<Key, "details" | "plan">, ReactNode> = {
+  const screen: Record<Exclude<Key, "details" | "plan" | "code">, ReactNode> = {
     about: (
       <div className={s.stack}>
         <div className={s.group}>
@@ -431,6 +464,30 @@ export default function FreeCheck() {
           {band === "obesity" && <Cite id="misra" />}
         </p>
 
+        {/* the categories at a glance (call, 16 Nov 2026: "show the BMI categories, what happens in which") */}
+        <div className={s.block}>
+          <h2 className={s.blockK}>BMI on the Indian scale</h2>
+          <ul className={s.bands}>
+            {BANDS.map((x) => (
+              <li key={x.band} data-band={x.band} aria-current={x.band === band || undefined}>
+                <i className={s.swatch} aria-hidden="true" />
+                <span className={`${s.bandRange} num`}>{x.range}</span>
+                <span className={s.bandText}>
+                  <strong>
+                    {x.name}
+                    {x.band === band && <span className={s.you}>You</span>}
+                  </strong>
+                  <span>{x.line}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className={s.small}>
+            The global chart starts overweight at 25 and obesity at 30. Indians face these risks at a lower BMI.
+            <Cite id="who" />
+          </p>
+        </div>
+
         {band === "obesity" ? (
           <div className={s.block}>
             <h2 className={s.blockK}>Your first goal</h2>
@@ -505,11 +562,26 @@ export default function FreeCheck() {
     tried: options(EXPERIENCES, (code) => d.experience.includes(code), (code) => update({ experience: experienceToggled(d.experience, code) })),
   };
 
-  const toFirstStep = (
-    <button type="button" className="btn btn--signal" onClick={() => router.push("/onboarding")}>
-      <span>Choose your first step</span>
+  // the first step is chosen here, then the code is sent (the code screen), then onboarding opens it
+  const choose = (first: FirstStep) => {
+    const answers = answersOf(d, identity, first);
+    if (answers) saveFreeCheck(answers);
+    setFirstStep(first);
+    go(at("code"));
+  };
+  const bookLab = (
+    <button type="button" className="btn btn--signal" onClick={() => choose("LAB")}>
+      <span>Book home blood tests</span>
       <span className="well" aria-hidden="true">
         <ArrowRight size={18} />
+      </span>
+    </button>
+  );
+  const uploadInstead = (
+    <button type="button" className={s.instead} onClick={() => choose("UPLOAD")}>
+      <FileArrowUp size={18} aria-hidden="true" />
+      <span>
+        Have a blood report from the last 3 months? <u>Upload it instead</u>
       </span>
     </button>
   );
@@ -517,15 +589,16 @@ export default function FreeCheck() {
   const plan = canBook ? (
     <>
       <div className={s.close2} data-dark>
-        <p className={s.closeK}>You are all set</p>
-        <p className={s.closeText}>Next, a blood test at home.</p>
-        {toFirstStep}
+        <p className={s.closeK}>Your first step</p>
+        <p className={s.closeText}>A blood test at home. A lab collects a sample at your door.</p>
+        {bookLab}
+        {uploadInstead}
       </div>
       <ol className={s.steps}>
         <li data-next>
           <p className={s.here}>Your next step</p>
           <h2 className={s.stepK}>Blood tests at home</h2>
-          <p>A lab collects a sample at your door. Or upload a recent report.</p>
+          <p>Your doctor goes through every result with you.</p>
         </li>
         <li>
           <h2 className={s.stepK}>A review by our doctors</h2>
@@ -564,7 +637,7 @@ export default function FreeCheck() {
         </p>
       </section>
 
-      <div className={s.again}>{toFirstStep}</div>
+      <div className={s.again}>{bookLab}</div>
     </>
   ) : (
     <div className={s.close2} data-dark>
@@ -589,20 +662,13 @@ export default function FreeCheck() {
       plan
     ) : cur.key === "details" ? (
       <>
-        <CheckSignIn
+        <CheckDetails
           identity={identity}
           onChange={(patch) => setIdentity((prev) => ({ ...prev, ...patch }))}
-          onVerified={({ role, nextScreen }) => {
-            if (role !== "PATIENT" || nextScreen !== "ONBOARDING") {
-              // an existing account: the profile is already done, so the check's answers are not used
-              setLeaving(true);
-              router.replace(homePathFor(role));
-              return;
-            }
+          onDone={() => {
             const answers = answersOf(d, identity);
             if (answers) saveFreeCheck(answers);
-            // replace: Back from the plan goes to the health questions, never to a used code
-            go(at("plan"), true);
+            go(at("plan"));
           }}
         />
         <p className={s.private}>
@@ -610,6 +676,18 @@ export default function FreeCheck() {
           Private. Only your care team sees your details.
         </p>
       </>
+    ) : cur.key === "code" ? (
+      <CheckCode
+        mobile={identity.mobile}
+        lastSend={lastSend.current}
+        onSent={(sent) => (lastSend.current = sent)}
+        onChangeNumber={() => go(at("details"))}
+        onVerified={({ role, nextScreen }) => {
+          setLeaving(true);
+          // an existing account: the profile is already done, so the check's answers are not used
+          router.replace(role !== "PATIENT" || nextScreen !== "ONBOARDING" ? homePathFor(role) : "/onboarding");
+        }}
+      />
     ) : (
       <>
         {screen[cur.key]}
@@ -653,7 +731,7 @@ export default function FreeCheck() {
         </header>
 
         <div className={s.head} key={`h${step}`} style={{ "--dir": dir } as CSSProperties}>
-          {step > 0 && cur.key !== "plan" ? (
+          {step > 0 ? (
             <button type="button" className={s.back} onClick={back}>
               <ArrowLeft size={16} aria-hidden="true" />
               Back
@@ -697,14 +775,18 @@ export default function FreeCheck() {
               <h1 id="check-q" ref={headingRef} tabIndex={-1} className={s.q}>
                 {cur.key === "plan" && !canBook ? "Your result" : cur.q}
               </h1>
-              {cur.why && (cur.key !== "plan" || canBook) && <p className={s.why}>{cur.why}</p>}
+              {cur.key === "code" ? (
+                <p className={s.why}>{firstStep === "UPLOAD" ? "Then you upload your report." : cur.why}</p>
+              ) : (
+                cur.why && (cur.key !== "plan" || canBook) && <p className={s.why}>{cur.why}</p>
+              )}
             </>
           )}
         </div>
       </div>
 
       {/* the details have their own form (the code is sent from it); the other questions share this one */}
-      {cur.key === "details" || cur.key === "plan" ? (
+      {cur.key === "details" || cur.key === "plan" || cur.key === "code" ? (
         <div className={s.body} key={`b${step}`} style={{ "--dir": dir } as CSSProperties}>
           <div className={s.card}>{card}</div>
           <Fine />

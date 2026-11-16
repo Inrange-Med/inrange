@@ -5,9 +5,10 @@
  * nothing is sent until the person signs in, and closing the tab forgets them. Onboarding saves them
  * to the profile, then clears them once the profile is complete.
  *
- * The check's last step also takes the name, email and consent, with the mobile number and its
- * code (`identity`), so onboarding after sign-in can save questions 1 to 8 and go straight to the
- * first step (call, 12 Nov 2026: fewer clicks before payment). A consent is kept with the wording
+ * The check also takes the name, email, mobile and consent (`identity`) and the first step chosen
+ * on its plan (`firstStep`: home blood tests or a report upload), then the code, so onboarding after
+ * sign-in can save questions 1 to 8 and open that first step at once (calls, 12 and 16 Nov 2026:
+ * fewer clicks before payment, the code as late as possible). A consent is kept with the wording
  * version it was given to; onboarding asks again if the backend's version differs.
  *
  * Every read is checked again (ranges and codes as the backend accepts them), so a stale, edited or
@@ -37,9 +38,14 @@ export type FreeCheckIdentity = {
   firstName: string;
   lastName: string;
   email: string;
+  /** 10 digits, so a reload on the plan can still send the code; never saved to the profile from here */
+  mobile?: string;
   consents: ConsentType[];
   consentVersion: string;
 };
+
+/** The first step chosen on the check's plan: the care package with home blood tests, or a report. */
+export type FirstStep = "LAB" | "UPLOAD";
 
 export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -54,6 +60,7 @@ export type FreeCheckAnswers = {
   noConditions: boolean;
   conditions: ConditionAnswer[];
   identity?: FreeCheckIdentity;
+  firstStep?: FirstStep;
 };
 
 type Stored = FreeCheckAnswers & { v: number; savedAt: number };
@@ -77,6 +84,10 @@ function checkedIdentity(raw: unknown): FreeCheckIdentity | undefined {
   if (!EMAIL_PATTERN.test(email) || email.length > 120) return undefined;
   if (typeof i.consentVersion !== "string" || !i.consentVersion)
     return undefined;
+  const mobile =
+    typeof i.mobile === "string" && /^[6-9]\d{9}$/.test(i.mobile)
+      ? i.mobile
+      : undefined;
   const consents = Array.isArray(i.consents)
     ? CONSENTS.map((c) => c.type).filter((type) => i.consents!.includes(type))
     : [];
@@ -84,6 +95,7 @@ function checkedIdentity(raw: unknown): FreeCheckIdentity | undefined {
     firstName,
     lastName,
     email,
+    ...(mobile && { mobile }),
     consents,
     consentVersion: i.consentVersion,
   };
@@ -135,6 +147,9 @@ export function checkedAnswers(raw: unknown): FreeCheckAnswers | null {
         : { code: c.code },
     ),
     ...(a.identity ? { identity: checkedIdentity(a.identity) } : {}),
+    ...(a.firstStep === "LAB" || a.firstStep === "UPLOAD"
+      ? { firstStep: a.firstStep }
+      : {}),
   };
 }
 

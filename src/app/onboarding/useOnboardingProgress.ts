@@ -46,7 +46,11 @@ export function useOnboardingProgress(
   prefilled?: Prefilled,
 ) {
   const router = useRouter();
-  const path = useBloodTestPath();
+  // the first step chosen on the free check opens at once on a completed profile: a report goes
+  // straight to the upload, the home test books its care package (call, 16 Nov 2026: fewer taps)
+  const chosen = prefilled?.status.completed ? prefilled.firstStep : undefined;
+  const path = useBloodTestPath(chosen === "UPLOAD" ? "upload" : "steps");
+  const [autoLab, setAutoLab] = useState(chosen === "LAB");
   const [step, setStep] = useState(status?.currentStep ?? 1);
   const [direction, setDirection] = useState<1 | -1>(1);
   const [busy, setBusy] = useState(false);
@@ -55,9 +59,7 @@ export function useOnboardingProgress(
   );
   // the questions saved from the free check (and an earlier name), skipped when moving forward
   const skip = useRef(prefilled?.done ?? []);
-  const welcomeLine = prefilled?.fromCheck
-    ? "Welcome back."
-    : undefined;
+  const welcomeLine = prefilled?.fromCheck ? "Welcome back." : undefined;
   const [problem, setProblem] = useState<Problem | null>(
     prefilled?.problem ? { message: prefilled.problem } : null,
   );
@@ -178,16 +180,20 @@ export function useOnboardingProgress(
         : !isProblem(stepAnswerFor(step, draft, config)),
     submit,
     pickThenGo,
+    /** the home test was chosen on the free check: question 9 books its care package by itself, once */
+    autoLab,
     /** question 9's package card: straight into the booking, at the address */
     openLab: (chosen: Parameters<typeof path.openLab>[0]) => {
       setDirection(1);
       setProblem(null);
+      setAutoLab(false);
       path.openLab(chosen);
     },
     /** question 9's report row: the upload form */
     openUpload: () => {
       setDirection(1);
       setProblem(null);
+      setAutoLab(false);
       path.openPath(true);
     },
     back,

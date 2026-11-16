@@ -12,6 +12,8 @@
   at least 1600 x 2000 px, chest up, plain wall, soft window light.
 
   Order: Dr. Govind Singh first (client, 19 Oct 2026), then alphabetical by first name.
+  Dr. Rakesh Mishra was removed (call, 16 Nov 2026): he holds no MD, so he cannot prescribe for medical
+  weight loss. List only doctors who can (MD Medicine, or DM/DNB Endocrinology).
   CONFIRM for every doctor: consent to be listed, council and registration number.
 */
 
@@ -36,9 +38,6 @@ export const DOCTORS: Doctor[] = [
   { name: "Dr. Arunim Purkayastha", degrees: "MBBS, MD (General Medicine), MACP", years: "11+", photo: "/img/doc-arunim-purkayastha-v2.jpg" },
   { name: "Dr. Barun Kumar", degrees: "MBBS, DNB", years: "14", photo: "/img/doc-barun-kumar-v2.jpg" },
   { name: "Dr. Imran Ahmad Khan", degrees: "MBBS, MD (General Medicine)", photo: "/img/doc-imran-ahmad-khan-v3.jpg" },
-  // from his CV (Sep 2026): MBBS (Zhengzhou University), MPH (Florida International University); in practice in
-  // India since January 2017 (Kailash Hospital, then Park Hospital and Medanta), so 9+ years. CONFIRM with him.
-  { name: "Dr. Rakesh Mishra", degrees: "MBBS, MPH", years: "9+", photo: "/img/doc-rakesh-mishra-v4.jpg" },
 ];
 
 /** Every doctor on the care team is listed. */
