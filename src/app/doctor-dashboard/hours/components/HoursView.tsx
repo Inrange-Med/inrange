@@ -14,6 +14,7 @@ import { useApiResource } from "@/hooks/useApiResource";
 import { getMyAvailability } from "@/services/doctorPortalService";
 import WeeklyHoursCard from "./WeeklyHoursCard";
 import DaysOffCard from "./DaysOffCard";
+import WhatsAppAlertsCard from "./WhatsAppAlertsCard";
 import clinicStyles from "@/app/doctor-dashboard/styles/ClinicSurfaces.module.css";
 import styles from "../HoursPage.module.css";
 
@@ -65,10 +66,13 @@ export default function HoursView() {
           availability={availability.data}
           onSaved={availability.setData}
         />
-        <DaysOffCard
-          daysOff={availability.data.daysOff}
-          onChanged={availability.setData}
-        />
+        <div className={styles.side}>
+          <DaysOffCard
+            daysOff={availability.data.daysOff}
+            onChanged={availability.setData}
+          />
+          <WhatsAppAlertsCard />
+        </div>
       </div>
     </main>
   );

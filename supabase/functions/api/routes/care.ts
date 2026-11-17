@@ -31,6 +31,8 @@ import { setEligibility } from "../lib/eligibility.ts";
 import { signedUrl } from "../lib/storage.ts";
 import { priceCart, type CartLine } from "../lib/pharmacy.ts";
 import { bookAppointment } from "../lib/booking.ts";
+import * as notices from "../lib/notices.ts";
+import { sendNow } from "../lib/notify.ts";
 import { createRoom, endRoom, hmsLive, joinLink, mockJoinLink } from "../integrations/hms.ts";
 
 export const careRoutes = new Hono();
@@ -180,7 +182,7 @@ careRoutes.put("/schedule/book", async (c) => {
   const me = await requirePatient(c);
   const input = await body<{ slotId?: unknown; consultationType?: string; reason?: string }>(c);
   const slotId = intParam(String(input.slotId ?? ""), "time");
-  const appointmentId = await sql.begin(async (tx) => {
+  const { appointmentId, messages } = await sql.begin(async (tx) => {
     const [el] = await tx`select * from eligibility where user_id = ${me.id} for update`;
     if (el?.stage !== "APPROVED")
       fail(400, "You can book once your doctor has reviewed your blood test report.");
@@ -198,8 +200,10 @@ careRoutes.put("/schedule/book", async (c) => {
       patientId: me.id, slotId, reason: input.reason, consultationType: input.consultationType, prepaid: first,
     });
     if (first) await setEligibility(tx, me.id, { consultation_used: true });
-    return booked.appointmentId;
+    // the patient's confirmation and the doctor's notice on WhatsApp, both with the link to the room
+    return { appointmentId: booked.appointmentId, messages: await notices.within(tx, (sp) => notices.appointmentBooked(sp, booked.appointmentId)) };
   });
+  await sendNow(messages);
   return ok(c, { appointmentId }, "Consultation booked", { appointmentId });
 });
 
@@ -207,9 +211,11 @@ careRoutes.patch("/appointments/:appointmentId/reschedule", async (c) => {
   const me = await requirePatient(c);
   const appointmentId = intParam(c.req.param("appointmentId"), "consultation");
   const slotId = intParam(String((await body(c)).slotId ?? ""), "time");
-  const row = await sql.begin(async (tx) => {
+  const { row, messages } = await sql.begin(async (tx) => {
     const [a] = await tx`select * from appointments where id = ${appointmentId} for update`;
     if (!a || a.patient_id !== me.id) fail(400, "That consultation does not exist.");
+    const [from] = await tx`select to_char(slot_date, 'YYYY-MM-DD') as "slotDate", to_char(start_time, 'HH24:MI') as "startTime"
+                            from doctor_slots where id = ${a.slot_id}`;
     // a doctor opening the room early marks it InProgress; it is still movable until it ends
     if (a.status !== "Booked" && a.status !== "InProgress") fail(400, "Only a booked consultation can be moved.");
     const [slot] = await tx`select doctor_id from doctor_slots where id = ${slotId}`;
@@ -221,13 +227,17 @@ careRoutes.patch("/appointments/:appointmentId/reschedule", async (c) => {
       returning s.id`;
     if (!taken) fail(409, "That time was just booked. Choose another.");
     if (a.slot_id) await tx`update doctor_slots set status = 'Available' where id = ${a.slot_id}`;
-    await tx`update appointments set slot_id = ${slotId}, status = 'Booked', started_at = null where id = ${appointmentId}`;
+    await tx`update appointments set slot_id = ${slotId}, status = 'Booked', started_at = null, patient_joined_at = null,
+             doctor_joined_at = null where id = ${appointmentId}`;
     const [out] = await tx`
       select a.id as "AppointmentId", a.doctor_id as "DoctorId", to_char(s.slot_date, 'YYYY-MM-DD') as "SlotDate",
         to_char(s.start_time, 'HH24:MI:SS') as "StartTime", to_char(s.end_time, 'HH24:MI:SS') as "EndTime", a.status as "Status"
       from appointments a join doctor_slots s on s.id = a.slot_id where a.id = ${appointmentId}`;
-    return out;
+    // both hear the new time; the old time's reminders lapse on their own (the slot changed)
+    const moved = from as { slotDate: string; startTime: string } | undefined;
+    return { row: out, messages: moved ? await notices.within(tx, (sp) => notices.appointmentMoved(sp, appointmentId, moved)) : [] };
   });
+  await sendNow(messages);
   return ok(c, row, "Appointment moved");
 });
 
@@ -307,8 +317,15 @@ careRoutes.get("/care/prescription/current", async (c) => {
 careRoutes.get("/care/medicine-orders", async (c) => {
   const me = await requirePatient(c);
   const rows = await sql`
-    select id::text as id, status, ${iso("placed_at")} as "placedAt", ${iso("expected_at")} as "expectedAt",
-      tracking_no as "trackingNo", tracking_url as "trackingUrl", items, history
+    select id::text as id, 'MED-' || lpad(id::text, 5, '0') as "orderNumber", status,
+      ${iso("placed_at")} as "placedAt", ${iso("expected_at")} as "expectedAt",
+      ${iso("dispatched_at")} as "dispatchedAt", ${iso("delivered_at")} as "deliveredAt",
+      courier, tracking_no as "trackingNo", tracking_url as "trackingUrl", items, history,
+      feedback, cancel_reason as "cancelReason", refunded_paise as "refundedPaise",
+      case when supply_days is not null and delivered_at is not null
+        then to_char((delivered_at + make_interval(days => supply_days)) at time zone 'Asia/Kolkata', 'YYYY-MM-DD') end as "runOutOn",
+      -- a delivered order can be rated for two weeks
+      (status = 'DELIVERED' and feedback is null and delivered_at > now() - interval '14 days') as "canGiveFeedback"
     from medicine_orders where patient_id = ${me.id} order by placed_at desc`;
   return ok(c, rows);
 });
@@ -356,6 +373,8 @@ careRoutes.post("/chat/sessions/:sessionId/messages", async (c) => {
     values (${s.id}, ${me.id}, ${role}, ${fileUrl ? "FILE" : "TEXT"}, ${text || null}, ${fileUrl})
     returning id`;
   if (role === "DOCTOR") await sql`update chat_sessions set doctor_last_read_at = now() where id = ${s.id}`;
+  // the other side hears there is a message (never what it says), at most once an hour
+  await notices.chatMessage(s as { id: number; patient_id: number; doctor_id: number }, role).then(sendNow).catch((e) => console.error("chat notice", (e as Error).message));
   const [row] = await sql`${messageSelect()} where m.id = ${m.id}`;
   return ok(c, row, "Sent");
 });
@@ -445,8 +464,22 @@ careRoutes.get("/video/appointments/:appointmentId/join", async (c) => {
       fail(502, "The video room could not be opened. Please try again in a moment.");
     }
   }
-  if (role === "doctor" && a.status === "Booked")
-    await sql`update appointments set status = 'InProgress', started_at = coalesce(started_at, now()) where id = ${a.id}`;
+  // each join is stamped; from a quarter of an hour before the start, the other side hears it on WhatsApp
+  // if they are not in the room yet (once: the message is keyed on the slot). An early look says nothing.
+  const [seen] = await sql`
+    update appointments a set
+      status = case when ${role} = 'doctor' and a.status = 'Booked' then 'InProgress' else a.status end,
+      started_at = case when ${role} = 'doctor' and a.status = 'Booked' then coalesce(a.started_at, now()) else a.started_at end,
+      doctor_joined_at = case when ${role} = 'doctor' then now() else a.doctor_joined_at end,
+      patient_joined_at = case when ${role} = 'patient' then now() else a.patient_joined_at end
+    where a.id = ${a.id}
+    returning (select (s.slot_date + s.start_time) at time zone 'Asia/Kolkata' - interval '15 minutes'
+               from doctor_slots s where s.id = a.slot_id) as window_opens, a.doctor_joined_at, a.patient_joined_at`;
+  if (seen?.window_opens && new Date(seen.window_opens) <= new Date()) {
+    const other = role === "doctor" ? seen.patient_joined_at : seen.doctor_joined_at;
+    if (!other || new Date(other) < new Date(seen.window_opens))
+      await notices.joined(a.id, role).then(sendNow).catch((e) => console.error("join notice", (e as Error).message));
+  }
   return ok(c, { joinLink: link, role });
 });
 
@@ -461,6 +494,8 @@ careRoutes.post("/video/appointments/:appointmentId/end", async (c) => {
       on conflict (user_id) do update set care_team_doctor_id = coalesce(patient_profiles.care_team_doctor_id, excluded.care_team_doctor_id)`;
   });
   await endRoom(a.video_room_id);
+  // the note to sign: a reminder an hour later, unless it is signed by then
+  await notices.callEnded(a.id).catch((e) => console.error("note notice", (e as Error).message));
   return ok(c, null, "Consultation ended");
 });
 
@@ -485,6 +520,8 @@ async function cartView(patientId: number) {
   return {
     data: {
       id: String(k.id), prescriptionId: String(k.prescription_id), months: k.months, validUntil: k.valid_iso, ...priced,
+      // a refill is the next supply on the same prescription (lib/medicineFlow.ts checkRefills)
+      kind: k.kind, boughtElsewhere: Boolean(k.elsewhere_at),
       address: address ? { id: String(address.id), label: address.label, name: address.full_name ?? "", line: addressLine(address) } : null,
     },
   };

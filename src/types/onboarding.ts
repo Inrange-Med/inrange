@@ -7,13 +7,14 @@
 /** The backend's gender values (PATCH /api/onboarding/step already accepts these). */
 export type Gender = "Male" | "Female" | "Other";
 
-/** A consent the patient can give. All but AI are needed before a doctor sees their details. */
+/** A consent the patient can give. All but AI and WHATSAPP are needed before a doctor sees their details. */
 export type ConsentType =
   | "TERMS"
   | "PRIVACY"
   | "HEALTH_DATA"
   | "TELECONSULT"
-  | "AI";
+  | "AI"
+  | "WHATSAPP";
 
 /** A condition the patient ticked; OTHER carries their own words. */
 export type ConditionAnswer = { code: string; otherText?: string };

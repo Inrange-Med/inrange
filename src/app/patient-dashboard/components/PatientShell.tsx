@@ -4,7 +4,7 @@
   The signed-in patient app around every /patient-dashboard page (Arhaan's account/Shell.tsx): a thin bar
   with the wordmark, the four sections (centred pills on a laptop, a dock on a phone), an offline
   line and the toast. Only signed-in patients get past it: anyone signed out goes to /sign-in
-  (?next= brings them back to this page) and a doctor goes to their own dashboard.
+  (?next= brings them back to this page) and anyone else (a doctor, an admin, a coach) to their own home.
 
   The chat thread (/patient-dashboard/messages/<doctorId>) brings its own bar, so the shell draws neither
   the bar nor the dock there, as in Arhaan's design. A task that owns the screen (the checkout, the
@@ -28,6 +28,7 @@ import Wordmark from "@/components/ui/Wordmark";
 import { useOnline } from "@/hooks/useOnline";
 import { useSessionUser } from "@/hooks/useSessionUser";
 import { signInHrefFor } from "@/lib/navigation/signInReturn";
+import { homePathFor } from "@/lib/session/authSession";
 import formStyles from "@/components/ui/styles/FormControls.module.css";
 import layoutStyles from "@/components/ui/styles/PageLayout.module.css";
 import PageGhosts from "./PageGhosts";
@@ -136,8 +137,7 @@ export default function PatientShell({ children }: { children: ReactNode }) {
       router.replace(
         signInHrefFor(window.location.pathname + window.location.search),
       );
-    if (role === "DOCTOR") router.replace("/doctor-dashboard");
-    if (role === "ADMIN") router.replace("/admin");
+    else if (role && role !== "PATIENT") router.replace(homePathFor(role));
   }, [role, router]);
 
   useEffect(() => {

@@ -6,7 +6,8 @@ import { env } from "./env.ts";
 import { sql } from "./db.ts";
 import { fail } from "./http.ts";
 
-export type Role = "PATIENT" | "DOCTOR" | "ADMIN";
+/** COACH: a health coach (docs/backend/medicine-flow.md); sees only their own patients in the medicine queue. */
+export type Role = "PATIENT" | "DOCTOR" | "ADMIN" | "COACH";
 export type AuthUser = { id: number; role: Role; mobile: string; fullName: string | null; sid: string };
 
 const key = () => {

@@ -21,6 +21,12 @@ import styles from "./Sheet.module.css";
 
 type Drag = { startY: number; time: number; offset: number; velocity: number };
 
+/** Sheets mounted right now. The page's scroll lock and `data-sheet` follow the count, so a sheet that
+    opens while another is still closing (one hands off to the next) never leaves the page locked or
+    unlocked by mistake. */
+let openSheets = 0;
+let pageOverflow = "";
+
 const FOCUSABLE =
   "button:not([disabled]), a[href], input:not([disabled]), select, summary, [tabindex='0']";
 
@@ -64,10 +70,12 @@ export default function Sheet({
   useEffect(() => {
     if (!mounted) return;
     const html = document.documentElement;
-    const previousOverflow = html.style.overflow;
-    html.style.overflow = "hidden";
-    // confirmations wait while a sheet is open, so they never cover what is in it
-    html.dataset.sheet = "open";
+    if (openSheets++ === 0) {
+      pageOverflow = html.style.overflow;
+      html.style.overflow = "hidden";
+      // confirmations wait while a sheet is open, so they never cover what is in it
+      html.dataset.sheet = "open";
+    }
     // Escape closes; Tab stays inside the panel
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
@@ -88,8 +96,10 @@ export default function Sheet({
     };
     window.addEventListener("keydown", onKey);
     return () => {
-      html.style.overflow = previousOverflow;
-      delete html.dataset.sheet;
+      if (--openSheets === 0) {
+        html.style.overflow = pageOverflow;
+        delete html.dataset.sheet;
+      }
       window.removeEventListener("keydown", onKey);
     };
   }, [mounted, onClose]);

@@ -6,7 +6,9 @@
  * the one required tap is Pay, which opens Razorpay at once (checkout with payNow). The patient may
  * lower a quantity or take a line out, never go past the prescription. A first consultation's cart is
  * held back for the programme call (12 Nov 2026 call); until then the page says when it opens and
- * offers the prescription and a call back.
+ * offers the prescription and a call back, and, quietly, ordering now if the patient asks (it is
+ * their request, never a push: docs/backend/medicine-flow-prd.md, conflict 1). "I already have these"
+ * stops the reminders about this order (the same as the WhatsApp button).
  * Data: GET/PATCH /api/care/cart and the prescription (carePlanService). Phone: one column, Pay right
  * under the bill; laptop: the lines left, the address and bill in a sticky column right.
  */
@@ -26,7 +28,12 @@ import { longDate, shortDate, spokenDay } from "@/lib/format/dateTime";
 import { formatRupees } from "@/lib/format/money";
 import { errorMessage } from "@/lib/http/apiClient";
 import { checkoutHref } from "@/lib/payments/checkoutHref";
-import { loadCarePlan, updateCart } from "@/services/carePlanService";
+import {
+  boughtElsewhere,
+  loadCarePlan,
+  openCartNow,
+  updateCart,
+} from "@/services/carePlanService";
 import { getFile } from "@/services/fileService";
 import { contactSupport } from "@/services/patientProfileService";
 import type { MedicineCart } from "@/types/carePlan";
@@ -45,6 +52,8 @@ export default function CartView() {
   const [edited, setEdited] = useState<MedicineCart | null>(null);
   const [saving, setSaving] = useState(false);
   const [calledBack, setCalledBack] = useState(false);
+  const [opening, setOpening] = useState(false);
+  const [elsewhere, setElsewhere] = useState(false);
 
   const prescription = plan.data?.prescription ?? null;
   const cart = edited ?? plan.data?.cart.cart ?? null;
@@ -58,6 +67,28 @@ export default function CartView() {
       toast(errorMessage(caught, "That change was not saved."));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const orderNow = async () => {
+    setOpening(true);
+    try {
+      await openCartNow();
+      plan.reload();
+    } catch (caught) {
+      toast(errorMessage(caught, "Your order could not be opened. Try again."));
+    } finally {
+      setOpening(false);
+    }
+  };
+
+  const haveThem = async () => {
+    try {
+      await boughtElsewhere();
+      setElsewhere(true);
+      toast("We will not remind you about this order again");
+    } catch (caught) {
+      toast(errorMessage(caught));
     }
   };
 
@@ -111,7 +142,15 @@ export default function CartView() {
               <p className={styles.text}>
                 Your medicine quote opens here{" "}
                 {spokenDay(new Date(availableAt))}. Your care team calls you
-                before then about your programme.
+                before then about your programme.{" "}
+                <button
+                  type="button"
+                  className={styles.inlineLink}
+                  disabled={opening}
+                  onClick={orderNow}
+                >
+                  {opening ? "Opening your order" : "Order now instead"}
+                </button>
               </p>
             </>
           ) : (
@@ -143,7 +182,9 @@ export default function CartView() {
       {cart && (
         <div className={styles.layout}>
           <Card
-            title="Prescribed for you"
+            title={
+              cart.kind === "REFILL" ? "Your next supply" : "Prescribed for you"
+            }
             className={styles.lines}
             action={openPrescription(styles.pdfLink)}
           >
@@ -233,7 +274,18 @@ export default function CartView() {
               )}
               <p className={styles.small}>
                 Card or UPI through Razorpay. You may also fill this
-                prescription at any licensed pharmacy.
+                prescription at any licensed pharmacy.{" "}
+                {cart.boughtElsewhere || elsewhere ? (
+                  "You told us you have these, so we will not remind you."
+                ) : (
+                  <button
+                    type="button"
+                    className={styles.inlineLink}
+                    onClick={haveThem}
+                  >
+                    I already have these
+                  </button>
+                )}
               </p>
             </Card>
           </div>

@@ -45,7 +45,23 @@ export const env = {
   hmsSecret: get("HMS_SECRET"),
   hmsTemplateId: get("HMS_TEMPLATE_ID"),
   hmsSubdomain: get("HMS_SUBDOMAIN"),
+
+  /** WhatsApp (Meta Cloud API): the system user's token and the business number's id (docs/backend/medicine-flow.md). */
+  whatsappToken: get("WHATSAPP_TOKEN"),
+  whatsappPhoneNumberId: get("WHATSAPP_PHONE_NUMBER_ID"),
+  /** signs Meta's webhook calls (X-Hub-Signature-256) */
+  whatsappAppSecret: get("WHATSAPP_APP_SECRET"),
+  /** the word Meta echoes back when the webhook is registered */
+  whatsappVerifyToken: get("WHATSAPP_VERIFY_TOKEN"),
+  /** the WhatsApp Business Account that owns the templates (POST /admin/whatsapp/templates/sync) */
+  whatsappBusinessAccountId: get("WHATSAPP_BUSINESS_ACCOUNT_ID"),
+  /** POST /api/jobs/tick needs it in x-jobs-secret (Supabase cron sends it); unset, the tick refuses */
+  jobsSecret: get("JOBS_SECRET"),
 };
+
+/** A test account (testMobiles): signs in with TEST_OTP, and is never sent a real WhatsApp message. */
+export const isTestMobile = (mobile: string) =>
+  Boolean(env.testOtp) && env.testMobiles.some((m) => (m.endsWith("*") ? mobile.startsWith(m.slice(0, -1)) : m === mobile));
 
 export const live = {
   firebase: () => Boolean(env.firebaseProjectId),
@@ -53,4 +69,6 @@ export const live = {
   razorpay: () => Boolean(env.razorpayKeyId && env.razorpayKeySecret),
   redcliffe: () => Boolean(env.redcliffeApiKey),
   hms: () => Boolean(env.hmsAccessKey && env.hmsSecret && env.hmsTemplateId && env.hmsSubdomain),
+  // the app secret too: without it every webhook (replies, STOP) would be refused while messages go out
+  whatsapp: () => Boolean(env.whatsappToken && env.whatsappPhoneNumberId && env.whatsappAppSecret),
 };

@@ -33,6 +33,7 @@ export default function ConsentQuestion({ consents, draft, update }: Props) {
     draft.consents.includes(type),
   );
   const aiAgreed = draft.consents.includes("AI");
+  const whatsappAgreed = draft.consents.includes("WHATSAPP");
   const shownConsent = consents.find(
     (consent) => consent.type === openDocument,
   );
@@ -123,6 +124,41 @@ export default function ConsentQuestion({ consents, draft, update }: Props) {
         </span>
       </label>
 
+      {consents.some((consent) => consent.type === "WHATSAPP") && (
+        <label
+          className={pageStyles.agree}
+          data-on={whatsappAgreed}
+          data-optional="true"
+        >
+          <input
+            type="checkbox"
+            className={pageStyles.check}
+            checked={whatsappAgreed}
+            onChange={() =>
+              update({
+                consents: whatsappAgreed
+                  ? draft.consents.filter((type) => type !== "WHATSAPP")
+                  : [...draft.consents, "WHATSAPP"],
+              })
+            }
+          />
+          <i className={pageStyles.mark} data-multi="true" aria-hidden="true">
+            <Check size={12} weight="bold" />
+          </i>
+          <span className={pageStyles.agreeText}>
+            <strong>Optional.</strong> Updates about my care from inrange
+            on{" "}
+            <a
+              href="#whatsapp"
+              className={styles.docLink}
+              onClick={openFromLabel("WHATSAPP")}
+            >
+              WhatsApp
+            </a>
+            : bookings, blood tests, any prescription, orders and reminders.
+          </span>
+        </label>
+      )}
       <Sheet
         open={!!openDocument}
         onClose={() => setOpenDocument(null)}

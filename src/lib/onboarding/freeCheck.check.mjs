@@ -132,14 +132,24 @@ assert.equal(
 
 // the mobile is kept only when it is a valid Indian mobile; the first step only when it is a known one
 assert.equal(
-  checkedAnswers({ ...good, identity: { ...id, mobile: "9810000099" } }).identity.mobile,
+  checkedAnswers({ ...good, identity: { ...id, mobile: "9810000099" } })
+    .identity.mobile,
   "9810000099",
 );
 for (const mobile of ["0981000009", "98100", "+919810000099", 9810000099])
-  assert.equal(checkedAnswers({ ...good, identity: { ...id, mobile } }).identity.mobile, undefined);
+  assert.equal(
+    checkedAnswers({ ...good, identity: { ...id, mobile } }).identity.mobile,
+    undefined,
+  );
 assert.equal(checkedAnswers({ ...good, firstStep: "LAB" }).firstStep, "LAB");
-assert.equal(checkedAnswers({ ...good, firstStep: "UPLOAD" }).firstStep, "UPLOAD");
-assert.equal("firstStep" in checkedAnswers({ ...good, firstStep: "PAY" }), false);
+assert.equal(
+  checkedAnswers({ ...good, firstStep: "UPLOAD" }).firstStep,
+  "UPLOAD",
+);
+assert.equal(
+  "firstStep" in checkedAnswers({ ...good, firstStep: "PAY" }),
+  false,
+);
 assert.equal("firstStep" in checkedAnswers(good), false);
 
 assert.equal(bmiFrom(162.6, 82), 31);

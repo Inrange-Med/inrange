@@ -23,7 +23,8 @@ export const patientRoutes = new Hono();
 
 // ---------- onboarding ----------
 
-const CONSENT_VERSION = "2026-09";
+// bumped with the frontend's (src/lib/onboarding/answerLists.ts) whenever a wording changes
+const CONSENT_VERSION = "2026-11";
 const REQUIRED_CONSENTS = ["TERMS", "PRIVACY", "HEALTH_DATA", "TELECONSULT"];
 const EXPERIENCES = [
   { code: "FIRST_TIME", label: "This is my first real attempt" },
@@ -56,6 +57,9 @@ const CONSENTS = [
     more: "Your doctor may decide a video consultation is not enough and ask you to see someone in person. InRange is not for emergencies: call 112.", required: true },
   { type: "AI", title: "Call transcription", line: "An AI scribe drafts your doctor's notes from your video calls.",
     more: "If you agree, your video calls are transcribed so an AI scribe can draft the notes. Your doctor reads, corrects and signs every note, and nothing reaches your record without them. If you say no, nothing about your care changes: your doctor writes the notes themselves.", required: false },
+  // optional (DPDP Act 2023 and WhatsApp's opt-in rule): without it nothing goes to WhatsApp, and the app shows everything
+  { type: "WHATSAPP", title: "Updates on WhatsApp", line: "Updates about my care from inrange on WhatsApp: bookings, blood tests, any prescription, orders and reminders.",
+    more: "inrange messages you from its WhatsApp number about your bookings and the link to join, your blood tests and report, any prescription your doctor writes, your order's progress, and the reminders you choose. Messages never name a medicine, a diagnosis or a price: those stay in the app. Reply STOP at any time, or turn it off in your profile.", required: false },
 ];
 const CONSENT_TYPES = CONSENTS.map((c) => c.type);
 const EXPERIENCE_CODES = EXPERIENCES.map((e) => e.code);
@@ -287,7 +291,8 @@ patientRoutes.get("/patient/profile", async (c) => {
     planName: plan?.name ?? "",
     planStatus: plan?.status ?? "",
     remindersEnabled: reminders.remindersEnabled ?? true,
-    whatsappReminders: reminders.whatsappReminders ?? true,
+    // WhatsApp is on only with the consent (a STOP reply or the profile switch revokes it)
+    whatsappReminders: consents.some((x) => x.consent_type === "WHATSAPP"),
     emailReminders: reminders.emailReminders ?? false,
     consentGiven: privacy.consentGiven ?? consents.some((x) => x.consent_type === "HEALTH_DATA"),
   });
@@ -336,13 +341,22 @@ patientRoutes.patch("/patient/reminders", async (c) => {
   const me = await requirePatient(c);
   const b = await body(c);
   await ensureProfile(me.id);
-  const reminders = {
-    remindersEnabled: Boolean(b.remindersEnabled),
-    whatsappReminders: Boolean(b.whatsappReminders),
-    emailReminders: Boolean(b.emailReminders),
-  };
-  await sql`update patient_profiles set reminders = ${sql.json(reminders)}, updated_at = now() where user_id = ${me.id}`;
-  return ok(c, reminders, "Reminders saved");
+  // only the switches sent change: a screen opened before a STOP never turns WhatsApp back on by saving another
+  const changes: Record<string, boolean> = {};
+  for (const key of ["remindersEnabled", "whatsappReminders", "emailReminders"])
+    if (typeof b[key] === "boolean") changes[key] = b[key];
+  const [row] = await sql.begin(async (tx) => {
+    const saved = await tx`update patient_profiles set reminders = reminders || ${tx.json(changes)}, updated_at = now()
+                           where user_id = ${me.id} returning reminders`;
+    // the WhatsApp switch is the WhatsApp consent: on records it (once), off revokes it
+    if (changes.whatsappReminders === true) {
+      const [active] = await tx`select 1 from consents where user_id = ${me.id} and consent_type = 'WHATSAPP' and revoked_at is null`;
+      if (!active) await tx`insert into consents (user_id, consent_type, version) values (${me.id}, 'WHATSAPP', ${CONSENT_VERSION})`;
+    } else if (changes.whatsappReminders === false)
+      await tx`update consents set revoked_at = now() where user_id = ${me.id} and consent_type = 'WHATSAPP' and revoked_at is null`;
+    return saved;
+  });
+  return ok(c, row?.reminders ?? changes, "Reminders saved");
 });
 
 patientRoutes.patch("/patient/privacy", async (c) => {

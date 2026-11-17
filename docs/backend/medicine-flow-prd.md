@@ -29,45 +29,25 @@ indicative at ₹1,499 until Redcliffe's quote); its **Program** is our **plans*
 | Every order state change logged with time | `medicine_orders.status` (`PLACED`, `PACKED`, `DISPATCHED`, `DELIVERED`) with a `history` of `{ status, at, note }` |
 | Immutable prescription, clinical words untouched | A signed prescription is not edited; a newer one closes the unpaid cart |
 
-## To build next, in order
+## Built (17 Nov 2026)
 
-Each item says what the patient or the team sees. Rough size in brackets.
+Everything below is live in the code, documented in [medicine-flow.md](medicine-flow.md) and covered by
+`supabase/tests/medicine_flow_journey.py` (102 checks).
 
-1. **WhatsApp messages and a scheduler** (large; needs a Meta business account and templates). One
-   service sends templates and records every send and button tap against the patient.
-   - **T+0:** the prescription PDF and a short summary, with no purchase link for the nano plan, and
-     with "Buy now" (the cart link) for patients on a plan.
-   - **Nano plan, T+24:** a check-in with three buttons: "Already bought", "Help me buy", "Need more
-     time". "Help me buy" sends the cart link (see conflict 1). "Need more time" moves the next
-     check-in by a day.
-   - **Nano plan, T+48:** the same buttons plus "I have questions", which opens a call-back task for the
-     team due within 2 hours.
-   - **No reply by T+48:** a call task for the next working day, with the prescription and the cart
-     ready, so one call settles it. The agent guides the patient to pay themselves; they never order
-     for them (12 Nov call).
-   - **Plan patients, T+24:** one gentle reminder if nothing was bought.
-   - **Before every automated message:** skip it if the cart is paid, the patient moved onto a plan,
-     or said they bought elsewhere. A late tap is handled against the message it belongs to, and a
-     repeated tap does nothing twice.
-   - "Already bought" closes the flow with a kind line and tells the coach, so adherence follow-up
-     still happens.
-2. **Order updates to the patient** (medium; the statuses exist). An order number within seconds of
-   paying, then packed, dispatched (with the tracking link), out for delivery and delivered, each on
-   WhatsApp and in Your medicines. Two hours after delivery: "All good" or "Something is wrong", where
-   the second opens an urgent ticket. A failed payment sends a retry link.
-3. **A medicine queue in the admin panel** (medium). One list of tasks (no reply, questions, payment
-   failed, dispatch overdue), each with a due time that turns amber, then red. One-tap actions: call,
-   send the cart link, mark bought elsewhere, schedule a call-back, close with a reason. Every action is
-   logged with who and when. Pharmacy staff move orders through packed and dispatched here, with the
-   tracking number.
-4. **The coach sees medicine status** (small). "Dispatched" and "Delivered" on the coach's patient card,
-   and a note to the coach when each happens.
-5. **Refills for plan patients** (medium). A daily job works out the run-out date (delivered + days
-   supplied, less 7). Seven days before it, a reminder with the reorder link (a new cart at today's
-   price and discount). No reminder if a cart is already open. A refill past the prescription's length
-   goes to the doctor first.
-6. **Adherence for plan patients** (later). Dose reminders with "Taken", "Remind me in an hour" and
-   "Skipped" (with a reason). The coach is alerted after 2 skips in 7 days, or any "side effects".
+| PRD | inrange |
+| --- | --- |
+| 5.3, 7.2 WhatsApp conversation: T+0, T+24, T+48 with buttons, T+72 call | `lib/medicineFlow.ts` follow-ups, `lib/messages.ts` (18 utility templates), `integrations/whatsapp.ts`, `lib/replies.ts`. The nano check-ins are timed from when the order opens (conflict 1) |
+| 7.2 BR1 pre-flight checks, EC1 duplicate taps, EC2 late replies, EC4 upgraded mid-flow | Every step re-reads the order; replies are recorded once by event id; a tap acts on the message it belongs to; a new plan moves the follow-up to the plan rhythm |
+| 7.3 payment webhook: idempotent, failures handled | Already built; now a failed medicines payment messages the patient and opens a task |
+| 5.2, 7.5 milestone notifications and delivery feedback 2 hours after | Pack, dispatch (with tracking), out for delivery, delivered, feedback; late and new-date messages |
+| 9.1 medicine team dashboard: queue with SLA countdowns, one-click actions, order monitor, analytics | `/admin/medicine`: Queue, Orders, Patients, Messages, Numbers |
+| 4.1, 7.6 the health coach: delivery and adherence visibility | `COACH` role, scoped to their patients; adherence and ran-out tasks go to them |
+| 7.6 adherence: reminders, Taken / Snooze / Skipped with reasons, coach alerts | Dose schedules on delivery, WhatsApp and the app, alerts at 2 off in 7 days, 3 missed in a row, under 70% in 4 weeks, side effects at once |
+| 7.7 refills: run-out date, reminder 7 days ahead, reorder, doctor review beyond the prescription | Refill orders on the same prescription; renewal tasks when it does not cover more; the refill gap |
+| 11.3 consent for WhatsApp, opt-out on every channel | Optional WHATSAPP consent; the profile switch and STOP revoke it |
+| 11.5 idempotency, retries, reconciliation | Keyed messages and tasks, backoff retries, the nightly Razorpay check |
+| 14 success measures | The Numbers tab, same definitions |
+| 6.2 audit trails | Task and order histories (who, when, what), every send and reply recorded, record views in `audit_log` |
 
 ## Not for now
 
@@ -101,17 +81,17 @@ The PRD's definitions, kept so numbers compare:
 | Escalations | Under 2 per 100 orders |
 | Satisfaction after delivery | 4.5 of 5 or more |
 
-## Conflicts to settle with Sachchidanand
+## Conflicts to settle with Sachchidanand (the defaults built are in bold)
 
 1. **When the nano cart can be bought.** The PRD offers the quote at T+24 to anyone who taps "Help me
    buy". The 12 Nov call holds the cart for 48 hours (his data: 24 hours raised programme conversion by
-   1 to 2 points, 48 hours by 3 to 4) and says nobody calls about medicine in that time. Proposal: keep
-   48 hours by default, and let a patient who asks ("Help me buy") open their own cart early, since it
-   is their request rather than a push.
+   1 to 2 points, 48 hours by 3 to 4) and says nobody calls about medicine in that time. **Built: the
+   48-hour hold stays, the check-ins start when the order opens, and a patient who asks ("Order now")
+   opens their own order early, since it is their request rather than a push.**
 2. **The plan discount.** The PRD gives plan members 5%; ours is 13% from 1 month and 14% from 6 for
-   everyone. Confirm whether plan members get more.
+   everyone. **Built: our table, for everyone.** Confirm whether plan members get more.
 3. **Delivery fee.** The PRD charges ₹50 under ₹1,000. Our medicines are all above that, so delivery
-   is free; confirm it stays free.
+   is free. **Built: free.** Confirm it stays free.
 
 ## Also from the 16 Nov call: the prescription tool
 

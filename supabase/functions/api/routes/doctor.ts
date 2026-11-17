@@ -3,6 +3,7 @@
 // this doctor treats (an appointment with them, or their care-team doctor); every read of a record
 // and every change writes an audit row.
 //   GET    /doctor/patients/snapshots
+//   GET    /doctor/whatsapp, PUT { on }                                      the doctor's WhatsApp alerts
 //   GET    /doctor/queue
 //   GET    /doctor/work-counts
 //   GET    /doctor/patients/:patientId/record
@@ -35,6 +36,9 @@ import { requireDoctor } from "../lib/auth.ts";
 import { signedUrl, uploadFile } from "../lib/storage.ts";
 import { cartAvailableAt, medicineColumns, searchInventory, type CartLine } from "../lib/pharmacy.ts";
 import { prescriptionPdf, type RxPdfItem } from "../lib/prescriptionPdf.ts";
+import { closeTasks, startMedicineFlow } from "../lib/medicineFlow.ts";
+import * as notices from "../lib/notices.ts";
+import { deliver, sendNow } from "../lib/notify.ts";
 
 export const doctorRoutes = new Hono();
 
@@ -381,6 +385,31 @@ doctorRoutes.get("/doctor/work-counts", async (c) => {
   });
 });
 
+// ---------- WhatsApp alerts (the doctor's own opt-in, like a patient's consent) ----------
+
+/** New bookings, a moved time, the call starting, the patient waiting, a note to sign, a patient's message:
+    each with a link into the app (the consultation link opens the video room). No patient names or health details. */
+doctorRoutes.get("/doctor/whatsapp", async (c) => {
+  const doctor = await doctorOf(c);
+  const [row] = await sql`
+    select u.mobile, exists (select 1 from consents x where x.user_id = u.id and x.consent_type = 'WHATSAPP' and x.revoked_at is null) as "on"
+    from users u where u.id = ${doctor.id}`;
+  return ok(c, { on: Boolean(row?.on), mobile: row?.mobile ?? "" });
+});
+
+doctorRoutes.put("/doctor/whatsapp", async (c) => {
+  const doctor = await doctorOf(c);
+  const b = await body<{ on?: unknown }>(c);
+  if (typeof b.on !== "boolean") fail(400, "Turn WhatsApp alerts on or off.");
+  await sql.begin(async (tx) => {
+    if (b.on) {
+      const [active] = await tx`select 1 from consents where user_id = ${doctor.id} and consent_type = 'WHATSAPP' and revoked_at is null`;
+      if (!active) await tx`insert into consents (user_id, consent_type, version) values (${doctor.id}, 'WHATSAPP', 'doctor-2026-11')`;
+    } else await tx`update consents set revoked_at = now() where user_id = ${doctor.id} and consent_type = 'WHATSAPP' and revoked_at is null`;
+  });
+  return ok(c, { on: b.on }, b.on ? "WhatsApp alerts on" : "WhatsApp alerts off");
+});
+
 // ---------- patients ----------
 
 doctorRoutes.get("/doctor/patients/snapshots", async (c) => {
@@ -566,6 +595,8 @@ doctorRoutes.post("/doctor/patients/:patientId/plan-recommendation", async (c) =
     await tx`insert into plan_recommendations (patient_id, doctor_id, plan_id, note) values (${patientId}, ${doctor.id}, ${planId}, ${note || null})`;
   });
   await audit(patientId, doctor, `Recommended ${plan.name}`);
+  // the patient hears the next steps are written up (the plan itself is in the app)
+  await notices.carePlanWritten(patientId, doctor.name, planId).then(sendNow).catch((e) => console.error("plan notice", (e as Error).message));
   return ok(c, null, "Plan recommended");
 });
 
@@ -749,16 +780,29 @@ async function signRx(doctor: { id: number; name: string; qualification: string 
     const prev = merged.get(id);
     merged.set(id, { medicineId: id, quantity: (prev?.quantity ?? 0) + q, prescribed: (prev?.prescribed ?? 0) + q });
   }
-  await sql.begin(async (tx) => {
+  const messageId = await sql.begin(async (tx) => {
     await tx`update prescriptions set status = 'SUPERSEDED' where patient_id = ${patientId} and status = 'SIGNED'`;
     await tx`update prescriptions set status = 'SIGNED', signed_at = ${signedAt}, pdf_path = ${path}, months = ${months},
                valid_until = ${validUntil} where id = ${rxId}`;
-    await tx`update medicine_carts set status = 'CLOSED' where patient_id = ${patientId} and status = 'OPEN'`;
-    if (merged.size)
-      await tx`insert into medicine_carts (patient_id, prescription_id, available_at, lines, address_id)
-               values (${patientId}, ${rxId}, ${availableAt}, ${tx.json([...merged.values()])}, ${addr?.id ?? null})`;
+    const replaced = await tx`update medicine_carts set status = 'CLOSED' where patient_id = ${patientId} and status = 'OPEN' returning id`;
+    // the replaced orders' follow-ups and calls close with them: nobody calls about an order that is gone
+    for (const { id } of replaced) {
+      await tx`update medicine_followups set stage = 'DONE', next_at = null, closed_reason = 'SUPERSEDED', closed_at = now()
+               where cart_id = ${id} and closed_at is null`;
+      await closeTasks(tx, { cartId: id }, ["NO_REPLY", "PLAN_CALL", "PAYMENT_FAILED", "QUESTIONS"], "RESOLVED", "A newer prescription replaced this order");
+    }
+    const [cart] = merged.size
+      ? await tx`insert into medicine_carts (patient_id, prescription_id, available_at, lines, address_id)
+               values (${patientId}, ${rxId}, ${availableAt}, ${tx.json([...merged.values()])}, ${addr?.id ?? null}) returning id`
+      : [];
     await tx`insert into audit_log (patient_id, actor_id, action) values (${patientId}, ${doctor.id}, ${`Signed prescription version ${rx.version}, ${doctor.name}`})`;
+    // the prescription on WhatsApp now (a link into the app; the PDF stays with us), and the follow-up (lib/medicineFlow.ts)
+    return await startMedicineFlow(tx, {
+      patientId, prescriptionId: rxId, version: rx.version, cartId: cart?.id ?? null, onPlan, signedAt, availableAt,
+      doctorName: doctor.name,
+    });
   });
+  if (messageId) await deliver(messageId).catch((e) => console.error("prescription message", e.message));
   return { id: String(rxId), version: rx.version, status: "SIGNED", signedAt: ist(signedAt), months,
            validUntil: ist(validUntil), cartAvailableAt: merged.size ? ist(availableAt) : null };
 }

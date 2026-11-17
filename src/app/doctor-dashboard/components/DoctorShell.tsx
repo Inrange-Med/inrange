@@ -8,7 +8,8 @@
   390px: Hours is left out there, lights Schedule, and is reached from the Schedule page head.
   Sign out sits under the doctor's name on the rail and beside the avatar in the phone top bar.
   Only signed-in doctors get past it: anyone signed out goes to /sign-in (?next= brings them back to
-  this page), a patient to /patient-dashboard. Offline, a line above the page says so.
+  this page), anyone else (a patient, an admin, a coach) to their own home. Offline, a line above the
+  page says so.
 
   A loaded call note (/doctor-dashboard/notes/<id>) is a pushed screen: below a laptop it brings its
   own top and bottom bars and marks itself data-own-bars, so the shell's phone chrome steps aside
@@ -35,6 +36,7 @@ import { useOnline } from "@/hooks/useOnline";
 import { useSessionUser } from "@/hooks/useSessionUser";
 import { DATA_CHANGED_EVENT } from "@/lib/http/apiClient";
 import { signInHrefFor } from "@/lib/navigation/signInReturn";
+import { homePathFor } from "@/lib/session/authSession";
 import { getMyDoctorProfile } from "@/services/doctorPortalService";
 import { getWorkCounts } from "@/services/patientRecordService";
 import type { DoctorWorkCounts } from "@/types/patientRecord";
@@ -136,8 +138,7 @@ export default function DoctorShell({ children }: { children: ReactNode }) {
       router.replace(
         signInHrefFor(window.location.pathname + window.location.search),
       );
-    if (role === "PATIENT") router.replace("/patient-dashboard");
-    if (role === "ADMIN") router.replace("/admin");
+    else if (role && role !== "DOCTOR") router.replace(homePathFor(role));
   }, [role, router]);
 
   // while the session is checked the frame is already up (the brand only: no places, no name), and the

@@ -7,7 +7,7 @@
 import Link from "next/link";
 import { ArrowRight, CaretRight } from "@phosphor-icons/react/dist/ssr";
 import Card from "@/components/ui/Card";
-import { spokenDay } from "@/lib/format/dateTime";
+import { shortDate, spokenDay } from "@/lib/format/dateTime";
 import { formatRupees } from "@/lib/format/money";
 import ErrorNotice from "@/components/ui/ErrorNotice";
 import type { CarePlan, MedicineOrder } from "@/types/carePlan";
@@ -16,6 +16,7 @@ import {
   DELIVERY_STEPS,
   deliveryLine,
   deliveryStepIndex,
+  isMoving,
 } from "./deliveryStatus";
 import StepLine from "./StepLine";
 import formStyles from "@/components/ui/styles/FormControls.module.css";
@@ -45,7 +46,7 @@ export default function CareProgrammeCard({
   onOpenDelivery: () => void;
 }) {
   const medicine = carePlan?.prescription?.items[0] ?? null;
-  const moving = !!order && order.status !== "DELIVERED";
+  const moving = !!order && isMoving(order);
   const cart = carePlan?.cart.cart ?? null;
   const cartOpensAt = carePlan?.cart.availableAt ?? null;
   return (
@@ -115,7 +116,11 @@ export default function CareProgrammeCard({
         <div className={pageStyles.delivery}>
           <Link href="/patient-dashboard/care/cart" className={styles.dRow}>
             <span className={styles.dText}>
-              <strong>Medicines ready to order</strong>{" "}
+              <strong>
+                {cart.kind === "REFILL"
+                  ? "Your next supply is ready to order"
+                  : "Medicines ready to order"}
+              </strong>{" "}
               <span className="num">{formatRupees(cart.totalPaise / 100)}</span>
             </span>
             <CaretRight
@@ -141,7 +146,13 @@ export default function CareProgrammeCard({
           >
             <span className={styles.dText}>
               <strong>{moving ? "Next delivery" : "Last delivery"}</strong>{" "}
-              <span className="num">{deliveryLine(order)}</span>
+              <span className="num">
+                {deliveryLine(order)}
+                {order.status === "DELIVERED" && order.runOutOn
+                  ? `. Lasts until about ${shortDate(order.runOutOn)}`
+                  : ""}
+                {order.canGiveFeedback ? ". Tell us how it arrived" : ""}
+              </span>
             </span>
             <CaretRight
               size={16}

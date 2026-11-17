@@ -2,13 +2,16 @@
 
 /*
   The "Reminders" sheet (Arhaan AccountSheet.tsx ReminderSettings): switches that save as they are
-  flipped, through PATCH /api/patient/reminders. The channel switches only apply while reminders
-  are on. A failed save puts the switch back and says why. While a save runs, its knob dims.
+  flipped, through PATCH /api/patient/reminders, which changes only the switch sent. Email follows
+  "Enable reminders"; "Updates on WhatsApp" is the WhatsApp consent, so it can always be turned off
+  (DPDP Act 2023: as easy to withdraw as to give), and turning reminders off also stops WhatsApp
+  reminders. A failed save puts the switch back and says why. While a save runs, its knob dims.
 */
 
 import { useState } from "react";
 import { useToast } from "@/components/ui/ToastProvider";
 import { errorMessage } from "@/lib/http/apiClient";
+import { CONSENTS } from "@/lib/onboarding/answerLists";
 import { updateReminderSettings } from "@/services/patientProfileService";
 import type { PatientProfile } from "@/types/patientProfile";
 import formStyles from "@/components/ui/styles/FormControls.module.css";
@@ -21,7 +24,7 @@ type Settings = Pick<
 
 const SWITCHES: { key: keyof Settings; label: string }[] = [
   { key: "remindersEnabled", label: "Enable reminders" },
-  { key: "whatsappReminders", label: "WhatsApp reminders" },
+  { key: "whatsappReminders", label: "Updates on WhatsApp" },
   { key: "emailReminders", label: "Email reminders" },
 ];
 
@@ -50,16 +53,17 @@ export default function ReminderSettings({
       return next;
     });
 
+  // each switch saves and rolls back on its own, so a failed save never undoes another switch
   const flip = async (key: keyof Settings) => {
-    const before = settings;
-    const next = { ...settings, [key]: !settings[key] };
-    setSettings(next);
+    if (saving.has(key)) return;
+    const value = !settings[key];
+    setSettings((current) => ({ ...current, [key]: value }));
     markSaving(key, true);
     try {
-      await updateReminderSettings(next);
-      onSaved(next);
+      await updateReminderSettings({ [key]: value });
+      onSaved({ [key]: value });
     } catch (error) {
-      setSettings(before);
+      setSettings((current) => ({ ...current, [key]: !value }));
       toast(errorMessage(error));
     } finally {
       markSaving(key, false);
@@ -87,7 +91,7 @@ export default function ReminderSettings({
                     type="checkbox"
                     checked={settings[item.key]}
                     disabled={
-                      item.key !== "remindersEnabled" &&
+                      item.key === "emailReminders" &&
                       !settings.remindersEnabled
                     }
                     onChange={() => flip(item.key)}
@@ -98,6 +102,9 @@ export default function ReminderSettings({
             </li>
           ))}
         </ul>
+        <p className={formStyles.hint}>
+          {CONSENTS.find((c) => c.type === "WHATSAPP")?.more}
+        </p>
         <p className={formStyles.hint}>
           Nobody from inrange will ever ask you for a one-time code.
         </p>

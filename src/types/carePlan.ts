@@ -32,19 +32,61 @@ export type MedicineOrderStatus =
   | "PLACED"
   | "PACKED"
   | "DISPATCHED"
-  | "DELIVERED";
+  | "OUT_FOR_DELIVERY"
+  | "DELIVERED"
+  | "CANCELLED";
 
-/** One delivery from inrange's pharmacy. `history` holds each status reached, oldest first. */
+/** One delivery from inrange's pharmacy. `history` holds each status reached, oldest first
+    (and "DELAYED" when the expected date moved). Docs: docs/backend/medicine-flow.md. */
 export type MedicineOrder = {
   id: string;
+  /** "MED-00042", as WhatsApp says it */
+  orderNumber?: string;
   status: MedicineOrderStatus;
   placedAt: string; // ISO
   expectedAt: string | null; // ISO, once the courier has it
+  dispatchedAt?: string | null;
+  deliveredAt?: string | null;
+  courier?: string | null;
   trackingNo: string | null;
   trackingUrl: string | null;
   items: { name: string; quantity: string }[];
-  history: { status: MedicineOrderStatus; at: string; note: string }[];
+  history: {
+    status: MedicineOrderStatus | "DELAYED";
+    at: string;
+    note: string;
+  }[];
+  feedback?: "GOOD" | "ISSUE" | null;
+  /** delivered within the last two weeks and not rated yet */
+  canGiveFeedback?: boolean;
+  /** YYYY-MM-DD, when the delivered supply runs out */
+  runOutOn?: string | null;
+  cancelReason?: string | null;
+  refundedPaise?: number | null;
 };
+
+/** A dose reminder the app and WhatsApp share (patients on a plan). */
+export type DoseSchedule = {
+  id: string;
+  medicine: string;
+  cadence: "WEEKLY" | "DAILY" | "TWICE_DAILY";
+  weekday: number | null; // ISO, 1 Monday ... 7 Sunday
+  times: string[]; // "09:00", India time
+  paused: boolean;
+  startsOn: string;
+  endsOn: string | null;
+};
+
+export type DoseEvent = {
+  id: string;
+  scheduleId: string;
+  medicine: string;
+  dueAt: string; // ISO
+  status: "DUE" | "TAKEN" | "TAKEN_LATE" | "SKIPPED" | "MISSED";
+  skipReason: "UNWELL" | "FORGOT" | "SIDE_EFFECTS" | "OTHER" | null;
+};
+
+export type Doses = { schedules: DoseSchedule[]; events: DoseEvent[] };
 
 /** One prescribed item in the cart. Prices are what the patient pays, in paise, per pack. */
 export type CartLine = {
@@ -73,6 +115,9 @@ export type MedicineCart = {
   discountPaise: number;
   totalPaise: number;
   address: { id: string; label: string; name: string; line: string } | null;
+  /** REFILL: the next supply on the same prescription */
+  kind?: "FIRST" | "REFILL";
+  boughtElsewhere?: boolean;
 };
 
 /** The cart, or when it opens (a first consultation's cart waits for the programme call). */

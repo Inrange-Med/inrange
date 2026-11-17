@@ -18,6 +18,10 @@ import * as rzp from "../integrations/razorpay.ts";
 import { applyLabEvent, fulfilLabBooking, type LabEvent } from "./labs.ts";
 import * as rc from "../integrations/redcliffe.ts";
 import { priceCart, type CartLine } from "../lib/pharmacy.ts";
+import { deliverQueued, onMedicinePaid, onMedicinePaymentFailed } from "../lib/medicineFlow.ts";
+import { spokenSlot } from "../lib/hours.ts";
+import * as notices from "../lib/notices.ts";
+import { sendNow } from "../lib/notify.ts";
 
 export const paymentRoutes = new Hono();
 
@@ -26,13 +30,6 @@ type Purpose = typeof PURPOSES[number];
 type Priced = { amountPaise: number; title: string; lineItems: { label: string; amountPaise: number }[]; meta?: Record<string, unknown> };
 
 const rupees = (r: number) => Math.round(Number(r) * 100);
-
-const spokenSlot = (date: string, time: string) => {
-  const d = new Date(`${date}T${time}:00+05:30`);
-  const day = new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", weekday: "short", day: "numeric", month: "short" }).format(d);
-  const clock = new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", hour: "numeric", minute: "2-digit", hour12: true }).format(d);
-  return `${day}, ${clock.toLowerCase()}`;
-};
 
 async function price(tx: TransactionSql, userId: number, purpose: Purpose, referenceId: string, reason: string | null): Promise<Priced> {
   if (purpose === "PLAN") {
@@ -87,7 +84,10 @@ async function price(tx: TransactionSql, userId: number, purpose: Purpose, refer
     if (priced.discountPaise > 0) lineItems.push({ label: `Discount, ${priced.discountPercent}%`, amountPaise: -priced.discountPaise });
     return {
       amountPaise: priced.totalPaise, title: "Your medicines", lineItems,
-      meta: { addressId: k.address_id, lines: bought.map((l) => ({ name: `${l.brand} ${l.strength}`, quantity: `${l.quantity} x ${l.pack}` })) },
+      // `paid`: the quantities this payment is for; fulfil writes them back, so a cart changed in another tab
+      // during checkout never decides the supply, the doses or the refill
+      meta: { addressId: k.address_id, lines: bought.map((l) => ({ name: `${l.brand} ${l.strength}`, quantity: `${l.quantity} x ${l.pack}` })),
+        paid: bought.map((l) => ({ medicineId: Number(l.medicineId), quantity: l.quantity })) },
     };
   }
 
@@ -154,8 +154,11 @@ paymentRoutes.post("/payments/orders", async (c) => {
  * /payments/verify and the webhook, so whichever arrives second does nothing. A fulfilment the
  * world refuses (slot taken, lab hold gone) keeps the payment PAID and is flagged in meta.needsAttention.
  */
-async function fulfil(orderId: string, paymentId: string) {
-  return await sql.begin(async (tx) => {
+export async function fulfil(orderId: string, paymentId: string) {
+  let medicineOrderId: number | null = null;
+  // WhatsApp messages queued with the fulfilment, sent once it has committed
+  const messages: (number | null)[] = [];
+  const done = await sql.begin(async (tx) => {
     const [o] = await tx`select * from payment_orders where id = ${orderId} for update`;
     if (!o) throw new HttpError(400, "That payment was not found.");
     if (o.fulfilled_at) return o;
@@ -169,15 +172,30 @@ async function fulfil(orderId: string, paymentId: string) {
       await tx`insert into subscriptions (user_id, plan_id, status, starts_at, ends_at, payment_order_id)
         values (${o.user_id}, ${Number(o.reference_id)}, 'Active', now(),
           now() + make_interval(months => ${plan?.duration_months ?? 1}), ${o.id})`;
+      // on a plan now (PRD 7.2 EC4): a held first-consultation order opens at once, and its follow-up
+      // moves to the plan rhythm on its next step
+      await tx`update medicine_carts set available_at = least(available_at, now()) where patient_id = ${o.user_id} and status = 'OPEN'`;
+      await tx`update medicine_followups set next_at = now() where patient_id = ${o.user_id} and closed_at is null and flow = 'NANO' and stage = 'WAITING'`;
     } else if (o.purpose === "MEDICINE_ORDER") {
-      const [k] = await tx`update medicine_carts set status = 'PAID', paid_at = now() where id = ${Number(o.reference_id)}
-                           returning prescription_id`;
-      await tx`insert into medicine_orders (patient_id, prescription_id, cart_id, address_id, payment_order_id, status, expected_at, items, history)
+      // the cart keeps every prescribed line, with the quantities this payment was for
+      const paid = (meta.paid ?? null) as { medicineId: number; quantity: number }[] | null;
+      const [cart] = await tx`select lines from medicine_carts where id = ${Number(o.reference_id)} for update`;
+      const lines = paid && cart
+        ? (cart.lines as CartLine[]).map((l) => ({ ...l, quantity: paid.find((p) => p.medicineId === l.medicineId)?.quantity ?? 0 }))
+        : cart?.lines ?? [];
+      const [k] = await tx`update medicine_carts set status = 'PAID', paid_at = now(), lines = ${tx.json(lines as never)}
+                           where id = ${Number(o.reference_id)} returning prescription_id`;
+      const [mo] = await tx`insert into medicine_orders (patient_id, prescription_id, cart_id, address_id, payment_order_id, status, expected_at, items, history)
         values (${o.user_id}, ${k?.prescription_id ?? null}, ${Number(o.reference_id)}, ${(meta.addressId as number) ?? null}, ${o.id},
           'PLACED', now() + interval '3 days', ${tx.json((meta.lines ?? []) as never)},
-          ${tx.json([{ status: "PLACED", at: new Date().toISOString(), note: "Order received by the pharmacy" }])})`;
+          ${tx.json([{ status: "PLACED", at: new Date().toISOString(), note: "Order received by the pharmacy" }])})
+        returning id`;
+      // the follow-up closes, the supply and the dose rhythm are worked out, the confirmation is queued (lib/medicineFlow.ts)
+      await onMedicinePaid(tx, mo.id);
+      medicineOrderId = mo.id;
     } else if (o.purpose === "LAB_BOOKING") {
       await fulfilLabBooking(tx, o.reference_id, o.user_id);
+      messages.push(...(await notices.within(tx, (sp) => notices.labBooked(sp, o.reference_id))));
     } else {
       await setEligibility(tx, o.user_id, { consultation_paid: true });
       try {
@@ -185,6 +203,7 @@ async function fulfil(orderId: string, paymentId: string) {
           bookAppointment(sp, { patientId: o.user_id, slotId: Number(o.reference_id), reason: (meta.reason as string) ?? null, prepaid: true }));
         meta.appointmentId = appointmentId;
         await setEligibility(tx, o.user_id, { consultation_used: true });
+        messages.push(...(await notices.within(tx, (sp) => notices.appointmentBooked(sp, appointmentId))));
       } catch (e) {
         meta.needsAttention = `Paid, but the slot could not be booked: ${(e as Error).message}`;
         console.error("consultation fulfil", o.id, meta.needsAttention);
@@ -196,6 +215,10 @@ async function fulfil(orderId: string, paymentId: string) {
       where id = ${o.id} returning *`;
     return done;
   });
+  // the confirmations go once the payment is committed
+  if (medicineOrderId) await deliverQueued({ medicineOrderId }).catch((e) => console.error("order confirmation", e.message));
+  await sendNow(messages);
+  return done;
 }
 
 paymentRoutes.post("/payments/verify", async (c) => {
@@ -256,6 +279,10 @@ paymentRoutes.post("/webhooks/razorpay", async (c) => {
   } else if (event.event === "payment.failed" && o.status === "CREATED") {
     // not final: a UPI retry can still be captured later, and the order stays payable
     await sql`update payment_orders set failure_reason = ${payment.error_description ?? "Payment failed"} where id = ${o.id}`;
+    // the patient hears it a quarter of an hour later unless it went through by then; for medicines the
+    // team also checks in if it stays unpaid
+    await notices.paymentFailed(o as { id: string; user_id: number; purpose: string }).catch((e) => console.error("payment failed message", e.message));
+    if (o.purpose === "MEDICINE_ORDER") await onMedicinePaymentFailed(o.id).catch((e) => console.error("payment failed task", e.message));
   }
   if (eventId) await sql`insert into razorpay_events (id) values (${eventId}) on conflict do nothing`;
   return c.json({ success: true });

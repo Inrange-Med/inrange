@@ -23,7 +23,7 @@ import type { NextScreen } from "@/types/auth";
 import type { UserRole } from "@/lib/session/authSession";
 import s from "./FreeCheck.module.css";
 
-export type Identity = { firstName: string; lastName: string; email: string; mobile: string; consented: boolean; ai: boolean };
+export type Identity = { firstName: string; lastName: string; email: string; mobile: string; consented: boolean; ai: boolean; whatsapp: boolean };
 
 const RESEND_AFTER_S = 30;
 /** A code lasts 5 minutes (routes/auth.ts CODE_MINUTES); within 4 a return to this screen keeps the one already sent,
@@ -170,6 +170,12 @@ export function CheckDetails({
           <strong>Optional.</strong> {CONSENTS.find((c) => c.type === "AI")?.line}
         </span>
       </label>
+      <label className={`${s.tick} ${s.tickQuiet}`}>
+        <input type="checkbox" checked={identity.whatsapp} onChange={(e) => change({ whatsapp: e.target.checked })} />
+        <span>
+          <strong>Optional.</strong> {CONSENTS.find((c) => c.type === "WHATSAPP")?.line} Reply STOP any time.
+        </span>
+      </label>
 
       <button type="submit" className={`btn ${s.go}`}>
         <span>See my next step</span>
@@ -208,6 +214,7 @@ export function CheckCode({
   const [resendIn, setResendIn] = useState(recent ? Math.max(0, Math.ceil(RESEND_AFTER_S - (Date.now() - recent.at) / 1000)) : 0);
   const [done, setDone] = useState(false);
   const codeRef = useRef<HTMLInputElement>(null);
+  const retryRef = useRef<HTMLButtonElement>(null);
   const smsListener = useRef<AbortController | null>(null);
   const started = useRef(false);
 
@@ -273,6 +280,8 @@ export function CheckCode({
       listenForSms();
     } catch (error) {
       setProblem(errorMessage(error));
+      // the code box stays shut, so the focus goes to what can be done next
+      window.setTimeout(() => retryRef.current?.focus({ preventScroll: true }), 80);
     } finally {
       setSending(false);
     }
@@ -362,7 +371,7 @@ export function CheckCode({
             Resend in <span className="num">{resendIn}</span> s
           </>
         ) : (
-          <button type="button" className={s.inlineLink} onClick={() => void send()}>
+          <button ref={retryRef} type="button" className={s.inlineLink} onClick={() => void send()}>
             {sent ? "Send a new code" : "Try again"}
           </button>
         )}
@@ -372,4 +381,7 @@ export function CheckCode({
 }
 
 /** The consents to keep with the check, as onboarding saves them. */
-export const consentsOf = (id: Identity) => (id.consented ? [...REQUIRED_CONSENTS, ...(id.ai ? (["AI"] as const) : [])] : []);
+export const consentsOf = (id: Identity) =>
+  id.consented
+    ? [...REQUIRED_CONSENTS, ...(id.ai ? (["AI"] as const) : []), ...(id.whatsapp ? (["WHATSAPP"] as const) : [])]
+    : [];

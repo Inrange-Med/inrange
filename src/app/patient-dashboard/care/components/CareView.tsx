@@ -6,9 +6,11 @@
  * Data: GET /api/appointments/patient, the care team (GET /api/care-team, else the doctors from the
  * consultations), GET /api/subscriptions/status + /plans, and the PROPOSED care-plan endpoints in
  * carePlanService (prescription and deliveries; a calm note until they exist).
+ * A WhatsApp button lands here with what it is about: ?rx=<id> opens the prescription, ?order=<id>
+ * that delivery, once the care plan is in.
  */
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   loadCareTeamDoctors,
   type CareTeamDoctor,
@@ -22,7 +24,14 @@ import { useNow } from "@/hooks/useNow";
 import { isUpcomingConsultation } from "@/lib/consultations/consultationTime";
 import { getSessionUser } from "@/lib/session/authSession";
 import { listMyAppointments } from "@/services/appointmentService";
-import { loadCarePlan } from "@/services/carePlanService";
+import {
+  getDoses,
+  loadCarePlan,
+  logDose,
+  rateDelivery,
+  updateDoseReminder,
+} from "@/services/carePlanService";
+import { errorMessage } from "@/lib/http/apiClient";
 import { getMyEligibility } from "@/services/eligibilityService";
 import {
   getSubscriptionStatus,
@@ -33,6 +42,8 @@ import AppointmentsCard from "./AppointmentsCard";
 import BloodTestsCard from "./BloodTestsCard";
 import CareTeamCard from "./CareTeamCard";
 import DeliverySheet from "./DeliverySheet";
+import DosesCard from "./DosesCard";
+import { isMoving } from "./deliveryStatus";
 import DoctorSheet from "./DoctorSheet";
 import PrescriptionSheet from "./PrescriptionSheet";
 import CareProgrammeCard, { type Programme } from "./CareProgrammeCard";
@@ -61,8 +72,11 @@ export default function CareView() {
   const carePlan = useApiResource("care-plan", loadCarePlan);
   const team = useApiResource("care-team", loadCareTeamDoctors);
   const eligibility = useApiResource("eligibility", getMyEligibility);
+  const doses = useApiResource("care-doses", getDoses);
   const [doctor, setDoctor] = useState<CareTeamDoctor | null>(null);
   const [sheet, setSheet] = useState<SheetName>(null);
+  const [orderId, setOrderId] = useState<string | null>(null);
+  const linkOpened = useRef(false);
 
   const all = appointments.data ?? [];
   const doctors = team.data ?? [];
@@ -73,10 +87,28 @@ export default function CareView() {
   // the delivery on its way if there is one, otherwise the last one that arrived
   const orders = carePlan.data?.orders ?? [];
   const order =
-    orders.find((candidate) => candidate.status !== "DELIVERED") ??
+    orders.find((o) => o.id === orderId) ??
+    orders.find(isMoving) ??
     orders[0] ??
     null;
-  const closeSheet = () => setSheet(null);
+  const closeSheet = () => {
+    setSheet(null);
+    setOrderId(null);
+  };
+
+  useEffect(() => {
+    if (linkOpened.current || !carePlan.data) return;
+    linkOpened.current = true;
+    const query = new URLSearchParams(window.location.search);
+    /* eslint-disable react-hooks/set-state-in-effect -- the link's target, opened once, when the plan has loaded */
+    const linked = query.get("order");
+    if (query.has("rx") && carePlan.data.prescription) setSheet("rx");
+    else if (linked && carePlan.data.orders.some((o) => o.id === linked)) {
+      setOrderId(linked);
+      setSheet("delivery");
+    }
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, [carePlan.data]);
 
   return (
     <main className={`${layoutStyles.page} ${styles.page}`}>
@@ -123,6 +155,35 @@ export default function CareView() {
             onOpenPrescription={() => setSheet("rx")}
             onOpenDelivery={() => setSheet("delivery")}
           />
+          {doses.data && doses.data.schedules.length > 0 && (
+            <DosesCard
+              doses={doses.data}
+              now={now}
+              actions={{
+                log: async (eventId, status, reason) => {
+                  try {
+                    const { message } = await logDose(eventId, status, reason);
+                    doses.reload();
+                    return message;
+                  } catch (caught) {
+                    throw new Error(
+                      errorMessage(caught, "That was not saved. Try again."),
+                    );
+                  }
+                },
+                change: async (scheduleId, change) => {
+                  try {
+                    await updateDoseReminder(scheduleId, change);
+                    doses.reload();
+                  } catch (caught) {
+                    throw new Error(
+                      errorMessage(caught, "That was not saved. Try again."),
+                    );
+                  }
+                },
+              }}
+            />
+          )}
           <BloodTestsCard
             hasTeam={hasTeam}
             hasTestsOrReport={Boolean(eligibility.data?.path)}
@@ -169,11 +230,28 @@ export default function CareView() {
       <Sheet
         open={sheet === "delivery"}
         onClose={closeSheet}
-        title={
-          order?.status === "DELIVERED" ? "Last delivery" : "Next delivery"
-        }
+        title={order && !isMoving(order) ? "Last delivery" : "Next delivery"}
       >
-        {sheet === "delivery" && order && <DeliverySheet order={order} />}
+        {sheet === "delivery" && order && (
+          <DeliverySheet
+            order={order}
+            onRate={async (rating, note) => {
+              try {
+                const { message } = await rateDelivery(
+                  order.id,
+                  rating,
+                  note || undefined,
+                );
+                carePlan.reload();
+                return message;
+              } catch (caught) {
+                throw new Error(
+                  errorMessage(caught, "That was not sent. Try again."),
+                );
+              }
+            }}
+          />
+        )}
       </Sheet>
       <Sheet
         open={sheet === "devices"}

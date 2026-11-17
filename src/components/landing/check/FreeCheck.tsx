@@ -43,6 +43,7 @@ import {
 import { bmiFrom, readFreeCheck, saveFreeCheck, type FirstStep, type FreeCheckAnswers } from "@/lib/onboarding/freeCheck";
 import { isValidMobile } from "@/lib/format/phone";
 import { getSessionUser, homePathFor } from "@/lib/session/authSession";
+import { updateReminderSettings } from "@/services/patientProfileService";
 import type { Gender } from "@/types/onboarding";
 import ContourField from "../ContourField";
 import { LISTED_DOCTORS } from "../doctor-data";
@@ -94,7 +95,7 @@ const START: Draft = {
   otherText: "",
   experience: [],
 };
-const NO_IDENTITY: Identity = { firstName: "", lastName: "", email: "", mobile: "", consented: false, ai: false };
+const NO_IDENTITY: Identity = { firstName: "", lastName: "", email: "", mobile: "", consented: false, ai: false, whatsapp: false };
 
 /** BMI bands: the revised Indian definition (Misra et al., 2025) and, for comparison, the global chart. */
 const bandOf = (bmi: number) => (bmi < 18.5 ? "under" : bmi <= 23 ? "healthy" : "obesity");
@@ -256,6 +257,7 @@ export default function FreeCheck() {
           // a tick counts only for the wording it was given to; a changed wording is asked again
           consented: saved.identity.consentVersion === CONSENT_VERSION && saved.identity.consents.length > 0,
           ai: saved.identity.consentVersion === CONSENT_VERSION && saved.identity.consents.includes("AI"),
+          whatsapp: saved.identity.consentVersion === CONSENT_VERSION && saved.identity.consents.includes("WHATSAPP"),
         });
       setFirstStep(saved.firstStep ?? null);
       setStep(at("details"));
@@ -695,8 +697,13 @@ export default function FreeCheck() {
           setLeaving(true);
           const answers = answersOf(d, identity, firstStep ?? undefined);
           if (answers) saveFreeCheck(answers);
-          // an existing account: the profile is already done, so the check's answers are not used
-          router.replace(role !== "PATIENT" || nextScreen !== "ONBOARDING" ? homePathFor(role) : "/onboarding");
+          // an existing account: the profile is already done, so the check's answers are not used, but a
+          // WhatsApp tick given here is recorded (a new account records it with the other consents)
+          const existing = role !== "PATIENT" || nextScreen !== "ONBOARDING";
+          // not awaited: a slow connection never holds the person on a blank screen (navigation keeps the request)
+          if (existing && role === "PATIENT" && identity.whatsapp)
+            void updateReminderSettings({ whatsappReminders: true }).catch(() => undefined);
+          router.replace(existing ? homePathFor(role) : "/onboarding");
         }}
       />
     ) : (

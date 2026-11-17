@@ -54,6 +54,26 @@ export async function paymentCaptured(paymentId: string, orderId: string, amount
   return p.status === "captured";
 }
 
+/**
+ * The captured payment on one of our orders, if any (the nightly reconciliation: a payment Razorpay holds
+ * whose webhook and verify never reached us). Mock orders were never sent to Razorpay, so they have none.
+ */
+export async function capturedPaymentFor(orderId: string, amountPaise: number): Promise<string | null> {
+  if (!razorpayLive() || !orderId.startsWith("order_") || orderId.startsWith("order_mock_")) return null;
+  const out = await api(`/orders/${orderId}/payments`);
+  const paid = (out.items ?? []).find((p: Record<string, unknown>) =>
+    p.status === "captured" && p.amount === amountPaise && p.currency === "INR");
+  return paid ? String(paid.id) : null;
+}
+
+/** A full refund of a captured payment (an order the pharmacy cannot fill, or the patient cancels). */
+export async function refundPayment(paymentId: string, amountPaise: number, notes: Record<string, string>): Promise<string> {
+  if (!razorpayLive() || !paymentId.startsWith("pay_")) return `rfnd_mock_${crypto.randomUUID().replace(/-/g, "").slice(0, 14)}`;
+  const out = await api(`/payments/${paymentId}/refund`, { amount: amountPaise, speed: "normal", notes });
+  if (!out.id) throw new Error("Razorpay refund has no id");
+  return out.id;
+}
+
 async function hmacHex(secret: string, message: string) {
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
   const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(message));

@@ -13,6 +13,30 @@
   }
 }
 
+/* the days off and the WhatsApp alerts share the side column */
+.side {
+  display: grid;
+  gap: 16px;
+}
+
+@media (min-width: 1280px) {
+  .side {
+    gap: 20px;
+  }
+}
+
+/* WhatsApp alerts: the state and the number, above the explanation */
+.alertsLine {
+  margin-bottom: 8px;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.alertsBtn {
+  margin-top: 16px;
+}
+
 /* booked consultations left outside the hours: calm, on the page tint */
 .note {
   margin-bottom: 16px;
