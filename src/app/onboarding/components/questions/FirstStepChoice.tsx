@@ -12,15 +12,18 @@ import type { LabPackage } from "@/types/labTest";
 import styles from "./FirstStepChoice.module.css";
 
 export default function FirstStepChoice({
+  autoLab = false,
   onLab,
   onUpload,
 }: {
+  /** the home test was already chosen on the free check: its one package is booked without a tap */
+  autoLab?: boolean;
   onLab: (chosen: { care: CarePackage; lab: LabPackage }) => void;
   onUpload: () => void;
 }) {
   return (
     <div className={styles.choice}>
-      <CarePackageStep onChoose={onLab} />
+      <CarePackageStep onChoose={onLab} autoStart={autoLab} />
       <button type="button" className={styles.upload} onClick={onUpload}>
         <span className={styles.icon} aria-hidden="true">
           <FileArrowUp size={20} />

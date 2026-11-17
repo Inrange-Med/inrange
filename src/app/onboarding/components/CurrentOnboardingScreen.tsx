@@ -105,6 +105,7 @@ export default function CurrentOnboardingScreen({
     ),
     9: (
       <FirstStepChoice
+        autoLab={progress.autoLab}
         onLab={progress.openLab}
         onUpload={progress.openUpload}
       />

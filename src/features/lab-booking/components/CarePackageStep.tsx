@@ -9,7 +9,7 @@
  * lab's age and sex limits) and moves on. Prices come from the backend.
  */
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowRight, WarningCircle } from "@phosphor-icons/react";
 import { useApiResource } from "@/hooks/useApiResource";
 import { errorMessage } from "@/lib/http/apiClient";
@@ -26,9 +26,14 @@ import styles from "../LabBookingFlow.module.css";
 
 type Props = {
   onChoose: (chosen: { care: CarePackage; lab: LabPackage }) => void;
+  /** start the booking without a tap when there is exactly one package (already chosen elsewhere) */
+  autoStart?: boolean;
 };
 
-export default function CarePackageStep({ onChoose }: Props) {
+export default function CarePackageStep({
+  onChoose,
+  autoStart = false,
+}: Props) {
   const packages = useApiResource("care-packages", listCarePackages);
   // the lab packages, for each card's marker count; the same list "Start your consultation" uses
   const labPackages = useApiResource("lab-packages", listLabPackages);
@@ -59,6 +64,20 @@ export default function CarePackageStep({ onChoose }: Props) {
       setStartingCode(null);
     }
   };
+
+  // the home test was chosen on the free check: with one package there is nothing left to choose
+  const autoStarted = useRef(false);
+  const only = (packages.data ?? []).filter(
+    (item) => item.includesLabTests && item.labPackageCode,
+  );
+  const single = only.length === 1 ? only[0] : null;
+  useEffect(() => {
+    if (!autoStart || autoStarted.current || !single || labPackages.loading)
+      return;
+    autoStarted.current = true;
+    void start(single);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, when the packages are in
+  }, [autoStart, single, labPackages.loading]);
 
   if (packages.loading) return <LoadingSkeleton />;
   if (packages.error)

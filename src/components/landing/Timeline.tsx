@@ -118,16 +118,16 @@ function Cadence({ lit = false }: { lit?: boolean }) {
         <line key={`c${w}`} x1={wx(w)} x2={wx(w)} y1={YOU + 8} y2={TEAM - 8} className={s.link} />
       ))}
       {CHECKINS.map((w) => (
-        <circle key={`y${w}`} cx={wx(w)} cy={YOU} r="6" className={s.you} />
+        <circle key={`y${w}`} cx={wx(w)} cy={YOU} r="7" className={s.you} />
       ))}
       {CHECKINS.map((w) => (
-        <circle key={`t${w}`} cx={wx(w)} cy={TEAM} r="4" className={s.reply} />
+        <circle key={`t${w}`} cx={wx(w)} cy={TEAM} r="5" className={s.reply} />
       ))}
       {REVIEWS.map((w) => (
         <circle key={`r${w}`} cx={wx(w)} cy={TEAM} r="11" className={s.review} />
       ))}
       {LABS.map((w) => (
-        <rect key={`l${w}`} x={wx(w) - 7} y={TEAM + 34} width="14" height="14" rx="3" className={s.lab} />
+        <rect key={`l${w}`} x={wx(w) - 8} y={TEAM + 33} width="16" height="16" rx="3.5" className={s.lab} />
       ))}
     </g>
   );

@@ -12,6 +12,7 @@
 import { errorMessage } from "@/lib/http/apiClient";
 import {
   clearFreeCheck,
+  type FirstStep,
   type FreeCheckAnswers,
 } from "@/lib/onboarding/freeCheck";
 import { updateSessionUser } from "@/lib/session/authSession";
@@ -43,6 +44,8 @@ export type Prefilled = {
   problem: string | null;
   /** true when the check's answers were saved, for the "answers are saved" line */
   fromCheck: boolean;
+  /** the first step chosen on the check's plan, opened at once once the profile is complete */
+  firstStep?: FirstStep;
 };
 
 const EMPTY: OnboardingAnswers = {
@@ -165,6 +168,7 @@ async function savePrefill(
         done,
         problem: null,
         fromCheck: true,
+        firstStep: check.firstStep,
       };
     } catch (error) {
       // consent is asked again, and its Continue completes the profile as usual
@@ -183,5 +187,7 @@ async function savePrefill(
     done,
     problem,
     fromCheck: done.some((step) => step !== 1),
+    // opened once the patient finishes the questions left (useOnboardingProgress submit)
+    firstStep: check.firstStep,
   };
 }

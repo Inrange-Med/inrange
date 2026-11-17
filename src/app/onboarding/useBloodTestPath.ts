@@ -11,9 +11,10 @@ import { useLabBookingFlow } from "@/features/lab-booking/useLabBookingFlow";
 /** steps: questions 1 to 9; upload: the report form; sent: the report is with the team; lab: the home test booking */
 export type Phase = "steps" | "upload" | "sent" | "lab";
 
-export function useBloodTestPath() {
+/** `initial`: "upload" when the free check already chose a report over the home test. */
+export function useBloodTestPath(initial: Phase = "steps") {
   const lab = useLabBookingFlow("onboarding");
-  const [phase, setPhase] = useState<Phase>("steps");
+  const [phase, setPhase] = useState<Phase>(initial);
 
   /** Back inside the path: through the lab booking's steps, then to question 9. False on the questions.
       The package is chosen on question 9 itself, so Back from the address returns there. */
