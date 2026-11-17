@@ -91,16 +91,20 @@ export default function CareView() {
     orders.find(isMoving) ??
     orders[0] ??
     null;
-  const closeSheet = () => setSheet(null);
+  const closeSheet = () => {
+    setSheet(null);
+    setOrderId(null);
+  };
 
   useEffect(() => {
     if (linkOpened.current || !carePlan.data) return;
     linkOpened.current = true;
     const query = new URLSearchParams(window.location.search);
     /* eslint-disable react-hooks/set-state-in-effect -- the link's target, opened once, when the plan has loaded */
+    const linked = query.get("order");
     if (query.has("rx") && carePlan.data.prescription) setSheet("rx");
-    else if (query.get("order")) {
-      setOrderId(query.get("order"));
+    else if (linked && carePlan.data.orders.some((o) => o.id === linked)) {
+      setOrderId(linked);
       setSheet("delivery");
     }
     /* eslint-enable react-hooks/set-state-in-effect */

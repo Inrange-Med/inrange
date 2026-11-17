@@ -214,6 +214,7 @@ export function CheckCode({
   const [resendIn, setResendIn] = useState(recent ? Math.max(0, Math.ceil(RESEND_AFTER_S - (Date.now() - recent.at) / 1000)) : 0);
   const [done, setDone] = useState(false);
   const codeRef = useRef<HTMLInputElement>(null);
+  const retryRef = useRef<HTMLButtonElement>(null);
   const smsListener = useRef<AbortController | null>(null);
   const started = useRef(false);
 
@@ -279,6 +280,8 @@ export function CheckCode({
       listenForSms();
     } catch (error) {
       setProblem(errorMessage(error));
+      // the code box stays shut, so the focus goes to what can be done next
+      window.setTimeout(() => retryRef.current?.focus({ preventScroll: true }), 80);
     } finally {
       setSending(false);
     }
@@ -368,7 +371,7 @@ export function CheckCode({
             Resend in <span className="num">{resendIn}</span> s
           </>
         ) : (
-          <button type="button" className={s.inlineLink} onClick={() => void send()}>
+          <button ref={retryRef} type="button" className={s.inlineLink} onClick={() => void send()}>
             {sent ? "Send a new code" : "Try again"}
           </button>
         )}

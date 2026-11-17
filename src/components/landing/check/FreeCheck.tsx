@@ -693,15 +693,16 @@ export default function FreeCheck() {
         lastSend={lastSend.current}
         onSent={(sent) => (lastSend.current = sent)}
         onChangeNumber={() => go(at("details"))}
-        onVerified={async ({ role, nextScreen }) => {
+        onVerified={({ role, nextScreen }) => {
           setLeaving(true);
           const answers = answersOf(d, identity, firstStep ?? undefined);
           if (answers) saveFreeCheck(answers);
           // an existing account: the profile is already done, so the check's answers are not used, but a
           // WhatsApp tick given here is recorded (a new account records it with the other consents)
           const existing = role !== "PATIENT" || nextScreen !== "ONBOARDING";
+          // not awaited: a slow connection never holds the person on a blank screen (navigation keeps the request)
           if (existing && role === "PATIENT" && identity.whatsapp)
-            await updateReminderSettings({ whatsappReminders: true }).catch(() => undefined);
+            void updateReminderSettings({ whatsappReminders: true }).catch(() => undefined);
           router.replace(existing ? homePathFor(role) : "/onboarding");
         }}
       />

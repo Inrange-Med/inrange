@@ -306,6 +306,7 @@ export async function moveOrder(orderId: number, to: OrderStep, actorId: number,
     const [o] = await tx`select * from medicine_orders where id = ${orderId} for update`;
     if (!o) throw new Error("That order was not found.");
     if (o.status === "CANCELLED") throw new Error("This order was cancelled.");
+    if (o.cancelled_at) throw new Error("This order is being cancelled and refunded.");
     const from = ORDER_STEPS.indexOf(o.status), next = ORDER_STEPS.indexOf(to);
     if (next <= from) throw new Error(`This order is already ${o.status.toLowerCase().replace(/_/g, " ")}.`);
     const courier = d.courier?.trim() || o.courier;

@@ -53,16 +53,17 @@ export default function ReminderSettings({
       return next;
     });
 
+  // each switch saves and rolls back on its own, so a failed save never undoes another switch
   const flip = async (key: keyof Settings) => {
-    const before = settings;
-    const next = { ...settings, [key]: !settings[key] };
-    setSettings(next);
+    if (saving.has(key)) return;
+    const value = !settings[key];
+    setSettings((current) => ({ ...current, [key]: value }));
     markSaving(key, true);
     try {
-      await updateReminderSettings({ [key]: next[key] });
-      onSaved(next);
+      await updateReminderSettings({ [key]: value });
+      onSaved({ [key]: value });
     } catch (error) {
-      setSettings(before);
+      setSettings((current) => ({ ...current, [key]: !value }));
       toast(errorMessage(error));
     } finally {
       markSaving(key, false);

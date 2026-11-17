@@ -134,8 +134,9 @@ export async function labBooked(tx: Tx, bookingId: string): Promise<Id[]> {
 /** What the lab told us that the patient needs to hear: the report, or a cancelled collection. */
 export async function labEvent(bookingId: string, event: string): Promise<Id[]> {
   if (event !== "REPORT_READY" && event !== "CANCELLED") return [];
-  const [b] = await sql`select id, user_id, to_char(slot_date, 'YYYY-MM-DD') as slot_date, slot_start from lab_bookings where id = ${bookingId}`;
-  if (!b) return [];
+  const [b] = await sql`select id, user_id, paid_at, to_char(slot_date, 'YYYY-MM-DD') as slot_date, slot_start from lab_bookings where id = ${bookingId}`;
+  // a hold that was never paid for is not a booking the patient made: its lapse says nothing
+  if (!b || (event === "CANCELLED" && !b.paid_at)) return [];
   const name = await firstName(sql, b.user_id);
   if (event === "REPORT_READY")
     return [await queueMessage(sql, { patientId: b.user_id, kind: "REPORT_READY", values: [name], labBookingId: b.id, dedupeKey: `lab:${b.id}:report` })];

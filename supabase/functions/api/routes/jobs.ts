@@ -106,7 +106,8 @@ jobRoutes.post("/webhooks/whatsapp", async (c) => {
         await sql`update patient_messages set
             status = case when ${event.status} = 'failed' then 'FAILED'
                           when ${event.status} = 'read' then 'READ'
-                          when ${event.status} = 'delivered' and status <> 'READ' then 'DELIVERED' else status end,
+                          when ${event.status} = 'delivered' and status <> 'READ' then 'DELIVERED'
+                          when ${event.status} = 'sent' and status = 'QUEUED' then 'SENT' else status end,
             provider_id = coalesce(provider_id, ${event.providerId || null}),
             delivered_at = case when ${column} = 'delivered_at' or ${column} = 'read_at' then coalesce(delivered_at, now()) else delivered_at end,
             read_at = case when ${column} = 'read_at' then coalesce(read_at, now()) else read_at end,

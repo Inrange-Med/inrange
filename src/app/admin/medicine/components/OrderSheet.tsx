@@ -72,7 +72,8 @@ export default function OrderSheet({
     const expected = order?.expectedAt ? new Date(order.expectedAt) : null;
     setDay(
       toApiDate(
-        expected && expected.getTime() > Date.now()
+        // the form saves 7 pm of the chosen day, so the day is kept only while that is still ahead
+        expected && Date.parse(dayToIso(toApiDate(expected))) > Date.now()
           ? expected
           : new Date(Date.now() + (expected ? 1 : 2) * 86400_000),
       ),
@@ -123,9 +124,11 @@ export default function OrderSheet({
       if (!courier.trim()) return setProblem("Add the courier.");
       if (!tracking.trim())
         return setProblem("Add the tracking link or number.");
-      const link = /^https:\/\//i.test(tracking.trim());
+      // the server takes https:// links with no spaces; a phone keyboard's "Https" is fixed here
+      const typed = tracking.trim().replace(/^https:/i, "https:");
+      const link = /^https:\/\/\S+$/.test(typed);
       // a link the patient cannot open safely is refused, never saved as a "number"
-      if (!link && /^http:|:\/\/|^www\./i.test(tracking.trim()))
+      if (!link && /^http:|:\/\/|^www\.|^https:/i.test(typed))
         return setProblem("A tracking link must start with https://.");
       const late = dayProblem(day);
       if (late) return setProblem(late);
@@ -135,8 +138,8 @@ export default function OrderSheet({
             to: "DISPATCHED",
             courier: courier.trim(),
             ...(link
-              ? { trackingUrl: tracking.trim() }
-              : { trackingNo: tracking.trim() }),
+              ? { trackingUrl: typed }
+              : { trackingNo: typed }),
             expectedAt: dayToIso(day),
           }),
         `${order.orderNumber} dispatched. The patient has the tracking.`,

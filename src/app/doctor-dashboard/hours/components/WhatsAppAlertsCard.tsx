@@ -74,7 +74,6 @@ export default function WhatsAppAlertsCard() {
           <button
             type="button"
             className={`btn ${alerts.data.on ? "btn--ghost" : ""} ${styles.alertsBtn}`}
-            aria-pressed={alerts.data.on}
             aria-busy={busy}
             data-busy={busy}
             disabled={busy}

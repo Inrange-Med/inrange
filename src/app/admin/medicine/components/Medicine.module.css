@@ -71,13 +71,18 @@
   color: inherit;
   cursor: pointer;
 }
+/* a doctor's notice: the same row, with nothing to open */
+.open:disabled {
+  cursor: default;
+  color: inherit;
+}
 .open:focus-visible {
   outline: 2px solid var(--ink);
   outline-offset: 4px;
   border-radius: 6px;
 }
 @media (hover: hover) and (pointer: fine) {
-  .open:hover .what {
+  .open:not(:disabled):hover .what {
     text-decoration: underline;
     text-decoration-color: var(--hair-2);
     text-underline-offset: 3px;

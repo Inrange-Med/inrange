@@ -74,7 +74,8 @@ opsRoutes.get("/admin/medicine/summary", async (c) => {
       count(*) filter (where t.status = 'OPEN' and t.due_at < now()) as overdue,
       count(*) filter (where t.status = 'OPEN' and t.priority = 'CRITICAL') as critical,
       count(*) filter (where t.status = 'OPEN' and t.assigned_to = ${me.id}) as mine
-    from ops_tasks t left join patient_profiles pp on pp.user_id = t.patient_id where true ${scope(me)}`;
+    from ops_tasks t left join patient_profiles pp on pp.user_id = t.patient_id
+    where true ${scope(me)} ${me.role === "COACH" ? sql`and t.kind in ${sql(COACH_TASKS)}` : sql``}`;
   const [o] = me.role === "ADMIN" ? await sql`
     select count(*) filter (where status in ('PLACED', 'PACKED')) as to_dispatch,
       count(*) filter (where status in ('DISPATCHED', 'OUT_FOR_DELIVERY')) as on_the_way
@@ -342,7 +343,9 @@ opsRoutes.post("/admin/medicine/orders/:orderId/cancel", async (c) => {
   // handled by the team). cancelled_at marks it as being cancelled until the refund is in.
   const [o] = await sql`
     update medicine_orders o set cancelled_at = now() from (select id from medicine_orders where id = ${id} for update) x
-    where o.id = x.id and o.status in ('PLACED', 'PACKED', 'DISPATCHED', 'OUT_FOR_DELIVERY') and o.cancelled_at is null
+    where o.id = x.id and o.status in ('PLACED', 'PACKED', 'DISPATCHED', 'OUT_FOR_DELIVERY')
+      -- a cancel that stopped half-way (the refund made, the rest not) can be finished; a stuck claim frees after 5 minutes
+      and (o.cancelled_at is null or o.refund_id is not null or o.cancelled_at < now() - interval '5 minutes')
     returning o.*, (select p.provider_payment_id from payment_orders p where p.id = o.payment_order_id) as provider_payment_id,
       (select p.amount_paise from payment_orders p where p.id = o.payment_order_id) as amount_paise`;
   if (!o) {
@@ -352,8 +355,8 @@ opsRoutes.post("/admin/medicine/orders/:orderId/cancel", async (c) => {
       ? "This order is delivered. Handle a return with the patient first." : "This order is being cancelled already.");
   }
   // the refund first: an order is only marked cancelled once the money is on its way back
-  let refundId: string | null = null;
-  if (o.provider_payment_id && o.amount_paise)
+  let refundId: string | null = o.refund_id ?? null;
+  if (!refundId && o.provider_payment_id && o.amount_paise)
     refundId = await refundPayment(o.provider_payment_id, o.amount_paise, { order: flow.orderNumber(id), reason }).catch(async () => {
       await sql`update medicine_orders set cancelled_at = null where id = ${id}`;
       return fail(502, "The refund could not be started. Nothing was changed. Try again, or refund in the Razorpay dashboard.");

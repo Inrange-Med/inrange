@@ -24,8 +24,8 @@ always shows everything too; WhatsApp only tells people there is something to se
 | Consultation booked (paid, or prepaid with the blood tests) | Booked, with the doctor and time | New booking, first or follow-up, and time | `/consultation/<id>` |
 | A day before (booked more than a day ahead) | Reminder | | `/consultation/<id>` |
 | 15 minutes before | Starting soon | Starting soon | `/consultation/<id>` |
-| The doctor opens the room first | The doctor is ready | | `/consultation/<id>` |
-| The patient opens the room first | | The patient is waiting | `/consultation/<id>` |
+| The doctor opens the room first (from 15 minutes before the start; an earlier look says nothing) | The doctor is ready | | `/consultation/<id>` |
+| The patient opens the room first (the same window) | | The patient is waiting | `/consultation/<id>` |
 | The patient moves it | Moved to the new time | Moved, from and to | `/consultation/<id>` |
 | The call ends | | An hour later, if the note is not signed yet | `/doctor-dashboard/notes` |
 | A chat message (at most once an hour per conversation; the words stay in the app) | The doctor replied | A patient wrote | the conversation |

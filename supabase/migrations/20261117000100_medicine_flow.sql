@@ -90,8 +90,9 @@ create index on public.patient_message_replies (patient_id, received_at desc);
 create unique index patient_message_replies_one_tap on public.patient_message_replies (message_id, action)
   where message_id is not null and action is not null;
 
--- when the patient first opened the video room (the doctor's is started_at), so each side hears the other is waiting once
-alter table public.appointments add column patient_joined_at timestamptz;
+-- when each side last opened the video room, so the other hears "waiting" only when it counts (from a
+-- quarter of an hour before the start; an early look at the room says nothing). started_at stays the call's start.
+alter table public.appointments add column patient_joined_at timestamptz, add column doctor_joined_at timestamptz;
 
 -- ---------------------------------------------------------------- the follow-up after a prescription
 -- One per cart. The nano plan's check-ins are timed from when its cart opens, so the 48-hour hold and

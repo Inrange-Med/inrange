@@ -75,8 +75,8 @@ export default function MessagesPanel({
       </div>
       {rows.length === 0 ? (
         <p className={adminStyles.empty}>
-          No messages yet. The first goes out when a doctor signs a
-          prescription.
+          No messages yet. The first goes out with the first booking,
+          prescription or reminder.
         </p>
       ) : (
         <ul className={s.rows}>
@@ -87,10 +87,16 @@ export default function MessagesPanel({
             return (
               <li key={m.id}>
                 <div className={s.row}>
+                  {/* a doctor's notice has no patient record to open */}
                   <button
                     type="button"
                     className={s.open}
-                    onClick={() => m.patientId && onOpenPatient(m.patientId)}
+                    disabled={m.kind.startsWith("DR_")}
+                    onClick={() =>
+                      m.patientId &&
+                      !m.kind.startsWith("DR_") &&
+                      onOpenPatient(m.patientId)
+                    }
                   >
                     <span className={s.what}>
                       {m.kind === "REPLY"

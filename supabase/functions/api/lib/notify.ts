@@ -75,8 +75,11 @@ async function staleReason(m: Record<string, any>): Promise<string | null> {
     if (k.elsewhere_at) return "Bought elsewhere";
   }
   if (m.kind === "PAYMENT_FAILED" && m.vars?.paymentOrderId) {
-    const [p] = await sql`select status from payment_orders where id = ${m.vars.paymentOrderId}`;
-    if (p?.status === "PAID") return "Paid since";
+    // paid since: this order, or another for the same thing (another slot, a changed cart) after it was made
+    const [p] = await sql`
+      select 1 from payment_orders f join payment_orders p on p.user_id = f.user_id and p.purpose = f.purpose
+      where f.id = ${m.vars.paymentOrderId} and p.status = 'PAID' and (p.id = f.id or p.paid_at >= f.created_at) limit 1`;
+    if (p) return "Paid since";
   }
   if (m.kind === "DOSE_REMINDER") {
     if (!m.dose_event_id) return "The dose was removed";
@@ -89,13 +92,15 @@ async function staleReason(m: Record<string, any>): Promise<string | null> {
   }
   if (m.appointment_id && SLOT_KINDS.includes(m.kind)) {
     const [a] = await sql`
-      select a.status, a.slot_id, a.started_at, a.patient_joined_at, (s.slot_date + s.start_time) at time zone 'Asia/Kolkata' as starts_at
+      select a.status, a.slot_id, a.doctor_joined_at, a.patient_joined_at, (s.slot_date + s.start_time) at time zone 'Asia/Kolkata' as starts_at
       from appointments a left join doctor_slots s on s.id = a.slot_id where a.id = ${m.appointment_id}`;
     if (!a || !["Booked", "InProgress"].includes(a.status)) return "The consultation ended or was cancelled";
     if (m.vars?.slotId && a.slot_id !== m.vars.slotId) return "The consultation moved since";
     if (BEFORE_START.includes(m.kind) && a.starts_at && new Date(a.starts_at) < new Date()) return "Too late: it has started";
-    if (m.kind === "DOCTOR_WAITING" && a.patient_joined_at) return "The patient joined already";
-    if (m.kind === "DR_PATIENT_WAITING" && a.started_at) return "The doctor joined already";
+    // "in the room" counts from a quarter of an hour before the start (an early look at the room does not)
+    const inRoom = (at: string | null) => Boolean(at && a.starts_at && new Date(at).getTime() >= new Date(a.starts_at).getTime() - 15 * 60_000);
+    if (m.kind === "DOCTOR_WAITING" && inRoom(a.patient_joined_at)) return "The patient joined already";
+    if (m.kind === "DR_PATIENT_WAITING" && inRoom(a.doctor_joined_at)) return "The doctor joined already";
   }
   if (m.kind === "DR_NOTE_TO_SIGN" && m.appointment_id) {
     const [n] = await sql`select status from clinical_notes where appointment_id = ${m.appointment_id}`;
@@ -148,9 +153,9 @@ export async function deliver(id: number): Promise<string> {
     const message = (e as Error).message.slice(0, 500);
     console.error("whatsapp send", id, message);
     // back off 2, 4, 8, 16 minutes; then it stays FAILED for the medicine queue to see
-    // a delivered status may already be in (a timeout after Meta accepted it): then it stays delivered, no retry
+    // Meta's own status may already be in (a timeout after it accepted the message): then it is not sent again
     await sql`update patient_messages set attempts = ${attempts}, error = ${message},
-      status = case when status in ('DELIVERED', 'READ') then status else ${final ? "FAILED" : "QUEUED"} end,
+      status = case when status in ('SENT', 'DELIVERED', 'READ') then status else ${final ? "FAILED" : "QUEUED"} end,
       send_after = now() + make_interval(mins => ${2 ** attempts}) where id = ${id}`;
     return final ? "FAILED" : "RETRY";
   }

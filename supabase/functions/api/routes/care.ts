@@ -227,7 +227,8 @@ careRoutes.patch("/appointments/:appointmentId/reschedule", async (c) => {
       returning s.id`;
     if (!taken) fail(409, "That time was just booked. Choose another.");
     if (a.slot_id) await tx`update doctor_slots set status = 'Available' where id = ${a.slot_id}`;
-    await tx`update appointments set slot_id = ${slotId}, status = 'Booked', started_at = null where id = ${appointmentId}`;
+    await tx`update appointments set slot_id = ${slotId}, status = 'Booked', started_at = null, patient_joined_at = null,
+             doctor_joined_at = null where id = ${appointmentId}`;
     const [out] = await tx`
       select a.id as "AppointmentId", a.doctor_id as "DoctorId", to_char(s.slot_date, 'YYYY-MM-DD') as "SlotDate",
         to_char(s.start_time, 'HH24:MI:SS') as "StartTime", to_char(s.end_time, 'HH24:MI:SS') as "EndTime", a.status as "Status"
@@ -463,15 +464,21 @@ careRoutes.get("/video/appointments/:appointmentId/join", async (c) => {
       fail(502, "The video room could not be opened. Please try again in a moment.");
     }
   }
-  // the first time each side opens the room, the other hears it on WhatsApp if they are not in yet
-  if (role === "doctor") {
-    const [first] = await sql`update appointments set status = 'InProgress', started_at = now()
-                              where id = ${a.id} and started_at is null returning patient_joined_at`;
-    if (first && !first.patient_joined_at) await sendNow(await notices.joined(a.id, "doctor"));
-  } else {
-    const [first] = await sql`update appointments set patient_joined_at = now()
-                              where id = ${a.id} and patient_joined_at is null returning started_at`;
-    if (first && !first.started_at) await sendNow(await notices.joined(a.id, "patient"));
+  // each join is stamped; from a quarter of an hour before the start, the other side hears it on WhatsApp
+  // if they are not in the room yet (once: the message is keyed on the slot). An early look says nothing.
+  const [seen] = await sql`
+    update appointments a set
+      status = case when ${role} = 'doctor' and a.status = 'Booked' then 'InProgress' else a.status end,
+      started_at = case when ${role} = 'doctor' and a.status = 'Booked' then coalesce(a.started_at, now()) else a.started_at end,
+      doctor_joined_at = case when ${role} = 'doctor' then now() else a.doctor_joined_at end,
+      patient_joined_at = case when ${role} = 'patient' then now() else a.patient_joined_at end
+    where a.id = ${a.id}
+    returning (select (s.slot_date + s.start_time) at time zone 'Asia/Kolkata' - interval '15 minutes'
+               from doctor_slots s where s.id = a.slot_id) as window_opens, a.doctor_joined_at, a.patient_joined_at`;
+  if (seen?.window_opens && new Date(seen.window_opens) <= new Date()) {
+    const other = role === "doctor" ? seen.patient_joined_at : seen.doctor_joined_at;
+    if (!other || new Date(other) < new Date(seen.window_opens))
+      await notices.joined(a.id, role).then(sendNow).catch((e) => console.error("join notice", (e as Error).message));
   }
   return ok(c, { joinLink: link, role });
 });
@@ -488,7 +495,7 @@ careRoutes.post("/video/appointments/:appointmentId/end", async (c) => {
   });
   await endRoom(a.video_room_id);
   // the note to sign: a reminder an hour later, unless it is signed by then
-  await notices.callEnded(a.id);
+  await notices.callEnded(a.id).catch((e) => console.error("note notice", (e as Error).message));
   return ok(c, null, "Consultation ended");
 });
 
