@@ -128,6 +128,9 @@ export function useOnboardingProgress(
         });
         // the profile has everything the check held
         clearFreeCheck();
+        // the first step the check chose opens now, as it would have with nothing left to ask
+        if (prefilled?.firstStep === "UPLOAD") path.setPhase("upload");
+        else if (prefilled?.firstStep === "LAB") setAutoLab(true);
       }
       setStep(upNext);
       setDirection(1);

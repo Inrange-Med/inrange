@@ -1073,9 +1073,7 @@ span.back {
   white-space: nowrap;
 }
 .bandText {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
+  display: contents;
   font-size: 0.9375rem;
   line-height: 1.5;
   color: var(--ink-2);
@@ -1097,10 +1095,16 @@ span.back {
   line-height: 1.6;
   color: var(--paper);
 }
-/* name first, the range on the right of it, the line under both */
-.bandText {
-  grid-column: 2 / -1;
+/* name first, the range on the right of it, the line under both; the name wraps in its own
+   column, so larger text never runs it into the range */
+.bandText > strong {
+  grid-column: 2;
   grid-row: 1;
+  min-width: 0;
+}
+.bandText > span {
+  grid-column: 2 / -1;
+  grid-row: 2;
 }
 .bandRange {
   grid-column: 3;

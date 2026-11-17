@@ -187,5 +187,7 @@ async function savePrefill(
     done,
     problem,
     fromCheck: done.some((step) => step !== 1),
+    // opened once the patient finishes the questions left (useOnboardingProgress submit)
+    firstStep: check.firstStep,
   };
 }

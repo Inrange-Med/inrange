@@ -253,10 +253,12 @@ export default function FreeCheck() {
           lastName: saved.identity.lastName,
           email: saved.identity.email,
           mobile: saved.identity.mobile ?? "",
-          consented: saved.identity.consents.length > 0,
-          ai: saved.identity.consents.includes("AI"),
-          whatsapp: saved.identity.consents.includes("WHATSAPP"),
+          // a tick counts only for the wording it was given to; a changed wording is asked again
+          consented: saved.identity.consentVersion === CONSENT_VERSION && saved.identity.consents.length > 0,
+          ai: saved.identity.consentVersion === CONSENT_VERSION && saved.identity.consents.includes("AI"),
+          whatsapp: saved.identity.consentVersion === CONSENT_VERSION && saved.identity.consents.includes("WHATSAPP"),
         });
+      setFirstStep(saved.firstStep ?? null);
       setStep(at("details"));
     }
     history.replaceState({ ...history.state, checkStep: saved ? at("details") : 0 }, "");
@@ -282,6 +284,8 @@ export default function FreeCheck() {
   useEffect(() => {
     if (!ready) return;
     window.scrollTo(0, 0);
+    // the code screen focuses its own input (the keyboard and the code suggestion come up)
+    if (STEPS[step].key === "code") return;
     const timer = window.setTimeout(() => headingRef.current?.focus({ preventScroll: true }), 80);
     return () => window.clearTimeout(timer);
   }, [step, ready]);
@@ -309,11 +313,6 @@ export default function FreeCheck() {
     }
   };
 
-  // the code screen needs a number to send to (a stale Forward after a reload has none): back to the details
-  useEffect(() => {
-    if (ready && STEPS[step].key === "code" && !isValidMobile(identity.mobile)) go(at("details"), true);
-  }, [ready, step, identity.mobile, go]);
-
   const bmi = bmiFrom(d.heightCm, d.weightKg);
   const band = bandOf(bmi);
   const range = useMemo(() => healthyRange(d.heightCm, wu), [d.heightCm, wu]);
@@ -322,6 +321,16 @@ export default function FreeCheck() {
   const diabetes = d.conditions.includes("T2D") || d.conditions.includes("PREDIABETES");
   // weight care is not for a BMI below the healthy range; diabetes care still can be
   const canBook = band !== "under" || diabetes;
+
+  // Back and Forward can reach any screen: someone the programme is not for never sees the details or
+  // the code (their plan says why), and the code screen needs a number to send to (a stale Forward
+  // after a reload has none), so it goes back to the details
+  useEffect(() => {
+    if (!ready) return;
+    const key = STEPS[step].key;
+    if ((key === "details" || key === "code") && !canBook) go(at("plan"), true);
+    else if (key === "code" && !isValidMobile(identity.mobile)) go(at("details"), true);
+  }, [ready, step, identity.mobile, go, canBook]);
 
   const next = () => {
     const why = problemOf(cur.key, d);
@@ -685,6 +694,8 @@ export default function FreeCheck() {
         onChangeNumber={() => go(at("details"))}
         onVerified={({ role, nextScreen }) => {
           setLeaving(true);
+          const answers = answersOf(d, identity, firstStep ?? undefined);
+          if (answers) saveFreeCheck(answers);
           // an existing account: the profile is already done, so the check's answers are not used
           router.replace(role !== "PATIENT" || nextScreen !== "ONBOARDING" ? homePathFor(role) : "/onboarding");
         }}

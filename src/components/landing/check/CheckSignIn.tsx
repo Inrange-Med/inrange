@@ -26,6 +26,9 @@ import s from "./FreeCheck.module.css";
 export type Identity = { firstName: string; lastName: string; email: string; mobile: string; consented: boolean; ai: boolean; whatsapp: boolean };
 
 const RESEND_AFTER_S = 30;
+/** A code lasts 5 minutes (routes/auth.ts CODE_MINUTES); within 4 a return to this screen keeps the one already sent,
+    because a new send replaces it and the code in the person's messages would stop working. */
+const REUSE_FOR_S = 4 * 60;
 type Field = "firstName" | "email" | "mobile" | "consent";
 
 /** What stops the details going on, and which box it belongs to. */
@@ -201,14 +204,14 @@ export function CheckCode({
   /** the session is saved; the check decides where to go from the role and the next screen */
   onVerified: (who: { role: UserRole; nextScreen: NextScreen }) => void;
 }) {
-  const recent = lastSend?.mobile === mobile && Date.now() - lastSend.at < RESEND_AFTER_S * 1000 ? lastSend : null;
+  const recent = lastSend?.mobile === mobile && Date.now() - lastSend.at < REUSE_FOR_S * 1000 ? lastSend : null;
   const [sending, setSending] = useState(!recent);
   const [sent, setSent] = useState(!!recent);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const [code, setCode] = useState("");
   const [hint, setHint] = useState<string | null>(recent?.hint ?? null);
-  const [resendIn, setResendIn] = useState(recent ? Math.ceil(RESEND_AFTER_S - (Date.now() - recent.at) / 1000) : 0);
+  const [resendIn, setResendIn] = useState(recent ? Math.max(0, Math.ceil(RESEND_AFTER_S - (Date.now() - recent.at) / 1000)) : 0);
   const [done, setDone] = useState(false);
   const codeRef = useRef<HTMLInputElement>(null);
   const smsListener = useRef<AbortController | null>(null);

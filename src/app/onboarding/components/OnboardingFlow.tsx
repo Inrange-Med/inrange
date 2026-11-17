@@ -91,7 +91,13 @@ async function loadStart(): Promise<Start> {
   const config = { ...BUNDLED_CONFIG, ...served };
   // the free check, done on the site before signing in: its answers are saved now, so only what it
   // never asked is left (name and email, consent). Not for a finished profile.
-  const check = status?.completed ? null : readFreeCheck();
+  const stored = status?.completed ? null : readFreeCheck();
+  // the check belongs to the number it was filled in for: another account signing in on this tab
+  // never takes its name, health answers or consent
+  const forThisNumber =
+    !stored?.identity?.mobile ||
+    stored.identity.mobile === user.mobile.replace(/\D/g, "").slice(-10);
+  const check = forThisNumber ? stored : null;
   if (check) {
     const prefilled = await prefillFromFreeCheck(check, status, config);
     return { status: prefilled.status, config, prefilled };
