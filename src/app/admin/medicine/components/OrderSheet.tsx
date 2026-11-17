@@ -2,9 +2,11 @@
 
 /*
   One delivery. Opened from "Dispatch" it is the dispatch form (courier, tracking link or number,
-  expected date: the patient gets them on WhatsApp). Otherwise it shows where the order goes, what is in
-  it and every step so far, with the two rarer actions: a new expected date (the patient is told), and
-  cancel with a full refund, which asks for the reason and confirms the consequence first.
+  expected date: the patient is told on WhatsApp); from "Mark delivered" it asks once more, because a
+  delivered order never moves back and the patient is told at once. Otherwise it shows where the order
+  goes, what is in it and every step so far, with the two rarer actions while it is on its way: a new
+  expected date (the patient is told), and cancel with a full refund, which asks for the reason and
+  confirms the consequence first.
 */
 
 import { useEffect, useState } from "react";
@@ -18,29 +20,36 @@ import {
   delayOrder,
   moveOrder,
 } from "@/services/medicineOpsService";
+import { combineDateAndTime, toApiDate } from "@/lib/format/dateTime";
 import type { OpsOrder } from "@/types/medicineOps";
 import { ORDER_WORDS, when } from "./words";
 import formStyles from "@/components/ui/styles/FormControls.module.css";
 import adminStyles from "@/app/admin/styles/AdminSurfaces.module.css";
 import s from "./Medicine.module.css";
 
-const dateInput = (d: Date) =>
-  new Date(d.getTime() + 5.5 * 3600_000).toISOString().slice(0, 10);
 /** An India-time day as the end of that day's deliveries (7 pm). */
-const dayToIso = (day: string) =>
-  new Date(`${day}T19:00:00+05:30`).toISOString();
+const dayToIso = (day: string) => combineDateAndTime(day, "19:00");
+/** Why the chosen day cannot be sent, or null: empty, or already past 7 pm that day. */
+const dayProblem = (day: string) =>
+  !/^\d{4}-\d{2}-\d{2}$/.test(day)
+    ? "Choose a date."
+    : Date.parse(dayToIso(day)) <= Date.now()
+      ? "Choose a later date."
+      : null;
 
-type Mode = "view" | "dispatch" | "delay" | "cancel";
+export type OrderSheetStart = "view" | "dispatch" | "deliver";
+type Mode = OrderSheetStart | "delay" | "cancel";
 
 export default function OrderSheet({
   order,
-  dispatch,
+  start,
   onClose,
   onOpenPatient,
   onChanged,
 }: {
   order: OpsOrder | null;
-  dispatch: boolean;
+  /** what the sheet opens on: the order, the dispatch form, or the delivery confirmation */
+  start: OrderSheetStart;
   onClose: () => void;
   onOpenPatient: (id: string) => void;
   onChanged: () => void;
@@ -56,14 +65,16 @@ export default function OrderSheet({
 
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect -- reset when another order opens */
-    setMode(dispatch ? "dispatch" : "view");
+    setMode(start);
     setCourier(order?.courier ?? "");
     setTracking(order?.trackingUrl ?? order?.trackingNo ?? "");
+    // the expected date, or (none yet, or already past on a late order) a day from now
+    const expected = order?.expectedAt ? new Date(order.expectedAt) : null;
     setDay(
-      dateInput(
-        order?.expectedAt
-          ? new Date(order.expectedAt)
-          : new Date(Date.now() + 2 * 86400_000),
+      toApiDate(
+        expected && expected.getTime() > Date.now()
+          ? expected
+          : new Date(Date.now() + (expected ? 1 : 2) * 86400_000),
       ),
     );
     setReason("");
@@ -71,7 +82,7 @@ export default function OrderSheet({
     /* eslint-enable react-hooks/set-state-in-effect */
   }, [
     order?.id,
-    dispatch,
+    start,
     order?.courier,
     order?.trackingUrl,
     order?.trackingNo,
@@ -92,6 +103,7 @@ export default function OrderSheet({
   ].includes(order.status);
 
   const run = async (work: () => Promise<void>, done: string) => {
+    if (busy) return;
     setBusy(true);
     setProblem(null);
     try {
@@ -111,7 +123,12 @@ export default function OrderSheet({
       if (!courier.trim()) return setProblem("Add the courier.");
       if (!tracking.trim())
         return setProblem("Add the tracking link or number.");
-      const link = /^https:\/\//.test(tracking.trim());
+      const link = /^https:\/\//i.test(tracking.trim());
+      // a link the patient cannot open safely is refused, never saved as a "number"
+      if (!link && /^http:|:\/\/|^www\./i.test(tracking.trim()))
+        return setProblem("A tracking link must start with https://.");
+      const late = dayProblem(day);
+      if (late) return setProblem(late);
       return run(
         () =>
           moveOrder(order.id, {
@@ -125,11 +142,19 @@ export default function OrderSheet({
         `${order.orderNumber} dispatched. The patient has the tracking.`,
       );
     }
-    if (mode === "delay")
+    if (mode === "deliver")
+      return run(
+        () => moveOrder(order.id, { to: "DELIVERED" }),
+        `${order.orderNumber} delivered. The patient was told.`,
+      );
+    if (mode === "delay") {
+      const late = dayProblem(day);
+      if (late) return setProblem(late);
       return run(
         () => delayOrder(order.id, dayToIso(day)),
         "New date sent to the patient",
       );
+    }
     if (mode === "cancel") {
       if (reason.trim().length < 3)
         return setProblem("Say why the order is cancelled.");
@@ -143,11 +168,13 @@ export default function OrderSheet({
   const title =
     mode === "dispatch"
       ? `Dispatch ${order.orderNumber}`
-      : mode === "delay"
-        ? "A new expected date"
-        : mode === "cancel"
-          ? `Cancel ${order.orderNumber}`
-          : order.orderNumber;
+      : mode === "deliver"
+        ? `Mark ${order.orderNumber} delivered`
+        : mode === "delay"
+          ? "A new expected date"
+          : mode === "cancel"
+            ? `Cancel ${order.orderNumber}`
+            : order.orderNumber;
 
   return (
     <Sheet open onClose={onClose} title={title}>
@@ -228,17 +255,16 @@ export default function OrderSheet({
                 <dd className="num">{when(order.placedAt)}</dd>
               </div>
             </dl>
-            {order.status !== "CANCELLED" && (
+            {/* a delivered order is not refunded from here: the patient has it (call them first) */}
+            {onTheWay && (
               <div className={adminStyles.actions}>
-                {onTheWay && (
-                  <button
-                    type="button"
-                    className={adminStyles.textBtn}
-                    onClick={() => setMode("delay")}
-                  >
-                    Give a new expected date
-                  </button>
-                )}
+                <button
+                  type="button"
+                  className={adminStyles.textBtn}
+                  onClick={() => setMode("delay")}
+                >
+                  Give a new expected date
+                </button>
                 <button
                   type="button"
                   className={adminStyles.textBtn}
@@ -291,7 +317,7 @@ export default function OrderSheet({
                   type="date"
                   className={s.input}
                   value={day}
-                  min={dateInput(new Date())}
+                  min={toApiDate(new Date())}
                   onChange={(e) => setDay(e.target.value)}
                 />
                 {mode === "delay" && (
@@ -300,6 +326,13 @@ export default function OrderSheet({
                   </span>
                 )}
               </label>
+            )}
+            {mode === "deliver" && (
+              <p className={adminStyles.confirm}>
+                The patient is told the order has arrived and, two hours later,
+                asked whether it came as it should. A delivered order cannot be
+                moved back.
+              </p>
             )}
             {mode === "cancel" && (
               <>
@@ -312,12 +345,14 @@ export default function OrderSheet({
                   order stop. This cannot be undone.
                 </p>
                 <label className={formStyles.field}>
-                  <span className={formStyles.label}>Reason</span>
+                  <span className={formStyles.label}>
+                    Reason (the patient sees this)
+                  </span>
                   <textarea
                     className={s.textarea}
                     value={reason}
                     maxLength={500}
-                    placeholder="Out of stock, damaged in transit, patient asked"
+                    placeholder="Out of stock, or damaged in transit"
                     onChange={(e) => setReason(e.target.value)}
                   />
                 </label>
@@ -334,6 +369,7 @@ export default function OrderSheet({
                 className={`btn ${formStyles.go}`}
                 data-busy={busy}
                 aria-busy={busy}
+                disabled={busy}
                 onClick={submit}
               >
                 <span>
@@ -341,9 +377,11 @@ export default function OrderSheet({
                     ? "Saving"
                     : mode === "dispatch"
                       ? "Dispatch and tell the patient"
-                      : mode === "delay"
-                        ? "Send the new date"
-                        : "Cancel and refund"}
+                      : mode === "deliver"
+                        ? "Mark delivered"
+                        : mode === "delay"
+                          ? "Send the new date"
+                          : "Cancel and refund"}
                 </span>
                 <span className="well" aria-hidden="true">
                   {busy ? (
@@ -353,7 +391,7 @@ export default function OrderSheet({
                   )}
                 </span>
               </button>
-              {!dispatch && (
+              {start === "view" && (
                 <button
                   type="button"
                   className={adminStyles.textBtn}

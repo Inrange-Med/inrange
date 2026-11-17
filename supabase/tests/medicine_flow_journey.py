@@ -179,16 +179,17 @@ def main():
     # the order opens: time moves on
     sql(f"update medicine_carts set available_at = now() - interval '1 minute' where patient_id = {nano_id}; update medicine_followups set next_at = now() - interval '1 minute' where patient_id = {nano_id}")
     tick()
-    c1 = last(nano_id, "CHECK_IN_1")
+    c1 = last(nano_id, "CHECK_IN")
     step("nano: first check-in sent", c1 is not None and one(f"select status from patient_messages where id = {c1}") == "SENT")
     reply(admin, c1, "LATER")
-    step("nano: 'Need more time' moves the next check-in a day on",
+    step("nano: a second tap of the same button acts once", reply(admin, c1, "LATER") == "Already handled")
+    step("nano: 'Remind me later' moves the next check-in a day on",
          one(f"select next_at > now() + interval '23 hours' from medicine_followups where patient_id = {nano_id}") == "t")
     step("nano: the patient got a plain reply", one(f"select count(*) from patient_messages where patient_id = {nano_id} and kind = 'REPLY'") == "1")
     sql(f"update medicine_followups set next_at = now() - interval '1 minute' where patient_id = {nano_id}")
     tick()
-    c2 = last(nano_id, "CHECK_IN_2")
-    step("nano: second check-in sent", c2 is not None)
+    c2 = last(nano_id, "CHECK_IN")
+    step("nano: second check-in sent", c2 is not None and c2 != c1)
     reply(admin, c2, "QUESTIONS")
     t = task(nano_id, "QUESTIONS")
     step("nano: 'I have questions' opens a high-priority call-back", t and t[0][1] == "HIGH" and t[0][2] == "OPEN", t)
@@ -260,10 +261,10 @@ def main():
     step("plan: three months, the order ready at once", signed["months"] == 3, signed)
     s, b = call("PATCH", "/api/care/cart", plan, {"lines": [{"medicineId": "1", "quantity": 1}]})
     step("plan: buys one pack of the three prescribed", s == 200 and b["data"]["lines"][0]["quantity"] == 1, b)
-    step("plan: prescription sent with the order link", [r[1] for r in messages(plan_id)] == ["RX_READY_ORDER"])
+    step("plan: prescription sent, linking to it in the app", [r[1] for r in messages(plan_id)] == ["RX_READY"])
     sql(f"update medicine_followups set next_at = now() - interval '1 minute' where patient_id = {plan_id}")
     tick()
-    step("plan: a reminder a day later", last(plan_id, "PLAN_REMINDER") is not None)
+    step("plan: a check-in a day later", last(plan_id, "CHECK_IN") is not None)
 
     # a failed payment first (signed Razorpay webhook), then the real one
     cart2 = one(f"select id from medicine_carts where patient_id = {plan_id} and status = 'OPEN'")
@@ -273,7 +274,8 @@ def main():
     sig = hmac.new(RZP_SECRET.encode(), event.encode(), hashlib.sha256).hexdigest()
     s, b = call("POST", "/api/webhooks/razorpay", raw=event, headers={"X-Razorpay-Signature": sig, "X-Razorpay-Event-Id": f"evt_{uuid.uuid4().hex[:12]}"})
     step("plan: payment failed webhook accepted", s == 200, b)
-    step("plan: the patient is told how to try again", last(plan_id, "PAYMENT_FAILED") is not None)
+    step("plan: the patient is told, a quarter of an hour later unless it goes through",
+         one(f"select status || (send_after > now() + interval '10 minutes')::text from patient_messages where patient_id = {plan_id} and kind = 'PAYMENT_FAILED'") == "QUEUEDtrue")
     step("plan: the team gets a payment task", task(plan_id, "PAYMENT_FAILED"))
     cart2, order2 = pay(plan, plan_id)
     step("plan: paying closes the payment task", one(f"select status from ops_tasks where patient_id = {plan_id} and kind = 'PAYMENT_FAILED'") == "DONE")
@@ -307,19 +309,16 @@ def main():
     tick()
     refill = sql(f"select id, kind, status from medicine_carts where patient_id = {plan_id} and kind = 'REFILL'")
     step("plan: a refill order opens, covered by the prescription", refill and refill[0][2] == "OPEN", refill)
-    step("plan: refill reminder sent", last(plan_id, "REFILL_DUE") is not None)
+    step("plan: supply alert sent", last(plan_id, "SUPPLY_LOW") is not None)
     s, b = call("GET", "/api/care/cart", plan)
     step("app: the cart is the refill, two packs left on the prescription",
          s == 200 and b["data"]["kind"] == "REFILL" and b["data"]["lines"][0]["prescribed"] == 2, b)
 
-    # cancel and refund the delivered order (a damaged pack)
+    # a delivered order is a return for the team, never a one-tap refund
     s, b = call("POST", f"/api/admin/medicine/orders/{order2}/cancel", admin, {"reason": ""})
     step("cancel needs a reason", s == 400, b)
     s, b = call("POST", f"/api/admin/medicine/orders/{order2}/cancel", admin, {"reason": "Pack damaged in transit"})
-    step("cancelled and refunded", s == 200 and b["data"]["refundId"], b)
-    step("plan: told about the refund", last(plan_id, "ORDER_CANCELLED") is not None)
-    step("plan: upcoming doses from that order removed",
-         one(f"select count(*) from dose_events e join dose_schedules s on s.id = e.schedule_id where s.medicine_order_id = {order2} and e.status = 'DUE' and e.due_at > now()") == "0")
+    step("a delivered order cannot be cancelled and refunded", s == 409, b)
 
     # ---------------------------------------------------------------- the team
     s, b = call("POST", "/api/admin/coaches", admin, {"fullName": "Test Coach", "mobile": COACH})

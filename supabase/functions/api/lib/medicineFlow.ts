@@ -6,6 +6,7 @@ import type { TransactionSql } from "postgres";
 import { sql } from "./db.ts";
 import { addDays, atIst, dayWords, ist, nextWorkingMorning, workingDue } from "./hours.ts";
 import { deliver, queueMessage } from "./notify.ts";
+import { firstName } from "./notices.ts";
 import { type CartLine } from "./pharmacy.ts";
 
 type Tx = TransactionSql | typeof sql;
@@ -27,12 +28,6 @@ const MISSED_AFTER_HOURS = 2;
 const MAX_SNOOZES = 2;
 
 export const orderNumber = (id: number) => `MED-${String(id).padStart(5, "0")}`;
-
-async function firstName(tx: Tx, patientId: number): Promise<string> {
-  const [r] = await tx`select coalesce(nullif(p.first_name, ''), split_part(u.full_name, ' ', 1), 'there') as name
-                       from users u left join patient_profiles p on p.user_id = u.id where u.id = ${patientId}`;
-  return r?.name || "there";
-}
 
 const historyEntry = (what: string, by: number | null = null) => [{ at: new Date().toISOString(), by, what }];
 
@@ -86,20 +81,20 @@ export async function closeTasks(tx: Tx, where: { cartId?: number; medicineOrder
 // ---------------------------------------------------------------- the follow-up after a prescription
 
 /**
- * On signing (routes/doctor.ts signRx, inside its transaction): the prescription message, and, when a
- * cart was made, its follow-up. A plan patient's first reminder is 24 hours after signing; the nano
- * plan's first check-in is when its cart opens (NANO_CART_DELAY_HOURS), the second a day later.
- * Returns the message to send once the transaction commits.
+ * On signing (routes/doctor.ts signRx, inside its transaction): the prescription message, with a button
+ * that opens it in the app (the PDF itself never goes to WhatsApp), and, when a cart was made, its
+ * follow-up. A plan patient's first check-in is 24 hours after signing; the nano plan's first is when
+ * its cart opens (NANO_CART_DELAY_HOURS), the second a day later. Returns the message to send once the
+ * transaction commits.
  */
 export async function startMedicineFlow(tx: Tx, input: {
   patientId: number; prescriptionId: number; version: number; cartId: number | null; onPlan: boolean;
-  signedAt: Date; availableAt: Date; doctorName: string; pdfPath: string;
+  signedAt: Date; availableAt: Date; doctorName: string;
 }): Promise<number | null> {
   const name = await firstName(tx, input.patientId);
   const messageId = await queueMessage(tx, {
-    patientId: input.patientId, kind: input.onPlan && input.cartId ? "RX_READY_ORDER" : "RX_READY",
-    values: [name, input.doctorName], dedupeKey: `rx:${input.prescriptionId}:v${input.version}:ready`,
-    prescriptionId: input.prescriptionId, cartId: input.cartId, documentPath: input.pdfPath,
+    patientId: input.patientId, kind: "RX_READY", values: [name, input.doctorName], links: [String(input.prescriptionId)],
+    dedupeKey: `rx:${input.prescriptionId}:v${input.version}:ready`, prescriptionId: input.prescriptionId,
   });
   if (input.cartId) {
     const flow = input.onPlan ? "PLAN" : "NANO";
@@ -120,17 +115,22 @@ async function closeFollowup(tx: Tx, id: number, reason: string, what: string) {
 
 /** One follow-up step, in its own transaction (the tick calls it for every one due). */
 export async function advanceFollowup(id: number): Promise<string> {
-  const sendAfterCommit: number[] = [];
-  const result = await sql.begin(async (tx) => {
+  return await sql.begin(async (tx) => {
     const [f] = await tx`select * from medicine_followups where id = ${id} and closed_at is null for update skip locked`;
     if (!f || !f.next_at || new Date(f.next_at) > new Date()) return "not due";
     const [k] = await tx`
-      select k.*, p.valid_until from medicine_carts k join prescriptions p on p.id = k.prescription_id where k.id = ${f.cart_id}`;
-    // pre-flight (PRD 7.2 BR1): never nudge about something already settled
-    if (!k || k.status === "CLOSED") return (await closeFollowup(tx, f.id, "SUPERSEDED", "A newer prescription replaced this order"), "closed");
-    if (k.status === "PAID") return (await closeFollowup(tx, f.id, "PAID", "Paid"), "closed");
-    if (k.elsewhere_at) return (await closeFollowup(tx, f.id, "ELSEWHERE", "Bought elsewhere"), "closed");
-    if (k.valid_until && new Date(k.valid_until) <= new Date()) return (await closeFollowup(tx, f.id, "EXPIRED", "The prescription ended"), "closed");
+      select k.*, p.valid_until, d.full_name as doctor from medicine_carts k join prescriptions p on p.id = k.prescription_id
+      left join doctors d on d.id = p.doctor_id where k.id = ${f.cart_id}`;
+    // pre-flight (PRD 7.2 BR1): never nudge about something already settled; its calls close with it
+    const settle = async (reason: string, what: string) => {
+      await closeFollowup(tx, f.id, reason, what);
+      if (reason !== "PAID") await closeTasks(tx, { cartId: f.cart_id }, ["NO_REPLY", "PLAN_CALL", "PAYMENT_FAILED", "QUESTIONS"], "RESOLVED", what);
+      return "closed";
+    };
+    if (!k || k.status === "CLOSED") return await settle("SUPERSEDED", "A newer prescription replaced this order");
+    if (k.status === "PAID") return await settle("PAID", "Paid");
+    if (k.elsewhere_at) return await settle("ELSEWHERE", "Bought elsewhere");
+    if (k.valid_until && new Date(k.valid_until) <= new Date()) return await settle("EXPIRED", "The prescription ended");
 
     let flow = f.flow as "NANO" | "PLAN";
     let stage = f.stage as string;
@@ -145,9 +145,13 @@ export async function advanceFollowup(id: number): Promise<string> {
     }
     const name = await firstName(tx, f.patient_id);
     const n = f.check_ins + 1;
-    const queue = async (kind: "CHECK_IN_1" | "CHECK_IN_2" | "PLAN_REMINDER") => {
-      const mid = await queueMessage(tx, { patientId: f.patient_id, kind, values: [name], dedupeKey: `fu:${f.id}:c${n}`, cartId: k.id, prescriptionId: k.prescription_id });
-      if (mid) sendAfterCommit.push(mid);
+    // the check-in is a care follow-up with no order button (prescription medicine is never sold in the
+    // chat); it opens the prescription in the app. The tick's sendDue sends it, inside daytime
+    const queue = async () => {
+      await queueMessage(tx, {
+        patientId: f.patient_id, kind: "CHECK_IN", values: [name, k.doctor ?? "your doctor"], links: [String(k.prescription_id)],
+        dedupeKey: `fu:${f.id}:c${n}`, cartId: k.id, prescriptionId: k.prescription_id,
+      });
     };
     const step = async (next: string, what: string, nextAt: Date | null) =>
       await tx`update medicine_followups set stage = ${next}, next_at = ${nextAt}, check_ins = ${n},
@@ -165,17 +169,15 @@ export async function advanceFollowup(id: number): Promise<string> {
     };
 
     if (flow === "PLAN") {
-      if (stage === "WAITING") { await queue("PLAN_REMINDER"); await step("CHECK_IN_1", "Reminder sent", new Date(Date.now() + DAY)); }
+      if (stage === "WAITING") { await queue(); await step("CHECK_IN_1", "Check-in sent", new Date(Date.now() + DAY)); }
       else await call("PLAN_CALL");
     } else {
-      if (stage === "WAITING") { await queue("CHECK_IN_1"); await step("CHECK_IN_1", "First check-in sent", new Date(Date.now() + DAY)); }
-      else if (stage === "CHECK_IN_1" && n <= MAX_CHECK_INS) { await queue("CHECK_IN_2"); await step("CHECK_IN_2", "Second check-in sent", new Date(Date.now() + DAY)); }
+      if (stage === "WAITING") { await queue(); await step("CHECK_IN_1", "First check-in sent", new Date(Date.now() + DAY)); }
+      else if (stage === "CHECK_IN_1" && n <= MAX_CHECK_INS) { await queue(); await step("CHECK_IN_2", "Second check-in sent", new Date(Date.now() + DAY)); }
       else await call("NO_REPLY");
     }
     return "advanced";
   });
-  for (const mid of sendAfterCommit) await deliver(mid);
-  return result;
 }
 
 export async function advanceDueFollowups(limit = 50) {
@@ -188,8 +190,8 @@ export async function advanceDueFollowups(limit = 50) {
   return out;
 }
 
-/** "Order now": sends the order link; a held nano order opens early because the patient asked (conflict 1 in the PRD doc). */
-export async function orderNow(cartId: number, patientId: number, via: string, key: string) {
+/** "Order now instead" in the app: a held nano order opens early because the patient asked (conflict 1 in the PRD doc). */
+export async function orderNow(cartId: number, patientId: number, via: string) {
   const [k] = await sql`select * from medicine_carts where id = ${cartId} and patient_id = ${patientId} and status = 'OPEN'`;
   if (!k) return "No open order";
   const early = new Date(k.available_at) > new Date();
@@ -197,11 +199,7 @@ export async function orderNow(cartId: number, patientId: number, via: string, k
   await sql`update medicine_followups set next_at = greatest(coalesce(next_at, now()), now() + interval '1 day'),
             history = history || ${sql.json(historyEntry(early ? `Opened early at the patient's request (${via})` : `Asked for the order link (${via})`))}
             where cart_id = ${k.id} and closed_at is null`;
-  if (via !== "APP") {
-    const mid = await queueMessage(sql, { patientId, kind: "ORDER_LINK", values: [await firstName(sql, patientId)], dedupeKey: `${key}:link`, cartId: k.id });
-    if (mid) await deliver(mid);
-  }
-  return early ? "Opened early and sent the link" : "Sent the order link";
+  return early ? "Opened early" : "Already open";
 }
 
 /** "I have them": no more reminders about this order. */
@@ -215,11 +213,13 @@ export async function boughtElsewhere(cartId: number, patientId: number, via: st
   return "Stopped reminders: bought elsewhere";
 }
 
-/** "Need more time": the next check-in a day later, up to MAX_CHECK_INS in all. */
+export const LAST_CHECK_IN = "Already at the last check-in";
+
+/** "Remind me later": the next check-in a day later, up to MAX_CHECK_INS in all. */
 export async function later(cartId: number) {
   const [f] = await sql`select * from medicine_followups where cart_id = ${cartId} and closed_at is null`;
   if (!f || f.stage === "CALL") return "Nothing scheduled";
-  if (f.check_ins >= MAX_CHECK_INS) return "Already at the last check-in";
+  if (f.check_ins >= MAX_CHECK_INS) return LAST_CHECK_IN;
   // the next run sends the second check-in again, a day from now
   await sql`update medicine_followups set stage = ${f.flow === "NANO" ? "CHECK_IN_1" : f.stage}, next_at = now() + interval '1 day',
             history = history || ${sql.json(historyEntry("Asked for more time: next check-in tomorrow"))} where id = ${f.id}`;
@@ -238,12 +238,20 @@ export async function questions(patientId: number, cartId: number | null, key: s
 
 // ---------------------------------------------------------------- deliveries
 
-/** The days an order lasts: its shortest line (quantity x the pack's days). */
+/**
+ * The days an order lasts. Strengths of one molecule are taken one after the other (a step-up: 2.5 mg,
+ * then 5 mg), so they add up; the order lasts as long as its shortest molecule.
+ */
 export async function supplyDays(tx: Tx, lines: CartLine[]): Promise<number | null> {
   const bought = lines.filter((l) => l.quantity > 0);
   if (!bought.length) return null;
-  const packs = await tx`select id, pack_days from medicines where id in ${tx(bought.map((l) => l.medicineId))}`;
-  const days = bought.map((l) => (packs.find((p) => p.id === l.medicineId)?.pack_days ?? 0) * l.quantity).filter((d) => d > 0);
+  const packs = await tx`select id, molecule, pack_days from medicines where id in ${tx(bought.map((l) => l.medicineId))}`;
+  const byMolecule = new Map<string, number>();
+  for (const l of bought) {
+    const m = packs.find((p) => p.id === l.medicineId);
+    if (m) byMolecule.set(m.molecule.toLowerCase(), (byMolecule.get(m.molecule.toLowerCase()) ?? 0) + m.pack_days * l.quantity);
+  }
+  const days = [...byMolecule.values()].filter((d) => d > 0);
   return days.length ? Math.min(...days) : null;
 }
 
@@ -256,9 +264,9 @@ export async function onMedicinePaid(tx: Tx, orderId: number) {
   await tx`update medicine_orders set flow = ${plan ? "PLAN" : "NANO"}, supply_days = ${days} where id = ${orderId}`;
   const [f] = await tx`select id from medicine_followups where cart_id = ${o.cart_id} and closed_at is null`;
   if (f) await closeFollowup(tx, f.id, "PAID", "Paid");
-  await closeTasks(tx, { cartId: o.cart_id }, ["NO_REPLY", "PLAN_CALL", "PAYMENT_FAILED"], "PAID", "Paid");
+  await closeTasks(tx, { cartId: o.cart_id }, ["NO_REPLY", "PLAN_CALL", "PAYMENT_FAILED", "QUESTIONS"], "PAID", "Paid");
   await queueMessage(tx, {
-    patientId: o.patient_id, kind: "ORDER_CONFIRMED", medicineOrderId: orderId,
+    patientId: o.patient_id, kind: "ORDER_CONFIRMED", medicineOrderId: orderId, links: [String(orderId)],
     values: [await firstName(tx, o.patient_id), orderNumber(orderId), dayWords(new Date(o.expected_at))],
     dedupeKey: `order:${orderId}:PLACED`,
   });
@@ -272,16 +280,11 @@ export async function deliverQueued(where: { medicineOrderId?: number; cartId?: 
   for (const { id } of rows) await deliver(id);
 }
 
-/** Payment failed on a medicines order: tell the patient how to try again; the team checks in if it stays unpaid. */
+/** Payment failed on a medicines order: the team checks in if it stays unpaid (the patient's message: lib/notices.ts). */
 export async function onMedicinePaymentFailed(paymentOrderId: string) {
   const [o] = await sql`select * from payment_orders where id = ${paymentOrderId} and purpose = 'MEDICINE_ORDER'`;
   if (!o || o.status !== "CREATED") return;
   const cartId = Number(o.reference_id);
-  const mid = await queueMessage(sql, {
-    patientId: o.user_id, kind: "PAYMENT_FAILED", values: [await firstName(sql, o.user_id)],
-    dedupeKey: `pay:${o.id}:failed`, cartId,
-  });
-  if (mid) await deliver(mid);
   await openTask(sql, {
     kind: "PAYMENT_FAILED", priority: "NORMAL", patientId: o.user_id, cartId, paymentOrderId: o.id,
     title: "A medicines payment failed", detail: o.failure_reason ?? null, dueAt: workingDue(new Date(), 4),
@@ -328,17 +331,17 @@ export async function moveOrder(orderId: number, to: OrderStep, actorId: number,
       where id = ${orderId} returning *`;
     const number = orderNumber(orderId);
     const queue = (kind: Parameters<typeof queueMessage>[1]["kind"], values: string[], suffix: string = to, sendAfter?: Date) =>
-      queueMessage(tx, { patientId: o.patient_id, kind, values, dedupeKey: `order:${orderId}:${suffix}`, medicineOrderId: orderId, sendAfter });
+      queueMessage(tx, { patientId: o.patient_id, kind, values, links: [String(orderId)], dedupeKey: `order:${orderId}:${suffix}`, medicineOrderId: orderId, sendAfter });
     if (to === "PACKED") await queue("ORDER_PACKED", [number]);
-    if (to === "DISPATCHED")
-      await queue("ORDER_DISPATCHED", [number, courier!, trackingUrl ?? `tracking number ${trackingNo}`, expected ? dayWords(expected) : "soon"]);
+    // the tracking link stays in the app: a third-party link in a template is a review risk, and the app shows it
+    if (to === "DISPATCHED") await queue("ORDER_DISPATCHED", [number, courier!, expected ? dayWords(expected) : "soon"]);
     if (to === "OUT_FOR_DELIVERY") await queue("ORDER_OUT_FOR_DELIVERY", [number]);
     if (to === "DELIVERED") {
       await queue("ORDER_DELIVERED", [number]);
       await queue("ORDER_FEEDBACK", [number], "feedback", new Date(now.getTime() + FEEDBACK_AFTER_HOURS * HOUR));
-      await closeTasks(tx, { medicineOrderId: orderId }, ["DISPATCH_DUE", "DELIVERY_LATE"], "DELIVERED", "Delivered");
+      await closeTasks(tx, { medicineOrderId: orderId }, ["DISPATCH_DUE", "DELIVERY_LATE"], "RESOLVED", "Delivered");
       if (updated.flow === "PLAN") await createDoseSchedules(tx, updated);
-    } else if (next >= 2) await closeTasks(tx, { medicineOrderId: orderId }, ["DISPATCH_DUE"], "DISPATCHED", "Dispatched");
+    } else if (next >= 2) await closeTasks(tx, { medicineOrderId: orderId }, ["DISPATCH_DUE"], "RESOLVED", "Dispatched");
     return updated;
   });
   await deliverQueued({ medicineOrderId: orderId });
@@ -417,56 +420,70 @@ async function remainingOn(tx: Tx, prescriptionId: number): Promise<CartLine[]> 
  * order opens (filled in, payable at once) and the patient is reminded; otherwise the doctor reviews first
  * (PRD 7.7 BR4) and the team sets up the review. A day after running out with nothing new: a refill gap.
  */
-export async function checkRefills() {
-  const out = { refills: 0, renewals: 0, gaps: 0 };
+export async function checkRefills(budgetMs = 40_000) {
+  const started = Date.now();
+  const out = { refills: 0, renewals: 0, gaps: 0, failed: 0 };
   const due = await sql`
     select o.*, (o.delivered_at + make_interval(days => o.supply_days)) as run_out, p.valid_until
-    from medicine_orders o left join prescriptions p on p.id = o.prescription_id
+    from medicine_orders o join prescriptions p on p.id = o.prescription_id
     where o.status = 'DELIVERED' and o.supply_days is not null
+      -- only the prescription in force: a replaced or stopped one is never refilled (the new one has its own follow-up)
+      and p.status = 'SIGNED'
       and o.delivered_at + make_interval(days => o.supply_days - ${REFILL_DAYS_AHEAD}::int) <= now()
       -- a month past running out, it is the team's (the gap task) and no longer scanned
       and o.delivered_at + make_interval(days => o.supply_days) > now() - interval '30 days'
       and not exists (select 1 from medicine_orders n where n.patient_id = o.patient_id and n.id > o.id and n.status <> 'CANCELLED')
-    order by o.id limit 100`;
+      -- what is handled drops out, so a long list never crowds out the newest: the reminder or renewal is
+      -- queued, and the gap is opened once it has run out
+      and (not exists (select 1 from patient_messages m where m.dedupe_key in ('order:' || o.id || ':refill', 'order:' || o.id || ':renewal'))
+           or (o.delivered_at + make_interval(days => o.supply_days + 1) < now()
+               and not exists (select 1 from ops_tasks t where t.dedupe_key = 'order:' || o.id || ':gap')))
+    order by o.delivered_at + make_interval(days => o.supply_days) limit 200`;
   for (const o of due) {
-    const runOut = new Date(o.run_out);
-    const [handled] = await sql`select 1 from patient_messages where dedupe_key in (${`order:${o.id}:refill`}, ${`order:${o.id}:renewal`})
-                                union all select 1 from ops_tasks where dedupe_key = ${`order:${o.id}:renewal`} limit 1`;
-    if (!handled) {
-      const name = await firstName(sql, o.patient_id);
-      const covered = o.prescription_id && o.valid_until && new Date(o.valid_until) > runOut;
-      const left = covered ? await remainingOn(sql, o.prescription_id) : [];
-      if (left.length) {
-        const cartId = await sql.begin(async (tx) => {
-          const [open] = await tx`select id from medicine_carts where prescription_id = ${o.prescription_id} and status = 'OPEN'`;
-          const id = open?.id ?? (await tx`
-            insert into medicine_carts (patient_id, prescription_id, available_at, lines, address_id, kind)
-            values (${o.patient_id}, ${o.prescription_id}, now(), ${tx.json(left)}, ${o.address_id}, 'REFILL') returning id`)[0].id;
-          // the plan rhythm on the refill: if it is not ordered within 2 days, the team calls (still before it runs out)
-          await tx`insert into medicine_followups (cart_id, patient_id, flow, stage, next_at, history)
-                   values (${id}, ${o.patient_id}, 'PLAN', 'CHECK_IN_1', now() + interval '2 days', ${tx.json(historyEntry("Refill order opened"))})
-                   on conflict (cart_id) do nothing`;
-          await queueMessage(tx, { patientId: o.patient_id, kind: "REFILL_DUE", values: [name, dayWords(runOut)], dedupeKey: `order:${o.id}:refill`, cartId: id, medicineOrderId: o.id });
-          return id;
-        });
-        await deliverQueued({ cartId });
-        out.refills++;
-      } else {
-        await queueMessage(sql, { patientId: o.patient_id, kind: "RENEWAL_DUE", values: [name, dayWords(runOut)], dedupeKey: `order:${o.id}:renewal`, medicineOrderId: o.id });
-        await openTask(sql, {
-          kind: "RENEWAL", priority: "NORMAL", patientId: o.patient_id, medicineOrderId: o.id, prescriptionId: o.prescription_id,
-          title: "Medicines run out soon: book the doctor's review", detail: `Runs out about ${dayWords(runOut)}. The prescription does not cover another supply.`,
-          dueAt: nextWorkingMorning(new Date()), dedupeKey: `order:${o.id}:renewal`,
-        });
-        out.renewals++;
+    if (Date.now() - started > budgetMs) break;
+    // one order failing never stops the others
+    try {
+      const runOut = new Date(o.run_out);
+      const [handled] = await sql`select 1 from patient_messages where dedupe_key in (${`order:${o.id}:refill`}, ${`order:${o.id}:renewal`})`;
+      if (!handled) {
+        const name = await firstName(sql, o.patient_id);
+        const covered = o.valid_until && new Date(o.valid_until) > runOut;
+        const left = covered ? await remainingOn(sql, o.prescription_id) : [];
+        if (left.length) {
+          const cartId = await sql.begin(async (tx) => {
+            const [open] = await tx`select id from medicine_carts where prescription_id = ${o.prescription_id} and status = 'OPEN'`;
+            const id = open?.id ?? (await tx`
+              insert into medicine_carts (patient_id, prescription_id, available_at, lines, address_id, kind)
+              values (${o.patient_id}, ${o.prescription_id}, now(), ${tx.json(left)}, ${o.address_id}, 'REFILL') returning id`)[0].id;
+            // the plan rhythm on the refill: if it is not ordered within 2 days, the team calls (still before it runs out)
+            await tx`insert into medicine_followups (cart_id, patient_id, flow, stage, next_at, history)
+                     values (${id}, ${o.patient_id}, 'PLAN', 'CHECK_IN_1', now() + interval '2 days', ${tx.json(historyEntry("Refill order opened"))})
+                     on conflict (cart_id) do nothing`;
+            await queueMessage(tx, { patientId: o.patient_id, kind: "SUPPLY_LOW", values: [name, dayWords(runOut)], dedupeKey: `order:${o.id}:refill`, cartId: id, medicineOrderId: o.id });
+            return id;
+          });
+          await deliverQueued({ cartId });
+          out.refills++;
+        } else {
+          await queueMessage(sql, { patientId: o.patient_id, kind: "RENEWAL_DUE", values: [name, dayWords(runOut)], dedupeKey: `order:${o.id}:renewal`, medicineOrderId: o.id });
+          await openTask(sql, {
+            kind: "RENEWAL", priority: "NORMAL", patientId: o.patient_id, medicineOrderId: o.id, prescriptionId: o.prescription_id,
+            title: "Medicines run out soon: book the doctor's review", detail: `Runs out about ${dayWords(runOut)}. The prescription does not cover another supply.`,
+            dueAt: nextWorkingMorning(new Date()), dedupeKey: `order:${o.id}:renewal`,
+          });
+          out.renewals++;
+        }
       }
+      if (runOut.getTime() + DAY < Date.now()
+        && await openTask(sql, {
+          kind: "REFILL_GAP", priority: "HIGH", patientId: o.patient_id, medicineOrderId: o.id,
+          title: "Ran out of medicines with nothing new on the way", detail: `Ran out about ${dayWords(runOut)}. Dose reminders are paused until a new supply arrives.`,
+          dueAt: workingDue(new Date(), 2), dedupeKey: `order:${o.id}:gap`,
+        })) out.gaps++;
+    } catch (e) {
+      out.failed++;
+      console.error("refill", o.id, (e as Error).message);
     }
-    if (runOut.getTime() + DAY < Date.now()
-      && await openTask(sql, {
-        kind: "REFILL_GAP", priority: "HIGH", patientId: o.patient_id, medicineOrderId: o.id,
-        title: "Ran out of medicines with nothing new on the way", detail: `Ran out about ${dayWords(runOut)}. Dose reminders are paused until a new supply arrives.`,
-        dueAt: workingDue(new Date(), 2), dedupeKey: `order:${o.id}:gap`,
-      })) out.gaps++;
   }
   return out;
 }
@@ -479,7 +496,7 @@ export async function haveEnough(orderId: number, patientId: number) {
   const runOut = new Date(o.run_out);
   const [k] = await sql`select id from medicine_carts where prescription_id = ${o.prescription_id} and status = 'OPEN' order by id desc limit 1`;
   await queueMessage(sql, {
-    patientId, kind: "REFILL_DUE", values: [await firstName(sql, patientId), dayWords(runOut)], dedupeKey: `order:${orderId}:refill2`,
+    patientId, kind: "SUPPLY_LOW", values: [await firstName(sql, patientId), dayWords(runOut)], dedupeKey: `order:${orderId}:refill2`,
     cartId: k?.id ?? null, medicineOrderId: orderId, sendAfter: new Date(runOut.getTime() - 2 * DAY),
   });
   if (k) await sql`update medicine_followups set next_at = ${new Date(runOut.getTime() - DAY)} where cart_id = ${k.id} and closed_at is null`;
@@ -498,38 +515,49 @@ export function cadenceOf(frequency: string): { cadence: "WEEKLY" | "DAILY" | "T
 }
 
 /**
- * On delivery for a plan patient: one schedule per medicine whose frequency we can remind on, from the
- * delivery day to the day the order runs out. A patient's earlier day and time for the same medicine
- * carry over, and the earlier schedule ends.
+ * On delivery for a plan patient: one schedule per molecule whose frequency we can remind on, from the
+ * delivery day to the day the order runs out. Strengths of one molecule are one schedule (a step-up is
+ * taken one pen after the other, never both on the same day). A patient's earlier day and time for the
+ * same molecule carry over, and the earlier schedule ends, with its upcoming doses removed.
  */
 // deno-lint-ignore no-explicit-any
 export async function createDoseSchedules(tx: Tx, order: Record<string, any>) {
   const [rx] = order.prescription_id ? await tx`select items from prescriptions where id = ${order.prescription_id}` : [];
   const [k] = await tx`select lines from medicine_carts where id = ${order.cart_id}`;
   if (!rx || !k) return;
+  const bought = (k.lines as CartLine[]).filter((l) => l.quantity > 0);
+  if (!bought.length) return;
+  const meds = await tx`select id, molecule from medicines where id in ${tx(bought.map((l) => l.medicineId))}`;
   const delivered = new Date(order.delivered_at ?? Date.now());
   const { date, weekday } = ist(delivered);
   const endsOn = order.supply_days ? addDays(date, order.supply_days) : null;
-  for (const line of (k.lines as CartLine[]).filter((l) => l.quantity > 0)) {
+  const groups = new Map<string, { rhythm: NonNullable<ReturnType<typeof cadenceOf>>; names: string[] }>();
+  for (const line of bought) {
     // deno-lint-ignore no-explicit-any
     const item = (rx.items as Record<string, any>[]).find((i) => Number(i.medicineId) === line.medicineId);
     const rhythm = item ? cadenceOf(String(item.frequency ?? "")) : null;
-    if (!item || !rhythm) continue;
-    const medicine = `${item.medicineName ?? ""} ${item.strength ?? ""}`.trim();
-    const generic = String(item.genericName ?? item.medicineName ?? "");
+    const molecule = String(meds.find((m) => m.id === line.medicineId)?.molecule ?? item?.genericName ?? "").toLowerCase();
+    if (!item || !rhythm || !molecule) continue;
+    const g = groups.get(molecule) ?? { rhythm, names: [] };
+    g.names.push(`${item.medicineName ?? ""} ${item.strength ?? ""}`.trim());
+    groups.set(molecule, g);
+  }
+  for (const [molecule, { rhythm, names }] of groups) {
     const [before] = await tx`
-      select s.* from dose_schedules s
-      where s.patient_id = ${order.patient_id} and s.medicine_order_id <> ${order.id} and s.cadence = ${rhythm.cadence}
-        and (s.ends_on is null or s.ends_on >= ${date}::date)
-        and exists (select 1 from prescriptions p, jsonb_array_elements(p.items) i
-                    where p.id = s.prescription_id and coalesce(i->>'genericName', i->>'medicineName') = ${generic})
-      order by s.id desc limit 1`;
-    if (before) await tx`update dose_schedules set ends_on = ${date}::date - 1 where id = ${before.id}`;
+      select * from dose_schedules
+      where patient_id = ${order.patient_id} and medicine_order_id <> ${order.id} and molecule = ${molecule}
+        and (ends_on is null or ends_on >= ${date}::date)
+      order by id desc limit 1`;
+    if (before) {
+      await tx`update dose_schedules set ends_on = ${date}::date - 1 where id = ${before.id}`;
+      await tx`delete from dose_events where schedule_id = ${before.id} and status = 'DUE'
+               and due_at >= (${date}::date)::timestamp at time zone 'Asia/Kolkata'`;
+    }
     await tx`
-      insert into dose_schedules (patient_id, prescription_id, medicine_order_id, medicine, cadence, weekday, times, starts_on, ends_on)
-      values (${order.patient_id}, ${order.prescription_id}, ${order.id}, ${medicine}, ${rhythm.cadence},
+      insert into dose_schedules (patient_id, prescription_id, medicine_order_id, medicine, molecule, cadence, weekday, times, starts_on, ends_on)
+      values (${order.patient_id}, ${order.prescription_id}, ${order.id}, ${names.join(", then ")}, ${molecule}, ${rhythm.cadence},
         ${rhythm.cadence === "WEEKLY" ? (before?.weekday ?? weekday) : null}, ${before?.times ?? rhythm.times}, ${date}, ${endsOn})
-      on conflict (medicine_order_id, medicine) do nothing`;
+      on conflict (medicine_order_id, molecule) do nothing`;
   }
 }
 
@@ -545,7 +573,7 @@ export async function makeDoseEvents(scheduleId: number | null = null) {
     cross join lateral unnest(s.times) t
     where not s.paused and d::date >= s.starts_on and (s.ends_on is null or d::date <= s.ends_on)
       and (s.cadence <> 'WEEKLY' or extract(isodow from d) = s.weekday)
-      and (d::date + t::time) at time zone 'Asia/Kolkata' > s.created_at
+      and (d::date + t::time) at time zone 'Asia/Kolkata' > greatest(s.created_at, now())
       and (${scheduleId}::int is null or s.id = ${scheduleId})
     on conflict (schedule_id, due_at) do nothing returning id`;
 }
@@ -556,14 +584,15 @@ export async function checkDoses() {
     select e.id, e.patient_id from dose_events e join dose_schedules s on s.id = e.schedule_id
     where e.status = 'DUE' and not s.paused and e.due_at <= now() and e.due_at > now() - make_interval(hours => ${MISSED_AFTER_HOURS}::int)
       and not exists (select 1 from patient_messages m where m.dedupe_key = 'dose:' || e.id)`;
-  for (const e of due) {
-    const mid = await queueMessage(sql, { patientId: e.patient_id, kind: "DOSE_REMINDER", values: [await firstName(sql, e.patient_id)], dedupeKey: `dose:${e.id}`, doseEventId: e.id });
-    if (mid) await deliver(mid);
-  }
+  // queued only: the tick's sendDue sends them, within its time budget
+  for (const e of due)
+    await queueMessage(sql, { patientId: e.patient_id, kind: "DOSE_REMINDER", values: [await firstName(sql, e.patient_id)], dedupeKey: `dose:${e.id}`, doseEventId: e.id });
+  // a paused schedule's doses are not missed: the patient chose to stop the reminders
   const missed = await sql`
-    update dose_events set status = 'MISSED'
-    where status = 'DUE' and due_at + make_interval(hours => ${MISSED_AFTER_HOURS}::int + snoozes) < now()
-    returning patient_id`;
+    update dose_events e set status = 'MISSED' from dose_schedules s
+    where s.id = e.schedule_id and not s.paused
+      and e.status = 'DUE' and e.due_at + make_interval(hours => ${MISSED_AFTER_HOURS}::int + e.snoozes) < now()
+    returning e.patient_id`;
   for (const p of new Set(missed.map((m) => m.patient_id as number))) await checkAdherence(p);
   return { created: made.length, reminded: due.length, missed: missed.length };
 }
@@ -572,7 +601,7 @@ export async function checkDoses() {
 export async function recordDose(eventId: number, patientId: number, status: "TAKEN" | "SKIPPED", reason: string | null): Promise<Date | null> {
   const [e] = await sql`select * from dose_events where id = ${eventId} and patient_id = ${patientId}`;
   if (!e) throw new Error("That dose was not found.");
-  const late = e.status === "MISSED" || Date.now() > new Date(e.due_at).getTime() + MISSED_AFTER_HOURS * HOUR;
+  const late = e.status === "MISSED" || Date.now() > new Date(e.due_at).getTime() + (MISSED_AFTER_HOURS + e.snoozes) * HOUR;
   const final = status === "TAKEN" ? (late ? "TAKEN_LATE" : "TAKEN") : "SKIPPED";
   await sql`update dose_events set status = ${final}, skip_reason = ${status === "SKIPPED" ? reason ?? "OTHER" : null}, responded_at = now()
             where id = ${eventId}`;

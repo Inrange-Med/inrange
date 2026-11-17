@@ -287,6 +287,8 @@
 .facts dd {
   font-size: 1rem;
   line-height: 1.4;
+  /* a tracking number or link has no spaces to break at */
+  overflow-wrap: anywhere;
 }
 .facts > div:last-child:nth-child(odd),
 .facts > .wide {

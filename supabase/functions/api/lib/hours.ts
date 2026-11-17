@@ -74,6 +74,18 @@ export function whenWords(due: Date, now = new Date()): string {
   return `on ${day} by ${time}`;
 }
 
+/** "10:30 am" for an India-time "HH:MM". */
+export const clockWords = (time: string) =>
+  new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", hour: "numeric", minute: "2-digit", hour12: true })
+    .format(atIst("2026-01-01", time.slice(0, 5))).toLowerCase();
+
+/** "Tue, 18 Nov, 10:30 am" for an India-time date and "HH:MM". */
+export const spokenSlot = (date: string, time: string) => {
+  const day = new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", weekday: "short", day: "numeric", month: "short" })
+    .format(atIst(date, time.slice(0, 5)));
+  return `${day}, ${clockWords(time)}`;
+};
+
 /** "18 Nov" for messages. */
 export const dayWords = (d: Date) =>
   new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" }).format(d);
@@ -97,5 +109,6 @@ if (import.meta.main) {
   assert(whenWords(at("2026-11-17T14:00:00+05:30"), at("2026-11-17T12:00:00+05:30")) === "within 2 hours", "words: 2 hours");
   assert(whenWords(at("2026-11-18T11:30:00+05:30"), at("2026-11-17T18:30:00+05:30")) === "by 11:30 am tomorrow", "words: tomorrow");
   assert(ist(at("2026-11-22T12:00:00+05:30")).weekday === 7, "Sunday is 7");
+  assert(clockWords("16:05") === "4:05 pm" && spokenSlot("2026-11-18", "10:30:00") === "Wed, 18 Nov, 10:30 am", `slot words ${spokenSlot("2026-11-18", "10:30:00")}`);
   console.log("hours ok");
 }

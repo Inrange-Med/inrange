@@ -28,10 +28,10 @@ patient** has an active subscription (the PRD's Program).
 
 | When | Nano plan | Plan patient |
 | --- | --- | --- |
-| Signing | Prescription on WhatsApp, no purchase link. The order is held `NANO_CART_DELAY_HOURS` (48) | Prescription on WhatsApp with "Order medicines". The order is ready at once |
-| Order opens (+48 h) | Check-in 1: Order now / I have them / Need more time | |
-| +24 h after signing | | Reminder: Order medicines / I have them |
-| +24 h | Check-in 2: the same, plus I have questions | Call task, critical, due in 2 working hours |
+| Signing | Prescription on WhatsApp, a button that opens it in the app. The order is held `NANO_CART_DELAY_HOURS` (48) | The same; the order is ready at once in the app |
+| Order opens (+48 h) | Check-in 1: All clear / I have questions / Remind me later / I have them already | |
+| +24 h after signing | | Check-in: the same buttons |
+| +24 h | Check-in 2: the same | Call task, critical, due in 2 working hours |
 | +24 h | Call task, due within a working day | |
 | Paying | Follow-up closes, call and payment tasks close, order confirmed on WhatsApp | The same |
 
@@ -43,9 +43,13 @@ T+24 / T+48 / T+72.
 - **Before every automated message** the step re-reads the state (PRD 7.2 BR1): a paid order, a newer
   prescription, "I have them", or an ended prescription closes the follow-up instead. A nano patient who
   buys a plan mid-way moves to the plan rhythm and the order opens at once (PRD 7.2 EC4).
-- **Need more time** pushes the next check-in a day, up to four check-ins in all, then the team calls.
-- **Order now** sends the order link. On a held nano order it opens the order early, because the
-  patient asked (decision on PRD conflict 1, below). The app offers the same, quietly, as "Order now instead".
+- **No ordering in the chat.** Prescription medicine is a Regulated Vertical in WhatsApp's Business
+  Messaging Policy: the check-ins are care follow-ups with no purchase button, and the patient orders and
+  pays in the app ([whatsapp.md](whatsapp.md), "The rules every template follows").
+- **Remind me later** pushes the next check-in a day, up to four check-ins in all, then the team calls.
+- **All clear** is acknowledged; the rhythm carries on.
+- **Order now instead** (the app only): on a held nano order it opens the order early, because the
+  patient asked (decision on PRD conflict 1, below).
 - **I have questions**: a high-priority call back due in 2 working hours; the reply says when ("within 2
   hours", "by 11:30 am tomorrow").
 - **Free text** on WhatsApp goes to the team as a call back (one task and one acknowledgement a day).
@@ -192,79 +196,25 @@ open. Task kinds and who they go to:
 Working hours are 10 am to 7 pm, Monday to Saturday, India time (`lib/hours.ts`). Check-ins, reminders
 and feedback reach patients only from 9 am to 9 pm; order updates go when they happen.
 
-## The messages (for WhatsApp Manager)
+## The messages
 
-Create each as a **Utility** template in English (`en`) with these names, bodies and buttons. URL
-buttons are static: `APP_URL` + the path (the web app's domain, so `https://inrangemed.com/patient-dashboard/care/cart/`).
-The two prescription templates have a **document header**. Wording rules (also the review notes): no
-medicine names, molecules, doses or prices (WhatsApp's commerce policy bars selling prescription
-medicine in a chat; the app is where those live and where the patient pays), plain words, no dashes.
-`deno run lib/messages.ts` checks every template against these rules.
-
-| Template | Body | Buttons |
-| --- | --- | --- |
-| `rx_ready` | Hi {{1}}, your prescription from {{2}} is ready. It is attached here and in the inrange app. | URL: Open the app (/patient-dashboard/care/) |
-| `rx_ready_order` | Hi {{1}}, your prescription from {{2}} is ready. It is attached here and in the inrange app. Your medicines are ready to order, filled in from the prescription. | URL: Order medicines (/patient-dashboard/care/cart/) |
-| `medicines_check_in` | Hi {{1}}, the medicines your doctor prescribed are ready to order whenever you are. How would you like to go ahead? | Quick: Order now, I have them, Need more time |
-| `medicines_check_in_2` | Hi {{1}}, checking in about the medicines your doctor prescribed. Your order is filled in and waiting in the app. We are here if anything is unclear. | Quick: Order now, I have them, Need more time, I have questions |
-| `medicines_reminder` | Hi {{1}}, your medicines are ready to order in the app, filled in from your prescription. | URL: Order medicines; Quick: I have them |
-| `medicines_order_link` | Hi {{1}}, here is your medicines order. It is filled in from your prescription, so paying is one tap. | URL: Order medicines |
-| `order_confirmed` | Hi {{1}}, we have your order {{2}}. We expect it to reach you by {{3}}, and we will message you when it leaves our pharmacy. | URL: See your order (/patient-dashboard/care/) |
-| `order_packed` | Your order {{1}} is packed and sealed, and leaves our pharmacy soon. | |
-| `order_dispatched` | Your order {{1}} is on its way with {{2}}. Track it here: {{3}}. We expect it by {{4}}. | |
-| `order_out_for_delivery` | Your order {{1}} is out for delivery today. Please keep your phone close for the courier. | |
-| `order_delivered` | Your order {{1}} has been delivered. Scan the seal on the pack to check where it came from. | |
-| `order_feedback` | Did your order {{1}} arrive as it should? | Quick: All good, Something is wrong |
-| `order_delayed` | Your order {{1}} is running late, sorry. We now expect it by {{2}}. Reply here if you need it sooner and someone from your care team will call. | |
-| `order_cancelled` | Your order {{1}} has been cancelled, and your payment is on its way back to how you paid. Refunds take 5 to 7 working days to show. | |
-| `payment_failed` | Hi {{1}}, your payment for your medicines did not go through. If any amount left your account, your bank returns it. You can try again in the app. | URL: Try again (/patient-dashboard/care/cart/) |
-| `refill_due` | Hi {{1}}, your medicines last until about {{2}}. Order your next supply now so there is no gap. | URL: Order medicines; Quick: I have enough |
-| `renewal_due` | Hi {{1}}, your medicines last until about {{2}}. Your doctor reviews your prescription before the next supply, and your care team will call to set it up. | |
-| `dose_reminder` | Hi {{1}}, it is time for your dose. Tap below once it is done. | Quick: Taken, Remind me in 1 hour, Skip this one |
-
-Replies to taps inside WhatsApp's 24-hour window are plain session messages (`ACKS` in `lib/messages.ts`),
-and the skip reasons are an interactive list. They need no template.
+Every template, its wording, buttons and deep link, and how they are submitted to Meta: [whatsapp.md](whatsapp.md).
+The code (`lib/messages.ts`) is the source.
 
 ## Turning it on
 
-1. **Apply the migration** `20261117000100_medicine_flow.sql` (`supabase db push`).
-2. **The tick.** Set `JOBS_SECRET` (`supabase secrets set JOBS_SECRET=<a long random string>`), store the same
-   value in Vault, and schedule it (SQL editor; `pg_cron` and `pg_net` are on in Supabase):
+The migrations, the tick and WhatsApp: [whatsapp.md](whatsapp.md), "Turning it on". Then:
 
-   ```sql
-   select vault.create_secret('<the same JOBS_SECRET>', 'jobs_secret');
-   select cron.schedule('inrange-tick', '*/5 * * * *', $$
-     select net.http_post(
-       url := 'https://wcsglsrjixfrobujchen.supabase.co/functions/v1/api/jobs/tick?forceFunctionRegion=ap-south-1',
-       headers := jsonb_build_object('Content-Type', 'application/json',
-         'x-jobs-secret', (select decrypted_secret from vault.decrypted_secrets where name = 'jobs_secret')),
-       body := '{}'::jsonb, timeout_milliseconds := 120000)
-   $$);
-   ```
-
-   Every step is bounded and keyed, so an overlapping or repeated tick is harmless. The last run and what
-   it did are in `job_runs` (`name = 'tick'`), and the medicine queue shows "Checked 3 min ago". Without
-   the secret the tick answers 503 and nothing runs.
-3. **WhatsApp** (WhatsApp test mode until then: everything is recorded as sent, nothing leaves, and an
-   admin plays replies from the queue). From Meta Business Manager, for inrange's verified WhatsApp
-   Business number:
-   - `WHATSAPP_TOKEN` (a system user's permanent token with `whatsapp_business_messaging`),
-     `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_APP_SECRET` (the app's secret, for the webhook signature),
-     `WHATSAPP_VERIFY_TOKEN` (any long word, typed into Meta when registering the webhook).
-   - The webhook: `https://wcsglsrjixfrobujchen.supabase.co/functions/v1/api/webhooks/whatsapp?forceFunctionRegion=ap-south-1`, subscribed
-     to `messages`.
-   - The 18 templates above, approved, before the token is set (a send with an unapproved template fails
-     and is retried five times, then shows as Not sent in Messages).
-4. **Coaches**: an admin adds them in Medicine, Patients, Health coaches, and assigns each patient.
-5. **Razorpay** already sends `payment.failed`; nothing new to register.
+1. **Coaches**: an admin adds them in Medicine, Patients, Health coaches, and assigns each patient.
+2. **Razorpay** already sends `payment.failed`; nothing new to register.
 
 ## Notes
 
 - **Consent and privacy (DPDP Act 2023).** WhatsApp is a separate, optional consent (`WHATSAPP`), unticked
   by default, on the free check and in onboarding; the profile switch records and revokes it; STOP
   revokes it. Without it nothing is sent, every message is recorded as "Not sent: not opted in", and the
-  app shows everything (orders, doses, refills). Messages carry no medicine names, doses or prices. The
-  prescription PDF goes to Meta as an uploaded file (media id), never as a storage link.
+  app shows everything (orders, doses, refills). Messages carry no medicine names, doses or prices, and the
+  prescription PDF never goes to WhatsApp: the message's button opens it in the app.
 - **Idempotency.** Every message and task has a unique key ("rx:41:v1:ready", "order:7:DISPATCHED",
   "dose:310", "fu:12:c2"), and every inbound event is recorded once by its id, so Meta's and Razorpay's
   retries, double taps and overlapping ticks act once. Sends retry with backoff (2, 4, 8, 16 minutes) and

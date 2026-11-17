@@ -31,6 +31,8 @@ import { setEligibility } from "../lib/eligibility.ts";
 import { signedUrl } from "../lib/storage.ts";
 import { priceCart, type CartLine } from "../lib/pharmacy.ts";
 import { bookAppointment } from "../lib/booking.ts";
+import * as notices from "../lib/notices.ts";
+import { sendNow } from "../lib/notify.ts";
 import { createRoom, endRoom, hmsLive, joinLink, mockJoinLink } from "../integrations/hms.ts";
 
 export const careRoutes = new Hono();
@@ -180,7 +182,7 @@ careRoutes.put("/schedule/book", async (c) => {
   const me = await requirePatient(c);
   const input = await body<{ slotId?: unknown; consultationType?: string; reason?: string }>(c);
   const slotId = intParam(String(input.slotId ?? ""), "time");
-  const appointmentId = await sql.begin(async (tx) => {
+  const { appointmentId, messages } = await sql.begin(async (tx) => {
     const [el] = await tx`select * from eligibility where user_id = ${me.id} for update`;
     if (el?.stage !== "APPROVED")
       fail(400, "You can book once your doctor has reviewed your blood test report.");
@@ -198,8 +200,10 @@ careRoutes.put("/schedule/book", async (c) => {
       patientId: me.id, slotId, reason: input.reason, consultationType: input.consultationType, prepaid: first,
     });
     if (first) await setEligibility(tx, me.id, { consultation_used: true });
-    return booked.appointmentId;
+    // the patient's confirmation and the doctor's notice on WhatsApp, both with the link to the room
+    return { appointmentId: booked.appointmentId, messages: await notices.within(tx, (sp) => notices.appointmentBooked(sp, booked.appointmentId)) };
   });
+  await sendNow(messages);
   return ok(c, { appointmentId }, "Consultation booked", { appointmentId });
 });
 
@@ -207,9 +211,11 @@ careRoutes.patch("/appointments/:appointmentId/reschedule", async (c) => {
   const me = await requirePatient(c);
   const appointmentId = intParam(c.req.param("appointmentId"), "consultation");
   const slotId = intParam(String((await body(c)).slotId ?? ""), "time");
-  const row = await sql.begin(async (tx) => {
+  const { row, messages } = await sql.begin(async (tx) => {
     const [a] = await tx`select * from appointments where id = ${appointmentId} for update`;
     if (!a || a.patient_id !== me.id) fail(400, "That consultation does not exist.");
+    const [from] = await tx`select to_char(slot_date, 'YYYY-MM-DD') as "slotDate", to_char(start_time, 'HH24:MI') as "startTime"
+                            from doctor_slots where id = ${a.slot_id}`;
     // a doctor opening the room early marks it InProgress; it is still movable until it ends
     if (a.status !== "Booked" && a.status !== "InProgress") fail(400, "Only a booked consultation can be moved.");
     const [slot] = await tx`select doctor_id from doctor_slots where id = ${slotId}`;
@@ -226,8 +232,11 @@ careRoutes.patch("/appointments/:appointmentId/reschedule", async (c) => {
       select a.id as "AppointmentId", a.doctor_id as "DoctorId", to_char(s.slot_date, 'YYYY-MM-DD') as "SlotDate",
         to_char(s.start_time, 'HH24:MI:SS') as "StartTime", to_char(s.end_time, 'HH24:MI:SS') as "EndTime", a.status as "Status"
       from appointments a join doctor_slots s on s.id = a.slot_id where a.id = ${appointmentId}`;
-    return out;
+    // both hear the new time; the old time's reminders lapse on their own (the slot changed)
+    const moved = from as { slotDate: string; startTime: string } | undefined;
+    return { row: out, messages: moved ? await notices.within(tx, (sp) => notices.appointmentMoved(sp, appointmentId, moved)) : [] };
   });
+  await sendNow(messages);
   return ok(c, row, "Appointment moved");
 });
 
@@ -363,6 +372,8 @@ careRoutes.post("/chat/sessions/:sessionId/messages", async (c) => {
     values (${s.id}, ${me.id}, ${role}, ${fileUrl ? "FILE" : "TEXT"}, ${text || null}, ${fileUrl})
     returning id`;
   if (role === "DOCTOR") await sql`update chat_sessions set doctor_last_read_at = now() where id = ${s.id}`;
+  // the other side hears there is a message (never what it says), at most once an hour
+  await notices.chatMessage(s as { id: number; patient_id: number; doctor_id: number }, role).then(sendNow).catch((e) => console.error("chat notice", (e as Error).message));
   const [row] = await sql`${messageSelect()} where m.id = ${m.id}`;
   return ok(c, row, "Sent");
 });
@@ -452,8 +463,16 @@ careRoutes.get("/video/appointments/:appointmentId/join", async (c) => {
       fail(502, "The video room could not be opened. Please try again in a moment.");
     }
   }
-  if (role === "doctor" && a.status === "Booked")
-    await sql`update appointments set status = 'InProgress', started_at = coalesce(started_at, now()) where id = ${a.id}`;
+  // the first time each side opens the room, the other hears it on WhatsApp if they are not in yet
+  if (role === "doctor") {
+    const [first] = await sql`update appointments set status = 'InProgress', started_at = now()
+                              where id = ${a.id} and started_at is null returning patient_joined_at`;
+    if (first && !first.patient_joined_at) await sendNow(await notices.joined(a.id, "doctor"));
+  } else {
+    const [first] = await sql`update appointments set patient_joined_at = now()
+                              where id = ${a.id} and patient_joined_at is null returning started_at`;
+    if (first && !first.started_at) await sendNow(await notices.joined(a.id, "patient"));
+  }
   return ok(c, { joinLink: link, role });
 });
 
@@ -468,6 +487,8 @@ careRoutes.post("/video/appointments/:appointmentId/end", async (c) => {
       on conflict (user_id) do update set care_team_doctor_id = coalesce(patient_profiles.care_team_doctor_id, excluded.care_team_doctor_id)`;
   });
   await endRoom(a.video_room_id);
+  // the note to sign: a reminder an hour later, unless it is signed by then
+  await notices.callEnded(a.id);
   return ok(c, null, "Consultation ended");
 });
 

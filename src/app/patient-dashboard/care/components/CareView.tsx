@@ -6,9 +6,11 @@
  * Data: GET /api/appointments/patient, the care team (GET /api/care-team, else the doctors from the
  * consultations), GET /api/subscriptions/status + /plans, and the PROPOSED care-plan endpoints in
  * carePlanService (prescription and deliveries; a calm note until they exist).
+ * A WhatsApp button lands here with what it is about: ?rx=<id> opens the prescription, ?order=<id>
+ * that delivery, once the care plan is in.
  */
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   loadCareTeamDoctors,
   type CareTeamDoctor,
@@ -73,6 +75,8 @@ export default function CareView() {
   const doses = useApiResource("care-doses", getDoses);
   const [doctor, setDoctor] = useState<CareTeamDoctor | null>(null);
   const [sheet, setSheet] = useState<SheetName>(null);
+  const [orderId, setOrderId] = useState<string | null>(null);
+  const linkOpened = useRef(false);
 
   const all = appointments.data ?? [];
   const doctors = team.data ?? [];
@@ -82,8 +86,25 @@ export default function CareView() {
   const prescription = carePlan.data?.prescription ?? null;
   // the delivery on its way if there is one, otherwise the last one that arrived
   const orders = carePlan.data?.orders ?? [];
-  const order = orders.find(isMoving) ?? orders[0] ?? null;
+  const order =
+    orders.find((o) => o.id === orderId) ??
+    orders.find(isMoving) ??
+    orders[0] ??
+    null;
   const closeSheet = () => setSheet(null);
+
+  useEffect(() => {
+    if (linkOpened.current || !carePlan.data) return;
+    linkOpened.current = true;
+    const query = new URLSearchParams(window.location.search);
+    /* eslint-disable react-hooks/set-state-in-effect -- the link's target, opened once, when the plan has loaded */
+    if (query.has("rx") && carePlan.data.prescription) setSheet("rx");
+    else if (query.get("order")) {
+      setOrderId(query.get("order"));
+      setSheet("delivery");
+    }
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, [carePlan.data]);
 
   return (
     <main className={`${layoutStyles.page} ${styles.page}`}>

@@ -18,6 +18,8 @@ import { signedUrl } from "../lib/storage.ts";
 import { bookingQuery, refreshFromLab, simulateLab, toLabBooking } from "./labs.ts";
 import { env } from "../lib/env.ts";
 import { redcliffeLive } from "../integrations/redcliffe.ts";
+import * as notices from "../lib/notices.ts";
+import { sendNow } from "../lib/notify.ts";
 
 export const adminRoutes = new Hono();
 
@@ -153,14 +155,17 @@ adminRoutes.post("/admin/reviews/:patientId", async (c) => {
   if (decision === "NOT_APPROVED" && !note) fail(400, "Add a short note for the patient on what happens next.");
   const [e] = await sql`select stage from eligibility where user_id = ${patientId}`;
   if (!e || !["UNDER_REVIEW", "APPROVED", "NOT_APPROVED"].includes(e.stage)) fail(409, "This patient has nothing to review yet.");
-  await sql.begin(async (tx) => {
+  const messages = await sql.begin(async (tx) => {
     await setEligibility(tx, patientId, { stage: decision!, review_note: note || null });
     await tx`update eligibility set reviewed_by = ${me.id}, reviewed_at = now() where user_id = ${patientId}`;
     // the patient's Reports tab shows the decision on the reports it was made from
     await tx`update reports r set review_status = ${decision!}, review_note = ${note || null}
       from eligibility e where e.user_id = ${patientId} and r.user_id = e.user_id
         and (r.purpose = 'ELIGIBILITY' or (r.lab_booking_id is not null and r.lab_booking_id = e.lab_booking_id))`;
+    // the patient hears the outcome on WhatsApp: book now, or read the note (the note itself stays in the app)
+    return await notices.within(tx, (sp) => notices.reviewDecided(sp, patientId, decision!));
   });
+  await sendNow(messages);
   return ok(c, null, decision === "APPROVED" ? "Approved" : "Marked not approved");
 });
 
@@ -229,6 +234,7 @@ adminRoutes.post("/admin/doctors", async (c) => {
       from users u where u.mobile = ${mobile} for update`;
     if (existing?.role === "ADMIN") fail(409, "This number belongs to an admin.");
     if (existing?.role === "DOCTOR") fail(409, "This number is already a doctor.");
+    if (existing?.role === "COACH") fail(409, "This number belongs to a health coach.");
     if (existing?.has_profile) fail(409, "This number already belongs to a patient. Use another number for the doctor.");
     const [u] = existing
       ? await tx`update users set role = 'DOCTOR', full_name = ${fields.full_name as string}, onboarding_completed = true

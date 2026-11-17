@@ -2,8 +2,9 @@
 
 /*
   The pharmacy's deliveries, grouped by step: to pack, to dispatch, on the way, delivered lately. Each
-  row has its one next step; dispatching asks for the courier and tracking first (the patient gets the
-  link). A row opens the order: address, items, history, a new date, or cancel and refund.
+  row has its one next step; dispatching asks for the courier and tracking first, and marking delivered
+  asks once more (neither can be undone). A row opens the order: address, items, history, a new date,
+  or cancel and refund.
 */
 
 import { useState } from "react";
@@ -14,7 +15,7 @@ import { useApiResource } from "@/hooks/useApiResource";
 import { errorMessage } from "@/lib/http/apiClient";
 import { listOrders, moveOrder } from "@/services/medicineOpsService";
 import type { OpsOrder } from "@/types/medicineOps";
-import OrderSheet from "./OrderSheet";
+import OrderSheet, { type OrderSheetStart } from "./OrderSheet";
 import { dueWords, NEXT_STEP, when } from "./words";
 import adminStyles from "@/app/admin/styles/AdminSurfaces.module.css";
 import s from "./Medicine.module.css";
@@ -44,32 +45,37 @@ const GROUPS: {
 
 export default function OrdersPanel({
   now,
+  version,
   onOpenPatient,
   onChanged,
 }: {
   now: number;
+  /** bumped by the page after a change anywhere (the patient sheet), so the list reloads */
+  version: number;
   onOpenPatient: (id: string) => void;
   onChanged: () => void;
 }) {
-  const orders = useApiResource("medicine-orders", listOrders);
+  const orders = useApiResource(`medicine-orders-${version}`, listOrders);
   const toast = useToast();
   const [opened, setOpened] = useState<{
     order: OpsOrder;
-    dispatch: boolean;
+    start: OrderSheetStart;
   } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
   const step = async (order: OpsOrder) => {
     const next = NEXT_STEP[order.status];
     if (!next) return;
-    if (next.to === "DISPATCHED") return setOpened({ order, dispatch: true });
+    if (next.to === "DISPATCHED")
+      return setOpened({ order, start: "dispatch" });
+    if (next.to === "DELIVERED") return setOpened({ order, start: "deliver" });
+    if (busy) return;
     setBusy(order.id);
     try {
       await moveOrder(order.id, { to: next.to });
       toast(
         `${order.orderNumber}: ${next.label.toLowerCase()}. The patient was told.`,
       );
-      orders.reload();
       onChanged();
     } catch (caught) {
       toast(errorMessage(caught, "That step could not be saved."));
@@ -126,16 +132,14 @@ export default function OrdersPanel({
                           <button
                             type="button"
                             className={s.open}
-                            onClick={() =>
-                              setOpened({ order, dispatch: false })
-                            }
+                            onClick={() => setOpened({ order, start: "view" })}
                           >
                             <span className={s.what}>
                               <span className="num">{order.orderNumber}</span>{" "}
                               {order.patientName}
                             </span>
                             <span className={s.sub}>
-                              <span>
+                              <span className={s.items}>
                                 {order.items.map((i) => i.name).join(", ")}
                               </span>
                               {order.courier && <span>{order.courier}</span>}
@@ -191,16 +195,13 @@ export default function OrdersPanel({
 
       <OrderSheet
         order={opened?.order ?? null}
-        dispatch={opened?.dispatch ?? false}
+        start={opened?.start ?? "view"}
         onClose={() => setOpened(null)}
         onOpenPatient={(id) => {
           setOpened(null);
           onOpenPatient(id);
         }}
-        onChanged={() => {
-          orders.reload();
-          onChanged();
-        }}
+        onChanged={onChanged}
       />
     </div>
   );

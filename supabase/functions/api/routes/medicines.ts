@@ -30,7 +30,7 @@ async function openCart(patientId: number) {
 medicineRoutes.post("/care/cart/open-now", async (c) => {
   const me = await requirePatient(c);
   const k = await openCart(me.id);
-  await flow.orderNow(k.id, me.id, "APP", `app:${k.id}:open`);
+  await flow.orderNow(k.id, me.id, "app");
   return ok(c, { cartId: String(k.id) }, "Your order is ready");
 });
 
@@ -83,10 +83,11 @@ medicineRoutes.patch("/care/doses/:scheduleId", async (c) => {
   if (b.time !== undefined) {
     const time = String(b.time);
     if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) fail(400, "Choose a time.");
-    // one time for a once-a-day or weekly dose; a twice-a-day dose keeps its second time twelve hours on
-    times = s.cadence === "TWICE_DAILY"
-      ? [time, `${String((Number(time.slice(0, 2)) + 12) % 24).padStart(2, "0")}${time.slice(2)}`].sort()
-      : [time];
+    // one time for a once-a-day or weekly dose; a twice-a-day dose keeps its other time twelve hours away,
+    // held between 7 am and 10 pm so a reminder never comes in the night
+    const hour = Number(time.slice(0, 2));
+    const other = Math.min(22, Math.max(7, hour < 12 ? hour + 12 : hour - 12));
+    times = s.cadence === "TWICE_DAILY" ? [time, `${String(other).padStart(2, "0")}${time.slice(2)}`].sort() : [time];
   }
   const paused = b.paused === undefined ? s.paused : Boolean(b.paused);
   await sql.begin(async (tx) => {

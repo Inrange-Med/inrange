@@ -1,8 +1,9 @@
 "use client";
 
 /*
-  Every WhatsApp message, newest first: what it was, to whom, and whether it went (and why not: WhatsApp
-  off, already paid, a failure from WhatsApp). In test mode an admin can play the patient's reply here.
+  Every WhatsApp message, to patients and doctors, newest first: what it was, to whom, and whether it
+  went (and why not: WhatsApp off, already paid, a failure from WhatsApp). In test mode an admin can
+  play the patient's reply here. `version` reloads the list after an action elsewhere on the page.
 */
 
 import { useState } from "react";
@@ -25,13 +26,15 @@ const notSent = (m: OpsMessage) =>
 export default function MessagesPanel({
   now,
   mock,
+  version,
   onOpenPatient,
 }: {
   now: number;
   mock: boolean;
+  version: number;
   onOpenPatient: (id: string) => void;
 }) {
-  const messages = useApiResource("medicine-messages", listMessages);
+  const messages = useApiResource(`medicine-messages-${version}`, listMessages);
   const toast = useToast();
   const [show, setShow] = useState<"all" | "unsent">("all");
   const [busy, setBusy] = useState<string | null>(null);
@@ -48,7 +51,8 @@ export default function MessagesPanel({
         <h2 id="messages-h" className={adminStyles.h2}>
           WhatsApp
         </h2>
-        {unsent.length > 0 && (
+        {/* kept while "Not sent" is chosen, so an emptied list never strands the filter */}
+        {(unsent.length > 0 || show === "unsent") && (
           <span className={s.seg}>
             <SegmentedControl
               label="Which messages"

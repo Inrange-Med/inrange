@@ -19,14 +19,17 @@ import s from "./Medicine.module.css";
 
 export default function PatientsPanel({
   isAdmin,
+  version,
   onOpenPatient,
 }: {
   isAdmin: boolean;
+  /** bumped by the page after a change in the patient sheet (a coach assigned), so the rows reload */
+  version: number;
   onOpenPatient: (id: string) => void;
 }) {
   const [query, setQuery] = useState("");
   const q = useDeferredValue(query.trim());
-  const patients = useApiResource(`medicine-patients-${q}`, () =>
+  const patients = useApiResource(`medicine-patients-${q}-${version}`, () =>
     listPatients(q),
   );
   const [coaches, setCoaches] = useState(false);

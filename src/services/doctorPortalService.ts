@@ -10,6 +10,8 @@
  *   PUT    /api/doctor/days-off/:date               marks a day off
  *   DELETE /api/doctor/days-off/:date               works that day again
  *   GET    /api/pharmacy/inventory?query=           what the pharmacy stocks, for the e-prescription (doc: medicine-cart.md)
+ *   GET    /api/doctor/whatsapp                     the doctor's WhatsApp alerts (doc: whatsapp.md)
+ *   PUT    /api/doctor/whatsapp                     { on } turns them on (a recorded opt-in) or off
  */
 
 import { apiRequest, listFrom, type ApiEnvelope } from "@/lib/http/apiClient";
@@ -24,6 +26,7 @@ import type {
   DoctorPatient,
   DoctorProfile,
   InventoryItem,
+  WhatsAppAlerts,
   WorkingRange,
 } from "@/types/doctor";
 
@@ -152,4 +155,15 @@ export async function searchInventory(
   return listFrom<InventoryItem>(
     await apiRequest("/api/pharmacy/inventory", { query: { query }, signal }),
   );
+}
+
+export async function getWhatsAppAlerts(): Promise<WhatsAppAlerts> {
+  const body = await apiRequest<ApiEnvelope<{ on?: boolean; mobile?: string }>>(
+    "/api/doctor/whatsapp",
+  );
+  return { on: Boolean(body.data?.on), mobile: body.data?.mobile ?? "" };
+}
+
+export async function setWhatsAppAlerts(on: boolean): Promise<void> {
+  await apiRequest("/api/doctor/whatsapp", { method: "PUT", body: { on } });
 }

@@ -81,10 +81,10 @@ export async function updateHealthDetails(details: {
   });
 }
 
+/** Only the switches passed change (the others keep what the server has). */
 export async function updateReminderSettings(
-  settings: Pick<
-    PatientProfile,
-    "remindersEnabled" | "whatsappReminders" | "emailReminders"
+  settings: Partial<
+    Pick<PatientProfile, "remindersEnabled" | "whatsappReminders" | "emailReminders">
   >,
 ) {
   await apiRequest("/api/patient/reminders", {

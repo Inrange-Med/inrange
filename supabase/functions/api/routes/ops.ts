@@ -6,7 +6,7 @@
 //   GET   /admin/medicine/tasks?status=&kind=&mine=    the queue, soonest due first
 //   POST  /admin/medicine/tasks/:taskId/done           { outcome, note, callBackAt? }
 //   POST  /admin/medicine/tasks/:taskId/assign         { to: "me" | userId | null }
-//   POST  /admin/medicine/tasks/:taskId/send-link      the order link to the patient on WhatsApp
+//   POST  /admin/medicine/tasks/:taskId/send-link      the app link to the patient on WhatsApp, after a call
 //   GET   /admin/medicine/patients?q=                  patients with medicine activity
 //   GET   /admin/medicine/patients/:patientId          everything about one patient's medicines
 //   PATCH /admin/medicine/patients/:patientId/coach    { coachId | null } (admin)
@@ -17,6 +17,7 @@
 //   GET   /admin/medicine/messages?patientId=&status=  every message sent or skipped
 //   POST  /admin/medicine/messages/:messageId/reply    { code?, text? } plays the patient's reply; mock mode only (admin)
 //   GET   /admin/medicine/numbers?days=30              the PRD's measures (admin)
+//   POST  /admin/whatsapp/templates/sync               submits lib/messages.ts's templates to Meta, returns each one's status (admin)
 //   GET   /admin/coaches                               the coaches (admin)
 //   POST  /admin/coaches                               { fullName, mobile } (admin)
 import { Hono } from "hono";
@@ -30,7 +31,9 @@ import { deliver, queueMessage } from "../lib/notify.ts";
 import { handleReply } from "../lib/replies.ts";
 import { priceCart, type CartLine } from "../lib/pharmacy.ts";
 import { refundPayment } from "../integrations/razorpay.ts";
-import { whatsappLive } from "../integrations/whatsapp.ts";
+import { syncTemplates, whatsappLive } from "../integrations/whatsapp.ts";
+import { env } from "../lib/env.ts";
+import { TEMPLATES, type Template } from "../lib/messages.ts";
 
 export const opsRoutes = new Hono();
 
@@ -50,9 +53,12 @@ async function patientFor(me: AuthUser, patientId: number) {
   return p;
 }
 
+/** What a coach works on; the pharmacy, payment and reconciliation tasks are the care team's alone. */
+const COACH_TASKS = ["ADHERENCE", "REFILL_GAP", "QUESTIONS", "NO_REPLY", "PLAN_CALL"];
+
 async function taskFor(me: AuthUser, taskId: number) {
   const [t] = await sql`select t.* from ops_tasks t left join patient_profiles pp on pp.user_id = t.patient_id
-                        where t.id = ${taskId} ${scope(me)}`;
+                        where t.id = ${taskId} ${scope(me)} ${me.role === "COACH" ? sql`and t.kind in ${sql(COACH_TASKS)}` : sql``}`;
   if (!t) fail(404, "That task was not found.");
   return t;
 }
@@ -101,6 +107,7 @@ opsRoutes.get("/admin/medicine/tasks", async (c) => {
     left join patient_profiles pp on pp.user_id = t.patient_id
     left join users au on au.id = t.assigned_to
     where t.status = ${status} ${kind ? sql`and t.kind = ${kind}` : sql``} ${mine ? sql`and t.assigned_to = ${me.id}` : sql``} ${scope(me)}
+      ${me.role === "COACH" ? sql`and t.kind in ${sql(COACH_TASKS)}` : sql``}
     order by ${status === "OPEN" ? sql`t.due_at asc, case t.priority when 'CRITICAL' then 0 when 'HIGH' then 1 else 2 end` : sql`t.done_at desc`}
     limit 200`;
   return ok(c, rows);
@@ -165,12 +172,12 @@ opsRoutes.post("/admin/medicine/tasks/:taskId/send-link", async (c) => {
   if (n >= 3) fail(429, "The link was sent three times already. Call the patient instead.");
   const [p] = await sql`select coalesce(nullif(first_name, ''), 'there') as first from patient_profiles where user_id = ${k.patient_id}`;
   if (new Date(k.available_at) > new Date()) await sql`update medicine_carts set available_at = now() where id = ${k.id}`;
-  const id = await queueMessage(sql, { patientId: k.patient_id, kind: "ORDER_LINK", values: [p?.first ?? "there"], dedupeKey: `task:${t.id}:link:${n + 1}`, cartId: k.id });
+  const id = await queueMessage(sql, { patientId: k.patient_id, kind: "CARE_LINK", values: [p?.first ?? "there"], dedupeKey: `task:${t.id}:link:${n + 1}`, cartId: k.id });
   const result = id ? await deliver(id) : "SKIPPED";
-  await sql`update ops_tasks set history = history || ${entry(me, result === "SENT" ? "Sent the order link on WhatsApp" : `Order link not sent (${result.toLowerCase()})`)}
+  await sql`update ops_tasks set history = history || ${entry(me, result === "SENT" ? "Sent the app link on WhatsApp" : `App link not sent (${result.toLowerCase()})`)}
             where id = ${t.id}`;
   if (result === "SKIPPED") fail(409, "The link was not sent: the patient has WhatsApp off. Read it to them on the call.");
-  return ok(c, { result }, "Order link sent");
+  return ok(c, { result }, "App link sent");
 });
 
 // ---------------------------------------------------------------- patients
@@ -331,19 +338,35 @@ opsRoutes.post("/admin/medicine/orders/:orderId/cancel", async (c) => {
   const b = await body<{ reason?: unknown }>(c);
   const reason = typeof b.reason === "string" ? b.reason.trim().slice(0, 500) : "";
   if (reason.length < 3) fail(400, "Say why the order is cancelled.");
-  const [o] = await sql`select o.*, p.provider_payment_id, p.amount_paise from medicine_orders o
-                        left join payment_orders p on p.id = o.payment_order_id where o.id = ${id}`;
-  if (!o) fail(404, "That order was not found.");
-  if (o.status === "CANCELLED") fail(409, "This order is already cancelled.");
+  // the claim: one cancel at a time, and only for an order still on its way (a delivered one is a return,
+  // handled by the team). cancelled_at marks it as being cancelled until the refund is in.
+  const [o] = await sql`
+    update medicine_orders o set cancelled_at = now() from (select id from medicine_orders where id = ${id} for update) x
+    where o.id = x.id and o.status in ('PLACED', 'PACKED', 'DISPATCHED', 'OUT_FOR_DELIVERY') and o.cancelled_at is null
+    returning o.*, (select p.provider_payment_id from payment_orders p where p.id = o.payment_order_id) as provider_payment_id,
+      (select p.amount_paise from payment_orders p where p.id = o.payment_order_id) as amount_paise`;
+  if (!o) {
+    const [now] = await sql`select status, cancelled_at from medicine_orders where id = ${id}`;
+    if (!now) fail(404, "That order was not found.");
+    fail(409, now.status === "CANCELLED" ? "This order is already cancelled." : now.status === "DELIVERED"
+      ? "This order is delivered. Handle a return with the patient first." : "This order is being cancelled already.");
+  }
   // the refund first: an order is only marked cancelled once the money is on its way back
-  const refundId = o.provider_payment_id && o.amount_paise
-    ? await refundPayment(o.provider_payment_id, o.amount_paise, { order: flow.orderNumber(id), reason })
-        .catch(() => fail(502, "The refund could not be started. Nothing was changed. Try again, or refund in the Razorpay dashboard."))
-    : null;
+  let refundId: string | null = null;
+  if (o.provider_payment_id && o.amount_paise)
+    refundId = await refundPayment(o.provider_payment_id, o.amount_paise, { order: flow.orderNumber(id), reason }).catch(async () => {
+      await sql`update medicine_orders set cancelled_at = null where id = ${id}`;
+      return fail(502, "The refund could not be started. Nothing was changed. Try again, or refund in the Razorpay dashboard.");
+    });
+  // the refund is on its way: write it down before anything else can fail
+  if (refundId) await sql`update medicine_orders set refund_id = ${refundId} where id = ${id}`;
   await sql.begin(async (tx) => {
-    await tx`update medicine_orders set status = 'CANCELLED', cancelled_at = now(), cancel_reason = ${reason}, refund_id = ${refundId},
+    await tx`update medicine_orders set status = 'CANCELLED', cancel_reason = ${reason}, refund_id = ${refundId},
              refunded_paise = ${refundId ? o.amount_paise : null},
              history = history || ${tx.json([{ status: "CANCELLED", at: new Date().toISOString(), note: reason, by: me.id }])} where id = ${id}`;
+    // the prescription can be ordered again: its cart opens (unless another order on it is open already)
+    await tx`update medicine_carts k set status = 'OPEN', paid_at = null where k.id = ${o.cart_id}
+             and not exists (select 1 from medicine_carts x where x.prescription_id = k.prescription_id and x.status = 'OPEN')`;
     if (o.payment_order_id)
       await tx`update payment_orders set meta = meta || ${tx.json({ refundId, refundedAt: new Date().toISOString(), refundReason: reason })} where id = ${o.payment_order_id}`;
     await tx`update dose_schedules set ends_on = (now() at time zone 'Asia/Kolkata')::date where medicine_order_id = ${id}`;
@@ -361,6 +384,10 @@ opsRoutes.get("/admin/medicine/messages", async (c) => {
   const me = await staff(c);
   const patientId = Number(c.req.query("patientId")) || null;
   const status = c.req.query("status") || null;
+  if (patientId) {
+    const p = await patientFor(me, patientId);
+    await sql`insert into audit_log (patient_id, actor_id, action) values (${p.id}, ${me.id}, 'Viewed WhatsApp messages')`;
+  }
   const rows = await sql`
     select m.id::text as id, m.kind, m.status, m.skip_reason as "skipReason", m.error, m.vars, ${iso("m.created_at")} as "createdAt",
       ${iso("m.send_after")} as "sendAfter", ${iso("m.sent_at")} as "sentAt", ${iso("m.read_at")} as "readAt",
@@ -368,20 +395,22 @@ opsRoutes.get("/admin/medicine/messages", async (c) => {
     from patient_messages m join users pu on pu.id = m.patient_id left join patient_profiles pp on pp.user_id = m.patient_id
     where true ${patientId ? sql`and m.patient_id = ${patientId}` : sql``} ${status ? sql`and m.status = ${status}` : sql``} ${scope(me)}
     order by m.id desc limit 200`;
-  return ok(c, rows.map((m) => ({ ...m, values: m.vars?.values ?? null, text: m.vars?.text ?? null, vars: undefined })));
+  return ok(c, rows.map((m) => ({ ...m, values: m.vars?.values ?? null, text: m.vars?.text ?? null, choices: m.vars?.rows ?? null, vars: undefined })));
 });
 
 opsRoutes.post("/admin/medicine/messages/:messageId/reply", async (c) => {
-  await admin(c);
+  const me = await admin(c);
   if (whatsappLive()) fail(409, "WhatsApp is live: replies come from the patient's phone only.");
   const id = intParam(c.req.param("messageId"), "message");
-  const [m] = await sql`select * from patient_messages where id = ${id}`;
+  const [m] = await sql`select m.*, u.role from patient_messages m join users u on u.id = m.patient_id where m.id = ${id}`;
   if (!m) fail(404, "That message was not found.");
   const b = await body<{ code?: string; text?: string }>(c);
   const outcome = await handleReply({
-    patientId: m.patient_id, ref: m.id, code: b.code ?? null, text: typeof b.text === "string" ? b.text.slice(0, 2000) : null,
-    eventId: `sim-${crypto.randomUUID()}`,
+    userId: m.patient_id, role: m.role, ref: m.id, code: b.code ?? null, text: typeof b.text === "string" ? b.text.slice(0, 2000) : null,
+    eventId: `sim-${me.id}-${crypto.randomUUID()}`,
   });
+  // a reply played in test mode changes the record like the patient's own: who played it is logged
+  await sql`insert into audit_log (patient_id, actor_id, action) values (${m.patient_id}, ${me.id}, ${`Played a WhatsApp reply in test mode: ${b.code ?? "text"} (${outcome})`.slice(0, 300)})`;
   return ok(c, { outcome }, outcome);
 });
 
@@ -391,7 +420,7 @@ opsRoutes.get("/admin/medicine/numbers", async (c) => {
   await admin(c);
   const days = Math.min(365, Math.max(7, Number(c.req.query("days")) || 30));
   const since = sql`now() - make_interval(days => ${days}::int)`;
-  const [[rx], [msg], [pay], [checkIn], [del], [fb], [disp], [adh], [tasks]] = await Promise.all([
+  const [[rx], [msg], [checkIn], [del], [fb], [disp], [adh], [tasks]] = await Promise.all([
     // prescription to paid within 7 days, over prescriptions old enough to have had their 7 days
     sql`select count(*) as total, count(*) filter (where k.paid_at <= p.signed_at + interval '7 days') as paid
         from prescriptions p join medicine_carts k on k.prescription_id = p.id and k.kind = 'FIRST'
@@ -400,11 +429,9 @@ opsRoutes.get("/admin/medicine/numbers", async (c) => {
           count(*) filter (where m.status in ('SENT', 'DELIVERED', 'READ') and m.sent_at <= p.signed_at + interval '5 minutes') as fast,
           count(*) filter (where m.status = 'SKIPPED') as skipped
         from patient_messages m join prescriptions p on p.id = m.prescription_id
-        where m.kind in ('RX_READY', 'RX_READY_ORDER') and m.created_at > ${since}`,
-    sql`select percentile_cont(0.95) within group (order by extract(epoch from o.placed_at - p.paid_at)) as p95
-        from medicine_orders o join payment_orders p on p.id = o.payment_order_id where o.placed_at > ${since}`,
+        where m.kind = 'RX_READY' and m.created_at > ${since}`,
     sql`select count(*) as sent, count(*) filter (where exists (select 1 from patient_message_replies r where r.message_id = m.id)) as answered
-        from patient_messages m where m.kind in ('CHECK_IN_1', 'PLAN_REMINDER') and m.status in ('SENT', 'DELIVERED', 'READ') and m.created_at > ${since}`,
+        from patient_messages m where m.kind = 'CHECK_IN' and m.dedupe_key like 'fu:%:c1' and m.status in ('SENT', 'DELIVERED', 'READ') and m.created_at > ${since}`,
     sql`select count(*) filter (where status = 'DELIVERED') as delivered,
           count(*) filter (where status = 'DELIVERED' and delivered_at <= expected_at + interval '6 hours') as on_time
         from medicine_orders where placed_at > ${since}`,
@@ -427,7 +454,6 @@ opsRoutes.get("/admin/medicine/numbers", async (c) => {
       { key: "rxToPaid", label: "Prescriptions paid for within 7 days", value: pct(rx.paid, rx.total), unit: "%", target: 70, base: Number(rx.total) },
       { key: "rxMessage", label: "Prescription on WhatsApp within 5 minutes", value: pct(msg.fast, msg.sent), unit: "%", target: 99, base: Number(msg.sent),
         note: Number(msg.skipped) ? `${msg.skipped} not sent: WhatsApp off` : null },
-      { key: "paymentToOrder", label: "Payment to delivery order (p95)", value: pay.p95 == null ? null : Math.round(Number(pay.p95) * 10) / 10, unit: "s", target: 5, lowerIsBetter: true },
       { key: "checkInReplies", label: "First check-ins answered", value: pct(checkIn.answered, checkIn.sent), unit: "%", target: 60, base: Number(checkIn.sent) },
       { key: "dispatchInTime", label: "Dispatched in time", value: pct(disp.in_time, disp.dispatched), unit: "%", target: 95, base: Number(disp.dispatched) },
       { key: "deliveredOnTime", label: "Delivered by the expected date", value: pct(del.on_time, del.delivered), unit: "%", target: 95, base: Number(del.delivered) },
@@ -439,6 +465,19 @@ opsRoutes.get("/admin/medicine/numbers", async (c) => {
       { key: "taskClose", label: "Median time to close a task", value: tasks.median_close == null ? null : Math.round((Number(tasks.median_close) / 3600) * 10) / 10, unit: "h", lowerIsBetter: true },
     ],
   });
+});
+
+// ---------------------------------------------------------------- WhatsApp templates
+
+/** Every template in lib/messages.ts that Meta lacks is submitted (category UTILITY, English); the rest are listed with their status. */
+opsRoutes.post("/admin/whatsapp/templates/sync", async (c) => {
+  await admin(c);
+  try {
+    const templates = await syncTemplates(Object.values(TEMPLATES) as Template[], env.appUrl);
+    return ok(c, templates, `${templates.filter((t) => t.status === "APPROVED").length} of ${templates.length} approved`);
+  } catch (e) {
+    return fail(502, (e as Error).message);
+  }
 });
 
 // ---------------------------------------------------------------- coaches
@@ -461,8 +500,10 @@ opsRoutes.post("/admin/coaches", async (c) => {
   if (!/^[6-9]\d{9}$/.test(mobile)) fail(400, "Enter a 10-digit mobile number.");
   const [existing] = await sql`select id, role from users where mobile = ${mobile}`;
   if (existing && existing.role !== "COACH") fail(409, "That number already belongs to a patient, doctor or admin.");
+  // a patient signing up with this number in between is never renamed: the update only touches a coach
   const [u] = await sql`
     insert into users (mobile, role, full_name) values (${mobile}, 'COACH', ${fullName})
-    on conflict (mobile) do update set full_name = excluded.full_name returning id`;
+    on conflict (mobile) do update set full_name = excluded.full_name where users.role = 'COACH' returning id`;
+  if (!u) fail(409, "That number already belongs to a patient, doctor or admin.");
   return ok(c, { id: String(u.id), fullName, mobile, patients: 0 }, "Coach added. They sign in with this number.");
 });

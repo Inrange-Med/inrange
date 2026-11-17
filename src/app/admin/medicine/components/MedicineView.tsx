@@ -8,16 +8,19 @@
     Patients  everyone with a prescription or an order: last order, run-out, doses, coach
     Messages  every WhatsApp message, sent or not, and why (admin)
     Numbers   the PRD's measures against their targets (admin)
-  A health coach sees Queue and Patients, for their own patients only (the API scopes it). The tab is
-  in the address (?tab=), so a link and Back land on the same view.
+  A health coach sees Queue and Patients, for their own patients only (the API scopes it). The tabs
+  follow the signed-in role (AdminShell lets only an admin or a coach in), so a coach's link to an
+  admin tab never opens it. The tab is in the address (?tab=), so a link and Back land on the same view.
 */
 
 import { useCallback, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import ErrorNotice from "@/components/ui/ErrorNotice";
 import PageHead from "@/components/ui/PageHead";
 import SegmentedControl from "@/components/ui/SegmentedControl";
 import { useApiResource } from "@/hooks/useApiResource";
 import { useNow } from "@/hooks/useNow";
+import { useSessionUser } from "@/hooks/useSessionUser";
 import { timeAgo } from "@/lib/format/dateTime";
 import { getSummary } from "@/services/medicineOpsService";
 import MessagesPanel from "./MessagesPanel";
@@ -46,8 +49,11 @@ export default function MedicineView() {
   const summary = useApiResource("medicine-summary", getSummary);
   const now = useNow(60_000);
   const [patientId, setPatientId] = useState<string | null>(null);
+  // bumped by any change in a sheet, so every panel's list reloads with the counts
+  const [version, setVersion] = useState(0);
 
-  const role = summary.data?.role ?? null;
+  const { status } = useSessionUser();
+  const role = status === "COACH" || status === "ADMIN" ? status : null;
   const tabs = role === "COACH" ? COACH_TABS : ADMIN_TABS;
   const asked = params.get("tab") as Tab | null;
   const tab: Tab = asked && tabs.includes(asked) ? asked : "queue";
@@ -57,9 +63,12 @@ export default function MedicineView() {
       scroll: false,
     });
 
-  // anything done in a sheet refreshes the counts (each panel reloads its own list)
+  // anything done in a sheet refreshes the counts and the panels' lists
   const { reload } = summary;
-  const changed = useCallback(() => reload(), [reload]);
+  const changed = useCallback(() => {
+    reload();
+    setVersion((current) => current + 1);
+  }, [reload]);
 
   // a patient can be opened from a link (?patient=)
   useEffect(() => {
@@ -121,35 +130,42 @@ export default function MedicineView() {
           </p>
         )}
       </div>
+      {summary.error && (
+        <ErrorNotice message={summary.error} onRetry={summary.reload} />
+      )}
 
-      {tab === "queue" && (
+      {role && tab === "queue" && (
         <TasksPanel
           now={now}
+          version={version}
           onOpenPatient={setPatientId}
           onChanged={changed}
         />
       )}
-      {tab === "orders" && (
+      {role === "ADMIN" && tab === "orders" && (
         <OrdersPanel
           now={now}
+          version={version}
           onOpenPatient={setPatientId}
           onChanged={changed}
         />
       )}
-      {tab === "patients" && (
+      {role && tab === "patients" && (
         <PatientsPanel
           isAdmin={role === "ADMIN"}
+          version={version}
           onOpenPatient={setPatientId}
         />
       )}
-      {tab === "messages" && (
+      {role === "ADMIN" && tab === "messages" && (
         <MessagesPanel
+          version={version}
           now={now}
           mock={summary.data?.messages.whatsapp === "mock"}
           onOpenPatient={setPatientId}
         />
       )}
-      {tab === "numbers" && <NumbersPanel />}
+      {role === "ADMIN" && tab === "numbers" && <NumbersPanel />}
 
       <PatientSheet
         patientId={patientId}

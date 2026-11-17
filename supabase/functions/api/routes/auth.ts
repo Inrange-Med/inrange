@@ -14,7 +14,7 @@ import { createRemoteJWKSet, jwtVerify } from "jose";
 import { sql } from "../lib/db.ts";
 import { body, fail, ok } from "../lib/http.ts";
 import { issueToken, requireUser, type Role } from "../lib/auth.ts";
-import { env, live } from "../lib/env.ts";
+import { env, isTestMobile, live } from "../lib/env.ts";
 import { sendOtpSms, smsLive } from "../integrations/sms.ts";
 
 export const auth = new Hono();
@@ -41,9 +41,6 @@ function randomCode() {
   return String(n).padStart(CODE_LENGTH, "0");
 }
 
-/** A test account (env.testMobiles): signs in with TEST_OTP, nothing is sent. */
-const isTestMobile = (mobile: string) =>
-  Boolean(env.testOtp) && env.testMobiles.some((m) => (m.endsWith("*") ? mobile.startsWith(m.slice(0, -1)) : m === mobile));
 
 auth.post("/send-otp", async (c) => {
   const mobile = normaliseMobile((await body(c)).mobile);

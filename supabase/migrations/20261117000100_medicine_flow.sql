@@ -1,5 +1,6 @@
 -- The medicine flow after a prescription (docs/backend/medicine-flow.md; the PRD mapped in
--- docs/backend/medicine-flow-prd.md): messages to the patient (WhatsApp, with every send recorded),
+-- docs/backend/medicine-flow-prd.md) and WhatsApp for every notice (docs/backend/whatsapp.md): messages
+-- to patients and doctors (every send recorded),
 -- the follow-up after a prescription, the medicine queue the team works from, delivery milestones and
 -- feedback, refills, dose reminders and adherence, and the health coach. Everything a job does is
 -- keyed so a repeated or late run never acts twice.
@@ -31,18 +32,21 @@ alter table public.medicine_orders
   add column feedback_note text,
   add column feedback_at timestamptz;
 create index on public.medicine_orders (status);
+create index on public.medicine_orders (patient_id);
 
 -- ---------------------------------------------------------------- carts: a refill is a second cart on the same prescription
 alter table public.medicine_carts drop constraint if exists medicine_carts_prescription_id_key;
 create unique index medicine_carts_one_open on public.medicine_carts (prescription_id) where status = 'OPEN';
+create index on public.medicine_carts (prescription_id);
 alter table public.medicine_carts
   add column kind text not null default 'FIRST' check (kind in ('FIRST', 'REFILL')),
   -- the patient said they bought these elsewhere: no more reminders about this cart
   add column elsewhere_at timestamptz;
 
--- ---------------------------------------------------------------- messages to the patient
+-- ---------------------------------------------------------------- messages on WhatsApp
 -- One row per message, sent or not. `dedupe_key` makes every trigger idempotent ("rx:41:ready",
--- "order:7:dispatched", "dose:310:reminder"). Template names and wording: lib/messages.ts.
+-- "order:7:dispatched", "appt:12:s88:soon"). Template names and wording: lib/messages.ts.
+-- patient_id is whoever the message is for: a patient, or a doctor for the doctor's notices.
 create table public.patient_messages (
   id integer generated always as identity primary key,
   patient_id integer not null references public.users(id) on delete cascade,
@@ -60,6 +64,8 @@ create table public.patient_messages (
   cart_id integer references public.medicine_carts(id),
   medicine_order_id integer references public.medicine_orders(id),
   dose_event_id integer,
+  appointment_id integer references public.appointments(id) on delete set null,
+  lab_booking_id text references public.lab_bookings(id) on delete set null,
   created_at timestamptz not null default now(),
   sent_at timestamptz,
   delivered_at timestamptz,
@@ -80,6 +86,12 @@ create table public.patient_message_replies (
   received_at timestamptz not null default now()
 );
 create index on public.patient_message_replies (patient_id, received_at desc);
+-- a button acts once per message: a double tap, or the same tap arriving twice, is one tap
+create unique index patient_message_replies_one_tap on public.patient_message_replies (message_id, action)
+  where message_id is not null and action is not null;
+
+-- when the patient first opened the video room (the doctor's is started_at), so each side hears the other is waiting once
+alter table public.appointments add column patient_joined_at timestamptz;
 
 -- ---------------------------------------------------------------- the follow-up after a prescription
 -- One per cart. The nano plan's check-ins are timed from when its cart opens, so the 48-hour hold and
@@ -125,6 +137,8 @@ create table public.ops_tasks (
 );
 create index on public.ops_tasks (status, due_at);
 create index on public.ops_tasks (patient_id);
+create index on public.ops_tasks (cart_id) where cart_id is not null;
+create index on public.ops_tasks (medicine_order_id) where medicine_order_id is not null;
 
 -- ---------------------------------------------------------------- doses (patients on a plan)
 create table public.dose_schedules (
@@ -132,7 +146,8 @@ create table public.dose_schedules (
   patient_id integer not null references public.users(id) on delete cascade,
   prescription_id integer references public.prescriptions(id),
   medicine_order_id integer references public.medicine_orders(id),
-  medicine text not null,              -- "Mounjaro KwikPen 2.5 mg", in the app only, never in a message
+  medicine text not null,              -- "Mounjaro KwikPen 2.5 mg, then 5 mg", in the app only, never in a message
+  molecule text not null,              -- lower case; one schedule per molecule (a step-up is one schedule)
   cadence text not null check (cadence in ('WEEKLY', 'DAILY', 'TWICE_DAILY')),
   weekday integer check (weekday between 1 and 7),   -- ISO, for WEEKLY
   times text[] not null default '{09:00}',            -- India time, HH:MM
@@ -140,7 +155,7 @@ create table public.dose_schedules (
   ends_on date,
   paused boolean not null default false,
   created_at timestamptz not null default now(),
-  unique (medicine_order_id, medicine)
+  unique (medicine_order_id, molecule)
 );
 create index on public.dose_schedules (patient_id);
 

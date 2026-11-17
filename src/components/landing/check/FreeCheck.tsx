@@ -43,6 +43,7 @@ import {
 import { bmiFrom, readFreeCheck, saveFreeCheck, type FirstStep, type FreeCheckAnswers } from "@/lib/onboarding/freeCheck";
 import { isValidMobile } from "@/lib/format/phone";
 import { getSessionUser, homePathFor } from "@/lib/session/authSession";
+import { updateReminderSettings } from "@/services/patientProfileService";
 import type { Gender } from "@/types/onboarding";
 import ContourField from "../ContourField";
 import { LISTED_DOCTORS } from "../doctor-data";
@@ -692,12 +693,16 @@ export default function FreeCheck() {
         lastSend={lastSend.current}
         onSent={(sent) => (lastSend.current = sent)}
         onChangeNumber={() => go(at("details"))}
-        onVerified={({ role, nextScreen }) => {
+        onVerified={async ({ role, nextScreen }) => {
           setLeaving(true);
           const answers = answersOf(d, identity, firstStep ?? undefined);
           if (answers) saveFreeCheck(answers);
-          // an existing account: the profile is already done, so the check's answers are not used
-          router.replace(role !== "PATIENT" || nextScreen !== "ONBOARDING" ? homePathFor(role) : "/onboarding");
+          // an existing account: the profile is already done, so the check's answers are not used, but a
+          // WhatsApp tick given here is recorded (a new account records it with the other consents)
+          const existing = role !== "PATIENT" || nextScreen !== "ONBOARDING";
+          if (existing && role === "PATIENT" && identity.whatsapp)
+            await updateReminderSettings({ whatsappReminders: true }).catch(() => undefined);
+          router.replace(existing ? homePathFor(role) : "/onboarding");
         }}
       />
     ) : (

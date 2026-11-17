@@ -104,9 +104,10 @@ export default function AdminShell({ children }: { children: ReactNode }) {
                 {role === "COACH" ? "Coach" : "Admin"}
               </span>
             </Link>
-            <nav className={styles.nav} aria-label="Admin">
-              {sections.length > 1 &&
-                sections.map((item) => {
+            {/* one place (a coach) needs no navigation, and no empty landmark */}
+            {sections.length > 1 && (
+              <nav className={styles.nav} aria-label="Admin">
+                {sections.map((item) => {
                   const Icon = item.icon;
                   const on = isCurrent(item.href, pathname);
                   return (
@@ -121,7 +122,8 @@ export default function AdminShell({ children }: { children: ReactNode }) {
                     </Link>
                   );
                 })}
-            </nav>
+              </nav>
+            )}
             <div className={styles.me}>
               <Avatar name={name} size={36} />
               <div>
@@ -160,9 +162,9 @@ export default function AdminShell({ children }: { children: ReactNode }) {
             {children}
           </div>
 
-          <nav className={styles.dock} aria-label="Admin">
-            {sections.length > 1 &&
-              sections.map((item) => {
+          {sections.length > 1 && (
+            <nav className={styles.dock} aria-label="Admin">
+              {sections.map((item) => {
                 const Icon = item.icon;
                 const on = isCurrent(item.href, pathname);
                 return (
@@ -177,7 +179,8 @@ export default function AdminShell({ children }: { children: ReactNode }) {
                   </Link>
                 );
               })}
-          </nav>
+            </nav>
+          )}
         </div>
       </ToastProvider>
     </AppTheme>

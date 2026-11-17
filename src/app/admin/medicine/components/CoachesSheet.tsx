@@ -38,6 +38,7 @@ export default function CoachesSheet({
   const [busy, setBusy] = useState(false);
 
   const add = async () => {
+    if (busy) return;
     if (name.trim().length < 2) return setProblem("Add the coach's full name.");
     if (!isValidMobile(mobile))
       return setProblem("Enter a 10-digit mobile number.");
@@ -118,6 +119,7 @@ export default function CoachesSheet({
           className={`btn ${formStyles.go}`}
           data-busy={busy}
           aria-busy={busy}
+          disabled={busy}
           onClick={add}
         >
           <span>{busy ? "Adding" : "Add the coach"}</span>

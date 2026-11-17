@@ -23,6 +23,8 @@ import { signedUrl, uploadFile } from "../lib/storage.ts";
 import { readPdf, sha256, sniff } from "../lib/fileCheck.ts";
 import * as rc from "../integrations/redcliffe.ts";
 import { env } from "../lib/env.ts";
+import * as notices from "../lib/notices.ts";
+import { sendNow } from "../lib/notify.ts";
 
 export const labRoutes = new Hono();
 
@@ -374,6 +376,8 @@ export async function applyLabEvent(bookingId: string, event: LabEvent, simulate
   }
   await sql`update lab_bookings set status = ${event}, updated_at = now() where id = ${bookingId}`;
   if (event === "SAMPLE_COLLECTED" && forEligibility) await setEligibility(sql, row.user_id, { stage: "SAMPLE_COLLECTED" });
+  // the report, or a cancelled collection, on WhatsApp (once each: the message is keyed on the booking)
+  await notices.labEvent(bookingId, event).then(sendNow).catch((e) => console.error("lab notice", bookingId, (e as Error).message));
 }
 
 async function attachReport(row: Row, forEligibility: boolean, simulated: boolean) {

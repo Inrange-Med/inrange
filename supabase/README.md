@@ -7,7 +7,7 @@ private Storage buckets (`reports`, `prescriptions`, `photos`) hold the files.
 | --- | --- |
 | Project | `inrange-pilot` (`wcsglsrjixfrobujchen`), Mumbai `ap-south-1` |
 | API base URL (the app's `NEXT_PUBLIC_API_BASE_URL`) | `https://wcsglsrjixfrobujchen.supabase.co/functions/v1` |
-| Health and vendor modes | `GET /api/health` → `{ integrations: { sms, razorpay, redcliffe, hms: "mock" or "live" } }` |
+| Health and vendor modes | `GET /api/health` → `{ integrations: { sms, razorpay, redcliffe, hms, whatsapp: "mock" or "live" } }` |
 | Web app | https://inrange-pilot.vercel.app (Vercel project `inrange-pilot`) |
 
 Code: `functions/api/index.ts` (router), `routes/` (one file per area), `lib/` (db, auth, http, storage,
@@ -28,7 +28,7 @@ supabase secrets set --project-ref wcsglsrjixfrobujchen NAME=value ...
 | Razorpay | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` | Orders use key `rzp_mock`; checkout says "Pilot test payment. Nothing is charged." and succeeds |
 | Redcliffe Labs | `REDCLIFFE_API_KEY`, `REDCLIFFE_WEBHOOK_SECRET` (and `REDCLIFFE_BASE_URL` for production; default is their QA host) | Mock catalogue (MD028 and 4 more), NCR locations and slots; a booking can be moved on with `POST /api/labs/bookings/:id/simulate {event: "SAMPLE_COLLECTED" or "REPORT_READY"}` |
 | 100ms video | `HMS_ACCESS_KEY`, `HMS_SECRET`, `HMS_TEMPLATE_ID`, `HMS_SUBDOMAIN` (the template's Prebuilt subdomain, from the 100ms dashboard; no API returns it) | The call opens `pilot-video-room.html` (camera preview, "live video connects once the key is added") |
-| WhatsApp (Meta Cloud API) | `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN` | Messages are recorded as sent and nothing leaves; an admin plays the patient's replies from Medicine (docs/backend/medicine-flow.md) |
+| WhatsApp (Meta Cloud API) | `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_APP_SECRET` (live), `WHATSAPP_BUSINESS_ACCOUNT_ID` (template sync), `WHATSAPP_VERIFY_TOKEN` (webhook); the tick needs `JOBS_SECRET` and its two Vault secrets | Every message is recorded as sent (`mock-` ids), nothing leaves; an admin plays replies from Medicine > Messages. [docs/backend/whatsapp.md](../docs/backend/whatsapp.md) |
 
 Pilot vendor accounts (PDPL's; test keys until go-live):
 - Razorpay: test mode. Each order sets auto-capture itself; `/payments/verify` fulfils only after Razorpay
@@ -48,10 +48,11 @@ Register these webhooks with the vendors once their keys are in:
 
 ## The scheduler
 
-`POST /api/jobs/tick` runs the medicine flow's timed steps (check-ins, order checks, doses, refills, the
-nightly reconciliation, the message queue). Supabase cron calls it every 5 minutes with `JOBS_SECRET`;
-the SQL to schedule it is in `docs/backend/medicine-flow.md`, "Turning it on". Without the secret it
-answers 503 and nothing runs. `job_runs` records each run.
+`POST /api/jobs/tick` runs the timed steps (check-ins, order checks, doses, refills, the nightly
+reconciliation) and sends every WhatsApp message that is due (reminders included). pg_cron calls it every
+5 minutes (`migrations/20261117000200_tick_schedule.sql`) with `JOBS_SECRET`, read from Vault with the
+tick's URL: the two `vault.create_secret` lines are in `docs/backend/whatsapp.md`, "Turning it on". Without
+the secret it answers 503 and nothing runs. `job_runs` records each run.
 
 ## Pilot switches
 
@@ -59,7 +60,7 @@ answers 503 and nothing runs. `job_runs` records each run.
 | --- | --- | --- |
 | `JOBS_SECRET` | unset | Lets Supabase cron call the tick (`x-jobs-secret`). |
 | `PILOT_OTP` | `123456` | The sign-in code while SMS is mocked. |
-| `APP_URL` | `https://inrange-pilot.vercel.app` | Links the API hands out (the mock video room). |
+| `APP_URL` | `https://inrange-pilot.vercel.app` | Links the API hands out (the mock video room) and the base of every WhatsApp button (re-sync the templates when it changes). |
 | `DB_POOLER_URL` | set | Postgres through the transaction pooler (port 6543). |
 | `APP_JWT_SECRET` | set | Signs sign-in tokens (14 days). Changing it signs everyone out. |
 | `NANO_CART_DELAY_HOURS` | `48` | Hours between a first consultation's prescription and its cart (pilot 24 or 48). |

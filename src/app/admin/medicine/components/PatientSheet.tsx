@@ -185,7 +185,8 @@ function Timeline({
         key: `f${f.id}-${i}`,
         node: <strong>{h.what}</strong>,
       });
-  moments.sort((a, b) => b.at.localeCompare(a.at));
+  // the times come in two forms ("+05:30" and "Z"), so they are compared as instants
+  moments.sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
   if (!moments.length) return <p className={adminStyles.empty}>Nothing yet.</p>;
   return (
     <ol className={s.timeline}>
@@ -261,7 +262,8 @@ export default function PatientSheet({
     patientId ? `medicine-patient-${patientId}` : null,
     () => getPatient(patientId!),
   );
-  const data = patient.data;
+  // the last patient's record stays loaded while the next one loads: never show or act on it
+  const data = patient.data?.patient.id === patientId ? patient.data : null;
   const refresh = () => {
     patient.reload();
     onChanged();

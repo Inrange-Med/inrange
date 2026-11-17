@@ -173,7 +173,7 @@ export function CheckDetails({
       <label className={`${s.tick} ${s.tickQuiet}`}>
         <input type="checkbox" checked={identity.whatsapp} onChange={(e) => change({ whatsapp: e.target.checked })} />
         <span>
-          <strong>Optional.</strong> Send my prescription, order updates and reminders on WhatsApp. Reply STOP any time.
+          <strong>Optional.</strong> {CONSENTS.find((c) => c.type === "WHATSAPP")?.line} Reply STOP any time.
         </span>
       </label>
 

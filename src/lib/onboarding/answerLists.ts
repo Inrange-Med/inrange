@@ -63,7 +63,7 @@ export const experienceToggled = (experience: string[], code: string) =>
 
 /** The consent wording, shared by onboarding and the free check's last step. Bump the version when
     the wording changes: a consent given to older wording is asked again. */
-export const CONSENT_VERSION = "2026-09";
+export const CONSENT_VERSION = "2026-11";
 
 export const CONSENTS: ConsentText[] = [
   {
@@ -107,8 +107,8 @@ export const CONSENTS: ConsentText[] = [
     // shows everything; the profile's "Updates on WhatsApp" switch and a STOP reply turn it off
     type: "WHATSAPP",
     title: "Updates on WhatsApp",
-    line: "Your prescription, where your order is, and reminders, on WhatsApp.",
-    more: "We send your prescription, your order's progress, and the reminders you choose, from inrange's WhatsApp number. Messages never name a medicine or a price. Reply STOP at any time, or turn it off in your profile.",
+    line: "Updates about my care from inrange on WhatsApp: bookings, blood tests, any prescription, orders and reminders.",
+    more: "inrange messages you from its WhatsApp number about your bookings and the link to join, your blood tests and report, any prescription your doctor writes, your order's progress, and the reminders you choose. Messages never name a medicine, a diagnosis or a price: those stay in the app. Reply STOP at any time, or turn it off in your profile.",
     required: false,
   },
 ];

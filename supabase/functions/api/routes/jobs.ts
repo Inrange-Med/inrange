@@ -20,7 +20,7 @@ export const jobRoutes = new Hono();
  * webhook never arrived is fulfilled now, as the webhook would have; anything else becomes a task.
  */
 export async function reconcile() {
-  const out = { fulfilled: 0, tasks: 0 };
+  const out = { fulfilled: 0, tasks: 0, failed: 0 };
   const unfilled = await sql`
     select p.id, p.user_id, p.reference_id from payment_orders p
     where p.purpose = 'MEDICINE_ORDER' and p.status = 'PAID'
@@ -31,14 +31,21 @@ export async function reconcile() {
       title: "Paid for medicines, but no delivery order exists", detail: `Payment ${p.id}. Create the delivery or refund.`,
       dueAt: new Date(), dedupeKey: `reconcile:${p.id}:no-order`,
     })) out.tasks++;
+  // newest first: each order is checked on three nights, so a busy day never pushes a recent one out
   const stuck = await sql`
     select id, user_id, amount_paise, purpose from payment_orders
     where status = 'CREATED' and created_at between now() - interval '3 days' and now() - interval '30 minutes'
-    order by created_at limit 40`;
+    order by created_at desc limit 100`;
   for (const p of stuck) {
     const paymentId = await capturedPaymentFor(p.id, p.amount_paise).catch((e) => (console.error("reconcile", p.id, e.message), null));
     if (!paymentId) continue;
-    await fulfil(p.id, paymentId);
+    try {
+      await fulfil(p.id, paymentId);
+    } catch (e) {
+      out.failed++;
+      console.error("reconcile fulfil", p.id, (e as Error).message);
+      continue;
+    }
     out.fulfilled++;
     await flow.openTask(sql, {
       kind: "RECONCILE", priority: "NORMAL", patientId: p.user_id, paymentOrderId: p.id,
@@ -55,15 +62,22 @@ jobRoutes.post("/jobs/tick", async (c) => {
   const started = Date.now();
   const steps: Record<string, unknown> = {};
   // each step on its own: one failing never stops the others
-  const run = async (name: string, fn: () => Promise<unknown>) => {
-    try { steps[name] = await fn(); } catch (e) { steps[name] = { error: (e as Error).message }; console.error("tick", name, e); }
+  // a daily step that fails is not marked done for the day, so the next tick tries it again
+  const run = async (name: string, fn: () => Promise<unknown>, daily = false) => {
+    try { steps[name] = await fn(); } catch (e) {
+      steps[name] = { error: (e as Error).message };
+      console.error("tick", name, e);
+      if (daily) await sql`delete from job_runs where name = ${name}`.catch(() => {});
+    }
   };
+  // every step only queues; sendDue sends last within its own budget, so the tick ends well inside the
+  // function's limit and what is left goes on the next one
   await run("followups", () => flow.advanceDueFollowups());
   await run("orders", () => flow.checkOrders());
   await run("doses", () => flow.checkDoses());
-  if (await flow.firstRunToday("refills")) await run("refills", () => flow.checkRefills());
-  if (await flow.firstRunToday("reconcile")) await run("reconcile", () => reconcile());
-  await run("messages", () => sendDue());
+  if (await flow.firstRunToday("refills")) await run("refills", () => flow.checkRefills(), true);
+  if (await flow.firstRunToday("reconcile")) await run("reconcile", () => reconcile(), true);
+  await run("messages", () => sendDue(Math.max(10_000, 100_000 - (Date.now() - started))));
   await sql`insert into job_runs (name, last_run_at, summary) values ('tick', now(), ${sql.json(steps as never)})
             on conflict (name) do update set last_run_at = now(), summary = excluded.summary`;
   return c.json({ success: true, data: { ms: Date.now() - started, steps } });
@@ -82,27 +96,34 @@ jobRoutes.post("/webhooks/whatsapp", async (c) => {
     return c.json({ success: false, message: "Invalid signature" }, 401);
   let payload: unknown;
   try { payload = JSON.parse(raw); } catch { return c.json({ success: true }); }
+  let failed = 0;
   for (const event of wa.parseWebhook(payload)) {
     try {
       if (event.type === "status") {
         const column = { sent: null, delivered: "delivered_at", read: "read_at", failed: null }[event.status];
-        // statuses can arrive out of order: a later one never moves a message back
+        // statuses can arrive out of order, and before our own write of the provider id: match on either,
+        // and a later status never moves a message back
         await sql`update patient_messages set
             status = case when ${event.status} = 'failed' then 'FAILED'
                           when ${event.status} = 'read' then 'READ'
                           when ${event.status} = 'delivered' and status <> 'READ' then 'DELIVERED' else status end,
+            provider_id = coalesce(provider_id, ${event.providerId || null}),
             delivered_at = case when ${column} = 'delivered_at' or ${column} = 'read_at' then coalesce(delivered_at, now()) else delivered_at end,
             read_at = case when ${column} = 'read_at' then coalesce(read_at, now()) else read_at end,
             error = coalesce(${event.error}, error)
-          where provider_id = ${event.providerId}`;
+          where provider_id = ${event.providerId} or (${event.ref}::int is not null and id = ${event.ref})`;
       } else {
-        const [u] = await sql`select id from users where mobile = ${event.from} and role = 'PATIENT'`;
-        if (u) await handleReply({ patientId: u.id, ref: event.ref, code: event.code, text: event.text, eventId: event.eventId });
+        // patients act on their messages; anyone (a doctor too) can opt out with STOP
+        const [u] = await sql`select id, role from users where mobile = ${event.from}`;
+        if (u) await handleReply({ userId: u.id, role: u.role, ref: event.ref, code: event.code, text: event.text, eventId: event.eventId });
       }
     } catch (e) {
+      failed++;
       console.error("whatsapp webhook", (e as Error).message);
     }
   }
-  // always 200 once the signature is good: Meta retries anything else for days
+  // a failure before the event was recorded (the database was away) asks Meta to send it again; recorded
+  // events are dropped on the retry by their id, so nothing acts twice
+  if (failed) return c.json({ success: false }, 500);
   return c.json({ success: true });
 });

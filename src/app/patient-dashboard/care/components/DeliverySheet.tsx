@@ -59,6 +59,7 @@ export default function DeliverySheet({
   const dates = stepDates(order);
 
   const rate = async (rating: "GOOD" | "ISSUE") => {
+    if (busy) return;
     if (!onRate) return;
     setBusy(true);
     setProblem(null);
@@ -175,6 +176,7 @@ export default function DeliverySheet({
                 className={`btn ${formStyles.go}`}
                 data-busy={busy}
                 aria-busy={busy}
+                disabled={busy}
                 onClick={() => rate("ISSUE")}
               >
                 <span>{busy ? "Sending" : "Tell the care team"}</span>

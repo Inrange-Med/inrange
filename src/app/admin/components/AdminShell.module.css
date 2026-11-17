@@ -201,7 +201,7 @@
   right: 10px;
   bottom: calc(10px + env(safe-area-inset-bottom));
   display: grid;
-  /* one column per place (two for the team before Medicine, three now; one for a coach is hidden) */
+  /* one column per place (three for the team; a coach has one place and no dock) */
   grid-auto-flow: column;
   grid-auto-columns: 1fr;
   padding: 6px;

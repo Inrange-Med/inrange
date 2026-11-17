@@ -13,7 +13,12 @@ import { ArrowRight, Check } from "@phosphor-icons/react";
 import Card from "@/components/ui/Card";
 import SegmentedControl from "@/components/ui/SegmentedControl";
 import Sheet from "@/components/ui/Sheet";
-import { clockTime, relativeDayName, shortDate } from "@/lib/format/dateTime";
+import {
+  clockTime,
+  relativeDayName,
+  shortDate,
+  toApiDate,
+} from "@/lib/format/dateTime";
 import type { DoseEvent, Doses, DoseSchedule } from "@/types/carePlan";
 import formStyles from "@/components/ui/styles/FormControls.module.css";
 import pageStyles from "../CarePage.module.css";
@@ -152,7 +157,9 @@ function ReminderSheet({
           className={`btn ${formStyles.go}`}
           data-busy={busy}
           aria-busy={busy}
+          disabled={busy}
           onClick={async () => {
+            if (busy) return;
             setBusy(true);
             setProblem(null);
             try {
@@ -202,8 +209,17 @@ export default function DosesCard({
   const [busy, setBusy] = useState(false);
   const [said, setSaid] = useState<string | null>(null);
   const [editing, setEditing] = useState<DoseSchedule | null>(null);
+  // the sheet stays mounted on the last schedule opened, so closing it animates and returns focus;
+  // each opening starts from the saved values (`opened` remounts it)
+  const [sheetFor, setSheetFor] = useState<DoseSchedule | null>(null);
+  const [opened, setOpened] = useState(0);
+  const edit = (schedule: DoseSchedule) => {
+    setEditing(schedule);
+    setSheetFor(schedule);
+    setOpened((n) => n + 1);
+  };
   const live = doses.schedules.filter(
-    (s) => !s.endsOn || s.endsOn >= new Date(now).toISOString().slice(0, 10),
+    (s) => !s.endsOn || s.endsOn >= toApiDate(new Date(now)),
   );
   if (!live.length) return null;
 
@@ -330,7 +346,7 @@ export default function DosesCard({
             <button
               type="button"
               className={styles.change}
-              onClick={() => setEditing(s)}
+              onClick={() => edit(s)}
             >
               Change
             </button>
@@ -350,11 +366,11 @@ export default function DosesCard({
         </p>
       )}
 
-      {editing && (
+      {sheetFor && (
         <ReminderSheet
-          key={editing.id}
-          schedule={editing}
-          open
+          key={`${sheetFor.id}-${opened}`}
+          schedule={sheetFor}
+          open={editing !== null}
           onClose={() => setEditing(null)}
           onSave={actions.change}
         />

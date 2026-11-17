@@ -77,13 +77,28 @@ export const NEXT_STEP: Partial<
   OUT_FOR_DELIVERY: { to: "DELIVERED", label: "Mark delivered" },
 };
 
+/** Every WhatsApp message kind (supabase/functions/api/lib/messages.ts), to patients and to doctors. */
 export const MESSAGE_WORDS: Record<string, string> = {
+  APPT_BOOKED: "Consultation booked",
+  APPT_MOVED: "Consultation moved",
+  APPT_REMINDER: "Consultation tomorrow",
+  APPT_SOON: "Consultation starting",
+  DOCTOR_WAITING: "Doctor in the room",
+  CARE_PLAN: "Next steps written up",
+  DOCTOR_REPLIED: "Doctor replied",
+  LAB_BOOKED: "Blood test booked",
+  LAB_TOMORROW: "Blood test tomorrow",
+  LAB_CANCELLED: "Blood test cancelled by the lab",
+  REPORT_READY: "Report ready",
+  REVIEW_APPROVED: "Review done: book",
+  REVIEW_NOTE: "Review done: note",
+  PAYMENT_FAILED: "Payment failed",
   RX_READY: "Prescription",
-  RX_READY_ORDER: "Prescription, order ready",
-  CHECK_IN_1: "First check-in",
-  CHECK_IN_2: "Second check-in",
-  PLAN_REMINDER: "Order reminder",
-  ORDER_LINK: "Order link",
+  CHECK_IN: "Prescription check-in",
+  CARE_LINK: "App link after a call",
+  SUPPLY_LOW: "Supply running low",
+  RENEWAL_DUE: "Review before next supply",
+  DOSE_REMINDER: "Dose reminder",
   ORDER_CONFIRMED: "Order confirmed",
   ORDER_PACKED: "Packed",
   ORDER_DISPATCHED: "Dispatched",
@@ -92,32 +107,28 @@ export const MESSAGE_WORDS: Record<string, string> = {
   ORDER_FEEDBACK: "Delivery feedback",
   ORDER_DELAYED: "New delivery date",
   ORDER_CANCELLED: "Cancelled, refunded",
-  PAYMENT_FAILED: "Payment failed",
-  REFILL_DUE: "Refill reminder",
-  RENEWAL_DUE: "Review before next supply",
-  DOSE_REMINDER: "Dose reminder",
+  DR_BOOKED: "Doctor: new booking",
+  DR_MOVED: "Doctor: booking moved",
+  DR_SOON: "Doctor: call starting",
+  DR_PATIENT_WAITING: "Doctor: patient waiting",
+  DR_NOTE_TO_SIGN: "Doctor: note to sign",
+  DR_PATIENT_MESSAGE: "Doctor: patient wrote",
   REPLY: "Reply",
 };
 
 /** The quick replies a message carries, to play while WhatsApp is in test mode. */
 export const REPLIES_FOR: Record<string, { code: string; label: string }[]> = {
-  CHECK_IN_1: [
-    { code: "ORDER", label: "Order now" },
-    { code: "ELSEWHERE", label: "I have them" },
-    { code: "LATER", label: "Need more time" },
-  ],
-  CHECK_IN_2: [
-    { code: "ORDER", label: "Order now" },
-    { code: "ELSEWHERE", label: "I have them" },
-    { code: "LATER", label: "Need more time" },
+  CHECK_IN: [
+    { code: "CLEAR", label: "All clear" },
     { code: "QUESTIONS", label: "I have questions" },
+    { code: "LATER", label: "Remind me later" },
+    { code: "ELSEWHERE", label: "I have them already" },
   ],
-  PLAN_REMINDER: [{ code: "ELSEWHERE", label: "I have them" }],
   ORDER_FEEDBACK: [
     { code: "GOOD", label: "All good" },
     { code: "ISSUE", label: "Something is wrong" },
   ],
-  REFILL_DUE: [{ code: "ENOUGH", label: "I have enough" }],
+  SUPPLY_LOW: [{ code: "ENOUGH", label: "I have enough" }],
   DOSE_REMINDER: [
     { code: "TAKEN", label: "Taken" },
     { code: "SNOOZE", label: "Remind me in 1 hour" },

@@ -146,8 +146,8 @@ export default function ConsentQuestion({ consents, draft, update }: Props) {
             <Check size={12} weight="bold" />
           </i>
           <span className={pageStyles.agreeText}>
-            <strong>Optional.</strong> Send my prescription, order updates and
-            reminders on{" "}
+            <strong>Optional.</strong> Updates about my care from inrange
+            on{" "}
             <a
               href="#whatsapp"
               className={styles.docLink}
@@ -155,7 +155,7 @@ export default function ConsentQuestion({ consents, draft, update }: Props) {
             >
               WhatsApp
             </a>
-            .
+            : bookings, blood tests, any prescription, orders and reminders.
           </span>
         </label>
       )}

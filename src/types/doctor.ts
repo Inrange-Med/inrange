@@ -42,6 +42,9 @@ export type WorkingRange = { weekday: number; start: string; end: string };
  * the doctor saves their own week; `daysOff` are "YYYY-MM-DD", today onward; `bookedOutside` counts
  * booked consultations that fall outside these hours and stay booked.
  */
+/** The doctor's WhatsApp alerts: new bookings, changes, the call starting, the patient waiting. */
+export type WhatsAppAlerts = { on: boolean; mobile: string };
+
 export type DoctorAvailability = {
   weekly: WorkingRange[];
   daysOff: string[];

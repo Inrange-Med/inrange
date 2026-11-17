@@ -70,15 +70,22 @@ function TaskRow({
 
 export default function TasksPanel({
   now,
+  version,
   onOpenPatient,
   onChanged,
 }: {
   now: number;
+  /** bumped by the page after a change anywhere (a sheet here or the patient sheet), so the lists reload */
+  version: number;
   onOpenPatient: (id: string) => void;
   onChanged: () => void;
 }) {
-  const open = useApiResource("medicine-tasks-open", () => listTasks("OPEN"));
-  const done = useApiResource("medicine-tasks-done", () => listTasks("DONE"));
+  const open = useApiResource(`medicine-tasks-open-${version}`, () =>
+    listTasks("OPEN"),
+  );
+  const done = useApiResource(`medicine-tasks-done-${version}`, () =>
+    listTasks("DONE"),
+  );
   const { user } = useSessionUser();
   const [who, setWho] = useState<"all" | "mine">("all");
   const [openTask, setOpenTask] = useState<OpsTask | null>(null);
@@ -95,7 +102,8 @@ export default function TasksPanel({
           <h2 id="queue-h" className={adminStyles.h2}>
             To do
           </h2>
-          {mine.length > 0 && (
+          {/* shown while chosen too, so finishing the last of one's own tasks never strands the filter */}
+          {(mine.length > 0 || who === "mine") && (
             <span className={s.seg}>
               <SegmentedControl
                 label="Whose tasks"
@@ -174,11 +182,7 @@ export default function TasksPanel({
           setOpenTask(null);
           onOpenPatient(id);
         }}
-        onChanged={() => {
-          open.reload();
-          done.reload();
-          onChanged();
-        }}
+        onChanged={onChanged}
       />
     </div>
   );

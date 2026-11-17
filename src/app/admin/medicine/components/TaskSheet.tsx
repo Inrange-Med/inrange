@@ -12,6 +12,7 @@ import { ArrowRight, Phone } from "@phosphor-icons/react";
 import Sheet from "@/components/ui/Sheet";
 import { useToast } from "@/components/ui/ToastProvider";
 import { useSessionUser } from "@/hooks/useSessionUser";
+import { combineDateAndTime, inIndiaTime } from "@/lib/format/dateTime";
 import { spacedMobile } from "@/lib/format/phone";
 import { errorMessage } from "@/lib/http/apiClient";
 import {
@@ -33,8 +34,7 @@ import adminStyles from "@/app/admin/styles/AdminSurfaces.module.css";
 import s from "./Medicine.module.css";
 
 /** "2026-11-18T10:00" for a datetime-local input, in India time. */
-const localInput = (d: Date) =>
-  new Date(d.getTime() + 5.5 * 3600_000).toISOString().slice(0, 16);
+const localInput = (d: Date) => inIndiaTime(d).toISOString().slice(0, 16);
 
 export default function TaskSheet({
   task,
@@ -80,18 +80,25 @@ export default function TaskSheet({
   const mine = assigned === String(user?.userId);
 
   const save = async () => {
+    if (busy) return;
     if (!outcome) return setProblem("Choose what happened.");
     if (note.trim().length < 3)
       return setProblem("Add a short note on what happened.");
+    // the input gives India time ("2026-11-18T10:00"); an empty or past one is asked again
+    const callBackIso = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(callBackAt)
+      ? combineDateAndTime(callBackAt.slice(0, 10), callBackAt.slice(11, 16))
+      : null;
+    if (outcome === "CALL_BACK" && !callBackIso)
+      return setProblem("Choose when to call back.");
+    if (outcome === "CALL_BACK" && Date.parse(callBackIso!) < Date.now())
+      return setProblem("Choose a later time to call back.");
     setBusy("save");
     setProblem(null);
     try {
       const result = await finishTask(task.id, {
         outcome,
         note: note.trim(),
-        ...(outcome === "CALL_BACK"
-          ? { callBackAt: new Date(`${callBackAt}:00+05:30`).toISOString() }
-          : {}),
+        ...(outcome === "CALL_BACK" ? { callBackAt: callBackIso! } : {}),
       });
       toast(result.status === "OPEN" ? "Moved to the call-back time" : "Done");
       onChanged();
@@ -276,6 +283,7 @@ export default function TaskSheet({
               className={`btn ${formStyles.go}`}
               data-busy={busy === "save"}
               aria-busy={busy === "save"}
+              disabled={busy !== null}
               onClick={save}
             >
               <span>{busy === "save" ? "Saving" : "Save"}</span>
