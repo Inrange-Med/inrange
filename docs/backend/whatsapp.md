@@ -163,8 +163,8 @@ Replies inside WhatsApp's 24-hour window after the person writes or taps are ses
    `WHATSAPP_APP_SECRET` (the Meta app's secret: the webhook signature) and `WHATSAPP_VERIFY_TOKEN` (any long
    word). Live needs the token, the number id and the app secret; `/api/health` says `whatsapp: live`.
 4. **The webhook:** in the Meta app, `https://<ref>.supabase.co/functions/v1/api/webhooks/whatsapp?forceFunctionRegion=ap-south-1`
-   with the verify token, subscribed to `messages` (and `message_template_status_update`,
-   `template_category_update` to see approvals and recategorisations in the app's dashboard).
+   with the verify token, subscribed to `messages` (taps, replies and delivery statuses all arrive
+   on it). Template approvals show in WhatsApp Manager and in the sync's answer.
 5. **The templates:** `POST /api/admin/whatsapp/templates/sync` as an admin. Approval usually takes minutes
    (up to 24 hours). Until a template is approved its sends fail as final and show as Not sent.
 6. **Before live patients:** unset `TEST_OTP` or drop the pilot doctors from `TEST_MOBILES`.
