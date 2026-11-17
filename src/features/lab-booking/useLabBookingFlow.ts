@@ -119,13 +119,14 @@ export function useLabBookingFlow(mode: LabBookingMode) {
     slot,
     held,
     choosePackage: advance(setChosenPackage),
-    /** Onboarding: the care package and the Redcliffe package it books. */
-    chooseCarePackage: advance(
-      ({ care, lab }: { care: CarePackage; lab: LabPackage }) => {
-        setCarePackage(care);
-        setChosenPackage(lab);
-      },
-    ),
+    /** Onboarding: the care package and the Redcliffe package it books. Always starts at the address:
+        the card can be tapped again after Back from a later step. */
+    chooseCarePackage: ({ care, lab }: { care: CarePackage; lab: LabPackage }) => {
+      setCarePackage(care);
+      setChosenPackage(lab);
+      setHeld(null);
+      setStep("address");
+    },
     /**
      * The address, then the person step. A person the profile already fills in completely (`ready`)
      * is taken as is, straight to the time: the review shows them with Change.
