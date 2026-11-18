@@ -179,7 +179,11 @@ function Loaded({
       // without a plan (the nano plan) the prescription is for one month: said here, as the server does
       const days =
         line.durationValue *
-        (line.durationUnit === "MONTHS" ? 30 : line.durationUnit === "WEEKS" ? 7 : 1);
+        (line.durationUnit === "MONTHS"
+          ? 30
+          : line.durationUnit === "WEEKS"
+            ? 7
+            : 1);
       if (!p.onPlan && days > 31)
         return {
           text: `This patient is not on a plan yet, so the prescription is for one month. Set ${which} to 1 month or less.`,
