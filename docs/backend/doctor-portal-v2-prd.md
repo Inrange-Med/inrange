@@ -10,7 +10,7 @@
 
 ## The rules
 
-Doctors and patients are not comfortable with software (Sachchidanand: _“lay everything out on the plate in front of them”_). So:
+Doctors and patients are not comfortable with software (Sachchidanand: *“lay everything out on the plate in front of them”*). So:
 
 1. **One next step, one big button.** Every screen says what to do now, in words, with a single main button. Nothing else competes with it.
 2. **Nothing to find.** No menus, no `...`, no icon-only buttons, no pop-ups on the main path.
@@ -46,13 +46,13 @@ Three places only: **Today**, **History**, **Availability**.
 - **Below it, the day's consultations.** The arrows and date picker change only this list.
 - Every consultation shows one status in words and one button:
 
-| Status                             | Button                    |
-| ---------------------------------- | ------------------------- |
-| Starts at 8:00 pm                  | Open (read reports early) |
-| Call open now (from 10 min before) | **Join video call**       |
-| Prescription not written yet       | **Write prescription**    |
-| Not sent to patient yet            | **Send to patient**       |
-| Sent 7:42 pm                       | View PDF                  |
+| Status | Button |
+|---|---|
+| Starts at 8:00 pm | Open (read reports early) |
+| Call open now (from 10 min before) | **Join video call** |
+| Prescription not written yet | **Write prescription** |
+| Not sent to patient yet | **Send to patient** |
+| Sent 7:42 pm | View PDF |
 
 - Show only start times, never how long a consultation lasts (house rule).
 
@@ -156,18 +156,18 @@ One screen: **Home**. It shows **one card with the next step** and below it thre
 
 ## The next-step card, stage by stage
 
-| Stage              | The card says                                                          | Button                                        |
-| ------------------ | ---------------------------------------------------------------------- | --------------------------------------------- |
-| Blood test needed  | Book your home blood test, or upload a recent report                   | **Book home test** (Upload report, smaller)   |
-| Test booked        | Sample collection Thu 19 Nov, 7 to 9 am                                | none                                          |
-| Waiting for report | Your report is being prepared                                          | none                                          |
-| Report ready       | Your report is ready. We'll call you to book your doctor.              | **View report**                               |
-| Call booked        | Video call with Dr. Mehta, Tue 17 Nov, 7:00 pm. Join opens at 6:50 pm. | **Join video call** (live from 10 min before) |
-| After the call     | Your doctor is writing your prescription                               | none                                          |
-| Prescription sent  | Your prescription is ready                                             | **View prescription**                         |
-| Payment due        | Your plan and medicines: itemised bill on the card                     | **Pay ₹X**                                    |
-| Paid               | Medicines on the way. Arriving Thu 26 Nov.                             | **Track delivery**                            |
-| Follow-up booked   | Same as “Call booked”                                                  | **Join video call**                           |
+| Stage | The card says | Button |
+|---|---|---|
+| Blood test needed | Book your home blood test, or upload a recent report | **Book home test** (Upload report, smaller) |
+| Test booked | Sample collection Thu 19 Nov, 7 to 9 am | none |
+| Waiting for report | Your report is being prepared | none |
+| Report ready | Your report is ready. We'll call you to book your doctor. | **View report** |
+| Call booked | Video call with Dr. Mehta, Tue 17 Nov, 7:00 pm. Join opens at 6:50 pm. | **Join video call** (live from 10 min before) |
+| After the call | Your doctor is writing your prescription | none |
+| Prescription sent | Your prescription is ready | **View prescription** |
+| Payment due | Your plan and medicines: itemised bill on the card | **Pay ₹X** |
+| Paid | Medicines on the way. Arriving Thu 26 Nov. | **Track delivery** |
+| Follow-up booked | Same as “Call booked” | **Join video call** |
 
 Whenever something costs money, the itemised bill sits on the card above the **Pay** button. One payment covers the plan and the medicines where possible. If the backend needs two payments, they show as two steps, one after the other.
 
@@ -193,15 +193,15 @@ The weight card and logging, the programme card, the care team cards, the doses 
 
 # Where it lives in the code (`Medistry/src/app/`)
 
-| Change                          | Files                                                                                                                                                                                |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Doctor navigation (3 places)    | `doctor-dashboard/components/DoctorShell.tsx`                                                                                                                                        |
-| Same-tab call bug               | `doctor-dashboard/components/today/NextPatientCard.tsx` (a `<Link>` to `/consultation/<id>`)                                                                                         |
-| Today                           | `doctor-dashboard/components/today/TodayView.tsx`, `components/AppointmentRow.tsx`                                                                                                   |
-| Consultation page (new)         | `doctor-dashboard/consultations/[appointmentId]/`. Reuse `patients/[patientId]/components/LabsPanel.tsx` and the medicine search in `notes/[noteId]/components/AddMedicineSheet.tsx` |
-| Call tab end screen             | `consultation/[appointmentId]/components/ConsultationRoom.tsx`, `CallEnded.tsx`                                                                                                      |
-| Availability                    | `doctor-dashboard/hours/`                                                                                                                                                            |
-| Patient Home and next step      | `patient-dashboard/components/home/HomeView.tsx`, `NextStepStrip.tsx`, `components/PatientShell.tsx`                                                                                 |
-| Patient prescription, labs, pay | `patient-dashboard/care/components/PrescriptionSheet.tsx`, `lab-tests/`, `checkout/`, `care/cart/`, `components/ItemisedBill.tsx`                                                    |
+| Change | Files |
+|---|---|
+| Doctor navigation (3 places) | `doctor-dashboard/components/DoctorShell.tsx` |
+| Same-tab call bug | `doctor-dashboard/components/today/NextPatientCard.tsx` (a `<Link>` to `/consultation/<id>`) |
+| Today | `doctor-dashboard/components/today/TodayView.tsx`, `components/AppointmentRow.tsx` |
+| Consultation page (new) | `doctor-dashboard/consultations/[appointmentId]/`. Reuse `patients/[patientId]/components/LabsPanel.tsx` and the medicine search in `notes/[noteId]/components/AddMedicineSheet.tsx` |
+| Call tab end screen | `consultation/[appointmentId]/components/ConsultationRoom.tsx`, `CallEnded.tsx` |
+| Availability | `doctor-dashboard/hours/` |
+| Patient Home and next step | `patient-dashboard/components/home/HomeView.tsx`, `NextStepStrip.tsx`, `components/PatientShell.tsx` |
+| Patient prescription, labs, pay | `patient-dashboard/care/components/PrescriptionSheet.tsx`, `lab-tests/`, `checkout/`, `care/cart/`, `components/ItemisedBill.tsx` |
 
 **Backend adds:** prescription `diagnosis`, `patientHistory`, `remarks`, per-medicine `intake`, and `sentAt`; create and send as two separate steps; the PDPL medicine list with forgiving search; a list of consultations waiting on the doctor; one next-step stage per patient.

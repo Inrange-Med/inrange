@@ -176,6 +176,15 @@ function Loaded({
         return { text: `Choose how often for ${which}.`, line: line.key };
       if (!line.durationValue)
         return { text: `Write for how long for ${which}.`, line: line.key };
+      // without a plan (the nano plan) the prescription is for one month: said here, as the server does
+      const days =
+        line.durationValue *
+        (line.durationUnit === "MONTHS" ? 30 : line.durationUnit === "WEEKS" ? 7 : 1);
+      if (!p.onPlan && days > 31)
+        return {
+          text: `This patient is not on a plan yet, so the prescription is for one month. Set ${which} to 1 month or less.`,
+          line: line.key,
+        };
     }
     return null;
   };
@@ -460,7 +469,15 @@ function Loaded({
           {field("patientHistory", "Patient history")}
           {field("remarks", "Remarks")}
           <div className={styles.field}>
-            <span className={styles.fieldLabel}>Medicines</span>
+            <span className={styles.fieldLabel}>
+              Medicines
+              {!p.onPlan && (
+                // the nano plan (12 Nov 2026 call): said before the doctor writes, not found out at Create PDF
+                <span className={styles.fieldHint}>
+                  One month at most: this patient is not on a plan yet
+                </span>
+              )}
+            </span>
             <MedicineLines
               lines={draft.medicines}
               problemKey={problem?.line ?? null}

@@ -249,13 +249,19 @@ consultationRoutes.put("/doctor/consultations/:id/prescription", async (c) => {
   return ok(c, prescriptionView(saved), "Saved");
 });
 
+/** The longest a line may run for a patient with no plan (the nano plan): one month (12 Nov 2026 call). */
+const NANO_DAYS = 31;
+
 /** What the PDF needs before it can be made; the first gap, in the words the doctor sees. */
-function missingFor(rx: Row): string | null {
+function missingFor(rx: Row, onPlan: boolean): string | null {
   if (!String(rx.diagnosis ?? "").trim()) return "Write the diagnosis first.";
   for (const [i, l] of (rx.items as Row[]).entries()) {
     const which = (rx.items as Row[]).length > 1 ? `medicine ${i + 1}` : "the medicine";
     if (!String(l.medicineName ?? "").trim()) return `Choose ${which} from the list, or type its name.`;
     if (!String(l.frequency ?? "").trim()) return `Choose how often for ${which}.`;
+    // issued for one month without a plan: a longer line would print one thing and order another
+    if (!onPlan && Number(l.durationDays) > NANO_DAYS)
+      return `This patient is not on a plan yet, so the prescription is for one month. Set ${which} to 1 month or less.`;
   }
   return null;
 }
@@ -265,12 +271,12 @@ consultationRoutes.post("/doctor/consultations/:id/prescription/pdf", async (c) 
   const r = await consultationOf(doctor.id, intParam(c.req.param("id"), "consultation"));
   const [rx] = await sql`select * from prescriptions where appointment_id = ${r.id} and status = 'DRAFT'`;
   if (!rx) fail(409, r.sent_id ? "This prescription was sent already." : "Write the prescription first.");
-  const missing = missingFor(rx);
-  if (missing) fail(422, missing);
   // the PDF carries the time it was made as its signature time; sending issues exactly this file
   // the database's clock, as autosave's: a save that lands while the PDF renders is later than `at`
   const [{ at }] = await sql`select clock_timestamp() as at`;
-  const { months } = await issueMonths(r.patient_id, monthsOf(rx.items), at);
+  const { months, onPlan } = await issueMonths(r.patient_id, monthsOf(rx.items), at);
+  const missing = missingFor(rx, onPlan);
+  if (missing) fail(422, missing);
   const path = await renderRx(doctor, r.patient_id, rx, at, months);
   const [made] = await sql`
     update prescriptions set pdf_path = ${path}, pdf_made_at = ${at}, months = ${months}

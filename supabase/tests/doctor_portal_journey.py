@@ -162,6 +162,10 @@ def main():
          and b["data"]["diagnosis"].startswith("Obesity") and len(b["data"]["medicines"]) == 2, b)
     lines[0]["durationValue"] = 3
     call("PUT", f"/api/doctor/consultations/{appt}/prescription", doctor, {"medicines": lines})
+    s, b = call("POST", f"/api/doctor/consultations/{appt}/prescription/pdf", doctor)
+    step("no plan: a line longer than a month is refused, in words", s == 422 and "one month" in b.get("message", ""), b)
+    lines[0]["durationValue"] = 1
+    call("PUT", f"/api/doctor/consultations/{appt}/prescription", doctor, {"medicines": lines, "remarks": "Review sugar in a month."})
     s, b = call("GET", "/api/doctor/consultations", doctor)
     row = next(r for r in b["data"]["waiting"] if r["id"] == appt)
     step("Do this now: the new version to write", row["state"] == "TO_WRITE" and row["revising"], row)
