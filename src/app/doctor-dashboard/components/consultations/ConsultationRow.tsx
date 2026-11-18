@@ -56,7 +56,9 @@ export default function ConsultationRow({
     setSending(true);
     try {
       const sent = await sendPrescription(row.id);
-      toast(`Sent to patient, ${clockTime(new Date(sent.sentAt ?? Date.now()))}`);
+      toast(
+        `Sent to patient, ${clockTime(new Date(sent.sentAt ?? Date.now()))}`,
+      );
       onChanged?.();
     } catch (caught) {
       toast(errorMessage(caught, "The prescription was not sent. Try again."));
@@ -126,7 +128,9 @@ export default function ConsultationRow({
             load={() => getFile(row.pdf ?? "")}
             className={buttonClass}
           >
-            {(opening) => <span>{opening ? "Opening" : ACTION_LABEL.VIEW_PDF}</span>}
+            {(opening) => (
+              <span>{opening ? "Opening" : ACTION_LABEL.VIEW_PDF}</span>
+            )}
           </FileOpenButton>
         )}
       </span>

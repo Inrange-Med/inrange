@@ -28,7 +28,9 @@ export default function PaymentsView() {
       ) : !payments.data ? (
         <PageGhosts heights={[180]} />
       ) : payments.data.length === 0 ? (
-        <p className={styles.empty}>No payments yet. When something is due, Home shows the bill and Pay.</p>
+        <p className={styles.empty}>
+          No payments yet. When something is due, Home shows the bill and Pay.
+        </p>
       ) : (
         <ul className={styles.list}>
           {payments.data.map((p) => (
@@ -40,7 +42,9 @@ export default function PaymentsView() {
                   {p.invoiceNumber && `. Receipt ${p.invoiceNumber}`}
                 </span>
               </span>
-              <span className={`${styles.amount} num`}>{formatRupees(p.amountPaise / 100)}</span>
+              <span className={`${styles.amount} num`}>
+                {formatRupees(p.amountPaise / 100)}
+              </span>
             </li>
           ))}
         </ul>

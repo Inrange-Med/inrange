@@ -18,7 +18,11 @@ export type BillLine = {
   amountPaise: number;
 };
 
-export type Bill = { lines: BillLine[]; discountPercent?: number; totalPaise: number };
+export type Bill = {
+  lines: BillLine[];
+  discountPercent?: number;
+  totalPaise: number;
+};
 
 export type PrescriptionSummary = {
   id: string;
@@ -30,7 +34,10 @@ export type PrescriptionSummary = {
 
 /** One next step, from the backend (GET /api/patient/next-step); Home words it and gives it one button. */
 export type NextStep =
-  | { stage: "CALL_OPEN" | "CALL_BOOKED" | "AFTER_CALL"; appointment: NextAppointment }
+  | {
+      stage: "CALL_OPEN" | "CALL_BOOKED" | "AFTER_CALL";
+      appointment: NextAppointment;
+    }
   | {
       stage: "PAYMENT_DUE";
       payFor: "PLAN" | "MEDICINES";
@@ -39,11 +46,32 @@ export type NextStep =
       hasAddress: boolean;
       followedBy: "MEDICINES" | null;
     }
-  | { stage: "ON_THE_WAY"; order: { id: string; status: string; expectedAt: string | null } }
-  | { stage: "DELIVERED"; order: { id: string; deliveredAt: string }; prescription: PrescriptionSummary | null }
-  | { stage: "PRESCRIPTION_SENT"; prescription: PrescriptionSummary; orderOpensAt: string | null }
-  | { stage: "LAB_UNPAID"; labBookingId: string; collection: Collection | null; bill: Bill }
-  | { stage: "TEST_BOOKED"; labBookingId: string; collection: Collection | null; collectorName: string | null }
+  | {
+      stage: "ON_THE_WAY";
+      order: { id: string; status: string; expectedAt: string | null };
+    }
+  | {
+      stage: "DELIVERED";
+      order: { id: string; deliveredAt: string };
+      prescription: PrescriptionSummary | null;
+    }
+  | {
+      stage: "PRESCRIPTION_SENT";
+      prescription: PrescriptionSummary;
+      orderOpensAt: string | null;
+    }
+  | {
+      stage: "LAB_UNPAID";
+      labBookingId: string;
+      collection: Collection | null;
+      bill: Bill;
+    }
+  | {
+      stage: "TEST_BOOKED";
+      labBookingId: string;
+      collection: Collection | null;
+      collectorName: string | null;
+    }
   | { stage: "WAITING_FOR_REPORT"; labBookingId: string }
   | { stage: "UNDER_REVIEW" }
   | { stage: "NOT_APPROVED"; note: string | null }
@@ -51,7 +79,11 @@ export type NextStep =
   | { stage: "BLOOD_TEST_NEEDED" }
   | { stage: "IN_CARE"; prescription: PrescriptionSummary | null };
 
-export type Collection = { date: string; from: string | null; to: string | null };
+export type Collection = {
+  date: string;
+  from: string | null;
+  to: string | null;
+};
 
 export type PatientPrescription = {
   id: string;

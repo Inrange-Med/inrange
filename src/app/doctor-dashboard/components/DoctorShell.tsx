@@ -15,7 +15,11 @@
 import { useEffect, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ClockCounterClockwise, Clock, SquaresFour } from "@phosphor-icons/react";
+import {
+  ClockCounterClockwise,
+  Clock,
+  SquaresFour,
+} from "@phosphor-icons/react";
 import AppTheme from "@/components/ui/AppTheme";
 import Avatar from "@/components/ui/Avatar";
 import Wordmark from "@/components/ui/Wordmark";
@@ -132,7 +136,8 @@ export default function DoctorShell({ children }: { children: ReactNode }) {
 
   const section = sectionFor(pathname);
   const name = profile.data?.fullName ?? user?.fullName ?? "Doctor";
-  const countOf = (counted?: true) => (counted && counts.data ? counts.data : 0);
+  const countOf = (counted?: true) =>
+    counted && counts.data ? counts.data : 0;
 
   return (
     <AppTheme>

@@ -93,17 +93,26 @@ export default function MedicinePicker({
         />
       </label>
 
-      {failed && <p className={styles.searchNote}>The list did not load. Keep typing to try again.</p>}
+      {failed && (
+        <p className={styles.searchNote}>
+          The list did not load. Keep typing to try again.
+        </p>
+      )}
 
       {results && results.matches.length > 0 && (
         <ul className={styles.results} aria-label="Matches on the list">
           {results.matches.map((item) => (
             <li key={item.id}>
-              <button type="button" className={styles.result} onClick={() => pick(item)}>
+              <button
+                type="button"
+                className={styles.result}
+                onClick={() => pick(item)}
+              >
                 <strong>{item.name}</strong>
                 <span>
                   {[item.molecule, item.form].filter(Boolean).join(", ")}
-                  {!item.orderable && ". Prints only: our pharmacy does not sell it yet"}
+                  {!item.orderable &&
+                    ". Prints only: our pharmacy does not sell it yet"}
                 </span>
               </button>
             </li>
@@ -115,26 +124,41 @@ export default function MedicinePicker({
         <div className={styles.noMatch}>
           {results.didYouMean.length > 0 ? (
             <>
-              <p className={styles.searchNote}>Not on the list. Did you mean:</p>
+              <p className={styles.searchNote}>
+                Not on the list. Did you mean:
+              </p>
               <ul className={styles.results}>
                 {results.didYouMean.map((item) => (
                   <li key={item.id}>
-                    <button type="button" className={styles.result} onClick={() => pick(item)}>
+                    <button
+                      type="button"
+                      className={styles.result}
+                      onClick={() => pick(item)}
+                    >
                       <strong>{item.name}</strong>
-                      <span>{[item.molecule, item.form].filter(Boolean).join(", ")}</span>
+                      <span>
+                        {[item.molecule, item.form].filter(Boolean).join(", ")}
+                      </span>
                     </button>
                   </li>
                 ))}
               </ul>
             </>
           ) : (
-            <p className={styles.searchNote}>&ldquo;{q}&rdquo; is not on the list.</p>
+            <p className={styles.searchNote}>
+              &ldquo;{q}&rdquo; is not on the list.
+            </p>
           )}
-          <button type="button" className={`btn btn--ghost ${styles.typed}`} onClick={() => pick(null)}>
+          <button
+            type="button"
+            className={`btn btn--ghost ${styles.typed}`}
+            onClick={() => pick(null)}
+          >
             Add &ldquo;{q}&rdquo; as typed
           </button>
           <p className={styles.searchNote}>
-            It prints on the prescription. It can&apos;t be ordered until our team matches it to the list.
+            It prints on the prescription. It can&apos;t be ordered until our
+            team matches it to the list.
           </p>
         </div>
       )}

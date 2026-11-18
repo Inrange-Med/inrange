@@ -23,7 +23,9 @@ import type {
 
 const base = "/api/doctor/consultations";
 
-export async function getConsultationDay(date: string): Promise<ConsultationDay> {
+export async function getConsultationDay(
+  date: string,
+): Promise<ConsultationDay> {
   const body = await apiRequest<ApiEnvelope<ConsultationDay>>(base, {
     query: { date },
   });

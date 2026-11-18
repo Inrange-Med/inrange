@@ -136,9 +136,7 @@ export default function PatientShell({ children }: { children: ReactNode }) {
   return (
     <AppTheme>
       <ShellFocusContext.Provider value={setRegistered}>
-        <ToastProvider
-          className={bare ? styles.toastChat : ""}
-        >
+        <ToastProvider className={bare ? styles.toastChat : ""}>
           <div className={styles.app}>
             {focus && <FocusBar focus={focus} scrolled={scrolled} />}
             {tabs && (
@@ -171,7 +169,6 @@ export default function PatientShell({ children }: { children: ReactNode }) {
             )}
 
             {children}
-
           </div>
         </ToastProvider>
       </ShellFocusContext.Provider>

@@ -28,9 +28,15 @@ export default function CallEnded({
         <div className={styles.endedIcon}>
           <Check size={30} weight="light" />
         </div>
-        <span className={styles.endedLabel}>{left ? "You left the call" : "Call ended"}</span>
+        <span className={styles.endedLabel}>
+          {left ? "You left the call" : "Call ended"}
+        </span>
         <h1>Finish the prescription in your other tab.</h1>
-        <button type="button" className={styles.secondaryButton} onClick={() => window.close()}>
+        <button
+          type="button"
+          className={styles.secondaryButton}
+          onClick={() => window.close()}
+        >
           Close this tab
         </button>
         <Link href={doctorPage} className={styles.quietLink}>
@@ -46,7 +52,10 @@ export default function CallEnded({
       </div>
       <span className={styles.endedLabel}>Consultation complete</span>
       <h1>The call has ended.</h1>
-      <p>Your doctor is writing your prescription. It comes to you on WhatsApp and in the app.</p>
+      <p>
+        Your doctor is writing your prescription. It comes to you on WhatsApp
+        and in the app.
+      </p>
       <Link href={home} className={styles.secondaryButton}>
         Back to {homeLabel}
       </Link>

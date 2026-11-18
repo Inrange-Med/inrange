@@ -18,16 +18,24 @@ import ErrorNotice from "@/components/ui/ErrorNotice";
 import PageHead from "@/components/ui/PageHead";
 import { useApiResource } from "@/hooks/useApiResource";
 import { useNow } from "@/hooks/useNow";
-import { combineDateAndTime, toApiDate, weekdayDayMonth } from "@/lib/format/dateTime";
+import {
+  combineDateAndTime,
+  toApiDate,
+  weekdayDayMonth,
+} from "@/lib/format/dateTime";
 import { getConsultationDay } from "@/services/consultationService";
 import ClinicSkeleton from "../ClinicSkeleton";
-import ConsultationRow, { consultationListClass } from "../consultations/ConsultationRow";
+import ConsultationRow, {
+  consultationListClass,
+} from "../consultations/ConsultationRow";
 import clinicStyles from "@/app/doctor-dashboard/styles/ClinicSurfaces.module.css";
 import styles from "./TodayView.module.css";
 
 /** "2026-11-18" moved by whole days, on India's calendar. */
 const shiftDate = (date: string, days: number) =>
-  toApiDate(new Date(Date.parse(combineDateAndTime(date, "12:00")) + days * 86_400_000));
+  toApiDate(
+    new Date(Date.parse(combineDateAndTime(date, "12:00")) + days * 86_400_000),
+  );
 
 const dayTitle = (date: string) =>
   weekdayDayMonth.format(new Date(combineDateAndTime(date, "12:00")));
@@ -36,7 +44,9 @@ export default function TodayView() {
   const now = useNow(30_000);
   const today = toApiDate(new Date(now));
   const [date, setDate] = useState(today);
-  const day = useApiResource(`doctor-consultations-${date}`, () => getConsultationDay(date));
+  const day = useApiResource(`doctor-consultations-${date}`, () =>
+    getConsultationDay(date),
+  );
   const { reload } = day;
 
   // fresh every half minute (a call opening) and on coming back from the call tab
@@ -50,7 +60,11 @@ export default function TodayView() {
   }, [reload]);
 
   const head = (
-    <PageHead className={clinicStyles.pageHead} title="Today" sub={dayTitle(today)} />
+    <PageHead
+      className={clinicStyles.pageHead}
+      title="Today"
+      sub={dayTitle(today)}
+    />
   );
   if (day.error && !day.data) {
     return (
@@ -82,18 +96,26 @@ export default function TodayView() {
             Do this now
           </h2>
           {waiting.length > 0 && (
-            <span className={`${clinicStyles.count} num`}>{waiting.length}</span>
+            <span className={`${clinicStyles.count} num`}>
+              {waiting.length}
+            </span>
           )}
         </div>
         {waiting.length === 0 ? (
           <p className={clinicStyles.empty}>
-            Nothing is waiting on you. Calls that open and prescriptions to write or send appear here.
+            Nothing is waiting on you. Calls that open and prescriptions to
+            write or send appear here.
           </p>
         ) : (
           <ol className={consultationListClass}>
             {waiting.map((row, index) => (
               <li key={row.id}>
-                <ConsultationRow row={row} withDay lead={index === 0} onChanged={reload} />
+                <ConsultationRow
+                  row={row}
+                  withDay
+                  lead={index === 0}
+                  onChanged={reload}
+                />
               </li>
             ))}
           </ol>
@@ -126,7 +148,11 @@ export default function TodayView() {
               <CaretRight size={18} />
             </button>
             {date !== today && (
-              <button type="button" className={styles.pick} onClick={() => setDate(today)}>
+              <button
+                type="button"
+                className={styles.pick}
+                onClick={() => setDate(today)}
+              >
                 Today
               </button>
             )}
@@ -152,7 +178,9 @@ export default function TodayView() {
           <ClinicSkeleton titled={false} />
         ) : list.length === 0 ? (
           <p className={clinicStyles.empty}>
-            {date === today ? "No consultations today." : "No consultations on this day."}
+            {date === today
+              ? "No consultations today."
+              : "No consultations on this day."}
           </p>
         ) : (
           <ol className={consultationListClass}>

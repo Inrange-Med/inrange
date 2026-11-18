@@ -39,7 +39,8 @@ const INTAKES: { value: Exclude<Intake, "">; label: string }[] = [
 ];
 
 let keySeed = 0;
-export const newKey = () => `m${Date.now().toString(36)}${(keySeed++).toString(36)}`;
+export const newKey = () =>
+  `m${Date.now().toString(36)}${(keySeed++).toString(36)}`;
 
 /** A new line from a master-list item (or a name typed by hand), with the usual choices filled in. */
 export function lineFrom(item: ListItem | null, typed = ""): MedicineLine {
@@ -89,14 +90,17 @@ export default function MedicineLines({
                   {line.genericName && <span>{line.genericName}</span>}
                   {line.unlisted && (
                     <span className={styles.unlisted}>
-                      Not on the list: it prints, and our team matches it before it can be ordered
+                      Not on the list: it prints, and our team matches it before
+                      it can be ordered
                     </span>
                   )}
                 </span>
                 <button
                   type="button"
                   className={styles.remove}
-                  onClick={() => onChange(lines.filter((l) => l.key !== line.key))}
+                  onClick={() =>
+                    onChange(lines.filter((l) => l.key !== line.key))
+                  }
                   aria-label={`Remove ${line.name}`}
                 >
                   <Trash size={16} aria-hidden="true" />
@@ -134,7 +138,9 @@ export default function MedicineLines({
                       placeholder="For example, every other day"
                       aria-label="How often, in words"
                       autoFocus
-                      onChange={(e) => update(line.key, { frequencyOther: e.target.value })}
+                      onChange={(e) =>
+                        update(line.key, { frequencyOther: e.target.value })
+                      }
                     />
                   )}
                 </div>
@@ -152,7 +158,13 @@ export default function MedicineLines({
                       aria-label="How long, a number"
                       onChange={(e) =>
                         update(line.key, {
-                          durationValue: Math.max(0, Math.min(365, Math.round(Number(e.target.value) || 0))),
+                          durationValue: Math.max(
+                            0,
+                            Math.min(
+                              365,
+                              Math.round(Number(e.target.value) || 0),
+                            ),
+                          ),
                         })
                       }
                     />
@@ -160,7 +172,9 @@ export default function MedicineLines({
                       label="How long, in"
                       value={line.durationUnit}
                       options={UNITS}
-                      onChange={(unit) => unit && update(line.key, { durationUnit: unit })}
+                      onChange={(unit) =>
+                        unit && update(line.key, { durationUnit: unit })
+                      }
                     />
                   </div>
                 </div>

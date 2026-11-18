@@ -156,7 +156,9 @@ export default function ConsultationRoom({
                 className={styles.leaveButton}
                 // the doctor's call has its own tab: leaving shows the way back to the prescription
                 onClick={() =>
-                  isDoctor ? setStage({ name: "ended", left: true }) : router.push(home)
+                  isDoctor
+                    ? setStage({ name: "ended", left: true })
+                    : router.push(home)
                 }
               >
                 <SignOut size={18} aria-hidden="true" /> Leave
@@ -170,7 +172,11 @@ export default function ConsultationRoom({
         <CallEnded
           home={home}
           homeLabel={homeLabel}
-          doctorPage={isDoctor ? `/doctor-dashboard/consultations/${appointmentId}` : undefined}
+          doctorPage={
+            isDoctor
+              ? `/doctor-dashboard/consultations/${appointmentId}`
+              : undefined
+          }
           left={stage.left}
         />
       )}

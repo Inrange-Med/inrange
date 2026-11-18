@@ -41,7 +41,14 @@ export type ConsultationHistory = {
 };
 
 /** How often, as tapped. */
-export type Frequency = "1-0-0" | "0-0-1" | "1-0-1" | "1-1-1" | "WEEKLY" | "OTHER" | "";
+export type Frequency =
+  | "1-0-0"
+  | "0-0-1"
+  | "1-0-1"
+  | "1-1-1"
+  | "WEEKLY"
+  | "OTHER"
+  | "";
 export type DurationUnit = "DAYS" | "WEEKS" | "MONTHS";
 export type Intake = "BEFORE_FOOD" | "AFTER_FOOD" | "EMPTY_STOMACH" | "";
 

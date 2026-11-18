@@ -11,7 +11,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { errorMessage } from "@/lib/http/apiClient";
 import { savePrescription } from "@/services/consultationService";
-import type { MedicineLine, Prescription, PrescriptionDraft } from "@/types/consultation";
+import type {
+  MedicineLine,
+  Prescription,
+  PrescriptionDraft,
+} from "@/types/consultation";
 
 export type SaveState = "idle" | "saving" | "saved" | "error";
 
@@ -55,7 +59,9 @@ export function usePrescriptionDraft(
 ) {
   const [draft, setDraft] = useState<PrescriptionDraft>(() => draftOf(initial));
   const [saved, setSaved] = useState<Prescription | null>(initial);
-  const [state, setState] = useState<SaveState>(initial?.savedAt ? "saved" : "idle");
+  const [state, setState] = useState<SaveState>(
+    initial?.savedAt ? "saved" : "idle",
+  );
   const [problem, setProblem] = useState<string | null>(null);
   const edits = useRef(0); // bumps on every change; a save covers the edits made before it began
   const savedEdits = useRef(0);
@@ -85,7 +91,9 @@ export function usePrescriptionDraft(
       })
       .catch((caught) => {
         setState("error");
-        setProblem(errorMessage(caught, "Not saved yet. Check your connection."));
+        setProblem(
+          errorMessage(caught, "Not saved yet. Check your connection."),
+        );
         return null;
       })
       .finally(() => {
@@ -119,7 +127,8 @@ export function usePrescriptionDraft(
   /** Saves now, and answers the saved prescription (Create PDF waits on it). */
   const flush = useCallback(async () => {
     const rx = await save();
-    if (savedEdits.current !== edits.current) throw new Error(problem ?? "Not saved yet. Check your connection.");
+    if (savedEdits.current !== edits.current)
+      throw new Error(problem ?? "Not saved yet. Check your connection.");
     return rx ?? saved;
   }, [save, saved, problem]);
 
@@ -127,7 +136,10 @@ export function usePrescriptionDraft(
   const pending = state === "saving" || state === "error";
   useEffect(() => {
     if (!pending) return;
-    const timer = window.setTimeout(() => void save(), state === "error" ? 5000 : 800);
+    const timer = window.setTimeout(
+      () => void save(),
+      state === "error" ? 5000 : 800,
+    );
     return () => clearTimeout(timer);
   }, [draft, pending, state, save]);
 

@@ -42,7 +42,9 @@ export default function HomeView() {
 
   return (
     <main className={styles.home} data-screen="home">
-      <h1 className={styles.hello}>{firstName ? `Hi ${firstName}` : "Hello"}</h1>
+      <h1 className={styles.hello}>
+        {firstName ? `Hi ${firstName}` : "Hello"}
+      </h1>
       {step.error && !step.data ? (
         <ErrorNotice message={step.error} onRetry={reload} />
       ) : step.data ? (

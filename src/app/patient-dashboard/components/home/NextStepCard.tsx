@@ -35,7 +35,8 @@ const when = (iso: string) => {
   const day = relativeDayName(iso);
   return `${day === "Today" || day === "Tomorrow" ? day : `${day} ${shortDate(iso)}`}, ${clockTime(new Date(iso))}`;
 };
-const doctor = (name: string) => (name ? (/^dr\.?\s/i.test(name) ? name : `Dr. ${name}`) : "your doctor");
+const doctor = (name: string) =>
+  name ? (/^dr\.?\s/i.test(name) ? name : `Dr. ${name}`) : "your doctor";
 const rupees = (paise: number) => formatRupees(Math.round(paise) / 100);
 const HOME = "/patient-dashboard";
 
@@ -45,7 +46,11 @@ function wordsFor(step: NextStep): Words {
       return {
         title: `Your video call with ${doctor(step.appointment.doctorName)} is open`,
         text: when(step.appointment.startsAt),
-        action: { label: "Join video call", href: `/consultation/${step.appointment.id}`, icon: "video" },
+        action: {
+          label: "Join video call",
+          href: `/consultation/${step.appointment.id}`,
+          icon: "video",
+        },
       };
     case "CALL_BOOKED":
       return {
@@ -63,7 +68,10 @@ function wordsFor(step: NextStep): Words {
         text: step.orderOpensAt
           ? `From ${doctor(step.prescription.doctorName)}. You can order your medicines from ${when(step.orderOpensAt)}.`
           : `From ${doctor(step.prescription.doctorName)}, ${shortDate(step.prescription.sentAt)}.`,
-        action: { label: "View prescription", href: `${HOME}/prescriptions?rx=${step.prescription.id}` },
+        action: {
+          label: "View prescription",
+          href: `${HOME}/prescriptions?rx=${step.prescription.id}`,
+        },
       };
     case "PAYMENT_DUE": {
       const plan = step.payFor === "PLAN";
@@ -79,26 +87,49 @@ function wordsFor(step: NextStep): Words {
         action: {
           label: `Pay ${total}`,
           href: plan
-            ? checkoutHref({ purpose: "PLAN", referenceId: step.referenceId, returnTo: HOME, payNow: true })
+            ? checkoutHref({
+                purpose: "PLAN",
+                referenceId: step.referenceId,
+                returnTo: HOME,
+                payNow: true,
+              })
             : step.hasAddress
-              ? checkoutHref({ purpose: "MEDICINE_ORDER", referenceId: step.referenceId, returnTo: HOME, payNow: true })
+              ? checkoutHref({
+                  purpose: "MEDICINE_ORDER",
+                  referenceId: step.referenceId,
+                  returnTo: HOME,
+                  payNow: true,
+                })
               : `${HOME}/care/cart`,
         },
-        quiet: plan ? undefined : { label: "Change the address or quantities", href: `${HOME}/care/cart` },
+        quiet: plan
+          ? undefined
+          : {
+              label: "Change the address or quantities",
+              href: `${HOME}/care/cart`,
+            },
       };
     }
     case "ON_THE_WAY":
       return {
         title: "Your medicines are on the way",
-        text: step.order.expectedAt ? `Arriving ${when(step.order.expectedAt).split(",")[0]}.` : "We'll tell you when they are out for delivery.",
-        action: { label: "Track delivery", href: `${HOME}/care?order=${step.order.id}` },
+        text: step.order.expectedAt
+          ? `Arriving ${when(step.order.expectedAt).split(",")[0]}.`
+          : "We'll tell you when they are out for delivery.",
+        action: {
+          label: "Track delivery",
+          href: `${HOME}/care?order=${step.order.id}`,
+        },
       };
     case "DELIVERED":
       return {
         title: "Your medicines arrived",
         text: `Delivered ${when(step.order.deliveredAt)}. How to take them is on your prescription.`,
         action: step.prescription
-          ? { label: "View prescription", href: `${HOME}/prescriptions?rx=${step.prescription.id}` }
+          ? {
+              label: "View prescription",
+              href: `${HOME}/prescriptions?rx=${step.prescription.id}`,
+            }
           : undefined,
       };
     case "BLOOD_TEST_NEEDED":
@@ -112,22 +143,39 @@ function wordsFor(step: NextStep): Words {
       const c = step.collection;
       return {
         title: "Pay to confirm your home collection",
-        text: c ? `Sample collection ${collectionWords(c)}, held for you.` : "Your collection time is held for you.",
+        text: c
+          ? `Sample collection ${collectionWords(c)}, held for you.`
+          : "Your collection time is held for you.",
         bill: step.bill,
         action: {
           label: `Pay ${rupees(step.bill.totalPaise)}`,
-          href: checkoutHref({ purpose: "LAB_BOOKING", referenceId: step.labBookingId, returnTo: HOME, payNow: true }),
+          href: checkoutHref({
+            purpose: "LAB_BOOKING",
+            referenceId: step.labBookingId,
+            returnTo: HOME,
+            payNow: true,
+          }),
         },
       };
     }
     case "TEST_BOOKED":
       return {
-        title: step.collection ? `Sample collection ${collectionWords(step.collection)}` : "Your blood test is booked",
-        text: step.collectorName ? `${step.collectorName} from the lab comes to you.` : "Someone from the lab comes to you at that time.",
-        quiet: { label: "See your booking", href: `${HOME}/lab-tests/${encodeURIComponent(step.labBookingId)}` },
+        title: step.collection
+          ? `Sample collection ${collectionWords(step.collection)}`
+          : "Your blood test is booked",
+        text: step.collectorName
+          ? `${step.collectorName} from the lab comes to you.`
+          : "Someone from the lab comes to you at that time.",
+        quiet: {
+          label: "See your booking",
+          href: `${HOME}/lab-tests/${encodeURIComponent(step.labBookingId)}`,
+        },
       };
     case "WAITING_FOR_REPORT":
-      return { title: "Your report is being prepared", text: "The lab sends it straight to our medical team." };
+      return {
+        title: "Your report is being prepared",
+        text: "The lab sends it straight to our medical team.",
+      };
     case "UNDER_REVIEW":
       return {
         title: "Your report is ready",
@@ -150,28 +198,48 @@ function wordsFor(step: NextStep): Words {
       return {
         title: "You're all set",
         text: "Your doctor reviews your care every month. Book the next review when it suits you.",
-        action: { label: "Book your review", href: `${HOME}/appointments/book` },
+        action: {
+          label: "Book your review",
+          href: `${HOME}/appointments/book`,
+        },
       };
   }
 }
 
 /** "Thu 19 Nov, 7 to 9 am" */
-function collectionWords(c: { date: string; from: string | null; to: string | null }) {
+function collectionWords(c: {
+  date: string;
+  from: string | null;
+  to: string | null;
+}) {
   const at = combineDateAndTime(c.date, c.from ?? "09:00");
   const day = relativeDayName(at);
-  const dayWords = day === "Today" || day === "Tomorrow" ? day.toLowerCase() : `${day} ${shortDate(at)}`;
+  const dayWords =
+    day === "Today" || day === "Tomorrow"
+      ? day.toLowerCase()
+      : `${day} ${shortDate(at)}`;
   if (!c.from) return dayWords;
   const from = clockTime(new Date(at));
-  const to = c.to ? clockTime(new Date(combineDateAndTime(c.date, c.to))) : null;
+  const to = c.to
+    ? clockTime(new Date(combineDateAndTime(c.date, c.to)))
+    : null;
   // "7 to 9 am": one am or pm when both share it
-  const range = to ? (from.slice(-2) === to.slice(-2) ? `${from.slice(0, -3)} to ${to}` : `${from} to ${to}`) : from;
+  const range = to
+    ? from.slice(-2) === to.slice(-2)
+      ? `${from.slice(0, -3)} to ${to}`
+      : `${from} to ${to}`
+    : from;
   return `${dayWords}, ${range}`;
 }
 
 export default function NextStepCard({ step }: { step: NextStep }) {
   const w = wordsFor(step);
   return (
-    <section className={styles.card} aria-labelledby="next-step" data-stage={step.stage}>
+    <section
+      className={styles.card}
+      aria-labelledby="next-step"
+      data-stage={step.stage}
+    >
       <h2 id="next-step" className={styles.title}>
         {w.title}
       </h2>
@@ -180,8 +248,14 @@ export default function NextStepCard({ step }: { step: NextStep }) {
         <ItemisedBill
           lines={w.bill.lines.map((line) => ({
             key: line.key,
-            label: line.quantity && line.quantity > 1 ? `${line.label} x ${line.quantity}` : line.label,
-            note: line.mrpPaise && line.mrpPaise > line.amountPaise ? `MRP ${rupees(line.mrpPaise)}` : undefined,
+            label:
+              line.quantity && line.quantity > 1
+                ? `${line.label} x ${line.quantity}`
+                : line.label,
+            note:
+              line.mrpPaise && line.mrpPaise > line.amountPaise
+                ? `MRP ${rupees(line.mrpPaise)}`
+                : undefined,
             amount: rupees(line.amountPaise),
           }))}
           total={{ label: "To pay", amount: rupees(w.bill.totalPaise) }}
@@ -191,7 +265,11 @@ export default function NextStepCard({ step }: { step: NextStep }) {
         <Link href={w.action.href} className={`btn ${styles.go}`}>
           <span>{w.action.label}</span>
           <span className="well" aria-hidden="true">
-            {w.action.icon === "video" ? <VideoCamera size={18} weight="fill" /> : <ArrowRight size={18} />}
+            {w.action.icon === "video" ? (
+              <VideoCamera size={18} weight="fill" />
+            ) : (
+              <ArrowRight size={18} />
+            )}
           </span>
         </Link>
       )}

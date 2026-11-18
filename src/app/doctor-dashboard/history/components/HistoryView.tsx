@@ -22,7 +22,9 @@ import styles from "./HistoryView.module.css";
 
 export default function HistoryView() {
   const [today] = useState(() => toApiDate(new Date()));
-  const [from, setFrom] = useState(() => toApiDate(new Date(Date.now() - 29 * 86_400_000)));
+  const [from, setFrom] = useState(() =>
+    toApiDate(new Date(Date.now() - 29 * 86_400_000)),
+  );
   const [to, setTo] = useState(today);
   const [query, setQuery] = useState("");
   const q = useDeferredValue(query.trim());
@@ -70,24 +72,33 @@ export default function HistoryView() {
         </div>
 
         {backwards ? (
-          <p className={clinicStyles.empty}>The start date is after the end date.</p>
+          <p className={clinicStyles.empty}>
+            The start date is after the end date.
+          </p>
         ) : history.error && !history.data ? (
           <ErrorNotice message={history.error} onRetry={history.reload} />
         ) : !rows || history.loading ? (
           <ClinicSkeleton titled={false} />
         ) : rows.length === 0 ? (
           <p className={clinicStyles.empty}>
-            {q ? `No consultations with “${q}” in these dates.` : "No consultations in these dates."}
+            {q
+              ? `No consultations with “${q}” in these dates.`
+              : "No consultations in these dates."}
           </p>
         ) : (
           <>
             <p className={`${clinicStyles.muted} num`}>
-              {rows.length} {rows.length === 1 ? "consultation" : "consultations"}
+              {rows.length}{" "}
+              {rows.length === 1 ? "consultation" : "consultations"}
             </p>
             <ol className={consultationListClass}>
               {rows.map((row) => (
                 <li key={row.id}>
-                  <ConsultationRow row={row} withDay onChanged={history.reload} />
+                  <ConsultationRow
+                    row={row}
+                    withDay
+                    onChanged={history.reload}
+                  />
                 </li>
               ))}
             </ol>

@@ -53,9 +53,15 @@ export default function PdfPanel({
         </FileOpenButton>
       </div>
       {failed ? (
-        <p className={styles.searchNote}>The PDF did not load here. Open it in a new tab instead.</p>
+        <p className={styles.searchNote}>
+          The PDF did not load here. Open it in a new tab instead.
+        </p>
       ) : url ? (
-        <iframe className={styles.pdfFrame} src={`${url}#view=FitH`} title={heading} />
+        <iframe
+          className={styles.pdfFrame}
+          src={`${url}#view=FitH`}
+          title={heading}
+        />
       ) : (
         <LoadingSkeleton />
       )}

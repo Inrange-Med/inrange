@@ -11,7 +11,9 @@ export function whenWords(iso: string, now = Date.now()) {
   const day = relativeDayName(iso);
   const yesterday =
     new Date(iso).getTime() < now &&
-    relativeDayName(new Date(new Date(iso).getTime() + 86_400_000).toISOString()) === "Today";
+    relativeDayName(
+      new Date(new Date(iso).getTime() + 86_400_000).toISOString(),
+    ) === "Today";
   const name = yesterday
     ? "Yesterday"
     : day === "Today" || day === "Tomorrow"
@@ -26,13 +28,19 @@ export function sentWords(iso: string) {
   return `Sent ${day === "Today" ? "" : `${shortDate(iso)}, `}${clockTime(new Date(iso))}`;
 }
 
-const sexLetter = (sex: string) => (/^f/i.test(sex) ? "F" : /^m/i.test(sex) ? "M" : "");
+const sexLetter = (sex: string) =>
+  /^f/i.test(sex) ? "F" : /^m/i.test(sex) ? "M" : "";
 
 /** "34 F, first consultation" */
-export function factsLine(row: Pick<ConsultationRow, "age" | "sex" | "visitType">) {
+export function factsLine(
+  row: Pick<ConsultationRow, "age" | "sex" | "visitType">,
+) {
   const who = [row.age, sexLetter(row.sex)].filter(Boolean).join(" ");
-  const visit = row.visitType === "FOLLOW_UP" ? "follow-up" : "first consultation";
-  return who ? `${who}, ${visit}` : visit.charAt(0).toUpperCase() + visit.slice(1);
+  const visit =
+    row.visitType === "FOLLOW_UP" ? "follow-up" : "first consultation";
+  return who
+    ? `${who}, ${visit}`
+    : visit.charAt(0).toUpperCase() + visit.slice(1);
 }
 
 /** The status, one sentence. */
@@ -43,9 +51,13 @@ export function statusWords(row: ConsultationRow): string {
     case "CALL_OPEN":
       return "The call is open";
     case "TO_WRITE":
-      return row.revising ? "New version not sent yet" : "Prescription not written yet";
+      return row.revising
+        ? "New version not sent yet"
+        : "Prescription not written yet";
     case "TO_SEND":
-      return row.revising ? "New version not sent yet" : "Not sent to patient yet";
+      return row.revising
+        ? "New version not sent yet"
+        : "Not sent to patient yet";
     case "SENT":
       return row.sentAt ? sentWords(row.sentAt) : "Sent";
     case "NO_CALL":
@@ -76,4 +88,5 @@ export const ACTION_LABEL: Record<Exclude<RowAction, null>, string> = {
   VIEW_PDF: "View PDF",
 };
 
-export const consultationHref = (id: string) => `/doctor-dashboard/consultations/${id}`;
+export const consultationHref = (id: string) =>
+  `/doctor-dashboard/consultations/${id}`;
