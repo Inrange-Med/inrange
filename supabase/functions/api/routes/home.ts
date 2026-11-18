@@ -43,8 +43,11 @@ export async function nextStep(patientId: number, now = new Date()) {
     sql`select e.*, b.status as lab_status, to_char(b.slot_date, 'YYYY-MM-DD') as slot_date, b.slot_start, b.slot_end, b.collector, b.price, b.package_name, b.amount_paise
         from eligibility e left join lab_bookings b on b.id = e.lab_booking_id where e.user_id = ${patientId}`,
     sql`select 1 from subscriptions where user_id = ${patientId} and status = 'Active' and ends_at > now()`,
+    // a recommendation counts until a plan is bought after it (a lapsed plan does not bring an old one back)
     sql`select r.plan_id, p.name, p.price_rupees, p.mrp_rupees, p.duration_months from plan_recommendations r
-        join plans p on p.id = r.plan_id where r.patient_id = ${patientId} order by r.created_at desc limit 1`,
+        join plans p on p.id = r.plan_id where r.patient_id = ${patientId}
+          and r.created_at > coalesce((select max(s.created_at) from subscriptions s where s.user_id = ${patientId}), '-infinity')
+        order by r.created_at desc limit 1`,
     sql`select x.id, x.appointment_id, coalesce(x.sent_at, x.signed_at) as sent_at, x.items, d.full_name as doctor
         from prescriptions x join doctors d on d.id = x.doctor_id
         where x.patient_id = ${patientId} and x.status = 'SIGNED' order by x.signed_at desc limit 1`,

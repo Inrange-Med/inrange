@@ -93,10 +93,13 @@ function SavedLine({
   savedAt: string | null;
   problem: string | null;
 }) {
-  if (state === "error")
+  // a lost connection keeps trying on its own; a refusal says why (it will not change by waiting)
+  if (state === "error" || state === "refused")
     return (
-      <span className={styles.saveLine} data-state="error">
-        {problem ?? "Not saved yet"}
+      <span className={styles.saveLine} data-state="error" role="status">
+        {state === "error"
+          ? "Not saved yet. Trying again."
+          : (problem ?? "Not saved.")}
       </span>
     );
   if (state === "saving")
@@ -154,6 +157,16 @@ function Loaded({
     return () => document.removeEventListener("visibilitychange", back);
   }, [reload]);
 
+  // the prescription moved on elsewhere (sent from Today's row, or in another tab): the page catches up, unless
+  // the doctor has typed something not yet saved (then the save's refusal says what happened)
+  const server = data.prescription;
+  useEffect(() => {
+    if (!server || !saved) return;
+    if (server.id === saved.id && server.status === saved.status) return;
+    if (rx.state === "saving") return;
+    rx.reset(server);
+  }, [server, saved, rx]);
+
   const fail = (caught: unknown, fallback: string) => {
     const text = errorMessage(caught, fallback);
     setProblem({
@@ -193,7 +206,19 @@ function Loaded({
     return null;
   };
 
-  const createPdf = async () => {
+  // one press at a time: a double click must not make two PDFs or send twice
+  const acting = useRef(false);
+  const once = (run: () => Promise<void>) => async () => {
+    if (acting.current) return;
+    acting.current = true;
+    try {
+      await run();
+    } finally {
+      acting.current = false;
+    }
+  };
+
+  const createPdf = once(async () => {
     const gap = missing();
     setProblem(gap);
     if (gap) {
@@ -221,9 +246,9 @@ function Loaded({
     } finally {
       setBusy(null);
     }
-  };
+  });
 
-  const send = async () => {
+  const send = once(async () => {
     setBusy("send");
     setProblem(null);
     try {
@@ -236,9 +261,9 @@ function Loaded({
     } finally {
       setBusy(null);
     }
-  };
+  });
 
-  const again = async () => {
+  const again = once(async () => {
     setBusy("again");
     try {
       const done = await sendPrescriptionAgain(c.id);
@@ -248,9 +273,9 @@ function Loaded({
     } finally {
       setBusy(null);
     }
-  };
+  });
 
-  const revise = async () => {
+  const revise = once(async () => {
     setBusy("revise");
     try {
       rx.reset(await revisePrescription(c.id));
@@ -262,7 +287,7 @@ function Loaded({
     } finally {
       setBusy(null);
     }
-  };
+  });
 
   const copyLast = () => {
     const last = data.lastPrescription;

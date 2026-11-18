@@ -29,7 +29,11 @@ class Handler(BaseHTTPRequestHandler):
             key = self.path[len("/storage/v1/object/sign/"):]
             return self._send(200, json.dumps({"signedURL": f"/object/authenticated/{key}"}).encode())
         if self.path.startswith("/storage/v1/object/"):
-            FILES[self.path[len("/storage/v1/object/"):]] = data
+            key = self.path[len("/storage/v1/object/"):]
+            # as Supabase: without x-upsert an existing object is refused, never silently replaced
+            if key in FILES and self.headers.get("x-upsert", "false") != "true":
+                return self._send(409, json.dumps({"statusCode": "409", "error": "Duplicate", "message": "The resource already exists"}).encode())
+            FILES[key] = data
             return self._send(200, json.dumps({"Key": self.path}).encode())
         self._send(404)
 

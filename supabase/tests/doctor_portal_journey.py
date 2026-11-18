@@ -139,9 +139,15 @@ def main():
     step("Send refuses a stale PDF", s == 409, b)
     s, b = call("GET", "/api/doctor/consultations", doctor)
     step("Do this now: back to write prescription", next(r for r in b["data"]["waiting"] if r["id"] == appt)["state"] == "TO_WRITE")
-    call("POST", f"/api/doctor/consultations/{appt}/prescription/pdf", doctor)
-    s, b = call("POST", f"/api/doctor/consultations/{appt}/prescription/send", doctor)
-    step("Send to patient", s == 200 and b["data"]["status"] == "SENT" and b["data"]["sentAt"], b)
+    s, b = call("POST", f"/api/doctor/consultations/{appt}/prescription/pdf", doctor)
+    step("the PDF is made again after an edit (a new file; storage never overwrites)", s == 200 and b["data"]["pdf"], b)
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(2) as pool:
+        both = list(pool.map(lambda _: call("POST", f"/api/doctor/consultations/{appt}/prescription/send", doctor), range(2)))
+    codes = sorted(r[0] for r in both)
+    step("two presses of Send at once: one sends, the other is told it was sent", codes == [200, 409], codes)
+    s, b = next(r for r in both if r[0] == 200)
+    step("Send to patient", b["data"]["status"] == "SENT" and b["data"]["sentAt"], b)
     m = sql(f"select kind, status from patient_messages where patient_id = {pid} and kind = 'RX_READY'")
     step("the patient got it on WhatsApp", m == [["RX_READY", "SENT"]], m)
     k = sql(f"select lines, available_at > now() from medicine_carts where patient_id = {pid} and status = 'OPEN'")
@@ -218,6 +224,19 @@ def main():
     step("patient: paid (mock)", s == 200, v)
     s, b = call("GET", "/api/patient/next-step", patient)
     step("patient: medicines on the way", b["data"]["stage"] == "ON_THE_WAY", b)
+
+    # ---------------------------------------------------------------- a new version after paying
+    call("POST", f"/api/doctor/consultations/{appt}/prescription/revise", doctor)
+    call("PUT", f"/api/doctor/consultations/{appt}/prescription", doctor, {"advice": "Walk 40 minutes a day."})
+    call("POST", f"/api/doctor/consultations/{appt}/prescription/pdf", doctor)
+    s, b = call("POST", f"/api/doctor/consultations/{appt}/prescription/send", doctor)
+    step("a new version after paying is sent", s == 200, b)
+    newest = b["data"]["id"]
+    step("nothing to pay again for what was bought", one(f"select count(*) from medicine_carts where patient_id = {pid} and status = 'OPEN'") == "0")
+    step("the paid order follows the new version (refills keep working)",
+         one(f"select count(*) from medicine_orders where patient_id = {pid} and prescription_id = {newest}") == "1")
+    s, b = call("GET", "/api/patient/next-step", patient)
+    step("patient: still medicines on the way", b["data"]["stage"] == "ON_THE_WAY", b)
 
     print(f"\nALL {__import__('medicine_flow_journey').passed} CHECKS PASSED")
 

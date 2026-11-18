@@ -273,6 +273,10 @@ doctorRoutes.post("/doctor/notes/:noteId/sign", async (c) => {
       const stocked = new Map((ids.length ? await tx`select ${medicineColumns(tx)} from medicines m where m.id in ${tx(ids)}` : [])
         .map((m) => [m.id, m]));
       for (const m of changes.filter((x) => x.action !== "STOP")) items.push(rxItem(m, stocked.get(Number(m.medicineId))));
+      // the consultation page (doctor portal v2) may already be writing this visit's prescription
+      const [writing] = n.appointment_id
+        ? await tx`select 1 from prescriptions where appointment_id = ${n.appointment_id} and status = 'DRAFT'` : [];
+      if (writing) fail(409, "This consultation's prescription is being written on its page. Finish and send it there.");
       const [rx] = await tx`
         insert into prescriptions (patient_id, doctor_id, appointment_id, status, version, items)
         values (${n.patient_id}, ${doctor.id}, ${n.appointment_id}, 'DRAFT', ${next}, ${tx.json(items)}) returning id`;

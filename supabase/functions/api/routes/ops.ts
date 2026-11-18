@@ -37,6 +37,7 @@ import { syncTemplates, whatsappLive } from "../integrations/whatsapp.ts";
 import { env } from "../lib/env.ts";
 import { TEMPLATES, type Template } from "../lib/messages.ts";
 import { lineOf, lineView } from "../lib/prescriptions.ts";
+import { packsFor } from "../lib/medicineSearch.ts";
 import { cartAvailableAt } from "../lib/pharmacy.ts";
 
 export const opsRoutes = new Hono();
@@ -213,42 +214,61 @@ opsRoutes.post("/admin/medicine/tasks/:taskId/match", async (c) => {
   const me = await admin(c);
   const b = await body<{ line?: unknown; medicineId?: unknown }>(c);
   const { t, rx, lines } = await unmatchedOf(intParam(c.req.param("taskId"), "task"));
+  if (t.status !== "OPEN") fail(409, "This task is done already.");
   const index = Number(b.line);
   if (!lines.some((l) => l.index === index)) fail(400, "That line is matched already.");
   const [m] = await sql`select * from medicines where id = ${Number(b.medicineId) || 0} and active`;
   if (!m) fail(400, "Choose an item from the master list.");
-  // deno-lint-ignore no-explicit-any
-  const items = rx.items as Record<string, any>[];
-  const was = items[index];
-  const matched: Record<string, unknown> = { ...lineOf({ ...was, frequency: was.frequencyCode, durationValue: was.durationValue, durationUnit: was.durationUnit }, m, index),
-                    typedAs: was.medicineName };
-  items[index] = matched;
-  const left = lines.length - 1;
-  await sql.begin(async (tx) => {
-    await tx`update prescriptions set items = ${tx.json(items as never)} where id = ${rx.id}`;
-    if (rx.status === "SIGNED" && m.mrp_paise != null) {
-      const q = Number(matched.quantity) || 1;
-      const [k] = await tx`select * from medicine_carts where prescription_id = ${rx.id} and status = 'OPEN'`;
+  const left = await sql.begin(async (tx) => {
+    // the prescription row is locked, so two lines matched at once never undo each other
+    const [cur] = await tx`select * from prescriptions where id = ${rx.id} for update`;
+    // deno-lint-ignore no-explicit-any
+    const items = cur.items as Record<string, any>[];
+    const was = items[index];
+    if (!was?.unlisted) fail(409, "That line was matched a moment ago.");
+    const matched: Record<string, unknown> = {
+      ...lineOf({ ...was, frequency: was.frequencyCode, durationValue: was.durationValue, durationUnit: was.durationUnit }, m, index),
+      typedAs: was.medicineName,
+    };
+    items[index] = matched;
+    await tx`update prescriptions set items = ${tx.json(items as never)} where id = ${cur.id}`;
+    if (cur.status === "SIGNED" && m.mrp_paise != null) {
+      const { onPlan, availableAt } = await cartAvailableAt(tx, cur.patient_id, new Date(cur.sent_at ?? cur.signed_at));
+      // as at Send: without a plan the order carries one month (lib/prescriptions.ts issueRx)
+      const full = Number(matched.quantity) || 1;
+      const q = onPlan ? full : Math.min(full, packsFor(30, m.pack_days));
+      const [k] = await tx`select * from medicine_carts where prescription_id = ${cur.id} and status = 'OPEN'`;
       if (k) {
         const cartLines = (k.lines as CartLine[]).filter((l) => l.medicineId !== m.id);
         const prev = (k.lines as CartLine[]).find((l) => l.medicineId === m.id);
         cartLines.push({ medicineId: m.id, quantity: (prev?.quantity ?? 0) + q, prescribed: (prev?.prescribed ?? 0) + q });
         await tx`update medicine_carts set lines = ${tx.json(cartLines)} where id = ${k.id}`;
       } else {
-        const [paid] = await tx`select 1 from medicine_carts where prescription_id = ${rx.id}`;
-        if (!paid) {
-          const { availableAt } = await cartAvailableAt(tx, rx.patient_id, new Date(rx.sent_at ?? rx.signed_at));
-          const [addr] = await tx`select id from addresses where user_id = ${rx.patient_id} order by is_default desc, id desc limit 1`;
-          await tx`insert into medicine_carts (patient_id, prescription_id, available_at, lines, address_id)
-                   values (${rx.patient_id}, ${rx.id}, ${availableAt}, ${tx.json([{ medicineId: m.id, quantity: q, prescribed: q }])}, ${addr?.id ?? null})`;
+        const [existing] = await tx`select 1 from medicine_carts where prescription_id = ${cur.id}`;
+        if (!existing) {
+          // the prescription had nothing to order until now: its order, and its follow-up, start here
+          const [addr] = await tx`select id from addresses where user_id = ${cur.patient_id} order by is_default desc, id desc limit 1`;
+          const [cart] = await tx`
+            insert into medicine_carts (patient_id, prescription_id, available_at, lines, address_id)
+            values (${cur.patient_id}, ${cur.id}, ${availableAt}, ${tx.json([{ medicineId: m.id, quantity: q, prescribed: q }])}, ${addr?.id ?? null})
+            returning id`;
+          await tx`
+            insert into medicine_followups (cart_id, patient_id, flow, stage, next_at, history)
+            values (${cart.id}, ${cur.patient_id}, ${onPlan ? "PLAN" : "NANO"}, 'WAITING',
+              ${onPlan ? new Date(Date.now() + 86_400_000) : availableAt},
+              ${tx.json([{ at: new Date().toISOString(), what: "Order opened when the care team matched a medicine" }])})
+            on conflict (cart_id) do nothing`;
+          await tx`update ops_tasks set cart_id = ${cart.id} where id = ${t.id}`;
         }
       }
     }
+    const remaining = items.filter((x) => x.unlisted).length;
     const what = `Matched "${String(was.medicineName)}" to ${m.brand} ${m.strength}`;
     await tx`update ops_tasks set history = history || ${entry(me, what)}
-             ${left ? sql`` : sql`, status = 'DONE', outcome = 'RESOLVED', outcome_note = 'Every medicine matched to the list', done_by = ${me.id}, done_at = now()`}
+             ${remaining ? sql`` : sql`, status = 'DONE', outcome = 'RESOLVED', outcome_note = 'Every medicine matched to the list', done_by = ${me.id}, done_at = now()`}
              where id = ${t.id}`;
-    await tx`insert into audit_log (patient_id, actor_id, action) values (${rx.patient_id}, ${me.id}, ${what})`;
+    await tx`insert into audit_log (patient_id, actor_id, action) values (${cur.patient_id}, ${me.id}, ${what})`;
+    return remaining;
   });
   return ok(c, { left }, left ? "Matched" : "All matched");
 });

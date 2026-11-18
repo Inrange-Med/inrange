@@ -9,7 +9,7 @@
 */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { errorMessage } from "@/lib/http/apiClient";
+import { ApiError, errorMessage } from "@/lib/http/apiClient";
 import { savePrescription } from "@/services/consultationService";
 import type {
   MedicineLine,
@@ -17,7 +17,8 @@ import type {
   PrescriptionDraft,
 } from "@/types/consultation";
 
-export type SaveState = "idle" | "saving" | "saved" | "error";
+/** "refused": the server said no (the prescription was sent elsewhere, say): retrying cannot help */
+export type SaveState = "idle" | "saving" | "saved" | "error" | "refused";
 
 const EMPTY: PrescriptionDraft = {
   diagnosis: "",
@@ -90,7 +91,13 @@ export function usePrescriptionDraft(
         return rx;
       })
       .catch((caught) => {
-        setState("error");
+        // a refusal (409: sent from another tab; 403, 404) will not change by trying again; a lost connection will
+        const refused =
+          caught instanceof ApiError &&
+          caught.status >= 400 &&
+          caught.status < 500 &&
+          ![408, 429].includes(caught.status);
+        setState(refused ? "refused" : "error");
         setProblem(
           errorMessage(caught, "Not saved yet. Check your connection."),
         );

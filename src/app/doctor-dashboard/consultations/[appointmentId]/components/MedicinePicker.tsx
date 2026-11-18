@@ -23,7 +23,10 @@ export default function MedicinePicker({
 }) {
   const [open, setOpen] = useState(first);
   const [query, setQuery] = useState("");
-  const [found, setFound] = useState<MedicineSearch | null>(null);
+  // each answer keeps the words it answers, so a slower, older answer is never shown or picked
+  const [found, setFound] = useState<(MedicineSearch & { q: string }) | null>(
+    null,
+  );
   const [failed, setFailed] = useState(false);
   const input = useRef<HTMLInputElement>(null);
   const q = query.trim();
@@ -35,7 +38,7 @@ export default function MedicinePicker({
     const timer = window.setTimeout(() => {
       searchMedicines(q, stale.signal)
         .then((result) => {
-          setFound(result);
+          setFound({ ...result, q });
           setFailed(false);
         })
         .catch(() => !stale.signal.aborted && setFailed(true));
@@ -69,7 +72,7 @@ export default function MedicinePicker({
     );
   }
 
-  const results = q.length >= 2 && found ? found : null;
+  const results = q.length >= 2 && found?.q === q ? found : null;
 
   return (
     <div className={styles.picker}>

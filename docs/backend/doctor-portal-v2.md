@@ -13,7 +13,7 @@ contract for what was built from it.
 | Admin   | The medicine queue's "Match a medicine" task                                   | `medicineOpsService.ts` (routes below)       | `types/medicineOps.ts`  |
 
 Backend: `routes/consultations.ts`, `routes/home.ts`, `lib/prescriptions.ts`, `lib/medicineSearch.ts`, migration
-`20261118000100_doctor_portal_v2.sql`. Journey: `supabase/tests/doctor_portal_journey.py` (58 checks, local API).
+`20261118000100_doctor_portal_v2.sql`. Journey: `supabase/tests/doctor_portal_journey.py` (66 checks, local API).
 
 ## What changed for the doctor
 
@@ -75,6 +75,15 @@ autosave (DRAFT, saved_at)  ->  Create PDF (pdf_made_at, pdf_path)  ->  Send (SI
   care team.
 - **Send again** sends the WhatsApp message again. **Edit and send new version** copies the sent one into a new draft
   for the same consultation; sending it supersedes the old one.
+- **Send is one send:** the draft is locked inside the transaction and must still be a DRAFT with a current PDF, so two
+  presses at once send once (the other is told it was sent) and an edit that lands mid-send is refused.
+- **A new version after the patient paid** does not bill again: the paid order moves to the new version (so refills
+  follow it) and the new order carries only what is left to buy.
+- **Without a plan** (the nano plan) the prescription is for one month: the page says "One month at most" above the
+  medicines and Create PDF asks for 1 month or less, so the PDF never prescribes more than the order carries.
+- Every Create PDF writes a new file (storage never overwrites), so the PDF can be made again after an edit.
+- A consultation still to come stays UPCOMING even if its prescription was written ahead; nothing is sent before the
+  call. Signing a call note for a consultation whose page already holds a draft is refused (finish it on the page).
 - A prescription may have no medicines (advice only): it sends with no cart.
 - The PDF prints diagnosis, history (when written), the medicines (dose and how often, "For 1 month", with food), advice
   and the doctor's remarks. Signing from a call note (`signRx`, back office) is unchanged.
@@ -102,7 +111,9 @@ minutes per API instance.
 **A medicine typed by hand** is saved with `unlisted: true`. Sending opens one `MATCH_MEDICINE` task (HIGH, due within
 4 working hours) in the medicine queue. Admin matches each line to a list item; the line takes the item, and while the
 prescription is current and the item is sold, its packs join the open cart (or start one). The task closes when
-nothing is left to match. The patient's PDF stays as it was signed.
+nothing is left to match. The patient's PDF stays as it was signed. Matching is locked per prescription (two lines matched at once never undo each other),
+carries one month for a patient without a plan, as Send does, and when it starts the prescription's first order it
+starts that order's follow-up too.
 
 ## What changed for the patient
 

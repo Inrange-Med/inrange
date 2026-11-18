@@ -246,7 +246,8 @@ export async function renderRx(doctor: Doctor, patientId: number, rx: Row, signe
     ],
     signature: { method: env("ESIGN_METHOD") || "Aadhaar eSign or DSC, to be confirmed", reference: "to be confirmed" },
   });
-  const path = `${patientId}/rx-${rx.id}-v${rx.version}.pdf`;
+  // one file per render: storage never overwrites, and "Create PDF" may run again after an edit
+  const path = `${patientId}/rx-${rx.id}-v${rx.version}-${signedAt.getTime()}.pdf`;
   await uploadFile("prescriptions", path, new Blob([pdf as Uint8Array<ArrayBuffer>], { type: "application/pdf" }), "application/pdf");
   return path;
 }
@@ -288,8 +289,16 @@ export async function issueRx(doctor: Doctor, patientId: number, rxId: number,
     merged.set(id, { medicineId: id, quantity: (prev?.quantity ?? 0) + q, prescribed: (prev?.prescribed ?? 0) + q });
   }
   const unlisted = items.filter((i) => i.unlisted).map((i) => String(i.medicineName));
+  let carted = false;
   const messageId = await sql.begin(async (tx) => {
-    const superseded = await tx`update prescriptions set status = 'SUPERSEDED' where patient_id = ${patientId} and status = 'SIGNED' returning id`;
+    // one send at a time: a second press, or an edit that landed after the PDF, finds this and stops here
+    const [locked] = await tx`
+      select status, saved_at, pdf_made_at from prescriptions where id = ${rxId} for update`;
+    if (locked?.status !== "DRAFT") fail(409, "This prescription was sent already.");
+    if (o.sentAt && locked.saved_at && locked.pdf_made_at && new Date(locked.saved_at) > new Date(locked.pdf_made_at))
+      fail(409, "The prescription changed after the PDF was made. Create the PDF again, then send it.");
+    const superseded = await tx`
+      update prescriptions set status = 'SUPERSEDED' where patient_id = ${patientId} and status = 'SIGNED' returning id, appointment_id`;
     // a replaced prescription is never ordered from, so its hand-typed medicines need no matching
     if (superseded.length)
       await tx`
@@ -298,6 +307,28 @@ export async function issueRx(doctor: Doctor, patientId: number, rxId: number,
         where status = 'OPEN' and kind = 'MATCH_MEDICINE' and prescription_id in ${tx(superseded.map((r) => r.id))}`;
     await tx`update prescriptions set status = 'SIGNED', signed_at = ${o.signedAt}, pdf_path = ${o.path}, months = ${o.months},
                valid_until = ${validUntil}, sent_at = ${o.sentAt ?? null} where id = ${rxId}`;
+    // a new version of the same consultation's prescription ("Edit and send new version"): what the patient already
+    // paid for stays bought. Its paid order moves to the new version (so refills follow it), and the new order
+    // carries only what is left to buy.
+    const sameVisit = superseded.filter((r) => rx.appointment_id && r.appointment_id === rx.appointment_id).map((r) => r.id);
+    if (sameVisit.length) {
+      const paid = await tx`select id, lines from medicine_carts where prescription_id in ${tx(sameVisit)} and status = 'PAID'`;
+      for (const k of paid) {
+        for (const l of k.lines as CartLine[]) {
+          const line = merged.get(l.medicineId);
+          if (!line) continue;
+          const left = Math.max(0, line.quantity - l.quantity);
+          if (left) merged.set(l.medicineId, { ...line, quantity: left, prescribed: left });
+          else merged.delete(l.medicineId);
+        }
+      }
+      if (paid.length) {
+        const ids = paid.map((k) => k.id);
+        await tx`update medicine_carts set prescription_id = ${rxId} where id in ${tx(ids)}`;
+        await tx`update medicine_orders set prescription_id = ${rxId} where cart_id in ${tx(ids)}`;
+      }
+    }
+    carted = merged.size > 0;
     const replaced = await tx`update medicine_carts set status = 'CLOSED' where patient_id = ${patientId} and status = 'OPEN' returning id`;
     // the replaced orders' follow-ups and calls close with them: nobody calls about an order that is gone
     for (const { id } of replaced) {
@@ -325,7 +356,7 @@ export async function issueRx(doctor: Doctor, patientId: number, rxId: number,
   });
   if (messageId) await deliver(messageId).catch((e) => console.error("prescription message", e.message));
   return { id: String(rxId), version: rx.version, status: "SIGNED", signedAt: ist(o.signedAt), months: o.months,
-           validUntil: ist(validUntil), cartAvailableAt: merged.size ? ist(availableAt) : null };
+           validUntil: ist(validUntil), cartAvailableAt: carted ? ist(availableAt) : null };
 }
 
 /**

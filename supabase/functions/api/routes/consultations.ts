@@ -82,6 +82,8 @@ export function stateOf(r: Row, now = Date.now()): ConsultationState {
   const ended = r.status === "Completed" || Boolean(r.ended_at);
   const callOpen = !ended && now >= start - OPENS_BEFORE && now <= end + OPEN_AFTER_END;
   if (callOpen && !r.sent_id) return "CALL_OPEN";
+  // written ahead of the call: still upcoming (nothing is sent before the patient is seen)
+  if (now < start - OPENS_BEFORE && !r.sent_id) return "UPCOMING";
   if (r.draft_id && pdfCurrent(r)) return "TO_SEND";
   if (r.draft_id && r.sent_id) return "TO_WRITE"; // a new version being written
   if (r.sent_id) return "SENT";
@@ -243,7 +245,7 @@ consultationRoutes.put("/doctor/consultations/:id/prescription", async (c) => {
       patient_history = ${input.patientHistory !== undefined ? text(input.patientHistory, 4000) : draft.patient_history},
       remarks = ${input.remarks !== undefined ? text(input.remarks, 2000) : draft.remarks},
       advice = ${input.advice !== undefined ? text(input.advice, 4000) : draft.advice},
-      items = ${sql.json(items)}, saved_at = clock_timestamp()
+      items = ${sql.json(items)}, saved_at = date_trunc('milliseconds', clock_timestamp())
     where id = ${draft.id} and status = 'DRAFT' returning *`;
   if (!saved) fail(409, "This prescription was sent a moment ago. Reload the page.");
   return ok(c, prescriptionView(saved), "Saved");
@@ -273,7 +275,8 @@ consultationRoutes.post("/doctor/consultations/:id/prescription/pdf", async (c) 
   if (!rx) fail(409, r.sent_id ? "This prescription was sent already." : "Write the prescription first.");
   // the PDF carries the time it was made as its signature time; sending issues exactly this file
   // the database's clock, as autosave's: a save that lands while the PDF renders is later than `at`
-  const [{ at }] = await sql`select clock_timestamp() as at`;
+  // milliseconds, as saved_at: a JS Date carries no finer, so the comparison is exact both ways
+  const [{ at }] = await sql`select date_trunc('milliseconds', clock_timestamp()) as at`;
   const { months, onPlan } = await issueMonths(r.patient_id, monthsOf(rx.items), at);
   const missing = missingFor(rx, onPlan);
   if (missing) fail(422, missing);
@@ -331,7 +334,8 @@ consultationRoutes.post("/doctor/consultations/:id/prescription/revise", async (
                                remarks, advice, saved_at)
     values (${r.patient_id}, ${doctor.id}, ${r.id}, 'DRAFT',
       (select coalesce(max(version), 0) + 1 from prescriptions where patient_id = ${r.patient_id}),
-      ${sql.json(sent.items)}, ${sent.diagnosis ?? ""}, ${sent.patient_history}, ${sent.remarks}, ${sent.advice}, now())
+      ${sql.json(sent.items)}, ${sent.diagnosis ?? ""}, ${sent.patient_history}, ${sent.remarks}, ${sent.advice},
+      date_trunc('milliseconds', clock_timestamp()))
     on conflict (appointment_id) where status = 'DRAFT' and appointment_id is not null do nothing returning *`;
   return ok(c, prescriptionView(draft ?? (await prescriptionOf(r.id))), "Editing the new version");
 });

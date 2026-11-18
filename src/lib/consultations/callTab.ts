@@ -2,7 +2,7 @@
  * The doctor's video call opens in its own browser tab (17 Nov 2026 call: the consultation page stays
  * open in the first tab, so the doctor writes the prescription while talking). Each consultation's call
  * tab has a fixed name: pressing Join again finds that tab and brings it forward instead of loading the
- * room a second time. Must run inside the click, or the browser blocks the new tab.
+ * room a second time (a tab that left the call loads the room again, so Join always rejoins). Must run inside the click, or the browser blocks the new tab.
  */
 
 const tabName = (appointmentId: string) => `inrange-call-${appointmentId}`;
@@ -18,12 +18,16 @@ export function openCallTab(appointmentId: string) {
     window.location.assign(path);
     return;
   }
-  let blank = true;
+  // only a tab that is in the room right now is brought forward as it is: a blank new tab, or one that left the
+  // call (its end screen, "Finish the prescription in your other tab"), loads the room again, so Join rejoins
+  let inRoom = false;
   try {
-    blank = tab.location.href === "about:blank";
+    inRoom =
+      tab.location.pathname === path &&
+      Boolean(tab.document.querySelector('main[data-live="true"]'));
   } catch {
-    // another origin: treat it as ours to replace
+    // another origin: ours to replace
   }
-  if (blank) tab.location.href = path;
+  if (!inRoom) tab.location.href = path;
   tab.focus();
 }
