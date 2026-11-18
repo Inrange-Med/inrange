@@ -41,7 +41,7 @@ export default function PreJoin({
         data-busy={joining}
         aria-busy={joining}
       >
-        <span>{joining ? "Joining" : "Join the call"}</span>
+        <span>{joining ? "Joining" : "Join now"}</span>
         <span className="well" aria-hidden="true">
           {joining ? (
             <i className={formStyles.spin} />

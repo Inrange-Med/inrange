@@ -7,6 +7,8 @@
 //   POST  /admin/medicine/tasks/:taskId/done           { outcome, note, callBackAt? }
 //   POST  /admin/medicine/tasks/:taskId/assign         { to: "me" | userId | null }
 //   POST  /admin/medicine/tasks/:taskId/send-link      the app link to the patient on WhatsApp, after a call
+//   GET   /admin/medicine/tasks/:taskId/unmatched      a MATCH_MEDICINE task's hand-typed lines (admin)
+//   POST  /admin/medicine/tasks/:taskId/match          { line, medicineId } matches one to the master list (admin)
 //   GET   /admin/medicine/patients?q=                  patients with medicine activity
 //   GET   /admin/medicine/patients/:patientId          everything about one patient's medicines
 //   PATCH /admin/medicine/patients/:patientId/coach    { coachId | null } (admin)
@@ -34,6 +36,8 @@ import { refundPayment } from "../integrations/razorpay.ts";
 import { syncTemplates, whatsappLive } from "../integrations/whatsapp.ts";
 import { env } from "../lib/env.ts";
 import { TEMPLATES, type Template } from "../lib/messages.ts";
+import { lineOf, lineView } from "../lib/prescriptions.ts";
+import { cartAvailableAt } from "../lib/pharmacy.ts";
 
 export const opsRoutes = new Hono();
 
@@ -179,6 +183,74 @@ opsRoutes.post("/admin/medicine/tasks/:taskId/send-link", async (c) => {
             where id = ${t.id}`;
   if (result === "SKIPPED") fail(409, "The link was not sent: the patient has WhatsApp off. Read it to them on the call.");
   return ok(c, { result }, "App link sent");
+});
+
+// ---------------------------------------------------------------- matching a hand-typed medicine (doctor portal v2)
+
+/** The prescription a MATCH_MEDICINE task is about, and its lines that are still not on the list. */
+async function unmatchedOf(taskId: number) {
+  const [t] = await sql`select * from ops_tasks where id = ${taskId} and kind = 'MATCH_MEDICINE'`;
+  if (!t) fail(404, "That task was not found.");
+  const [rx] = await sql`select * from prescriptions where id = ${t.prescription_id}`;
+  if (!rx) fail(404, "The prescription for this task was not found.");
+  // deno-lint-ignore no-explicit-any
+  const lines = (rx.items as Record<string, any>[]).map((l, index) => ({ index, ...lineView(l) })).filter((l) => l.unlisted);
+  return { t, rx, lines };
+}
+
+opsRoutes.get("/admin/medicine/tasks/:taskId/unmatched", async (c) => {
+  await admin(c);
+  const { rx, lines } = await unmatchedOf(intParam(c.req.param("taskId"), "task"));
+  return ok(c, { prescriptionId: String(rx.id), current: rx.status === "SIGNED", lines });
+});
+
+/**
+ * Matches one hand-typed line to a master-list item: the line takes the item (the PDF the patient has stays
+ * as it was signed), and while the prescription is current and the item is sold, its packs join the open
+ * cart (or start one). The task closes when nothing is left unmatched.
+ */
+opsRoutes.post("/admin/medicine/tasks/:taskId/match", async (c) => {
+  const me = await admin(c);
+  const b = await body<{ line?: unknown; medicineId?: unknown }>(c);
+  const { t, rx, lines } = await unmatchedOf(intParam(c.req.param("taskId"), "task"));
+  const index = Number(b.line);
+  if (!lines.some((l) => l.index === index)) fail(400, "That line is matched already.");
+  const [m] = await sql`select * from medicines where id = ${Number(b.medicineId) || 0} and active`;
+  if (!m) fail(400, "Choose an item from the master list.");
+  // deno-lint-ignore no-explicit-any
+  const items = rx.items as Record<string, any>[];
+  const was = items[index];
+  const matched: Record<string, unknown> = { ...lineOf({ ...was, frequency: was.frequencyCode, durationValue: was.durationValue, durationUnit: was.durationUnit }, m, index),
+                    typedAs: was.medicineName };
+  items[index] = matched;
+  const left = lines.length - 1;
+  await sql.begin(async (tx) => {
+    await tx`update prescriptions set items = ${tx.json(items as never)} where id = ${rx.id}`;
+    if (rx.status === "SIGNED" && m.mrp_paise != null) {
+      const q = Number(matched.quantity) || 1;
+      const [k] = await tx`select * from medicine_carts where prescription_id = ${rx.id} and status = 'OPEN'`;
+      if (k) {
+        const cartLines = (k.lines as CartLine[]).filter((l) => l.medicineId !== m.id);
+        const prev = (k.lines as CartLine[]).find((l) => l.medicineId === m.id);
+        cartLines.push({ medicineId: m.id, quantity: (prev?.quantity ?? 0) + q, prescribed: (prev?.prescribed ?? 0) + q });
+        await tx`update medicine_carts set lines = ${tx.json(cartLines)} where id = ${k.id}`;
+      } else {
+        const [paid] = await tx`select 1 from medicine_carts where prescription_id = ${rx.id}`;
+        if (!paid) {
+          const { availableAt } = await cartAvailableAt(tx, rx.patient_id, new Date(rx.sent_at ?? rx.signed_at));
+          const [addr] = await tx`select id from addresses where user_id = ${rx.patient_id} order by is_default desc, id desc limit 1`;
+          await tx`insert into medicine_carts (patient_id, prescription_id, available_at, lines, address_id)
+                   values (${rx.patient_id}, ${rx.id}, ${availableAt}, ${tx.json([{ medicineId: m.id, quantity: q, prescribed: q }])}, ${addr?.id ?? null})`;
+        }
+      }
+    }
+    const what = `Matched "${String(was.medicineName)}" to ${m.brand} ${m.strength}`;
+    await tx`update ops_tasks set history = history || ${entry(me, what)}
+             ${left ? sql`` : sql`, status = 'DONE', outcome = 'RESOLVED', outcome_note = 'Every medicine matched to the list', done_by = ${me.id}, done_at = now()`}
+             where id = ${t.id}`;
+    await tx`insert into audit_log (patient_id, actor_id, action) values (${rx.patient_id}, ${me.id}, ${what})`;
+  });
+  return ok(c, { left }, left ? "Matched" : "All matched");
 });
 
 // ---------------------------------------------------------------- patients

@@ -104,12 +104,12 @@ export async function joined(appointmentId: number, who: "doctor" | "patient"): 
     : await queueMessage(sql, { ...base, patientId: a.doctor_id, kind: "DR_PATIENT_WAITING", values: [clockWords(a.start_time)], dedupeKey: `${key}:patient-in` })];
 }
 
-/** The call ended: the doctor is reminded to sign the note an hour later, unless it is signed by then. */
+/** The call ended: the doctor is reminded an hour later if the prescription has not been sent by then. */
 export async function callEnded(appointmentId: number): Promise<Id[]> {
   const a = await appointment(sql, appointmentId);
   if (!a) return [];
   return [await queueMessage(sql, {
-    patientId: a.doctor_id, kind: "DR_NOTE_TO_SIGN", values: [clockWords(a.start_time)], appointmentId: a.id,
+    patientId: a.doctor_id, kind: "DR_NOTE_TO_SIGN", values: [clockWords(a.start_time)], appointmentId: a.id, links: [String(a.id)],
     dedupeKey: `appt:${a.id}:note`, sendAfter: new Date(Date.now() + HOUR),
   })];
 }

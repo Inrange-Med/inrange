@@ -309,8 +309,24 @@
 .ended > p {
   max-width: 420px;
 }
-.ended > a {
+.ended > a,
+.ended > button {
   margin-top: 26px;
+}
+.ended h1 {
+  max-width: 16ch;
+  text-wrap: balance;
+}
+/* the doctor's way back when this tab cannot close itself */
+.ended > .quietLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  margin-top: 8px;
+  font-size: 0.9375rem;
+  font-weight: 560;
+  color: var(--ink-2);
+  text-underline-offset: 4px;
 }
 
 @media (max-width: 900px) {

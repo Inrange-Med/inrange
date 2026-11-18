@@ -1,178 +1,169 @@
 "use client";
 
 /*
-  Today's screen (Arhaan's clinician Today): who is next, what is waiting on the doctor, and the day in
-  order. On a closed day or after the last call, the next working day's first patient leads.
-  Real data: the day's consultations (GET /api/appointments/doctor?date=) and, when nothing is left
-  today, every consultation to find the next one. Proposed: the queue and the next patient's record.
+  Today (doctor portal v2 PRD, 17 Nov 2026 call: "lay everything out on the plate"). Two things, top to
+  bottom:
+  - Do this now: anything waiting on the doctor from any date: an open call, a prescription not written,
+    one not sent. The first gets the filled button; an open call also offers Write prescription.
+  - Consultations: one day's list (arrows, Today, Pick date change only this list), each with its state in
+    words and one button.
+  It refreshes every half minute and when the doctor comes back from the call tab, so a call opening or a
+  prescription sent shows without a reload. Data: GET /api/doctor/consultations?date= (consultationService).
+  The old Today (next patient card, waiting queue) stays in this folder for the back office.
 */
 
-import { useState } from "react";
-import Link from "next/link";
-import { ArrowRight } from "@phosphor-icons/react";
+import { useEffect, useState } from "react";
+import { CaretLeft, CaretRight } from "@phosphor-icons/react";
 import ErrorNotice from "@/components/ui/ErrorNotice";
 import PageHead from "@/components/ui/PageHead";
 import { useApiResource } from "@/hooks/useApiResource";
 import { useNow } from "@/hooks/useNow";
-import { isInProgress } from "@/lib/consultations/consultationTime";
-import { clockTime, toApiDate, weekdayDayMonth } from "@/lib/format/dateTime";
-import {
-  listAllAppointments,
-  listAppointmentsOn,
-} from "@/services/doctorPortalService";
-import {
-  getPatientRecord,
-  listWaitingItems,
-} from "@/services/patientRecordService";
-import AppointmentRow, { appointmentListClass } from "../AppointmentRow";
+import { combineDateAndTime, toApiDate, weekdayDayMonth } from "@/lib/format/dateTime";
+import { getConsultationDay } from "@/services/consultationService";
 import ClinicSkeleton from "../ClinicSkeleton";
-import { flagsByPatient } from "../waitingWords";
-import NextPatientCard from "./NextPatientCard";
-import WaitingQueue from "./WaitingQueue";
+import ConsultationRow, { consultationListClass } from "../consultations/ConsultationRow";
 import clinicStyles from "@/app/doctor-dashboard/styles/ClinicSurfaces.module.css";
-import styles from "@/app/doctor-dashboard/TodayPage.module.css";
+import styles from "./TodayView.module.css";
+
+/** "2026-11-18" moved by whole days, on India's calendar. */
+const shiftDate = (date: string, days: number) =>
+  toApiDate(new Date(Date.parse(combineDateAndTime(date, "12:00")) + days * 86_400_000));
+
+const dayTitle = (date: string) =>
+  weekdayDayMonth.format(new Date(combineDateAndTime(date, "12:00")));
 
 export default function TodayView() {
-  const now = useNow(60_000);
-  const [today] = useState(() => new Date());
-  const day = useApiResource(`doctor-day-${toApiDate(today)}`, () =>
-    listAppointmentsOn(today),
-  );
-  const queue = useApiResource("doctor-queue", listWaitingItems);
+  const now = useNow(30_000);
+  const today = toApiDate(new Date(now));
+  const [date, setDate] = useState(today);
+  const day = useApiResource(`doctor-consultations-${date}`, () => getConsultationDay(date));
+  const { reload } = day;
 
-  const appointments = day.data ?? [];
-  const live =
-    appointments.find((appointment) => isInProgress(appointment, now)) ??
-    appointments.find(
-      (appointment) =>
-        appointment.status === "BOOKED" &&
-        Date.parse(appointment.startsAt) > now,
-    );
-  // nothing left today: the next working day's first patient leads instead
-  const all = useApiResource(
-    day.data && !live ? "doctor-all-appointments" : null,
-    listAllAppointments,
-  );
-  const later = (all.data ?? []).find(
-    (appointment) =>
-      appointment.status === "BOOKED" &&
-      Date.parse(appointment.startsAt) > now &&
-      new Date(appointment.startsAt).toDateString() !== today.toDateString(),
-  );
-  const next = live ?? (appointments.length === 0 ? later : undefined);
-  const record = useApiResource(
-    next?.patientId ? `record-${next.patientId}` : null,
-    () => getPatientRecord(next?.patientId ?? ""),
-  );
+  // fresh every half minute (a call opening) and on coming back from the call tab
+  useEffect(() => {
+    reload();
+  }, [now, reload]);
+  useEffect(() => {
+    const back = () => document.visibilityState === "visible" && reload();
+    document.addEventListener("visibilitychange", back);
+    return () => document.removeEventListener("visibilitychange", back);
+  }, [reload]);
 
+  const head = (
+    <PageHead className={clinicStyles.pageHead} title="Today" sub={dayTitle(today)} />
+  );
   if (day.error && !day.data) {
     return (
-      <main className={clinicStyles.page}>
-        <PageHead className={clinicStyles.pageHead} title="Today" />
-        <ErrorNotice message={day.error} onRetry={day.reload} />
+      <main className={`${clinicStyles.page} ${styles.page}`}>
+        {head}
+        <ErrorNotice message={day.error} onRetry={reload} />
       </main>
     );
   }
   if (!day.data) {
     return (
-      <main className={clinicStyles.page}>
-        <PageHead className={clinicStyles.pageHead} title="Today" />
+      <main className={`${clinicStyles.page} ${styles.page}`}>
+        {head}
         <ClinicSkeleton titled={false} />
       </main>
     );
   }
 
-  const waiting = queue.data ?? null;
-  const flags = flagsByPatient(waiting ?? []);
-  const done = appointments.filter(
-    (appointment) => appointment.status === "COMPLETED",
-  ).length;
+  const waiting = day.data.waiting;
+  const list = day.data.date === date ? day.data.day : null;
 
   return (
-    <main className={clinicStyles.page}>
-      <PageHead
-        className={clinicStyles.pageHead}
-        title="Today"
-        sub={
-          <>
-            {weekdayDayMonth.format(today)}.{" "}
-            <span className="num">{appointments.length}</span> consultations,{" "}
-            <span className="num">{done}</span> done
-            {waiting && (
-              <>
-                , <span className="num">{waiting.length}</span> waiting on you
-              </>
-            )}
-            .
-          </>
-        }
-      />
+    <main className={`${clinicStyles.page} ${styles.page}`}>
+      {head}
 
-      <div className={styles.todayGrid} data-quiet={!next}>
-        {/* when the day's consultations are done, the plate steps aside and the queue leads */}
-        {next && (
-          <NextPatientCard
-            appointment={next}
-            record={record.data ?? null}
-            inProgress={isInProgress(next, now)}
-            notToday={!live}
-            now={now}
-            className={styles.nextUp}
-          />
-        )}
-
-        <WaitingQueue
-          items={queue.loading && !queue.data ? undefined : waiting}
-          now={now}
-          className={styles.queuePanel}
-          notice={
-            queue.error ? (
-              <ErrorNotice message={queue.error} onRetry={queue.reload} />
-            ) : null
-          }
-        />
-
-        <section
-          className={`${clinicStyles.panel} ${styles.dayList}`}
-          aria-labelledby="day-heading"
-        >
-          <div className={clinicStyles.panelHead}>
-            <h2 id="day-heading" className={clinicStyles.h2}>
-              The day
-            </h2>
-            <Link
-              href="/doctor-dashboard/schedule"
-              className={clinicStyles.textLink}
-            >
-              Month <ArrowRight size={15} />
-            </Link>
-          </div>
-          {appointments.length === 0 && (
-            <p className={clinicStyles.empty}>
-              No consultations today.
-              {later
-                ? ` Next: ${later.patientName}, ${weekdayDayMonth.format(new Date(later.startsAt))} at ${clockTime(new Date(later.startsAt))}.`
-                : ""}
-            </p>
+      <section className={clinicStyles.panel} aria-labelledby="now-heading">
+        <div className={clinicStyles.panelHead}>
+          <h2 id="now-heading" className={clinicStyles.h2}>
+            Do this now
+          </h2>
+          {waiting.length > 0 && (
+            <span className={`${clinicStyles.count} num`}>{waiting.length}</span>
           )}
-          <ol className={appointmentListClass}>
-            {appointments.map((appointment) => (
-              <li key={appointment.id}>
-                <AppointmentRow
-                  appointment={appointment}
-                  now={now}
-                  flag={
-                    appointment.patientId
-                      ? flags.get(appointment.patientId)
-                      : undefined
-                  }
-                  from="today"
-                />
+        </div>
+        {waiting.length === 0 ? (
+          <p className={clinicStyles.empty}>
+            Nothing is waiting on you. Calls that open and prescriptions to write or send appear here.
+          </p>
+        ) : (
+          <ol className={consultationListClass}>
+            {waiting.map((row, index) => (
+              <li key={row.id}>
+                <ConsultationRow row={row} withDay lead={index === 0} onChanged={reload} />
               </li>
             ))}
           </ol>
-        </section>
-      </div>
+        )}
+      </section>
+
+      <section className={clinicStyles.panel} aria-labelledby="day-heading">
+        <div className={styles.dayHead}>
+          <h2 id="day-heading" className={clinicStyles.h2}>
+            Consultations
+          </h2>
+          <div className={styles.dayNav}>
+            <button
+              type="button"
+              className={styles.arrow}
+              onClick={() => setDate(shiftDate(date, -1))}
+              aria-label="The day before"
+            >
+              <CaretLeft size={18} />
+            </button>
+            <span className={styles.dayName} aria-live="polite">
+              {date === today ? `Today, ${dayTitle(date)}` : dayTitle(date)}
+            </span>
+            <button
+              type="button"
+              className={styles.arrow}
+              onClick={() => setDate(shiftDate(date, 1))}
+              aria-label="The day after"
+            >
+              <CaretRight size={18} />
+            </button>
+            {date !== today && (
+              <button type="button" className={styles.pick} onClick={() => setDate(today)}>
+                Today
+              </button>
+            )}
+            <label className={styles.pick}>
+              Pick date
+              <input
+                type="date"
+                className={styles.dateInput}
+                value={date}
+                onClick={(e) => {
+                  try {
+                    e.currentTarget.showPicker();
+                  } catch {
+                    // older browsers open their own picker on focus
+                  }
+                }}
+                onChange={(e) => e.target.value && setDate(e.target.value)}
+              />
+            </label>
+          </div>
+        </div>
+        {!list ? (
+          <ClinicSkeleton titled={false} />
+        ) : list.length === 0 ? (
+          <p className={clinicStyles.empty}>
+            {date === today ? "No consultations today." : "No consultations on this day."}
+          </p>
+        ) : (
+          <ol className={consultationListClass}>
+            {list.map((row) => (
+              <li key={row.id}>
+                <ConsultationRow row={row} onChanged={reload} />
+              </li>
+            ))}
+          </ol>
+        )}
+      </section>
     </main>
   );
 }

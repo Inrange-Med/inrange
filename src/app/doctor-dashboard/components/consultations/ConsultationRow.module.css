@@ -1,0 +1,125 @@
+/* One consultation: when, who and its state, and the one button. Rows are separated by a hairline. */
+
+.list {
+  display: grid;
+}
+
+.list > li + li .row {
+  border-top: 1px solid var(--hair);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 128px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 14px 0;
+}
+
+.when {
+  align-self: start;
+  padding-top: 2px;
+  font-size: 0.875rem;
+  font-weight: 560;
+  color: var(--ink-2);
+}
+
+.who {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.name {
+  justify-self: start;
+  font-size: 1rem;
+  font-weight: 560;
+  color: var(--ink);
+  text-decoration: none;
+  /* a patient's name is never cut short */
+  overflow-wrap: anywhere;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .name:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+}
+
+.facts {
+  font-size: 0.8125rem;
+  color: var(--ink-3);
+}
+
+.status {
+  margin-top: 4px;
+  font-size: 0.875rem;
+  font-weight: 560;
+  color: var(--ink-2);
+}
+
+.status[data-state="CALL_OPEN"] {
+  color: var(--signal-ink);
+}
+
+.status[data-state="TO_WRITE"],
+.status[data-state="TO_SEND"] {
+  color: var(--ink);
+}
+
+.status[data-state="SENT"],
+.status[data-state="CANCELLED"],
+.status[data-state="NO_CALL"] {
+  color: var(--ink-3);
+  font-weight: 450;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* a row's button: a full pill at 48px (the PRD's floor), smaller type than a page's one action */
+.act {
+  min-height: 48px;
+  font-size: 0.9375rem;
+}
+
+.act:global(.btn--ghost) {
+  padding: 6px 20px;
+}
+
+.act :global(.well) {
+  width: 36px;
+  height: 36px;
+}
+
+.act[data-busy="true"] {
+  cursor: default;
+}
+
+/* a phone: the time over the name, the buttons across the width under it */
+@media (max-width: 639px) {
+  .row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+    padding: 16px 0;
+  }
+  .when {
+    padding-top: 0;
+  }
+  .actions {
+    justify-content: stretch;
+    margin-top: 6px;
+  }
+  .actions > * {
+    flex: 1 1 100%;
+    justify-content: space-between;
+  }
+  .actions > :global(.btn--ghost) {
+    justify-content: center;
+  }
+}

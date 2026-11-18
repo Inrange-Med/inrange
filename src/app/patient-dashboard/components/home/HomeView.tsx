@@ -1,192 +1,67 @@
 "use client";
 
 /*
-  Home (Arhaan HomeView): a greeting, the next thing to do as one line with Chat beside it, the
-  weight card, and one card for where the patient stands in care. On a phone it never scrolls.
-  Before the first consultation the strip and that card give way to one status card driven by the
-  eligibility review (GET /api/eligibility); while the backend lacks it, the consultations decide.
-  Data: the patient's consultations, their profile (name, weight, plan), weight readings, eligibility.
+  Home, the patient's one screen (doctor portal v2 PRD; 17 Nov 2026 call: "lay everything out on the
+  plate"): a greeting, ONE card with the next step (NextStepCard, from GET /api/patient/next-step), and
+  three plain rows: Prescriptions, Lab reports, Payments. Their name, top right in the bar, opens the
+  profile. It refreshes when the patient comes back to the app, so a step done elsewhere (paid, the
+  call ended, the prescription sent) moves the card on.
+  Kept in this folder but off Home (PRD "Cut from the patient's view"): the weight card and logging, the
+  programme card, the first-steps card and the old strip (WeightCard, HomeProgrammeCard, FirstStepsCard,
+  NextStepStrip).
 */
 
-import { useCallback } from "react";
+import { useEffect } from "react";
+import Link from "next/link";
+import { CaretRight } from "@phosphor-icons/react";
 import ErrorNotice from "@/components/ui/ErrorNotice";
 import PageGhosts from "@/app/patient-dashboard/components/PageGhosts";
-import { useToast } from "@/components/ui/ToastProvider";
 import { useApiResource } from "@/hooks/useApiResource";
-import { useNow } from "@/hooks/useNow";
-import { errorMessage } from "@/lib/http/apiClient";
-import { getSessionUser } from "@/lib/session/authSession";
-import { listMyAppointments } from "@/services/appointmentService";
-import { getMyProfile } from "@/services/patientProfileService";
-import {
-  deleteWeightReading,
-  listWeightReadings,
-  logWeight,
-} from "@/services/trackerService";
-import EligibilityStatus from "../EligibilityStatus";
-import { eligibilityStatus, loadEligibilityReview } from "../eligibilityStage";
-import { careStageOf, isPlanActive, upcomingConsultation } from "./careStage";
-import FirstStepsCard from "./FirstStepsCard";
-import NextStepStrip from "./NextStepStrip";
-import HomeProgrammeCard from "./HomeProgrammeCard";
-import WeightCard from "./WeightCard";
-import styles from "@/app/patient-dashboard/HomePage.module.css";
-import layoutStyles from "@/components/ui/styles/PageLayout.module.css";
-import { listMyLabBookings } from "@/services/labTestService";
-import OngoingLabCard from "@/app/patient-dashboard/lab-tests/components/OngoingLabCard";
+import { useSessionUser } from "@/hooks/useSessionUser";
+import { getNextStep } from "@/services/patientHomeService";
+import NextStepCard from "./NextStepCard";
+import styles from "./HomeView.module.css";
 
-function greeting(hour: number) {
-  if (hour < 5) return "Hello";
-  if (hour >= 17) return "Good evening";
-  if (hour < 12) return "Good morning";
-  return "Good afternoon";
-}
-
-async function loadHome() {
-  const [appointments, profile, weights, review, labBookings] =
-    await Promise.all([
-      listMyAppointments(),
-      getMyProfile(),
-      listWeightReadings(),
-      loadEligibilityReview(),
-      listMyLabBookings().catch(() => null),
-    ]);
-  return {
-    appointments,
-    profile,
-    weights,
-    ...review,
-    labBookings: labBookings ?? [],
-  };
-}
-
-const LAB_UNDER_WAY = [
-  "BOOKED",
-  "COLLECTOR_ASSIGNED",
-  "SAMPLE_COLLECTED",
-  "PROCESSING",
+const ROWS = [
+  { href: "/patient-dashboard/prescriptions", label: "Prescriptions" },
+  { href: "/patient-dashboard/reports", label: "Lab reports" },
+  { href: "/patient-dashboard/payments", label: "Payments" },
 ];
 
 export default function HomeView() {
-  const toast = useToast();
-  const now = useNow();
-  const home = useApiResource("patient-home", loadHome);
-  const { data, reload, setData } = home;
+  const { user } = useSessionUser();
+  const step = useApiResource("patient-next-step", getNextStep);
+  const { reload } = step;
+  useEffect(() => {
+    const back = () => document.visibilityState === "visible" && reload();
+    document.addEventListener("visibilitychange", back);
+    return () => document.removeEventListener("visibilitychange", back);
+  }, [reload]);
 
-  // the card shows the new reading (or drops an undone one) at once; the reload then confirms it
-  const saveWeight = useCallback(
-    async (weightKg: number) => {
-      const reading = await logWeight(weightKg);
-      if (data)
-        setData({ ...data, weights: [...(data.weights ?? []), reading] });
-      reload();
-      toast("Weight saved", () => {
-        if (data) setData(data);
-        deleteWeightReading(reading.id)
-          .then(reload)
-          .catch((error) => toast(errorMessage(error)));
-      });
-    },
-    [data, reload, setData, toast],
-  );
-
-  if (!data) {
-    return (
-      <main className={layoutStyles.page} aria-busy={!home.error}>
-        {home.error ? (
-          <ErrorNotice message={home.error} onRetry={reload} />
-        ) : (
-          <PageGhosts title heights={[120, 180]} />
-        )}
-      </main>
-    );
-  }
-
-  const fullName = data.profile.fullName || getSessionUser()?.fullName || "";
-  const firstName = fullName.trim().split(" ")[0] || "there";
-  const planActive = isPlanActive(data.profile.planStatus);
-  const upcoming = upcomingConsultation(data.appointments, now);
-  const stage = careStageOf(data.appointments, planActive, now);
-  // before the first consultation the eligibility review leads; after it, the normal Home
-  const status =
-    data.eligibility && stage === "before-consultation"
-      ? eligibilityStatus(data.eligibility, data.labBooking, upcoming, now)
-      : null;
-  // a paid blood test under way always shows on Home (the eligibility test is already in the status card)
-  const labUnderWay =
-    data.labBookings.find(
-      (b) =>
-        LAB_UNDER_WAY.includes(b.status) &&
-        !(status && b.id === data.labBooking?.id),
-    ) ?? null;
-  const labCard = labUnderWay && (
-    <OngoingLabCard
-      booking={labUnderWay}
-      now={now}
-      onHome
-      className={styles.lab}
-    />
-  );
-  // one filled button per screen: when the next step is a dark "do this", logging steps back
-  const nextStepIsAction = status ? Boolean(status.action?.filled) : !upcoming;
-  const greetingBlock = (
-    <header className={styles.hello}>
-      <h1 className={styles.h1}>
-        {greeting(new Date(now).getHours())}, {firstName}.
-      </h1>
-      <p className={styles.sub}>Welcome to inrange</p>
-    </header>
-  );
-  const weightCard = (
-    <WeightCard
-      readings={data.weights}
-      profileWeightKg={data.profile.weightKg}
-      primary={!nextStepIsAction}
-      onSave={saveWeight}
-    />
-  );
-
-  if (status) {
-    return (
-      <main
-        className={`${styles.home} ${styles.withStatus}`}
-        data-screen="home"
-      >
-        {greetingBlock}
-        <section
-          className={`${styles.card} ${styles.dose}`}
-          aria-labelledby="status-heading"
-        >
-          <div className={styles.head}>
-            <h2 id="status-heading" className={styles.label}>
-              Your next step
-            </h2>
-          </div>
-          <EligibilityStatus status={status} />
-        </section>
-        {labCard}
-        {weightCard}
-      </main>
-    );
-  }
+  const firstName = (user?.fullName ?? "").trim().split(/\s+/)[0];
 
   return (
     <main className={styles.home} data-screen="home">
-      {greetingBlock}
-
-      <NextStepStrip upcoming={upcoming} stage={stage} now={now} />
-
-      {labCard}
-      {weightCard}
-
-      {stage === "before-consultation" ? (
-        <FirstStepsCard upcoming={upcoming} />
+      <h1 className={styles.hello}>{firstName ? `Hi ${firstName}` : "Hello"}</h1>
+      {step.error && !step.data ? (
+        <ErrorNotice message={step.error} onRetry={reload} />
+      ) : step.data ? (
+        <NextStepCard step={step.data} />
       ) : (
-        <HomeProgrammeCard
-          active={stage === "in-programme"}
-          planName={data.profile.planName}
-        />
+        <PageGhosts heights={[220]} />
       )}
+      <nav aria-label="Your records">
+        <ul className={styles.rows}>
+          {ROWS.map((row) => (
+            <li key={row.href}>
+              <Link href={row.href} className={styles.row}>
+                <span>{row.label}</span>
+                <CaretRight size={18} aria-hidden="true" />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </nav>
     </main>
   );
 }

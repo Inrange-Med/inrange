@@ -26,6 +26,8 @@ delete from support_requests where user_id in (select id from t);
 -- the access log of real patients stays whole: a test coach or admin who opened a real record is kept
 delete from audit_log where patient_id in (select id from t);
 delete from otp_codes where mobile like '98000%';
+-- the doctor portal journey's test item on the master list (once no order names it)
+delete from medicines m where m.sku like 'TEST-%' and not exists (select 1 from medicine_costs c where c.medicine_id = m.id);
 delete from users where id in (select id from t) and not exists (select 1 from audit_log a where a.actor_id = users.id);
 commit;
 select (select count(*) from users where role = 'PATIENT') as patients_left,

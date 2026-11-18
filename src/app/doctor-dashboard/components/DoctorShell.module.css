@@ -227,7 +227,7 @@
   right: 10px;
   bottom: calc(10px + env(safe-area-inset-bottom));
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   padding: 6px;
   border-radius: 999px;
   background: rgb(10 11 12 / 0.92);
@@ -317,7 +317,7 @@
   }
 }
 
-/* five places in the dock: the smallest phones take a smaller label */
+/* the smallest phones take a smaller label */
 @media (max-width: 359px) {
   .dockTab {
     font-size: 0.8125rem;

@@ -3,7 +3,7 @@
 // Mounted at /api. Someone not allowed gets the same 404 as a file that does not exist.
 //   GET /files/reports/:id          a report: the patient, a doctor treating them, or an admin
 //   GET /files/lab-bookings/:id     a booking's lab report: the same people
-//   GET /files/prescriptions/:id    a signed prescription: the patient or a doctor treating them
+//   GET /files/prescriptions/:id    an issued prescription: the patient or a doctor treating them; a draft's PDF: its doctor
 //   GET /files/photos/:id/:pose     front | side progress photo: the patient, or a treating doctor while shared
 // A doctor or admin opening a patient's file is written to audit_log.
 import { Hono } from "hono";
@@ -72,8 +72,13 @@ fileRoutes.get("/files/lab-bookings/:id", async (c) => {
 fileRoutes.get("/files/prescriptions/:id", async (c) => {
   const me = await requireUser(c);
   const id = intParam(c.req.param("id"), "prescription");
-  const [p] = await sql`select patient_id, pdf_path from prescriptions where id = ${id} and status = 'SIGNED'`;
-  if (!p) return missing();
+  // the patient's issued prescriptions (the current one and the ones it replaced); a draft's PDF only to the
+  // doctor writing it, once "Create PDF" made it (doctor portal v2: the PDF on the page before Send)
+  const [p] = await sql`
+    select patient_id, doctor_id, pdf_path, status from prescriptions
+    where id = ${id} and (status in ('SIGNED', 'SUPERSEDED') or (status = 'DRAFT' and pdf_made_at is not null))`;
+  if (!p || !p.pdf_path) return missing();
+  if (p.status === "DRAFT" && me.id !== p.doctor_id) return missing();
   await mayOpen(me, p.patient_id, false);
   return send(c, me, p.patient_id, `prescription ${id}`, "prescriptions", p.pdf_path, "application/pdf");
 });

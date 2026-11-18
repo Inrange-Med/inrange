@@ -1,10 +1,11 @@
 "use client";
 
 /**
- * The consultation room for both roles. Before joining: a camera and microphone check, then Join,
+ * The consultation room for both roles. Before joining: a camera and microphone check, then Join now,
  * which asks the backend for the 100ms room (GET /api/video/appointments/:id/join) and embeds it
- * full screen. Leave goes back to the person's home (the doctor's Today, the patient's Home); a
- * doctor can also end the consultation for everyone (POST /api/video/appointments/:id/end),
+ * full screen. The doctor's call opens in its own tab (doctor portal v2), so for the doctor Leave and End
+ * both end on "Finish the prescription in your other tab" with Close this tab; the patient's Leave goes
+ * back to Home. A doctor can end the consultation for everyone (POST /api/video/appointments/:id/end),
  * confirmed in a sheet. Signed out, it sends the person to sign in and back here; a failed join and the
  * ended call each offer a way out.
  */
@@ -33,7 +34,7 @@ import styles from "./ConsultationRoom.module.css";
 type Stage =
   | { name: "before" }
   | { name: "live"; room: VideoRoom }
-  | { name: "ended" };
+  | { name: "ended"; left?: boolean };
 
 export default function ConsultationRoom({
   appointmentId,
@@ -153,7 +154,10 @@ export default function ConsultationRoom({
               <button
                 type="button"
                 className={styles.leaveButton}
-                onClick={() => router.push(home)}
+                // the doctor's call has its own tab: leaving shows the way back to the prescription
+                onClick={() =>
+                  isDoctor ? setStage({ name: "ended", left: true }) : router.push(home)
+                }
               >
                 <SignOut size={18} aria-hidden="true" /> Leave
               </button>
@@ -163,7 +167,12 @@ export default function ConsultationRoom({
       )}
 
       {stage.name === "ended" && (
-        <CallEnded home={home} homeLabel={homeLabel} />
+        <CallEnded
+          home={home}
+          homeLabel={homeLabel}
+          doctorPage={isDoctor ? `/doctor-dashboard/consultations/${appointmentId}` : undefined}
+          left={stage.left}
+        />
       )}
 
       <EndConsultationSheet

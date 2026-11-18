@@ -1,0 +1,93 @@
+/* Prescriptions: one card each, the current one first and full strength, replaced ones quieter. */
+
+.page {
+  max-width: calc(640px + var(--gutter) * 2);
+}
+
+.empty {
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+.list {
+  display: grid;
+  gap: 14px;
+}
+
+.card {
+  display: grid;
+  gap: 16px;
+  padding: clamp(20px, 4vw, 28px);
+  border-radius: var(--r-surface);
+  background: var(--paper);
+  box-shadow: 0 0 0 1px var(--hair);
+  scroll-margin-top: 88px;
+}
+
+.card[data-current="false"] {
+  background: transparent;
+}
+
+.card[data-linked="true"] {
+  box-shadow: 0 0 0 1.5px var(--ink);
+}
+
+.head {
+  display: grid;
+  gap: 4px;
+}
+
+.h2 {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 520;
+  letter-spacing: -0.01em;
+}
+
+.card[data-current="false"] .h2 {
+  font-size: 1.0625rem;
+  color: var(--ink-2);
+}
+
+.meta {
+  font-size: 0.9375rem;
+  color: var(--ink-3);
+}
+
+.medicines {
+  display: grid;
+  gap: 12px;
+}
+
+.medicines li {
+  display: grid;
+  gap: 2px;
+}
+
+.medicines strong {
+  font-weight: 600;
+}
+
+.medicines span {
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.action {
+  min-height: 52px;
+  flex: 1 1 200px;
+  justify-content: center;
+  gap: 8px;
+}
+
+.action:not(:global(.btn--ghost)) {
+  padding: 6px 22px;
+}

@@ -105,6 +105,8 @@ async function staleReason(m: Record<string, any>): Promise<string | null> {
   if (m.kind === "DR_NOTE_TO_SIGN" && m.appointment_id) {
     const [n] = await sql`select status from clinical_notes where appointment_id = ${m.appointment_id}`;
     if (n?.status === "SIGNED") return "Signed already";
+    const [rx] = await sql`select 1 from prescriptions where appointment_id = ${m.appointment_id} and status in ('SIGNED', 'SUPERSEDED')`;
+    if (rx) return "Sent already";
   }
   if (m.lab_booking_id && m.kind === "LAB_TOMORROW") {
     const [b] = await sql`select status, to_char(slot_date, 'YYYY-MM-DD') as slot_date from lab_bookings where id = ${m.lab_booking_id}`;

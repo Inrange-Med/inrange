@@ -1,0 +1,59 @@
+/* Home's one card: the next step in words, the bill when money is due, and one full-width button. */
+
+.card {
+  display: grid;
+  gap: 14px;
+  padding: clamp(22px, 5vw, 32px);
+  border-radius: var(--r-surface);
+  background: var(--paper);
+  box-shadow:
+    0 0 0 1px var(--hair),
+    0 24px 48px -36px rgb(0 0 0 / 0.28);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 1.3rem + 0.9vw, 1.875rem);
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+.text {
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+.go {
+  width: 100%;
+  min-height: 56px;
+  margin-top: 6px;
+  justify-content: space-between;
+  font-size: 1.0625rem;
+}
+
+.quiet {
+  justify-self: center;
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  font-size: 0.9375rem;
+  font-weight: 560;
+  color: var(--ink-2);
+  text-decoration: underline;
+  text-decoration-color: var(--hair-2);
+  text-underline-offset: 4px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .quiet:hover {
+    text-decoration-color: currentColor;
+  }
+}
+
+/* an open call is the one live moment: the card takes the signal wash */
+.card[data-stage="CALL_OPEN"] {
+  background: linear-gradient(180deg, var(--signal-wash), var(--paper) 70%);
+}

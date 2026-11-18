@@ -20,7 +20,11 @@ $P -d inrange -c "do \$\$ begin create role anon; exception when duplicate_objec
   -c "do \$\$ begin create role authenticated; exception when duplicate_object then null; end \$\$;" \
   -c "do \$\$ begin create role service_role; exception when duplicate_object then null; end \$\$;" \
   -c "create schema storage; create table storage.buckets (id text primary key, name text, public boolean, file_size_limit bigint, allowed_mime_types text[]); create table storage.objects (id uuid, bucket_id text, name text);"
-for f in "$REPO"/supabase/migrations/*.sql; do $P -d inrange -f "$f" > /dev/null; done
+# the scheduler (pg_cron, pg_net, Vault) is Supabase's: locally the journeys call the tick themselves
+for f in "$REPO"/supabase/migrations/*.sql; do
+  grep -q "create extension if not exists pg_cron" "$f" && { echo "skipped $(basename "$f") (pg_cron is Supabase's)"; continue; }
+  $P -d inrange -f "$f" > /dev/null
+done
 echo "database ready ($(ls "$REPO"/supabase/migrations/*.sql | wc -l | tr -d ' ') migrations)"
 
 export DB_POOLER_URL="postgres://postgres@127.0.0.1:$PORT/inrange"
@@ -35,3 +39,4 @@ for i in $(seq 1 40); do curl -s http://127.0.0.1:8000/api/health > /dev/null &&
 echo "API on http://127.0.0.1:8000 (log: $WORK/api.log)"
 [ "$1" = "--serve" ] && exit 0
 PSQL_URL="$DB_POOLER_URL" PATH="$PG:$PATH" python3 -u "$REPO/supabase/tests/medicine_flow_journey.py"
+PSQL_URL="$DB_POOLER_URL" PATH="$PG:$PATH" python3 -u "$REPO/supabase/tests/doctor_portal_journey.py"

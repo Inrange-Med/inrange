@@ -35,7 +35,9 @@ const historyEntry = (what: string, by: number | null = null) => [{ at: new Date
 
 export type TaskKind =
   | "NO_REPLY" | "QUESTIONS" | "PLAN_CALL" | "PAYMENT_FAILED" | "DISPATCH_DUE" | "DELIVERY_LATE" | "DELIVERY_ISSUE"
-  | "RENEWAL" | "REFILL_GAP" | "ADHERENCE" | "RECONCILE";
+  | "RENEWAL" | "REFILL_GAP" | "ADHERENCE" | "RECONCILE"
+  // a medicine the doctor typed that is not on the master list (lib/prescriptions.ts): admin matches it
+  | "MATCH_MEDICINE";
 
 export type TaskInput = {
   kind: TaskKind;
@@ -511,7 +513,9 @@ export function cadenceOf(frequency: string): { cadence: "WEEKLY" | "DAILY" | "T
   const f = frequency.toLowerCase();
   if (/week/.test(f)) return { cadence: "WEEKLY", times: ["09:00"] };
   if (/twice|two times|2 times|\bbd\b|\bbid\b|morning and (evening|night)/.test(f)) return { cadence: "TWICE_DAILY", times: ["09:00", "21:00"] };
-  if (/daily|once a day|every day|\bod\b|each day|at night|in the morning/.test(f)) return { cadence: "DAILY", times: ["09:00"] };
+  // a night dose is reminded at night (the doctor portal's "Once a day, at night (0-0-1)")
+  if (/daily|once a day|every day|\bod\b|each day|at night|in the morning/.test(f))
+    return { cadence: "DAILY", times: [/night|0-0-1/.test(f) && !/morning/.test(f) ? "21:00" : "09:00"] };
   return null;
 }
 

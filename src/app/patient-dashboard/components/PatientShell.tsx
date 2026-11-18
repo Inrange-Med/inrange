@@ -1,27 +1,24 @@
 "use client";
 
 /*
-  The signed-in patient app around every /patient-dashboard page (Arhaan's account/Shell.tsx): a thin bar
-  with the wordmark, the four sections (centred pills on a laptop, a dock on a phone), an offline
-  line and the toast. Only signed-in patients get past it: anyone signed out goes to /sign-in
-  (?next= brings them back to this page) and anyone else (a doctor, an admin, a coach) to their own home.
+  The signed-in patient app around every /patient-dashboard page. One place only (doctor portal v2 PRD,
+  17 Nov 2026 call: patients are not comfortable with software): Home, with the one next step and three
+  rows (Prescriptions, Lab reports, Payments). The bar holds the wordmark, which always leads Home, and the
+  patient's name, which opens their profile. No section tabs and no dock: every other page is reached from
+  Home and comes back to it. Care, Resources and Messages are off the patient's way (their code stays).
+  Only signed-in patients get past it: anyone signed out goes to /sign-in (?next= brings them back to
+  this page) and anyone else (a doctor, an admin, a coach) to their own home.
 
-  The chat thread (/patient-dashboard/messages/<doctorId>) brings its own bar, so the shell draws neither
-  the bar nor the dock there, as in Arhaan's design. A task that owns the screen (the checkout, the
-  first-injection walk-through) turns on focus mode (shellFocus.tsx): the bar becomes a round close,
-  the task's name centred and a spacer, and the dock goes, so the task is the one thing on screen.
+  The chat thread (/patient-dashboard/messages/<doctorId>) brings its own bar. A task that owns the screen
+  (the checkout, the first-injection walk-through) turns on focus mode (shellFocus.tsx): the bar becomes a
+  round close, the task's name centred and a spacer, so the task is the one thing on screen.
 */
 
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import {
-  BookOpenText,
-  FirstAidKit,
-  House,
-  UserCircle,
-  X,
-} from "@phosphor-icons/react";
+import { X } from "@phosphor-icons/react";
+import Avatar from "@/components/ui/Avatar";
 import AppTheme from "@/components/ui/AppTheme";
 import ToastProvider from "@/components/ui/ToastProvider";
 import Wordmark from "@/components/ui/Wordmark";
@@ -34,54 +31,6 @@ import layoutStyles from "@/components/ui/styles/PageLayout.module.css";
 import PageGhosts from "./PageGhosts";
 import { ShellFocusContext, type ShellFocus } from "./shellFocus";
 import styles from "./PatientShell.module.css";
-
-type Section = "home" | "care" | "resources" | "profile";
-
-const SECTIONS: {
-  id: Section;
-  href: string;
-  label: string;
-  icon: typeof House;
-}[] = [
-  { id: "home", href: "/patient-dashboard", label: "Home", icon: House },
-  {
-    id: "care",
-    href: "/patient-dashboard/care",
-    label: "Care",
-    icon: FirstAidKit,
-  },
-  {
-    id: "resources",
-    href: "/patient-dashboard/resources",
-    label: "Resources",
-    icon: BookOpenText,
-  },
-  {
-    id: "profile",
-    href: "/patient-dashboard/profile",
-    label: "Profile",
-    icon: UserCircle,
-  },
-];
-
-/** Which section lights up for a page: the four sections, and the pages that sit under them. */
-const SECTION_OF_FOLDER: Record<string, Section> = {
-  messages: "home",
-  care: "care",
-  appointments: "care",
-  "lab-tests": "care",
-  reports: "care",
-  plans: "care",
-  checkout: "care",
-  resources: "resources",
-  profile: "profile",
-};
-
-function sectionFor(pathname: string): Section | null {
-  const folder = pathname.split("/")[2];
-  if (!folder) return "home";
-  return SECTION_OF_FOLDER[folder] ?? null;
-}
 
 /** Focus mode's bar: the close (or an empty slot), the task's name centred, a 44px spacer. */
 function FocusBar({
@@ -127,7 +76,7 @@ function FocusBar({
 export default function PatientShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { status: role } = useSessionUser();
+  const { status: role, user } = useSessionUser();
   const online = useOnline();
   const [scrolled, setScrolled] = useState(false);
   const [registered, setRegistered] = useState<ShellFocus | null>(null);
@@ -147,7 +96,8 @@ export default function PatientShell({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const current = sectionFor(pathname);
+  const firstName = (user?.fullName ?? "").trim().split(/\s+/)[0] || "Profile";
+  const onProfile = pathname.startsWith("/patient-dashboard/profile");
   const bare = /^\/patient-dashboard\/messages\/[^/]+/.test(pathname);
   // the checkout is a focused page from its first frame; the page fills in where Close goes
   const onCheckout = pathname.startsWith("/patient-dashboard/checkout");
@@ -187,13 +137,13 @@ export default function PatientShell({ children }: { children: ReactNode }) {
     <AppTheme>
       <ShellFocusContext.Provider value={setRegistered}>
         <ToastProvider
-          className={bare ? styles.toastChat : tabs ? styles.toastUp : ""}
+          className={bare ? styles.toastChat : ""}
         >
-          <div className={`${styles.app} ${tabs ? styles.withTabs : ""}`}>
+          <div className={styles.app}>
             {focus && <FocusBar focus={focus} scrolled={scrolled} />}
             {tabs && (
               <header className={styles.bar} data-scrolled={scrolled}>
-                <div className={`${styles.barInner} ${styles.barTabs}`}>
+                <div className={styles.barInner}>
                   <Link
                     href="/patient-dashboard"
                     className={styles.brand}
@@ -201,22 +151,15 @@ export default function PatientShell({ children }: { children: ReactNode }) {
                   >
                     <Wordmark height={34} />
                   </Link>
-                  <nav className={styles.tabs} aria-label="Sections">
-                    {SECTIONS.map((section) => (
-                      <Link
-                        key={section.id}
-                        href={section.href}
-                        className={styles.tab}
-                        aria-current={
-                          section.id === current ? "page" : undefined
-                        }
-                      >
-                        {section.label}
-                      </Link>
-                    ))}
-                  </nav>
-                  {/* the bar's third column keeps the sections centred */}
-                  <div className={styles.barEnd} />
+                  <Link
+                    href="/patient-dashboard/profile"
+                    className={styles.me}
+                    aria-current={onProfile ? "page" : undefined}
+                    aria-label={`${firstName}: your profile`}
+                  >
+                    <span>{firstName}</span>
+                    <Avatar name={user?.fullName ?? firstName} size={32} />
+                  </Link>
                 </div>
               </header>
             )}
@@ -229,25 +172,6 @@ export default function PatientShell({ children }: { children: ReactNode }) {
 
             {children}
 
-            {tabs && (
-              <nav className={styles.dock} aria-label="Sections">
-                {SECTIONS.map((section) => {
-                  const Icon = section.icon;
-                  const on = section.id === current;
-                  return (
-                    <Link
-                      key={section.id}
-                      href={section.href}
-                      className={styles.dockTab}
-                      aria-current={on ? "page" : undefined}
-                    >
-                      <Icon size={22} weight={on ? "fill" : "regular"} />
-                      <span>{section.label}</span>
-                    </Link>
-                  );
-                })}
-              </nav>
-            )}
           </div>
         </ToastProvider>
       </ShellFocusContext.Provider>
