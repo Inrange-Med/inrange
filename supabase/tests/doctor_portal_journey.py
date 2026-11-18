@@ -171,6 +171,8 @@ def main():
     v = sql(f"select version, status from prescriptions where patient_id = {pid} order by version")
     step("the first version is superseded", v == [["1", "SUPERSEDED"], ["2", "SIGNED"]], v)
     step("one open cart, for the new version", one(f"select count(*) from medicine_carts where patient_id = {pid} and status = 'OPEN'") == "1")
+    m = sql(f"select status from ops_tasks where patient_id = {pid} and kind = 'MATCH_MEDICINE' order by id")
+    step("the replaced version's match task closes; the new version has its own", m == [["DONE"], ["OPEN"]], m)
 
     s, b = call("GET", "/api/doctor/consultations/history?q=riya", doctor)
     step("History finds it by name", s == 200 and any(r["id"] == appt and r["state"] == "SENT" for r in b["data"]["consultations"]), b)

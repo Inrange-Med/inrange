@@ -4,7 +4,8 @@
   One task: who and why (with a call link), what happened so far, then the outcome. Every outcome needs
   a short note (PRD 9.1: the next person picks it up from there). "Call back later" asks when; "No
   answer" moves it to the next working morning. Both keep the task open. Sending the order link and
-  taking the task are quiet actions above the outcome; "Save" is the one primary.
+  taking the task are quiet actions above the outcome; "Save" is the one primary. A "Match a medicine"
+  task has no outcome to pick: matching every line closes it (MatchMedicines).
 */
 
 import { useEffect, useState } from "react";
@@ -31,6 +32,7 @@ import {
 } from "./words";
 import formStyles from "@/components/ui/styles/FormControls.module.css";
 import adminStyles from "@/app/admin/styles/AdminSurfaces.module.css";
+import MatchMedicines from "./MatchMedicines";
 import s from "./Medicine.module.css";
 
 /** "2026-11-18T10:00" for a datetime-local input, in India time. */
@@ -175,7 +177,19 @@ export default function TaskSheet({
           )}
         </dl>
 
-        {open && (
+        {open && task.kind === "MATCH_MEDICINE" && (
+          // the doctor's hand-typed medicine: matching it to the list closes the task
+          <MatchMedicines
+            taskId={task.id}
+            onDone={() => {
+              toast("Every medicine matched. The task is done.");
+              onChanged();
+              onClose();
+            }}
+          />
+        )}
+
+        {open && task.kind !== "MATCH_MEDICINE" && (
           <>
             <div className={adminStyles.actions}>
               {!mine && (

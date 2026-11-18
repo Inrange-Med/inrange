@@ -15,6 +15,17 @@
   margin-bottom: 0;
 }
 
+/* a field the doctor moves into never hides under the bar held at the bottom */
+.page :is(textarea, input, button) {
+  scroll-margin-bottom: 140px;
+}
+
+@media (max-width: 1023px) {
+  .page :is(textarea, input, button) {
+    scroll-margin-bottom: 230px;
+  }
+}
+
 .h2 {
   font-family: var(--font-display);
   font-size: 1.25rem;
@@ -22,10 +33,25 @@
   letter-spacing: -0.01em;
 }
 
-.reason {
+.callRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 20px;
   margin-top: -8px;
+}
+
+.reason {
   font-size: 0.9375rem;
   color: var(--ink-2);
+}
+
+@media (max-width: 639px) {
+  .callRow .join {
+    flex: 1 1 100%;
+    justify-content: space-between;
+  }
 }
 
 .join {
@@ -626,6 +652,9 @@
   }
   .barGo {
     justify-content: space-between;
+  }
+  .barButtons > * {
+    justify-content: center;
   }
   .report {
     grid-template-columns: minmax(0, 1fr) auto;

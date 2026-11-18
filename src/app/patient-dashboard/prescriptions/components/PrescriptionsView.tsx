@@ -16,6 +16,7 @@ import { useToast } from "@/components/ui/ToastProvider";
 import { useApiResource } from "@/hooks/useApiResource";
 import { shortDate } from "@/lib/format/dateTime";
 import { errorMessage } from "@/lib/http/apiClient";
+import { medicineLineWords } from "@/lib/format/medicineLine";
 import { getFile } from "@/services/fileService";
 import { listMyPrescriptions } from "@/services/patientHomeService";
 import type { PatientPrescription } from "@/types/patientHome";
@@ -78,7 +79,8 @@ export default function PrescriptionsView() {
         <PageGhosts heights={[220, 120]} />
       ) : list.data.length === 0 ? (
         <p className={styles.empty}>
-          Your prescription appears here after your video call with the doctor. It also comes to you on WhatsApp.
+          Your prescription appears here after your video call with the doctor.
+          It also comes to you on WhatsApp.
         </p>
       ) : (
         <ol className={styles.list}>
@@ -92,12 +94,18 @@ export default function PrescriptionsView() {
             >
               <div className={styles.head}>
                 <h2 className={styles.h2}>
-                  {rx.current ? "Your prescription" : `Replaced, from ${shortDate(rx.sentAt)} ${year(rx.sentAt)}`}
+                  {rx.current
+                    ? "Your prescription"
+                    : `Replaced, from ${shortDate(rx.sentAt)} ${year(rx.sentAt)}`}
                 </h2>
                 <p className={`${styles.meta} num`}>
                   {rx.doctorName}
-                  {rx.doctorQualification && `, ${rx.doctorQualification}`}. {shortDate(rx.sentAt)} {year(rx.sentAt)}
-                  {rx.current && rx.validUntil && `. Valid until ${shortDate(rx.validUntil)}`}
+                  {rx.doctorQualification &&
+                    `, ${rx.doctorQualification}`}. {shortDate(rx.sentAt)}{" "}
+                  {year(rx.sentAt)}
+                  {rx.current &&
+                    rx.validUntil &&
+                    `. Valid until ${shortDate(rx.validUntil)}`}
                 </p>
               </div>
               {rx.medicines.length > 0 ? (
@@ -105,23 +113,23 @@ export default function PrescriptionsView() {
                   {rx.medicines.map((m, i) => (
                     <li key={`${m.key}-${i}`}>
                       <strong>{m.name}</strong>
-                      <span>
-                        {[m.dose, m.frequencyWords, m.duration && `for ${m.duration}`, m.intakeWords]
-                          .filter(Boolean)
-                          .join(", ")}
-                      </span>
+                      <span>{medicineLineWords(m)}</span>
                     </li>
                   ))}
                 </ul>
               ) : (
-                <p className={styles.meta}>Advice from your doctor, no medicines.</p>
+                <p className={styles.meta}>
+                  Advice from your doctor, no medicines.
+                </p>
               )}
               <div className={styles.actions}>
                 <FileOpenButton
                   load={() => getFile(rx.pdf)}
                   className={`btn ${rx.current ? "" : "btn--ghost"} ${styles.action}`}
                 >
-                  {(opening) => <span>{opening ? "Opening" : "View prescription"}</span>}
+                  {(opening) => (
+                    <span>{opening ? "Opening" : "View prescription"}</span>
+                  )}
                 </FileOpenButton>
                 <DownloadButton rx={rx} />
               </div>

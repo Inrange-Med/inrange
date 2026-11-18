@@ -1,4 +1,4 @@
--- Doctor portal v2 (17 Nov 2026 call, docs/product/doctor-portal-v2-prd.md): one prescription per
+-- Doctor portal v2 (17 Nov 2026 call, docs/backend/doctor-portal-v2-prd.md): one prescription per
 -- consultation, written on the consultation page while the call runs in another tab. It saves as the
 -- doctor types (DRAFT), "Create PDF" makes the patient's copy (pdf_made_at), "Send to patient" signs and
 -- sends it (sent_at). Editing after the PDF was made takes the PDF away until it is made again, so the
