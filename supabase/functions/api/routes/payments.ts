@@ -102,7 +102,8 @@ async function price(tx: TransactionSql, userId: number, purpose: Purpose, refer
   return {
     amountPaise,
     title: `Video consultation, ${spokenSlot(slot.slotDate, slot.startTime)}`,
-    lineItems: [{ label: earlier ? "Follow-up consultation, 30 minutes" : "First consultation, 30 minutes", amountPaise }],
+    // never a length (client call, 12 Nov 2026): the first call runs about an hour, doctor then coach
+    lineItems: [{ label: earlier ? "Follow-up consultation" : "First consultation", amountPaise }],
     meta: { reason, slotId: slot.slotId, doctorId: slot.doctorId },
   };
 }
