@@ -271,6 +271,12 @@ def main():
           select {pid}, {doc_id}, id, 'Booked', 'FOLLOW_UP', 'Review' from slot returning id""")
     early = f"06:{int(RUN) % 60:02d}"  # outside working hours: never a real patient's slot, which cleanup would free
     later = booked("(now() at time zone 'Asia/Kolkata')::date + 2", early)
+    s, b = call("GET", f"/api/doctor/consultations/{later}", doctor)
+    lp = b["data"]["lastPrescription"] or {}
+    step("a follow-up starts from the last prescription: diagnosis, history, advice, medicines",
+         b["data"]["prescription"] is None and lp.get("diagnosis", "").startswith("Obesity") and lp.get("patientHistory")
+         and lp.get("advice") and any(m["brand"] and "inject" in m["form"].lower() for m in lp.get("medicines", [])), lp)
+    step("how often is plain words, never a code", all("(" not in m["frequencyWords"] for m in lp.get("medicines", [])), lp)
     call("PUT", f"/api/doctor/consultations/{later}/prescription", doctor, {"diagnosis": "Written ahead."})
     s, b = call("POST", f"/api/doctor/consultations/{later}/prescription/pdf", doctor)
     step("written ahead: no PDF before the call opens", s == 409 and "call opens" in b.get("message", ""), b)

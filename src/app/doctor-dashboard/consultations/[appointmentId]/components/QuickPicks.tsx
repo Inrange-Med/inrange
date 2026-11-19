@@ -16,16 +16,20 @@ export default function QuickPicks({
   perLine?: boolean;
   onChange: (text: string) => void;
 }) {
+  // a diagnosis splits at commas and sentence ends ("Obesity, class 1. Prediabetes."), never inside "31.5"
   const items = text
-    .split(perLine ? /\n/ : /[,;\n]/)
+    .split(perLine ? /\n/ : /[,;\n]|\.(?=\s|$)/)
     .map((x) => x.trim())
     .filter(Boolean);
-  const has = (option: string) =>
-    items.some((x) => x.toLowerCase() === option.toLowerCase());
+  // "Walk 30 minutes a day." is the same as the pick without its full stop
+  const same = (a: string, b: string) =>
+    a.replace(/[.\s]+$/, "").toLowerCase() ===
+    b.replace(/[.\s]+$/, "").toLowerCase();
+  const has = (option: string) => items.some((x) => same(x, option));
   const toggle = (option: string) =>
     onChange(
       (has(option)
-        ? items.filter((x) => x.toLowerCase() !== option.toLowerCase())
+        ? items.filter((x) => !same(x, option))
         : [...items, option]
       ).join(perLine ? "\n" : ", "),
     );

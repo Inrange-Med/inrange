@@ -129,8 +129,11 @@ export default function DatePicker({
     const below =
       at.bottom + gap + h <= window.innerHeight - edge ||
       at.top - gap - h < edge;
+    // its left edge on the button's, or its right edge on the button's when that would run off the screen
+    const left =
+      at.left + w <= window.innerWidth - edge ? at.left : at.right - w;
     el.style.top = `${below ? at.bottom + gap : at.top - gap - h}px`;
-    el.style.left = `${Math.min(Math.max(edge, at.left), window.innerWidth - w - edge)}px`;
+    el.style.left = `${Math.min(Math.max(edge, left), window.innerWidth - w - edge)}px`;
     el.dataset.placed = "true";
   }, []);
 
