@@ -8,6 +8,7 @@
 
 import { useDeferredValue, useState } from "react";
 import { MagnifyingGlass } from "@phosphor-icons/react";
+import DatePicker, { dateWords } from "@/components/ui/DatePicker";
 import ErrorNotice from "@/components/ui/ErrorNotice";
 import PageHead from "@/components/ui/PageHead";
 import { useApiResource } from "@/hooks/useApiResource";
@@ -51,24 +52,26 @@ export default function HistoryView() {
               onChange={(e) => setQuery(e.target.value)}
             />
           </label>
-          <label className={styles.date}>
+          <DatePicker
+            value={from}
+            max={today}
+            onChange={setFrom}
+            label="From"
+            className={styles.date}
+          >
             <span>From</span>
-            <input
-              type="date"
-              value={from}
-              max={today}
-              onChange={(e) => e.target.value && setFrom(e.target.value)}
-            />
-          </label>
-          <label className={styles.date}>
+            <span className={`${styles.dateValue} num`}>{dateWords(from)}</span>
+          </DatePicker>
+          <DatePicker
+            value={to}
+            max={today}
+            onChange={setTo}
+            label="To"
+            className={styles.date}
+          >
             <span>To</span>
-            <input
-              type="date"
-              value={to}
-              max={today}
-              onChange={(e) => e.target.value && setTo(e.target.value)}
-            />
-          </label>
+            <span className={`${styles.dateValue} num`}>{dateWords(to)}</span>
+          </DatePicker>
         </div>
 
         {backwards ? (

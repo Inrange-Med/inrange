@@ -14,6 +14,7 @@
 
 import { useEffect, useState } from "react";
 import { CaretLeft, CaretRight } from "@phosphor-icons/react";
+import DatePicker from "@/components/ui/DatePicker";
 import ErrorNotice from "@/components/ui/ErrorNotice";
 import PageHead from "@/components/ui/PageHead";
 import { useApiResource } from "@/hooks/useApiResource";
@@ -156,22 +157,14 @@ export default function TodayView() {
                 Today
               </button>
             )}
-            <label className={styles.pick}>
+            <DatePicker
+              value={date}
+              onChange={setDate}
+              label="Pick a date"
+              className={styles.pick}
+            >
               Pick date
-              <input
-                type="date"
-                className={styles.dateInput}
-                value={date}
-                onClick={(e) => {
-                  try {
-                    e.currentTarget.showPicker();
-                  } catch {
-                    // older browsers open their own picker on focus
-                  }
-                }}
-                onChange={(e) => e.target.value && setDate(e.target.value)}
-              />
-            </label>
+            </DatePicker>
           </div>
         </div>
         {!list ? (

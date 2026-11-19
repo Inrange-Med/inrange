@@ -12,6 +12,7 @@ never calls a service. Each `X.tsx` default-exports `X`; its styles sit beside i
 | `BackLink.tsx` | The one back link (arrow on a tinted plate); `backControlClass` styles a back button that is not a link. |
 | `Card.tsx` | The card surface with an optional title row and action. |
 | `ContourField.tsx` | The WebGL isoline field on dark plates (shaders in `contourFieldShaders.ts`). |
+| `DatePicker.tsx` | The one date picker: a button that opens our month calendar (popover on a laptop, docked at the bottom on a phone), never the browser's own. `dateWords` says a date as "Thu, 19 Nov 2026". |
 | `DeviceCheck.tsx` | Camera and microphone rehearsal before a video call. |
 | `ErrorNotice.tsx` | A failed load or save in words, with an optional Try again. |
 | `LabReportUpload.tsx` | Report date, its 90-day check, then the file. |

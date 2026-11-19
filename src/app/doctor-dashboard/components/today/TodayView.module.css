@@ -68,16 +68,9 @@
   transition: box-shadow 160ms var(--ease-out);
 }
 
-.dateInput {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  cursor: pointer;
-}
-
-.pick:focus-within {
+.pick:focus-visible,
+.pick[aria-expanded="true"] {
+  outline: none;
   box-shadow: inset 0 0 0 1.5px var(--ink);
 }
 

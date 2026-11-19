@@ -1,0 +1,244 @@
+/* DatePicker: the button (when the caller gives it no look of its own) and the month that opens from it. */
+
+/* the button, as a form field: the same pill as the inputs, the date in words and a calendar mark */
+.field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 56px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--paper);
+  box-shadow: inset 0 0 0 1px var(--hair-2);
+  font: inherit;
+  font-size: 1.0625rem;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  transition: box-shadow 180ms var(--ease-out);
+}
+.field:focus-visible,
+.field[aria-expanded="true"] {
+  outline: none;
+  box-shadow: inset 0 0 0 1.5px var(--ink);
+}
+.field svg {
+  flex: none;
+  color: var(--ink-3);
+}
+.placeholder {
+  color: color-mix(in srgb, var(--ink-3) 70%, transparent);
+}
+@media (hover: hover) and (pointer: fine) {
+  .field:hover {
+    box-shadow: inset 0 0 0 1px var(--ink-3);
+  }
+}
+
+/* above cards and sheets (60), under the toast (70); only the panel takes the pointer on a laptop */
+.layer {
+  position: fixed;
+  inset: 0;
+  z-index: 65;
+  pointer-events: none;
+}
+.scrim {
+  display: none;
+}
+
+/* a laptop: a popover the width of a week, placed by the component */
+.panel {
+  position: fixed;
+  width: 328px;
+  padding: 16px 16px 12px;
+  border-radius: var(--r-surface);
+  background: var(--paper);
+  box-shadow:
+    0 0 0 1px rgb(14 15 16 / 0.06),
+    0 24px 48px -20px rgb(10 11 12 / 0.32);
+  pointer-events: auto;
+  animation: rise 200ms var(--ease-out);
+}
+.panel:not([data-placed="true"]) {
+  visibility: hidden;
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, -4px, 0) scale(0.98);
+  }
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 0 10px 8px;
+}
+.month {
+  flex: 1;
+  font-size: 1rem;
+  font-weight: 560;
+  letter-spacing: -0.01em;
+}
+.nav {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--ink);
+  cursor: pointer;
+  transition:
+    background-color 160ms var(--ease-out),
+    transform 160ms var(--ease-out);
+}
+.nav:active {
+  transform: scale(0.94);
+}
+.nav:disabled {
+  color: var(--hair-2);
+  cursor: default;
+}
+
+/* seven columns of 40px circles, 2px apart: the week is the width */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+.weekday {
+  padding: 4px 0 8px;
+  font-size: 0.75rem;
+  font-weight: 560;
+  color: var(--ink-3);
+  text-align: center;
+}
+.day {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin: 0 auto;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--ink);
+  cursor: pointer;
+  transition:
+    background-color 140ms var(--ease-out),
+    transform 140ms var(--ease-out);
+}
+.day:active:not(:disabled) {
+  transform: scale(0.92);
+}
+/* today: a ring, so it reads at a glance without looking chosen */
+.day[aria-current="date"] {
+  box-shadow: inset 0 0 0 1px var(--ink);
+}
+.day[aria-pressed="true"] {
+  background: var(--slate-900);
+  box-shadow: none;
+  color: var(--on-dark);
+  font-weight: 600;
+}
+.day:disabled {
+  color: var(--hair-2);
+  cursor: default;
+}
+.day:focus-visible,
+.nav:focus-visible,
+.today:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.foot {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--hair);
+}
+.today {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 560;
+  color: var(--ink);
+  cursor: pointer;
+  transition: background-color 160ms var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .nav:not(:disabled):hover,
+  .day:not(:disabled):not([aria-pressed="true"]):hover,
+  .today:hover {
+    background: var(--hover-wash);
+  }
+}
+
+/* a phone: docked at the bottom, where the thumb is, over a scrim; bigger targets */
+@media (max-width: 639px) {
+  .scrim {
+    display: block;
+    position: absolute;
+    inset: 0;
+    background: rgb(10 11 12 / 0.42);
+    pointer-events: auto;
+    animation: fade 240ms var(--ease-out);
+  }
+  .panel {
+    top: auto;
+    right: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    left: 12px;
+    width: auto;
+    padding: 18px 16px 12px;
+    animation: lift 320ms var(--ease-drawer);
+  }
+  /* up to 44px, smaller on the narrowest phones so a week always fits */
+  .day {
+    width: 100%;
+    max-width: 44px;
+    height: auto;
+    aspect-ratio: 1;
+  }
+  .nav {
+    width: 44px;
+    height: 44px;
+  }
+  .today {
+    min-height: 44px;
+  }
+}
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes lift {
+  from {
+    transform: translate3d(0, 24px, 0);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel,
+  .scrim {
+    animation: none;
+  }
+}

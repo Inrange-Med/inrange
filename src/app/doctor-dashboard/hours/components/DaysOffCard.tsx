@@ -6,6 +6,7 @@
 */
 
 import { useState } from "react";
+import DatePicker from "@/components/ui/DatePicker";
 import ErrorNotice from "@/components/ui/ErrorNotice";
 import { useToast } from "@/components/ui/ToastProvider";
 import { errorMessage } from "@/lib/http/apiClient";
@@ -108,19 +109,20 @@ export default function DaysOffCard({
           add();
         }}
       >
-        <label className={formStyles.field}>
-          <span className={formStyles.label}>Add a day off</span>
-          <input
-            type="date"
-            className={formStyles.input}
-            min={today}
+        <div className={formStyles.field}>
+          <span className={formStyles.label} aria-hidden="true">
+            Add a day off
+          </span>
+          <DatePicker
             value={picked}
-            onChange={(event) => {
+            min={today}
+            label="Add a day off"
+            onChange={(value) => {
               setError(null);
-              setPicked(event.target.value);
+              setPicked(value);
             }}
           />
-        </label>
+        </div>
         <button
           type="submit"
           className={`btn btn--ghost ${styles.addBtn}`}

@@ -11,6 +11,7 @@
 
 import { useEffect, useState } from "react";
 import { ArrowRight, Phone } from "@phosphor-icons/react";
+import DatePicker from "@/components/ui/DatePicker";
 import Sheet from "@/components/ui/Sheet";
 import { useToast } from "@/components/ui/ToastProvider";
 import { spacedMobile } from "@/lib/format/phone";
@@ -312,23 +313,22 @@ export default function OrderSheet({
               </>
             )}
             {(mode === "dispatch" || mode === "delay") && (
-              <label className={formStyles.field}>
-                <span className={formStyles.label}>
+              <div className={formStyles.field}>
+                <span className={formStyles.label} aria-hidden="true">
                   {mode === "delay" ? "New expected date" : "Expected by"}
                 </span>
-                <input
-                  type="date"
-                  className={s.input}
+                <DatePicker
                   value={day}
                   min={toApiDate(new Date())}
-                  onChange={(e) => setDay(e.target.value)}
+                  label={mode === "delay" ? "New expected date" : "Expected by"}
+                  onChange={setDay}
                 />
                 {mode === "delay" && (
                   <span className={formStyles.hint}>
                     The patient gets the new date on WhatsApp, with an apology.
                   </span>
                 )}
-              </label>
+              </div>
             )}
             {mode === "deliver" && (
               <p className={adminStyles.confirm}>

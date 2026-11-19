@@ -31,13 +31,21 @@
   transition: box-shadow 180ms var(--ease-out);
 }
 
+/* a date is a button that opens the calendar (DatePicker) */
+.date {
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
 .search:focus-within,
-.date:focus-within {
+.date:focus-visible,
+.date[aria-expanded="true"] {
+  outline: none;
   box-shadow: inset 0 0 0 1.5px var(--ink);
 }
 
-.search input,
-.date input {
+.search input {
   min-width: 0;
   height: 50px;
   border: 0;
@@ -51,14 +59,19 @@
   flex: 1;
 }
 
-.search input:focus,
-.date input:focus {
+.search input:focus {
   outline: none;
 }
 
 .date span {
   font-size: 0.8125rem;
   font-weight: 600;
+}
+
+.date .dateValue {
+  font-size: 1rem;
+  font-weight: 450;
+  color: var(--ink);
 }
 
 @media (max-width: 719px) {
