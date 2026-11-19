@@ -90,7 +90,7 @@ export default function ReportsView() {
     >
       <PageHead
         title="Reports"
-        back={{ href: "/patient-dashboard/care", label: "Care" }}
+        back={{ href: "/patient-dashboard", label: "Home" }}
         sub="Your doctor reads these before your consultation."
       />
       <div className={styles.grid}>

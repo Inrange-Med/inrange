@@ -73,8 +73,14 @@ autosave (DRAFT, saved_at)  ->  Create PDF (pdf_made_at, pdf_path)  ->  Send (SI
   consultation without a plan carries one month and opens `NANO_CART_DELAY_HOURS` later, as before), WhatsApp
   `RX_READY` goes (its button now opens `/patient-dashboard/prescriptions?rx=`), and the patient joins the doctor's
   care team.
+- **Only once the call opens, never for a cancelled consultation:** the doctor may write ahead, but Create PDF and
+  Send answer 409 before the call opens (10 minutes before the start).
+- **An older consultation never replaces a newer one:** Send answers 409 when a later consultation of the patient
+  already issued the current prescription, and such an older consultation drops off "Do this now".
+- **The page keeps Join while the call is live** (`consultation.callOpen`), even after a mid-call Send, so a dropped
+  call can be rejoined.
 - **Send again** sends the WhatsApp message again. **Edit and send new version** copies the sent one into a new draft
-  for the same consultation; sending it supersedes the old one.
+  for the same consultation; sending it supersedes the old one. **Keep the version already sent** drops that draft.
 - **Send is one send:** the draft is locked inside the transaction and must still be a DRAFT with a current PDF, so two
   presses at once send once (the other is told it was sent) and an edit that lands mid-send is refused.
 - **A new version after the patient paid** does not bill again: the paid order moves to the new version (so refills
@@ -147,22 +153,23 @@ and medicines are two payments, shown one after the other.
 
 ## Endpoints
 
-| Method and path                                          | Who                      | Answer                                                                                  |
-| -------------------------------------------------------- | ------------------------ | --------------------------------------------------------------------------------------- |
-| `GET /api/doctor/consultations?date=YYYY-MM-DD`          | doctor                   | `{ date, day: Row[], waiting: Row[] }`                                                  |
-| `GET /api/doctor/consultations/history?from=&to=&q=`     | doctor                   | `{ from, to, consultations: Row[] }` (default: the last 30 days; 300 at most)           |
-| `GET /api/doctor/consultations/:id`                      | doctor                   | `{ consultation, patient, reports, lastPrescription, prescription }` (audited)          |
-| `PUT /api/doctor/consultations/:id/prescription`         | doctor                   | `{ diagnosis?, patientHistory?, remarks?, advice?, medicines? }` -> Prescription        |
-| `POST /api/doctor/consultations/:id/prescription/pdf`    | doctor                   | Prescription with `pdf`; 422 with the first gap ("Write the diagnosis first.")          |
-| `POST /api/doctor/consultations/:id/prescription/send`   | doctor                   | Prescription, `status: SENT`; 409 when the PDF is stale                                 |
-| `POST /api/doctor/consultations/:id/prescription/resend` | doctor                   | Prescription with `resentAt`                                                            |
-| `POST /api/doctor/consultations/:id/prescription/revise` | doctor                   | the new draft                                                                           |
-| `GET /api/medicines/search?q=`                           | doctor, admin            | `{ matches: ListItem[], didYouMean: ListItem[] }`                                       |
-| `GET /api/patient/next-step`                             | patient                  | the stage above                                                                         |
-| `GET /api/care/prescriptions`                            | patient                  | `{ prescriptions: [...] }`, newest first                                                |
-| `GET /api/admin/medicine/tasks/:taskId/unmatched`        | admin                    | `{ prescriptionId, current, lines }`                                                    |
-| `POST /api/admin/medicine/tasks/:taskId/match`           | admin                    | `{ line, medicineId }` -> `{ left }`                                                    |
-| `GET /api/files/prescriptions/:id`                       | patient, treating doctor | now also superseded ones (the patient's list), and a draft's PDF to its own doctor only |
+| Method and path                                           | Who                      | Answer                                                                                  |
+| --------------------------------------------------------- | ------------------------ | --------------------------------------------------------------------------------------- |
+| `GET /api/doctor/consultations?date=YYYY-MM-DD`           | doctor                   | `{ date, day: Row[], waiting: Row[] }`                                                  |
+| `GET /api/doctor/consultations/history?from=&to=&q=`      | doctor                   | `{ from, to, consultations: Row[] }` (default: the last 30 days; 300 at most)           |
+| `GET /api/doctor/consultations/:id`                       | doctor                   | `{ consultation, patient, reports, lastPrescription, prescription }` (audited)          |
+| `PUT /api/doctor/consultations/:id/prescription`          | doctor                   | `{ diagnosis?, patientHistory?, remarks?, advice?, medicines? }` -> Prescription        |
+| `POST /api/doctor/consultations/:id/prescription/pdf`     | doctor                   | Prescription with `pdf`; 422 with the first gap ("Write the diagnosis first.")          |
+| `POST /api/doctor/consultations/:id/prescription/send`    | doctor                   | Prescription, `status: SENT`; 409 when the PDF is stale                                 |
+| `POST /api/doctor/consultations/:id/prescription/resend`  | doctor                   | Prescription with `resentAt`                                                            |
+| `POST /api/doctor/consultations/:id/prescription/revise`  | doctor                   | the new draft                                                                           |
+| `POST /api/doctor/consultations/:id/prescription/discard` | doctor                   | "Keep the version already sent": drops the new draft; the sent Prescription             |
+| `GET /api/medicines/search?q=`                            | doctor, admin            | `{ matches: ListItem[], didYouMean: ListItem[] }`                                       |
+| `GET /api/patient/next-step`                              | patient                  | the stage above                                                                         |
+| `GET /api/care/prescriptions`                             | patient                  | `{ prescriptions: [...] }`, newest first                                                |
+| `GET /api/admin/medicine/tasks/:taskId/unmatched`         | admin                    | `{ prescriptionId, current, lines }`                                                    |
+| `POST /api/admin/medicine/tasks/:taskId/match`            | admin                    | `{ line, medicineId }` -> `{ left }`                                                    |
+| `GET /api/files/prescriptions/:id`                        | patient, treating doctor | now also superseded ones (the patient's list), and a draft's PDF to its own doctor only |
 
 A Row: `{ id, patientId, patientName, age, sex, visitType, startsAt, state, revising, sentAt, resentAt, pdf }`. No row,
 page or list carries a patient's phone number.

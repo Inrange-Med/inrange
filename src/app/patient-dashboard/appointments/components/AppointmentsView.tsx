@@ -41,7 +41,7 @@ export default function AppointmentsView() {
     <main className={`${layoutStyles.page} ${styles.page}`}>
       <PageHead
         title="Appointments"
-        back={{ href: "/patient-dashboard/care", label: "Care" }}
+        back={{ href: "/patient-dashboard", label: "Home" }}
       />
 
       {appointments.loading && !appointments.data && (

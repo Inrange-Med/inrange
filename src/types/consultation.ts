@@ -106,7 +106,12 @@ export type ConsultationReport = {
 };
 
 export type ConsultationPage = {
-  consultation: ConsultationRow & { endsAt: string | null; reason: string };
+  /** callOpen: the call can be joined now (it stays true after a mid-call send, so Join stays) */
+  consultation: ConsultationRow & {
+    endsAt: string | null;
+    reason: string;
+    callOpen: boolean;
+  };
   patient: {
     id: string;
     name: string;

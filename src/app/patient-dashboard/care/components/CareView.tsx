@@ -112,7 +112,10 @@ export default function CareView() {
 
   return (
     <main className={`${layoutStyles.page} ${styles.page}`}>
-      <PageHead title="Your care" />
+      <PageHead
+        title="Your care"
+        back={{ href: "/patient-dashboard", label: "Home" }}
+      />
 
       {(appointments.loading || team.loading) &&
         !(appointments.data && team.data) && (

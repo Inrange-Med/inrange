@@ -244,9 +244,10 @@ opsRoutes.post("/admin/medicine/tasks/:taskId/match", async (c) => {
         cartLines.push({ medicineId: m.id, quantity: (prev?.quantity ?? 0) + q, prescribed: (prev?.prescribed ?? 0) + q });
         await tx`update medicine_carts set lines = ${tx.json(cartLines)} where id = ${k.id}`;
       } else {
-        const [existing] = await tx`select 1 from medicine_carts where prescription_id = ${cur.id}`;
+        // a paid order does not take new lines, so the matched medicine starts its own; a closed one stays closed
+        const [existing] = await tx`select 1 from medicine_carts where prescription_id = ${cur.id} and status <> 'PAID'`;
         if (!existing) {
-          // the prescription had nothing to order until now: its order, and its follow-up, start here
+          // nothing left to order on this prescription until now: its order, and its follow-up, start here
           const [addr] = await tx`select id from addresses where user_id = ${cur.patient_id} order by is_default desc, id desc limit 1`;
           const [cart] = await tx`
             insert into medicine_carts (patient_id, prescription_id, available_at, lines, address_id)

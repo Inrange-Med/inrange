@@ -28,6 +28,7 @@ import { errorMessage } from "@/lib/http/apiClient";
 import { medicineLineWords } from "@/lib/format/medicineLine";
 import {
   createPrescriptionPdf,
+  discardNewVersion,
   getConsultation,
   revisePrescription,
   sendPrescription,
@@ -125,9 +126,9 @@ function Loaded({
   const { consultation: c, patient: p } = data;
   const rx = usePrescriptionDraft(c.id, data.prescription);
   const { draft, change, saved } = rx;
-  const [busy, setBusy] = useState<null | "pdf" | "send" | "again" | "revise">(
-    null,
-  );
+  const [busy, setBusy] = useState<
+    null | "pdf" | "send" | "again" | "revise" | "keep"
+  >(null);
   const [problem, setProblem] = useState<{
     text: string;
     field?: "diagnosis";
@@ -145,10 +146,13 @@ function Loaded({
       rx.state === "saved",
   );
 
-  // the call: open from 10 minutes before the start until the doctor ends it (the server's state decides)
+  // the call: open from 10 minutes before the start until the doctor ends it (the server decides; it stays
+  // open after a mid-call send, so a dropped call can be rejoined from here)
   const callOpen =
-    c.state === "CALL_OPEN" ||
+    c.callOpen ||
     (c.state === "UPCOMING" && Date.parse(c.startsAt) - 10 * 60_000 <= now);
+  // the prescription is written ahead if the doctor likes, but made and sent only once the call opens
+  const beforeCall = c.state === "UPCOMING" && !callOpen;
   const opensAt = clockTime(new Date(Date.parse(c.startsAt) - 10 * 60_000));
   useEffect(() => {
     // the page learns when the call opens or ends while it sits open
@@ -158,12 +162,15 @@ function Loaded({
   }, [reload]);
 
   // the prescription moved on elsewhere (sent from Today's row, or in another tab): the page catches up, unless
-  // the doctor has typed something not yet saved (then the save's refusal says what happened)
+  // the doctor has typed something not yet saved (then the save's refusal says what happened). Only a fresh
+  // answer from the server counts: the page's own steps (a new version, a send) are already in `saved`.
   const server = data.prescription;
+  const seen = useRef(server);
   useEffect(() => {
+    if (server === seen.current || rx.state === "saving") return;
+    seen.current = server;
     if (!server || !saved) return;
     if (server.id === saved.id && server.status === saved.status) return;
-    if (rx.state === "saving") return;
     rx.reset(server);
   }, [server, saved, rx]);
 
@@ -284,6 +291,18 @@ function Loaded({
       toast(
         errorMessage(caught, "The new version could not be opened. Try again."),
       );
+    } finally {
+      setBusy(null);
+    }
+  });
+
+  const keepSent = once(async () => {
+    setBusy("keep");
+    try {
+      rx.reset(await discardNewVersion(c.id));
+      reload();
+    } catch (caught) {
+      toast(errorMessage(caught, "That did not work. Try again."));
     } finally {
       setBusy(null);
     }
@@ -568,6 +587,13 @@ function Loaded({
                 </span>
               </button>
             </div>
+          ) : beforeCall ? (
+            <div className={styles.barRow}>
+              <p className={styles.barText}>
+                You can write now. The PDF can be made once the call opens at{" "}
+                {opensAt}.
+              </p>
+            </div>
           ) : (
             <div className={styles.barRow}>
               <p className={styles.barText}>
@@ -575,6 +601,18 @@ function Loaded({
                   ? "This new version replaces the one the patient has, once sent."
                   : "The PDF shows here before anything is sent."}
               </p>
+              {revising && (
+                <button
+                  type="button"
+                  className={`btn btn--ghost ${styles.open}`}
+                  onClick={keepSent}
+                  disabled={busy !== null}
+                >
+                  {busy === "keep"
+                    ? "Keeping it"
+                    : "Keep the version already sent"}
+                </button>
+              )}
               <button
                 type="button"
                 className={`btn ${styles.barGo}`}

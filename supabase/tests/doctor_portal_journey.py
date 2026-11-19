@@ -238,6 +238,37 @@ def main():
     s, b = call("GET", "/api/patient/next-step", patient)
     step("patient: still medicines on the way", b["data"]["stage"] == "ON_THE_WAY", b)
 
+    # ---------------------------------------------------------------- an abandoned new version, and when one may go
+    call("POST", f"/api/doctor/consultations/{appt}/prescription/revise", doctor)
+    s, b = call("GET", "/api/doctor/consultations", doctor)
+    step("a new version waits on the doctor", any(r["id"] == appt and r["revising"] for r in b["data"]["waiting"]), b["data"]["waiting"])
+    s, b = call("POST", f"/api/doctor/consultations/{appt}/prescription/discard", doctor)
+    step("Keep the version already sent: the new one goes", s == 200 and b["data"]["status"] == "SENT" and b["data"]["id"] == newest, b)
+    s, b = call("GET", "/api/doctor/consultations", doctor)
+    step("kept: off Do this now", all(r["id"] != appt for r in b["data"]["waiting"]), b["data"]["waiting"])
+    s, b = call("GET", f"/api/doctor/consultations/{appt}", doctor)
+    step("the page knows the call ended", b["data"]["consultation"]["callOpen"] is False, b["data"]["consultation"])
+
+    def booked(day, at):
+        return one(f"""with slot as (
+            insert into doctor_slots (doctor_id, slot_date, start_time, end_time, status)
+            values (1, {day}, '{at}'::time, '{at}'::time + interval '30 minutes', 'Booked')
+            on conflict (doctor_id, slot_date, start_time) do update set status = 'Booked' returning id)
+          insert into appointments (patient_id, doctor_id, slot_id, status, visit_type, reason)
+          select {pid}, 1, id, 'Booked', 'FOLLOW_UP', 'Review' from slot returning id""")
+    later = booked("(now() at time zone 'Asia/Kolkata')::date + 2", "10:00")
+    call("PUT", f"/api/doctor/consultations/{later}/prescription", doctor, {"diagnosis": "Written ahead."})
+    s, b = call("POST", f"/api/doctor/consultations/{later}/prescription/pdf", doctor)
+    step("written ahead: no PDF before the call opens", s == 409 and "call opens" in b.get("message", ""), b)
+    older = booked("(now() at time zone 'Asia/Kolkata')::date - 3", "10:00")
+    call("PUT", f"/api/doctor/consultations/{older}/prescription", doctor, {"diagnosis": "Left unsent."})
+    s, b = call("POST", f"/api/doctor/consultations/{older}/prescription/pdf", doctor)
+    step("an older consultation's PDF can still be made", s == 200, b)
+    s, b = call("GET", "/api/doctor/consultations", doctor)
+    step("one a later consultation replaced is off Do this now", all(r["id"] != older for r in b["data"]["waiting"]), b["data"]["waiting"])
+    s, b = call("POST", f"/api/doctor/consultations/{older}/prescription/send", doctor)
+    step("it cannot replace the newer prescription", s == 409 and "newer prescription" in b.get("message", ""), b)
+
     print(f"\nALL {__import__('medicine_flow_journey').passed} CHECKS PASSED")
 
 

@@ -17,6 +17,7 @@
 //   POST /doctor/consultations/:id/prescription/send  "Send to patient": that PDF, on WhatsApp and in the app
 //   POST /doctor/consultations/:id/prescription/resend  "Send again" (the WhatsApp message again)
 //   POST /doctor/consultations/:id/prescription/revise  "Edit and send new version": a new draft from the sent one
+//   POST /doctor/consultations/:id/prescription/discard "Keep the version already sent": drops that draft
 //   GET  /medicines/search?q=                         the master list, forgiving: { matches, didYouMean }
 import { Hono } from "hono";
 import type { Context } from "hono";
@@ -64,7 +65,11 @@ const rowsSelect = (doctorId: number) => sql`
     (s.slot_date + s.end_time) at time zone 'Asia/Kolkata' as ends_at,
     coalesce(nullif(trim(concat_ws(' ', p.first_name, p.last_name)), ''), u.full_name) as full_name, p.age_years, p.gender,
     sent.id as sent_id, coalesce(sent.sent_at, sent.signed_at) as sent_at, sent.resent_at,
-    dr.id as draft_id, dr.pdf_made_at, dr.saved_at
+    dr.id as draft_id, dr.pdf_made_at, dr.saved_at,
+    exists (select 1 from prescriptions z join appointments az on az.id = z.appointment_id
+      join doctor_slots sz on sz.id = az.slot_id
+      where z.patient_id = a.patient_id and z.status = 'SIGNED' and z.appointment_id <> a.id
+        and (sz.slot_date + sz.start_time) > (s.slot_date + s.start_time)) as replaced
   from appointments a join doctor_slots s on s.id = a.slot_id join users u on u.id = a.patient_id
   left join patient_profiles p on p.user_id = a.patient_id
   left join lateral (select x.id, x.sent_at, x.signed_at, x.resent_at from prescriptions x
@@ -75,12 +80,19 @@ const rowsSelect = (doctorId: number) => sql`
 
 const pdfCurrent = (r: Row) => Boolean(r.pdf_made_at && (!r.saved_at || new Date(r.saved_at) <= new Date(r.pdf_made_at)));
 
+/** The call can be joined: from 10 minutes before the start until it ends (at most an hour past the end). */
+export function callOpenOf(r: Row, now = Date.now()) {
+  if (r.status === "Cancelled" || r.status === "Completed" || r.ended_at) return false;
+  const start = new Date(r.starts_at).getTime();
+  const end = new Date(r.ends_at ?? r.starts_at).getTime();
+  return now >= start - OPENS_BEFORE && now <= end + OPEN_AFTER_END;
+}
+
 export function stateOf(r: Row, now = Date.now()): ConsultationState {
   if (r.status === "Cancelled") return "CANCELLED";
   const start = new Date(r.starts_at).getTime();
-  const end = new Date(r.ends_at ?? r.starts_at).getTime();
   const ended = r.status === "Completed" || Boolean(r.ended_at);
-  const callOpen = !ended && now >= start - OPENS_BEFORE && now <= end + OPEN_AFTER_END;
+  const callOpen = callOpenOf(r, now);
   if (callOpen && !r.sent_id) return "CALL_OPEN";
   // written ahead of the call: still upcoming (nothing is sent before the patient is seen)
   if (now < start - OPENS_BEFORE && !r.sent_id) return "UPCOMING";
@@ -115,7 +127,9 @@ consultationRoutes.get("/doctor/consultations", async (c) => {
   ]);
   // "Do this now": an open call first, then anything to send, then to write, oldest first
   const rank: Partial<Record<ConsultationState, number>> = { CALL_OPEN: 0, TO_SEND: 1, TO_WRITE: 2 };
-  const waiting = recent.map((r) => rowOf(r, now)).filter((r) => r.state in rank)
+  // an older consultation whose prescription a later one already replaced is not waiting on the doctor
+  const waiting = recent.filter((r) => !r.replaced || stateOf(r, now) === "CALL_OPEN")
+    .map((r) => rowOf(r, now)).filter((r) => r.state in rank)
     .sort((a, b) => rank[a.state]! - rank[b.state]! || String(a.startsAt).localeCompare(String(b.startsAt)));
   return ok(c, { date, day: day.map((r) => rowOf(r, now)), waiting });
 });
@@ -189,7 +203,7 @@ consultationRoutes.get("/doctor/consultations/:id", async (c) => {
   const conditions = Array.isArray(p?.conditions)
     ? p.conditions.map((x: Row) => (x.code === "OTHER" ? x.otherText || "Other" : CONDITIONS[x.code] ?? x.code)) : [];
   return ok(c, {
-    consultation: { ...rowOf(r), endsAt: ist(r.ends_at), reason: String(r.reason ?? "").split(" | Note:")[0] },
+    consultation: { ...rowOf(r), endsAt: ist(r.ends_at), reason: String(r.reason ?? "").split(" | Note:")[0], callOpen: callOpenOf(r) },
     patient: {
       id: String(patientId), name: patientName(r), age: p?.age_years ?? null, sex: p?.gender ?? "",
       heightCm: p?.height_cm ?? null, weightKg: kg, weighedAt: ist(weights[0]?.logged_at ?? p?.updated_at),
@@ -254,6 +268,13 @@ consultationRoutes.put("/doctor/consultations/:id/prescription", async (c) => {
 /** The longest a line may run for a patient with no plan (the nano plan): one month (12 Nov 2026 call). */
 const NANO_DAYS = 31;
 
+/** A prescription is issued only for a consultation that is not cancelled and whose call has opened. */
+function mayIssue(r: Row) {
+  if (r.status === "Cancelled") fail(409, "This consultation was cancelled.");
+  if (Date.now() < new Date(r.starts_at).getTime() - OPENS_BEFORE)
+    fail(409, "The prescription can be finished once the call opens.");
+}
+
 /** What the PDF needs before it can be made; the first gap, in the words the doctor sees. */
 function missingFor(rx: Row, onPlan: boolean): string | null {
   if (!String(rx.diagnosis ?? "").trim()) return "Write the diagnosis first.";
@@ -271,6 +292,7 @@ function missingFor(rx: Row, onPlan: boolean): string | null {
 consultationRoutes.post("/doctor/consultations/:id/prescription/pdf", async (c) => {
   const doctor = await doctorOf(c);
   const r = await consultationOf(doctor.id, intParam(c.req.param("id"), "consultation"));
+  mayIssue(r);
   const [rx] = await sql`select * from prescriptions where appointment_id = ${r.id} and status = 'DRAFT'`;
   if (!rx) fail(409, r.sent_id ? "This prescription was sent already." : "Write the prescription first.");
   // the PDF carries the time it was made as its signature time; sending issues exactly this file
@@ -292,6 +314,7 @@ consultationRoutes.post("/doctor/consultations/:id/prescription/pdf", async (c) 
 consultationRoutes.post("/doctor/consultations/:id/prescription/send", async (c) => {
   const doctor = await doctorOf(c);
   const r = await consultationOf(doctor.id, intParam(c.req.param("id"), "consultation"));
+  mayIssue(r);
   const [rx] = await sql`select * from prescriptions where appointment_id = ${r.id} and status = 'DRAFT'`;
   if (!rx) fail(409, r.sent_id ? "This prescription was sent already." : "Write the prescription first.");
   if (!pdfCurrent(rx)) fail(409, "The prescription changed after the PDF was made. Create the PDF again, then send it.");
@@ -338,6 +361,16 @@ consultationRoutes.post("/doctor/consultations/:id/prescription/revise", async (
       date_trunc('milliseconds', clock_timestamp()))
     on conflict (appointment_id) where status = 'DRAFT' and appointment_id is not null do nothing returning *`;
   return ok(c, prescriptionView(draft ?? (await prescriptionOf(r.id))), "Editing the new version");
+});
+
+/** "Keep the version already sent": drops the new version being written; the sent one stays current. */
+consultationRoutes.post("/doctor/consultations/:id/prescription/discard", async (c) => {
+  const doctor = await doctorOf(c);
+  const r = await consultationOf(doctor.id, intParam(c.req.param("id"), "consultation"));
+  const [sent] = await sql`select * from prescriptions where appointment_id = ${r.id} and status = 'SIGNED'`;
+  if (!sent) fail(409, "There is no sent prescription to keep.");
+  await sql`update prescriptions set status = 'VOID' where appointment_id = ${r.id} and status = 'DRAFT'`;
+  return ok(c, prescriptionView(sent), "Kept the version already sent");
 });
 
 // ---------- the master list ----------

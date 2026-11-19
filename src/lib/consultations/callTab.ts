@@ -7,7 +7,8 @@
 
 const tabName = (appointmentId: string) => `inrange-call-${appointmentId}`;
 
-export function openCallTab(appointmentId: string) {
+/** Returns false when the pop-up was blocked and the call took this tab instead. */
+export function openCallTab(appointmentId: string): boolean {
   const path = `/consultation/${appointmentId}/`;
   // "" finds the named tab without navigating it; a new one comes back blank
   const tab = window.open("", tabName(appointmentId));
@@ -16,7 +17,7 @@ export function openCallTab(appointmentId: string) {
     // load, as the room needs camera permission on a fresh page
     // eslint-disable-next-line @next/next/no-location-assign-relative-destination
     window.location.assign(path);
-    return;
+    return false;
   }
   // only a tab that is in the room right now is brought forward as it is: a blank new tab, or one that left the
   // call (its end screen, "Finish the prescription in your other tab"), loads the room again, so Join rejoins
@@ -30,4 +31,5 @@ export function openCallTab(appointmentId: string) {
   }
   if (!inRoom) tab.location.href = path;
   tab.focus();
+  return true;
 }

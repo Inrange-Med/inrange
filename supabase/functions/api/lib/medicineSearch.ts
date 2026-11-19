@@ -41,7 +41,7 @@ async function list(): Promise<ListItem[]> {
   if (cache && Date.now() - cache.at < 5 * 60_000) return cache.rows;
   const rows = await sql`
     select id, brand, molecule, form, strength, pack, pack_days, route, default_frequency, default_dose, kind, mrp_paise
-    from medicines where active order by brand, nullif(regexp_replace(strength, '[^0-9.]', '', 'g'), '')::numeric nulls last`;
+    from medicines where active order by brand, substring(strength from '[0-9]+(?:\.[0-9]+)?')::numeric nulls last`;
   cache = { at: Date.now(), rows: rows as unknown as ListItem[] };
   return cache.rows;
 }

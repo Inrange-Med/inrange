@@ -127,7 +127,7 @@ export default function CartView() {
     <main className={`${layoutStyles.page} ${styles.page}`}>
       <PageHead
         title="Your medicines"
-        back={{ href: "/patient-dashboard/care", label: "Care" }}
+        back={{ href: "/patient-dashboard", label: "Home" }}
         sub={cart ? sub : undefined}
       />
 
@@ -247,7 +247,7 @@ export default function CartView() {
                   href={checkoutHref({
                     purpose: "MEDICINE_ORDER",
                     referenceId: cart.id,
-                    returnTo: "/patient-dashboard/care",
+                    returnTo: "/patient-dashboard",
                     payNow: true,
                   })}
                   className={`btn ${formStyles.go} ${styles.pay}`}

@@ -8,6 +8,7 @@
  *   POST /api/doctor/consultations/:id/prescription/send    Send to patient
  *   POST /api/doctor/consultations/:id/prescription/resend  Send again
  *   POST /api/doctor/consultations/:id/prescription/revise  Edit and send new version
+ *   POST /api/doctor/consultations/:id/prescription/discard Keep the version already sent
  *   GET  /api/medicines/search?q=                           the master list: { matches, didYouMean }
  */
 
@@ -67,7 +68,7 @@ export async function savePrescription(
 
 async function act(
   id: string,
-  step: "pdf" | "send" | "resend" | "revise",
+  step: "pdf" | "send" | "resend" | "revise" | "discard",
 ): Promise<Prescription> {
   const body = await apiRequest<ApiEnvelope<Prescription>>(
     `${base}/${id}/prescription/${step}`,
@@ -80,6 +81,7 @@ export const createPrescriptionPdf = (id: string) => act(id, "pdf");
 export const sendPrescription = (id: string) => act(id, "send");
 export const sendPrescriptionAgain = (id: string) => act(id, "resend");
 export const revisePrescription = (id: string) => act(id, "revise");
+export const discardNewVersion = (id: string) => act(id, "discard");
 
 export async function searchMedicines(
   q: string,

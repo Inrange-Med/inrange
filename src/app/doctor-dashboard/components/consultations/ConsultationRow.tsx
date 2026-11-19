@@ -9,6 +9,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowRight } from "@phosphor-icons/react";
 import FileOpenButton from "@/components/ui/FileOpenButton";
 import { useToast } from "@/components/ui/ToastProvider";
@@ -45,6 +46,7 @@ export default function ConsultationRow({
   onChanged?: () => void;
 }) {
   const toast = useToast();
+  const router = useRouter();
   const [sending, setSending] = useState(false);
   const action = ACTION_OF[row.state];
   const href = consultationHref(row.id);
@@ -93,7 +95,8 @@ export default function ConsultationRow({
             <button
               type="button"
               className={buttonClass}
-              onClick={() => openCallTab(row.id)}
+              // this tab moves to the consultation page, so the doctor writes while talking (PRD: no navigation)
+              onClick={() => openCallTab(row.id) && router.push(href)}
             >
               <span>{ACTION_LABEL.JOIN}</span>
               {arrow}

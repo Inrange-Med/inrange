@@ -60,7 +60,7 @@ export function lineOf(input: Row, listed: Row | undefined, index: number): Row 
   const code = String(input.frequency ?? "");
   const other = String(input.frequencyOther ?? "").trim().slice(0, 80);
   const unit = DURATION_UNITS.includes(input.durationUnit) ? input.durationUnit : "DAYS";
-  const value = Math.max(1, Math.min(365, Math.round(Number(input.durationValue) || 0))) || 30;
+  const value = Math.max(1, Math.min(365, Math.round(Number(input.durationValue) || 30)));
   const days = daysOf(value, unit);
   const intake = INTAKES[input.intake] ? String(input.intake) : "";
   const base = {
@@ -295,6 +295,18 @@ export async function issueRx(doctor: Doctor, patientId: number, rxId: number,
     const [locked] = await tx`
       select status, saved_at, pdf_made_at from prescriptions where id = ${rxId} for update`;
     if (locked?.status !== "DRAFT") fail(409, "This prescription was sent already.");
+    // the PDF was made again between reading it and this lock: send only the one the doctor saw
+    if (o.sentAt && new Date(locked.pdf_made_at ?? 0).getTime() !== o.signedAt.getTime())
+      fail(409, "The PDF was made again a moment ago. Check it, then send.");
+    // an older consultation's prescription never replaces the one a later consultation issued
+    if (rx.appointment_id) {
+      const [newer] = await tx`
+        select 1 from prescriptions x join appointments a on a.id = x.appointment_id join doctor_slots s on s.id = a.slot_id
+        where x.patient_id = ${patientId} and x.status = 'SIGNED' and x.appointment_id <> ${rx.appointment_id}
+          and (s.slot_date + s.start_time) > (select s2.slot_date + s2.start_time from appointments a2
+                                              join doctor_slots s2 on s2.id = a2.slot_id where a2.id = ${rx.appointment_id})`;
+      if (newer) fail(409, "This patient has a newer prescription from a later consultation, so this one cannot be sent.");
+    }
     if (o.sentAt && locked.saved_at && locked.pdf_made_at && new Date(locked.saved_at) > new Date(locked.pdf_made_at))
       fail(409, "The prescription changed after the PDF was made. Create the PDF again, then send it.");
     const superseded = await tx`

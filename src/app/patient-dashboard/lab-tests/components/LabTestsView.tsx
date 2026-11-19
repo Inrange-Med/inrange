@@ -40,7 +40,7 @@ export default function LabTestsView() {
     >
       <PageHead
         title="Blood tests"
-        back={{ href: "/patient-dashboard/care", label: "Care" }}
+        back={{ href: "/patient-dashboard", label: "Home" }}
         action={
           <Link
             href={BOOK_HREF}
