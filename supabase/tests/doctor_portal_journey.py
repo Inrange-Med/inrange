@@ -44,7 +44,7 @@ def main():
     _, admin_id = sign_in(ADMIN)
     sql(f"update users set role = 'ADMIN', full_name = 'Test Admin' where id = {admin_id} and mobile like '98000%'")
     admin, _ = sign_in(ADMIN)
-    doctor, _ = sign_in("9000000001")
+    doctor, doc_id = sign_in("9000000001")
     sql(f"""update users set full_name = 'Riya Test', onboarding_completed = true where id = {pid} and mobile like '98000%';
             insert into patient_profiles (user_id, first_name, last_name, gender, age_years, height_cm, weight_kg)
               values ({pid}, 'Riya', 'Test', 'Female', 34, 162, 84) on conflict (user_id) do nothing;
@@ -70,12 +70,12 @@ def main():
     # a consultation starting in five minutes (as the booking team or the patient would book it)
     appt = one(f"""with slot as (
         insert into doctor_slots (doctor_id, slot_date, start_time, end_time, status)
-        select 1, (now() at time zone 'Asia/Kolkata')::date + d, t, t + interval '30 minutes', 'Booked'
+        select {doc_id}, (now() at time zone 'Asia/Kolkata')::date + d, t, t + interval '30 minutes', 'Booked'
         from (select ((now() at time zone 'Asia/Kolkata') + interval '5 minutes')::time(0) as t,
                      (((now() at time zone 'Asia/Kolkata') + interval '5 minutes')::date - (now() at time zone 'Asia/Kolkata')::date) as d) x
         on conflict (doctor_id, slot_date, start_time) do update set status = 'Booked' returning id)
       insert into appointments (patient_id, doctor_id, slot_id, status, visit_type, reason)
-      select {pid}, 1, id, 'Booked', 'FIRST', 'Weight and sugar' from slot returning id""")
+      select {pid}, {doc_id}, id, 'Booked', 'FIRST', 'Weight and sugar' from slot returning id""")
     s, b = call("GET", "/api/patient/next-step", patient)
     step("patient: the call is open (Join from 10 minutes before)", b["data"]["stage"] == "CALL_OPEN" and b["data"]["appointment"]["id"] == appt, b)
 
@@ -260,15 +260,16 @@ def main():
     def booked(day, at):
         return one(f"""with slot as (
             insert into doctor_slots (doctor_id, slot_date, start_time, end_time, status)
-            values (1, {day}, '{at}'::time, '{at}'::time + interval '30 minutes', 'Booked')
+            values ({doc_id}, {day}, '{at}'::time, '{at}'::time + interval '30 minutes', 'Booked')
             on conflict (doctor_id, slot_date, start_time) do update set status = 'Booked' returning id)
           insert into appointments (patient_id, doctor_id, slot_id, status, visit_type, reason)
-          select {pid}, 1, id, 'Booked', 'FOLLOW_UP', 'Review' from slot returning id""")
-    later = booked("(now() at time zone 'Asia/Kolkata')::date + 2", "10:00")
+          select {pid}, {doc_id}, id, 'Booked', 'FOLLOW_UP', 'Review' from slot returning id""")
+    early = f"06:{int(RUN) % 60:02d}"  # outside working hours: never a real patient's slot, which cleanup would free
+    later = booked("(now() at time zone 'Asia/Kolkata')::date + 2", early)
     call("PUT", f"/api/doctor/consultations/{later}/prescription", doctor, {"diagnosis": "Written ahead."})
     s, b = call("POST", f"/api/doctor/consultations/{later}/prescription/pdf", doctor)
     step("written ahead: no PDF before the call opens", s == 409 and "call opens" in b.get("message", ""), b)
-    older = booked("(now() at time zone 'Asia/Kolkata')::date - 3", "10:00")
+    older = booked("(now() at time zone 'Asia/Kolkata')::date - 3", early)
     call("PUT", f"/api/doctor/consultations/{older}/prescription", doctor, {"diagnosis": "Left unsent."})
     s, b = call("POST", f"/api/doctor/consultations/{older}/prescription/pdf", doctor)
     step("an older consultation's PDF can still be made", s == 200, b)
