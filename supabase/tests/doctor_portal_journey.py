@@ -34,10 +34,11 @@ def file_status(path, token):
 
 
 def main():
-    if not JOBS:
-        print("Set JOBS_SECRET to the API's value."); sys.exit(2)
     s, b = call("GET", "/api/health")
     step("API up, WhatsApp in mock mode", s == 200 and b["data"]["integrations"].get("whatsapp") == "mock", b)
+    # the deployed pilot: Razorpay runs on real test keys (a made-up payment cannot verify; pay in the browser with
+    # the test card) and the tick needs JOBS_SECRET; those steps are skipped there, and said so
+    live_pay = b["data"]["integrations"].get("razorpay") == "live"
 
     patient, pid = sign_in(PATIENT)
     _, admin_id = sign_in(ADMIN)
@@ -187,10 +188,13 @@ def main():
     s, b = call("GET", "/api/doctor/consultations/history?q=riya", doctor)
     step("History finds it by name", s == 200 and any(r["id"] == appt and r["state"] == "SENT" for r in b["data"]["consultations"]), b)
     # the hour-later reminder to finish the prescription is dropped once it is sent
-    sql(f"update patient_messages set send_after = now() - interval '1 minute' where kind = 'DR_NOTE_TO_SIGN' and appointment_id = {appt}")
-    tick()
-    r = sql(f"select status, coalesce(skip_reason, '') from patient_messages where kind = 'DR_NOTE_TO_SIGN' and appointment_id = {appt}")
-    step("the doctor's reminder is skipped: sent already", r and r[0][0] == "SKIPPED" and "Sent" in r[0][1], r)
+    if JOBS:
+        sql(f"update patient_messages set send_after = now() - interval '1 minute' where kind = 'DR_NOTE_TO_SIGN' and appointment_id = {appt}")
+        tick()
+        r = sql(f"select status, coalesce(skip_reason, '') from patient_messages where kind = 'DR_NOTE_TO_SIGN' and appointment_id = {appt}")
+        step("the doctor's reminder is skipped: sent already", r and r[0][0] == "SKIPPED" and "Sent" in r[0][1], r)
+    else:
+        print("SKIP the doctor's reminder (no JOBS_SECRET, so no tick)")
 
     # ---------------------------------------------------------------- admin matches the hand-typed medicine
     task_id = one(f"select id from ops_tasks where patient_id = {pid} and kind = 'MATCH_MEDICINE' and status = 'OPEN' order by id desc limit 1")
@@ -220,23 +224,27 @@ def main():
          and len(bill.get("lines", [])) == 2 and bill["totalPaise"] == sum(l["amountPaise"] for l in bill["lines"]), b)
     s, o = call("POST", "/api/payments/orders", patient, {"purpose": "MEDICINE_ORDER", "referenceId": b["data"]["referenceId"]})
     step("patient: the server charges the bill's total", s == 200 and o["data"]["amountPaise"] == bill["totalPaise"], o)
-    s, v = call("POST", "/api/payments/verify", patient, {"orderId": o["data"].get("orderId") or o["data"]["id"], "razorpayPaymentId": "pay_mock_" + uuid.uuid4().hex[:10]})
-    step("patient: paid (mock)", s == 200, v)
-    s, b = call("GET", "/api/patient/next-step", patient)
-    step("patient: medicines on the way", b["data"]["stage"] == "ON_THE_WAY", b)
+    if live_pay:
+        print("SKIP paying, and a new version after paying (Razorpay is live here: pay in the browser)")
+        newest = ps[0]["id"]
+    else:
+        s, v = call("POST", "/api/payments/verify", patient, {"orderId": o["data"].get("orderId") or o["data"]["id"], "razorpayPaymentId": "pay_mock_" + uuid.uuid4().hex[:10]})
+        step("patient: paid (mock)", s == 200, v)
+        s, b = call("GET", "/api/patient/next-step", patient)
+        step("patient: medicines on the way", b["data"]["stage"] == "ON_THE_WAY", b)
 
-    # ---------------------------------------------------------------- a new version after paying
-    call("POST", f"/api/doctor/consultations/{appt}/prescription/revise", doctor)
-    call("PUT", f"/api/doctor/consultations/{appt}/prescription", doctor, {"advice": "Walk 40 minutes a day."})
-    call("POST", f"/api/doctor/consultations/{appt}/prescription/pdf", doctor)
-    s, b = call("POST", f"/api/doctor/consultations/{appt}/prescription/send", doctor)
-    step("a new version after paying is sent", s == 200, b)
-    newest = b["data"]["id"]
-    step("nothing to pay again for what was bought", one(f"select count(*) from medicine_carts where patient_id = {pid} and status = 'OPEN'") == "0")
-    step("the paid order follows the new version (refills keep working)",
-         one(f"select count(*) from medicine_orders where patient_id = {pid} and prescription_id = {newest}") == "1")
-    s, b = call("GET", "/api/patient/next-step", patient)
-    step("patient: still medicines on the way", b["data"]["stage"] == "ON_THE_WAY", b)
+        # ---------------------------------------------------------------- a new version after paying
+        call("POST", f"/api/doctor/consultations/{appt}/prescription/revise", doctor)
+        call("PUT", f"/api/doctor/consultations/{appt}/prescription", doctor, {"advice": "Walk 40 minutes a day."})
+        call("POST", f"/api/doctor/consultations/{appt}/prescription/pdf", doctor)
+        s, b = call("POST", f"/api/doctor/consultations/{appt}/prescription/send", doctor)
+        step("a new version after paying is sent", s == 200, b)
+        newest = b["data"]["id"]
+        step("nothing to pay again for what was bought", one(f"select count(*) from medicine_carts where patient_id = {pid} and status = 'OPEN'") == "0")
+        step("the paid order follows the new version (refills keep working)",
+             one(f"select count(*) from medicine_orders where patient_id = {pid} and prescription_id = {newest}") == "1")
+        s, b = call("GET", "/api/patient/next-step", patient)
+        step("patient: still medicines on the way", b["data"]["stage"] == "ON_THE_WAY", b)
 
     # ---------------------------------------------------------------- an abandoned new version, and when one may go
     call("POST", f"/api/doctor/consultations/{appt}/prescription/revise", doctor)
