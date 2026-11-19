@@ -41,6 +41,7 @@ import type {
   Prescription,
 } from "@/types/consultation";
 import ClinicSkeleton from "@/app/doctor-dashboard/components/ClinicSkeleton";
+import ProgrammePlanPanel from "@/app/doctor-dashboard/patients/[patientId]/components/ProgrammePlanPanel";
 import {
   factsLine,
   sentWords,
@@ -550,6 +551,16 @@ function Loaded({
           }
         />
       )}
+
+      {/* the plan: the doctor's patient record is off the portal, so the recommendation is made here */}
+      <ProgrammePlanPanel
+        patientId={p.id}
+        record={{
+          planRecommendation: data.planRecommendation,
+          activePlan: data.activePlan,
+        }}
+        onChanged={reload}
+      />
 
       <div className={styles.bar} role="region" aria-label="Prescription">
         <div className={styles.barInner}>

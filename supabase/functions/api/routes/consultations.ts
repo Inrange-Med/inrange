@@ -184,7 +184,7 @@ consultationRoutes.get("/doctor/consultations/:id", async (c) => {
   const id = intParam(c.req.param("id"), "consultation");
   const r = await consultationOf(doctor.id, id);
   const patientId = r.patient_id;
-  const [[p], [clinical], weights, reports, [last], rx, [plan]] = await Promise.all([
+  const [[p], [clinical], weights, reports, [last], rx, [plan], [rec]] = await Promise.all([
     sql`select * from patient_profiles where user_id = ${patientId}`,
     sql`select allergies, outside_medicines from patient_clinical where patient_id = ${patientId}`,
     sql`select weight_kg, logged_at from weight_logs where user_id = ${patientId} order by logged_at desc limit 40`,
@@ -195,7 +195,11 @@ consultationRoutes.get("/doctor/consultations/:id", async (c) => {
         where x.patient_id = ${patientId} and x.status in ('SIGNED', 'SUPERSEDED') and coalesce(x.appointment_id, 0) <> ${id}
         order by coalesce(x.sent_at, x.signed_at) desc limit 1`,
     prescriptionOf(id),
-    sql`select 1 from subscriptions where user_id = ${patientId} and status = 'Active' and ends_at > now()`,
+    sql`select pl.name, s.ends_at from subscriptions s join plans pl on pl.id = s.plan_id
+        where s.user_id = ${patientId} and s.status = 'Active' and s.ends_at > now() order by s.ends_at desc limit 1`,
+    // the plan this patient was recommended (the doctor recommends one here; the patient pays for it on Home)
+    sql`select r.plan_id, r.note, r.created_at, pl.name from plan_recommendations r join plans pl on pl.id = r.plan_id
+        where r.patient_id = ${patientId} order by r.created_at desc limit 1`,
   ]);
   await sql`insert into audit_log (patient_id, actor_id, action) values (${patientId}, ${doctor.id}, ${`Opened the consultation, ${doctor.name}`})`;
   const kg = weights[0]?.weight_kg ?? p?.weight_kg ?? null;
@@ -221,6 +225,8 @@ consultationRoutes.get("/doctor/consultations/:id", async (c) => {
       medicines: (last.items as Row[]).map(lineView), pdf: `/api/files/prescriptions/${last.id}`,
     } : null,
     prescription: prescriptionView(rx),
+    planRecommendation: rec ? { planId: rec.plan_id, planName: rec.name, note: rec.note ?? "", recommendedAt: ist(rec.created_at) } : null,
+    activePlan: plan ? { planName: plan.name, endsAt: ist(plan.ends_at) } : null,
   });
 });
 

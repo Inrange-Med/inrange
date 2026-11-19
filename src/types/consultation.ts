@@ -1,5 +1,7 @@
 /** The doctor's consultations (doctor portal v2): Today, History and the consultation page. consultationService. */
 
+import type { PlanRecommendation } from "./patientRecord";
+
 /** One state per consultation, from the backend, so Today, History and the page always agree. */
 export type ConsultationState =
   | "UPCOMING"
@@ -106,6 +108,9 @@ export type ConsultationReport = {
 };
 
 export type ConsultationPage = {
+  /** the plan the doctor recommends on this page; the patient pays for it on Home */
+  planRecommendation: PlanRecommendation | null;
+  activePlan: { planName: string; endsAt: string } | null;
   /** callOpen: the call can be joined now (it stays true after a mid-call send, so Join stays) */
   consultation: ConsultationRow & {
     endsAt: string | null;
