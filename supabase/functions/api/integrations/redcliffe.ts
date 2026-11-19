@@ -5,8 +5,14 @@
 // annotated reference client this is ported from.
 import { env, live } from "../lib/env.ts";
 import { sql } from "../lib/db.ts";
+import { AsyncLocalStorage } from "node:async_hooks";
 
-export const redcliffeLive = live.redcliffe;
+/**
+ * Test accounts (TEST_MOBILES) always get the mock lab, whatever the keys: a test run never books a real home
+ * collection. index.ts runs a test account's /api/labs requests inside mockLab; everyone else gets Redcliffe.
+ */
+export const mockLab = new AsyncLocalStorage<true>();
+export const redcliffeLive = () => live.redcliffe() && !mockLab.getStore();
 
 /** httpStatus null = refused before sending (bad input); the route answers 422 then, else 502. */
 export class RedcliffeError extends Error {
@@ -126,6 +132,8 @@ const inNcr = (lat: number, lng: number) => lat > 28.2 && lat < 28.95 && lng > 7
 
 const mockPackage = (code: string) => {
   const found = MOCK_PACKAGES.find((p) => p.code === code);
+  // a real lab code (the care package's PL70) books as the metabolic panel; a care package sets its own price
+  if (!found && /^[A-Z]+\d+$/.test(code)) return { ...MOCK_PACKAGES[0], code };
   if (!found) throw new RedcliffeError("That test package is not offered.");
   return found;
 };
@@ -368,7 +376,11 @@ export async function slots(date: string, latitude: number, longitude: number): 
   const body = await call<{ results?: RcSlot[]; data?: RcSlot[] }>("GET", "/api/booking/v2/get-time-slot-list/", {
     query: { collection_date: date, latitude, longitude },
   });
-  return (body.results ?? body.data ?? []).map((s) => ({
+  const list = body.results ?? body.data;
+  // a reply without a slot list is the lab's change, not "no times": say so instead of showing an empty day
+  if (!Array.isArray(list))
+    throw new RedcliffeError(`The lab sent no list of times (it sent ${Object.keys(body ?? {}).join(", ") || "nothing"})`, 502, body);
+  return list.map((s) => ({
     slotId: s.id, startTime: s.format_24_hrs.start_time.slice(0, 5), endTime: s.format_24_hrs.end_time.slice(0, 5), available: s.available_slot,
   })).sort((a, b) => a.startTime.localeCompare(b.startTime)); // the lab lists them out of order
 }
