@@ -48,15 +48,23 @@ async function list(): Promise<ListItem[]> {
 /** After an import or a change to the list. */
 export const forgetList = () => { cache = null; };
 
-/** Every word of the query must appear in the item's brand, molecule, strength or form, keys compared. */
+/**
+ * Every word of the query must appear in the item's brand, molecule, strength or form, keys compared. A number on
+ * its own ("5", "2.5 mg") must equal one of the item's numbers: "mounjaro 5" is the 5 mg pen, never 2.5 or 15 mg.
+ */
 export function matchList(rows: ListItem[], query: string, limit = 12) {
   const words = query.toLowerCase().replace(FORM_WORDS, " ").split(/[\s,]+/).map(keyOf).filter(Boolean).slice(0, 5);
   if (!words.length) return { matches: [] as ListItem[], didYouMean: [] as ListItem[] };
   const hay = (m: ListItem) => keyOf(`${m.brand} ${m.molecule} ${m.strength} ${m.form}`);
   const whole = keyOf(query);
+  const strength = /^(\d+(?:\.\d+)?)(?:mg|mcg|g|ml|iu|units?)?$/;
+  const asked = words.map((w) => strength.exec(w)?.[1]).filter(Boolean).map(Number);
+  const named = words.filter((w) => !strength.test(w));
+  const numbers = (m: ListItem) => (`${m.brand} ${m.molecule} ${m.strength}`.match(/\d+(?:\.\d+)?/g) ?? []).map(Number);
   const matches = rows.filter((m) => {
     const h = hay(m);
-    return h.includes(whole) || words.every((w) => h.includes(w));
+    const have = numbers(m);
+    return asked.every((n) => have.includes(n)) && (h.includes(whole) || named.every((w) => h.includes(w)));
   });
   // brand first, then molecule matches, then the rest; the list is already sorted by strength
   const starts = (m: ListItem) => (keyOf(m.brand).startsWith(words[0]) ? 0 : keyOf(m.molecule).startsWith(words[0]) ? 1 : 2);
@@ -101,6 +109,8 @@ if (import.meta.main) {
   const rows = [
     item(1, "Tablet Rybelsus", "Semaglutide", "3 mg"), item(2, "Tablet Rybelsus", "Semaglutide", "7 mg"),
     item(3, "Glycomet", "Metformin", "500 mg"), item(4, "Mounjaro KwikPen", "Tirzepatide", "2.5 mg", "Pen injection"),
+    item(6, "Mounjaro KwikPen", "Tirzepatide", "5 mg", "Pen injection"), item(7, "Mounjaro KwikPen", "Tirzepatide", "12.5 mg", "Pen injection"),
+    item(8, "Vitamin D3", "Cholecalciferol", "60000 IU", "Capsule"),
     item(5, "Ensure", "Nutritional supplement", "400 g", "Powder"),
   ];
   const assert = (ok: boolean, what: string) => { if (!ok) throw new Error(what); };
@@ -110,7 +120,10 @@ if (import.meta.main) {
   assert(ids("tab rybelsus 3mg") === "1", "form word and joined unit");
   assert(ids("Tablet Rybelsus 3 mg") === "1", "the full name");
   assert(ids("metformin") === "3", "by molecule");
-  assert(ids("mounjaro 2.5") === "4", "decimal strength");
+  assert(ids("mounjaro 2.5") === "4", "decimal strength, never 12.5");
+  assert(ids("mounjaro 5") === "6" && ids("mounjaro 5mg") === "6", "a strength is matched whole, never 2.5 or 12.5");
+  assert(ids("mounjaro") === "4,6,7", "every strength without a number");
+  assert(ids("vitamin d3") === "8", "a number inside a name stays a word");
   assert(ids("ensure") === "5", "a supplement");
   assert(matchList(rows, "rybelsis").didYouMean[0]?.id === 1, "did you mean a misspelling");
   assert(matchList(rows, "glycomett 500").didYouMean[0]?.id === 3, "did you mean with a strength");

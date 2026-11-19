@@ -68,10 +68,21 @@ def sql(q):
         if r.returncode:
             print(r.stderr); sys.exit(1)
         return [line.split("\t") for line in r.stdout.strip().splitlines() if line]
-    r = subprocess.run(["supabase", "db", "query", "--remote", "--yes", "-o", "json", q], cwd=REPO, capture_output=True, text=True)
+    # the CLI's JSON sorts columns by name, so a single SELECT comes back through json_agg (json keeps column order)
+    body = q.strip().rstrip(";")
+    single = ";" not in body and body.lower().startswith("select")
+    query = f"select json_agg(x)::text as rows from ({body}) x" if single else q
+    r = subprocess.run(["supabase", "db", "query", "--remote", "--yes", "-o", "json", query], cwd=REPO, capture_output=True, text=True)
     if r.returncode:
         print(r.stdout, r.stderr); sys.exit(1)
-    return [list(map(str, row.values())) for row in json.loads(r.stdout or "[]")]
+    out = json.loads(r.stdout or "[]")
+    rows = out.get("rows", []) if isinstance(out, dict) else out  # newer CLIs wrap the rows in an object
+    if single:
+        rows = json.loads(rows[0]["rows"] or "[]", object_pairs_hook=lambda pairs: pairs) if rows else []
+    plain = lambda v: dict((k, plain(x)) for k, x in v) if isinstance(v, list) and v and all(isinstance(p, tuple) for p in v) else [plain(x) for x in v] if isinstance(v, list) else v
+    # the values as psql prints them, so checks read the same both ways: t/f, JSON text, empty for null
+    cell = lambda v: "t" if v is True else "f" if v is False else "" if v is None else json.dumps(plain(v)) if isinstance(v, (dict, list)) else str(v)
+    return [[cell(v) for _, v in row] if single else list(map(cell, row.values())) for row in rows]
 
 
 def one(q):
