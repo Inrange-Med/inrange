@@ -35,12 +35,15 @@ const sentences = (sections: Row[], key: string): Row[] => sections.find((s) => 
 
 // ---------------------------------------------------------------- the v2 form's medicine lines
 
-/** How often, as the doctor taps it; the words print and drive dose reminders (medicineFlow cadenceOf). */
+/**
+ * How often, as the doctor taps it; the words print and drive dose reminders (medicineFlow cadenceOf). Plain
+ * words only (19 Nov 2026: "1-0-0" confused the client, so neither the form nor the PDF shows the codes).
+ */
 export const FREQUENCIES: Record<string, string> = {
-  "1-0-0": "Once a day, in the morning (1-0-0)",
-  "0-0-1": "Once a day, at night (0-0-1)",
-  "1-0-1": "Twice a day, morning and night (1-0-1)",
-  "1-1-1": "Three times a day (1-1-1)",
+  "1-0-0": "Once a day, in the morning",
+  "0-0-1": "Once a day, at night",
+  "1-0-1": "Twice a day, morning and night",
+  "1-1-1": "Three times a day",
   WEEKLY: "Once a week",
 };
 export const INTAKES: Record<string, string> = {
@@ -93,7 +96,8 @@ export const monthsOf = (items: Row[]) =>
 export const lineView = (i: Row) => ({
   key: String(i.key ?? ""), medicineId: i.medicineId != null ? String(i.medicineId) : null,
   name: i.name ?? ([i.medicineName, i.strength].filter(Boolean).join(" ") || ""),
-  genericName: i.genericName ?? null, dose: i.dose ?? "", frequency: i.frequencyCode ?? "", frequencyOther: i.frequencyOther ?? "",
+  genericName: i.genericName ?? null, brand: i.unlisted ? null : i.medicineName ?? null, form: i.form ?? "",
+  dose: i.dose ?? "", frequency: i.frequencyCode ?? "", frequencyOther: i.frequencyOther ?? "",
   frequencyWords: i.frequency ?? "", durationValue: i.durationValue ?? null, durationUnit: i.durationUnit ?? null,
   duration: i.duration ?? "", intake: i.intake ?? "", intakeWords: i.instructions ?? "", unlisted: Boolean(i.unlisted),
 });

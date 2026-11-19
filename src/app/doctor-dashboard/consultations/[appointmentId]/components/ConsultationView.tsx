@@ -5,10 +5,11 @@
   "wherever the patient's profile opens, keep everything right there"):
   1. The patient and the consultation, with Join video call (a new tab, so this page stays open).
   2. Reports: every report on the account, any date, each opening its PDF.
-  3. The last prescription (follow-ups), with Copy into today's.
-  4. The prescription: what we know filled in (age, sex, height, weight, BMI, allergies), then diagnosis
-     (the only required field), history, remarks, medicines and advice. It saves as the doctor types.
-  5. A bar fixed at the bottom with the one next step: Create PDF, then Send to patient (the PDF shows on
+  3. The prescription: what we know filled in (age, sex, height, weight, BMI, allergies), then diagnosis
+     (the only required field), history, remarks, medicines, plan and advice. It saves as the doctor types.
+     A follow-up starts from the last prescription, so the doctor changes only what is different; diagnosis
+     and advice offer the usual words as taps (19 Nov 2026: as little typing as possible).
+  4. A bar fixed at the bottom with the one next step: Create PDF, then Send to patient (the PDF shows on
      the page first, and that is the check: no "are you sure"), then "Sent to patient, 7:42 pm" with
      Send again and Edit and send new version.
   Data: GET /api/doctor/consultations/:id and the prescription routes (consultationService).
@@ -25,7 +26,6 @@ import { useNow } from "@/hooks/useNow";
 import { openCallTab } from "@/lib/consultations/callTab";
 import { clockTime, shortDate } from "@/lib/format/dateTime";
 import { errorMessage } from "@/lib/http/apiClient";
-import { medicineLineWords } from "@/lib/format/medicineLine";
 import {
   createPrescriptionPdf,
   discardNewVersion,
@@ -35,11 +35,7 @@ import {
   sendPrescriptionAgain,
 } from "@/services/consultationService";
 import { getFile } from "@/services/fileService";
-import type {
-  ConsultationPage,
-  MedicineLine,
-  Prescription,
-} from "@/types/consultation";
+import type { ConsultationPage, Prescription } from "@/types/consultation";
 import ClinicSkeleton from "@/app/doctor-dashboard/components/ClinicSkeleton";
 import {
   factsLine,
@@ -47,14 +43,41 @@ import {
   whenWords,
 } from "@/app/doctor-dashboard/components/consultations/consultationWords";
 import ChoiceChips from "./ChoiceChips";
-import MedicineLines, { newKey } from "./MedicineLines";
+import MedicineLines, { daysOf } from "./MedicineLines";
 import PdfPanel from "./PdfPanel";
-import { usePrescriptionDraft, type SaveState } from "./usePrescriptionDraft";
+import QuickPicks from "./QuickPicks";
+import {
+  startFrom,
+  usePrescriptionDraft,
+  type SaveState,
+} from "./usePrescriptionDraft";
 import formStyles from "@/components/ui/styles/FormControls.module.css";
 import clinicStyles from "@/app/doctor-dashboard/styles/ClinicSurfaces.module.css";
 import styles from "./ConsultationPage.module.css";
 
 const BACK = { href: "/doctor-dashboard", label: "Today" };
+
+// the usual words, one tap each; the box takes anything else (to confirm with the client's doctors)
+const DIAGNOSES = [
+  "Obesity",
+  "Overweight",
+  "Type 2 diabetes",
+  "Prediabetes",
+  "High blood pressure",
+  "High cholesterol",
+  "Fatty liver",
+  "PCOS",
+  "Hypothyroidism",
+];
+const ADVICE = [
+  "Eat protein with every meal",
+  "Drink 2 to 3 litres of water a day",
+  "Walk 30 minutes a day",
+  "Strength exercise twice a week",
+  "Small meals, stop when full",
+  "Inject on the same day each week",
+  "Call us for severe stomach pain or vomiting",
+];
 
 export default function ConsultationView({
   appointmentId,
@@ -125,7 +148,14 @@ function Loaded({
   const toast = useToast();
   const now = useNow(30_000);
   const { consultation: c, patient: p } = data;
-  const rx = usePrescriptionDraft(c.id, data.prescription);
+  const last = data.lastPrescription;
+  const rx = usePrescriptionDraft(
+    c.id,
+    data.prescription,
+    data.prescription ? null : startFrom(last),
+  );
+  // a follow-up opened with nothing written yet: today's starts as a copy of the last one
+  const [fromLast] = useState(() => !data.prescription && Boolean(last));
   const { draft, change, saved } = rx;
   const [busy, setBusy] = useState<
     null | "pdf" | "send" | "again" | "revise" | "keep"
@@ -198,14 +228,11 @@ function Loaded({
       if (!line.durationValue)
         return { text: `Write for how long for ${which}.`, line: line.key };
       // without a plan (the nano plan) the prescription is for one month: said here, as the server does
-      const days =
-        line.durationValue *
-        (line.durationUnit === "MONTHS"
-          ? 30
-          : line.durationUnit === "WEEKS"
-            ? 7
-            : 1);
-      if (!p.onPlan && !draft.planId && days > 31)
+      if (
+        !p.onPlan &&
+        !draft.planId &&
+        daysOf(line.durationValue, line.durationUnit) > 31
+      )
         return {
           text: `This patient is not on a plan yet, so the prescription is for one month. Set ${which} to 1 month or less.`,
           line: line.key,
@@ -309,37 +336,6 @@ function Loaded({
     }
   });
 
-  const copyLast = () => {
-    const last = data.lastPrescription;
-    if (!last) return;
-    const have = new Set(
-      draft.medicines.map((m) => m.medicineId ?? m.name.toLowerCase()),
-    );
-    const add = last.medicines
-      .filter((m) => !have.has(m.medicineId ?? m.name.toLowerCase()))
-      .map(
-        (m): MedicineLine => ({
-          key: newKey(),
-          medicineId: m.medicineId,
-          name: m.name,
-          genericName: m.genericName ?? null,
-          dose: m.dose,
-          frequency: m.frequency,
-          frequencyOther: m.frequencyOther,
-          durationValue: m.durationValue ?? 30,
-          durationUnit: m.durationUnit ?? "DAYS",
-          intake: m.intake,
-          unlisted: m.unlisted,
-        }),
-      );
-    change({ medicines: [...draft.medicines, ...add] });
-    toast(
-      add.length
-        ? `Copied ${add.length} ${add.length === 1 ? "medicine" : "medicines"} from ${shortDate(last.at)}`
-        : "Those medicines are already on today's",
-    );
-  };
-
   const vitals = [
     p.age ? `Age ${p.age}` : null,
     p.sex || null,
@@ -354,16 +350,30 @@ function Loaded({
     key: "diagnosis" | "patientHistory" | "remarks" | "advice",
     label: string,
     hint?: string,
+    picks?: { options: string[]; perLine?: boolean },
   ) => (
-    <label
+    <div
       className={styles.field}
       data-problem={problem?.field === key || undefined}
     >
-      <span className={styles.fieldLabel}>
+      <label htmlFor={`rx-${key}`} className={styles.fieldLabel}>
         {label}
         {hint && <span className={styles.fieldHint}>{hint}</span>}
-      </span>
+      </label>
+      {picks && (
+        <QuickPicks
+          label={label}
+          options={picks.options}
+          perLine={picks.perLine}
+          text={draft[key]}
+          onChange={(text) => {
+            change({ [key]: text });
+            if (problem?.field === key) setProblem(null);
+          }}
+        />
+      )}
       <textarea
+        id={`rx-${key}`}
         ref={key === "diagnosis" ? diagnosisRef : undefined}
         className={styles.textarea}
         value={draft[key]}
@@ -375,7 +385,7 @@ function Loaded({
           if (problem?.field === key) setProblem(null);
         }}
       />
-    </label>
+    </div>
   );
 
   return (
@@ -447,48 +457,6 @@ function Loaded({
         )}
       </section>
 
-      {data.lastPrescription && (
-        <section className={clinicStyles.panel} aria-labelledby="last-heading">
-          <div className={clinicStyles.panelHead}>
-            <h2 id="last-heading" className={clinicStyles.h2}>
-              Last prescription
-            </h2>
-            <span className={`${clinicStyles.muted} num`}>
-              {shortDate(data.lastPrescription.at)},{" "}
-              {data.lastPrescription.doctorName}
-            </span>
-          </div>
-          {data.lastPrescription.diagnosis && (
-            <p className={styles.lastText}>{data.lastPrescription.diagnosis}</p>
-          )}
-          <ul className={styles.lastList}>
-            {data.lastPrescription.medicines.map((m, i) => (
-              <li key={`${m.key}-${i}`}>
-                <strong>{m.name}</strong>
-                <span>{medicineLineWords(m)}</span>
-              </li>
-            ))}
-          </ul>
-          <div className={styles.lastActions}>
-            {!sent && data.lastPrescription.medicines.length > 0 && (
-              <button
-                type="button"
-                className={`btn btn--ghost ${styles.open}`}
-                onClick={copyLast}
-              >
-                Copy into today&apos;s
-              </button>
-            )}
-            <FileOpenButton
-              load={() => getFile(data.lastPrescription?.pdf ?? "")}
-              className={styles.textBtn}
-            >
-              {(opening) => (opening ? "Opening" : "View its PDF")}
-            </FileOpenButton>
-          </div>
-        </section>
-      )}
-
       {!sent && (
         <section className={clinicStyles.panel} aria-labelledby="rx-heading">
           <div className={clinicStyles.panelHead}>
@@ -501,6 +469,21 @@ function Loaded({
               problem={rx.problem}
             />
           </div>
+          {last && (
+            <div className={styles.fromLast}>
+              <span className="num">
+                {fromLast
+                  ? `Filled in from the last prescription, ${shortDate(last.at)}, ${last.doctorName}. Change only what is different.`
+                  : `Last prescription: ${shortDate(last.at)}, ${last.doctorName}.`}
+              </span>
+              <FileOpenButton
+                load={() => getFile(last.pdf)}
+                className={styles.textBtn}
+              >
+                {(opening) => (opening ? "Opening" : "View it")}
+              </FileOpenButton>
+            </div>
+          )}
           <div className={styles.known}>
             <p className="num">
               {vitals.length
@@ -514,7 +497,9 @@ function Loaded({
               )}
             </p>
           </div>
-          {field("diagnosis", "Diagnosis", "Needed for the PDF")}
+          {field("diagnosis", "Diagnosis", "Needed for the PDF", {
+            options: DIAGNOSES,
+          })}
           {field("patientHistory", "Patient history")}
           {field("remarks", "Remarks")}
           <div className={styles.field}>
@@ -529,6 +514,7 @@ function Loaded({
             </span>
             <MedicineLines
               lines={draft.medicines}
+              maxDays={!p.onPlan && !draft.planId ? 31 : undefined}
               problemKey={problem?.line ?? null}
               onChange={(medicines) => {
                 change({ medicines });
@@ -562,7 +548,10 @@ function Loaded({
               />
             )}
           </div>
-          {field("advice", "Advice")}
+          {field("advice", "Advice", undefined, {
+            options: ADVICE,
+            perLine: true,
+          })}
         </section>
       )}
 

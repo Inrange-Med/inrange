@@ -58,6 +58,9 @@ export type MedicineLine = {
   medicineId: string | null;
   name: string;
   genericName?: string | null;
+  /** the master list's brand and form: the strengths to switch between, and no food choice for an injection */
+  brand?: string | null;
+  form?: string;
   dose: string;
   frequency: Frequency;
   frequencyOther: string;
@@ -137,6 +140,8 @@ export type ConsultationPage = {
     at: string;
     doctorName: string;
     diagnosis: string;
+    patientHistory: string;
+    advice: string;
     medicines: MedicineLineView[];
     pdf: string;
   } | null;

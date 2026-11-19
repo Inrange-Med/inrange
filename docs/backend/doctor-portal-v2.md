@@ -25,14 +25,18 @@ Backend: `routes/consultations.ts`, `routes/home.ts`, `lib/prescriptions.ts`, `l
 - **Join video call opens a new tab.** Each consultation's call tab has a fixed name (`lib/consultations/callTab.ts`), so
   Join again brings the same tab forward and never loads a second call. Ending or leaving the call shows "Finish the
   prescription in your other tab" with Close this tab.
-- **The consultation page:** the patient and Join, every report on the account (any date), the last prescription with
-  Copy into today's, then the prescription. Age, sex, height, weight (with the change over the last month), BMI and
-  allergies are filled in. Diagnosis is the only required field. It saves as the doctor types. A bar fixed at the
+- **The consultation page:** the patient and Join, every report on the account (any date), then the prescription. A
+  follow-up's prescription starts as a copy of the last one (diagnosis, history, medicines, advice; remarks are the
+  visit's own), saved with the first change or at Create PDF, so the doctor changes only what is different (19 Nov
+  2026). Age, sex, height, weight (with the change over the last month), BMI and allergies are filled in. Diagnosis is
+  the only required field; it and Advice offer the usual words as taps. It saves as the doctor types. A bar fixed at the
   bottom holds the one next step: Create PDF, then Send to patient, then "Sent to patient, 7:42 pm" with Send again and
   Edit and send new version.
 - **Medicines:** a forgiving search of the master list (case, spaces and words like tab, tablet, cap and inj are
-  ignored: "rybelsus" finds "Tablet Rybelsus 3 mg"); the dose comes filled in; how often (1-0-0, 0-0-1, 1-0-1, 1-1-1,
-  once a week, other), for how long (days, weeks, months) and with food are taps. Nothing found: "Did you mean" first,
+  ignored: "rybelsus" finds "Tablet Rybelsus 3 mg"); the dose comes filled in; how often (every morning, every night,
+  morning and night, three times a day, once a week, other: plain words, never "1-0-0", on the form and the PDF), for
+  how long (1 week to 3 months, or other) and with food (not for an injection) are taps. A brand with several strengths
+  shows them, so a step-up is one tap. Nothing found: "Did you mean" first,
   then "Add as typed", which prints but cannot be ordered until admin matches it.
 - **WhatsApp:** the doctor's booking, moved, starting-soon and patient-waiting messages link to the consultation page.
   An hour after the call, if the prescription is not sent, the doctor gets "The prescription for your 7 pm

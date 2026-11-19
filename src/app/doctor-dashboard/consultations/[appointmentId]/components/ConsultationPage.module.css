@@ -127,38 +127,6 @@
   color: var(--ink-3);
 }
 
-/* ---------- the last prescription ---------- */
-.lastText {
-  font-size: 0.9375rem;
-  color: var(--ink-2);
-}
-
-.lastList {
-  display: grid;
-  gap: 10px;
-}
-
-.lastList li {
-  display: grid;
-  gap: 2px;
-}
-
-.lastList strong {
-  font-weight: 560;
-}
-
-.lastList span {
-  font-size: 0.875rem;
-  color: var(--ink-3);
-}
-
-.lastActions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 20px;
-}
-
 /* ---------- the prescription ---------- */
 .saveLine {
   font-size: 0.875rem;
@@ -168,6 +136,16 @@
 
 .saveLine[data-state="error"] {
   color: var(--alert);
+}
+
+/* a follow-up: where today's started, with the last one a tap away */
+.fromLast {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 14px;
+  font-size: 0.9375rem;
+  color: var(--ink-2);
 }
 
 /* what we know, filled in: one quiet plate */
@@ -398,14 +376,24 @@
   transform: scale(0.97);
 }
 
-.chip[aria-checked="true"] {
+/* a quick pick can be a short sentence: it wraps instead of running off a phone */
+.pick {
+  padding-block: 10px;
+  white-space: normal;
+  text-align: left;
+  line-height: 1.3;
+}
+
+.chip[aria-checked="true"],
+.chip[aria-pressed="true"] {
   background: var(--slate-900);
   box-shadow: none;
   color: var(--on-dark);
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .chip[aria-checked="false"]:hover {
+  .chip[aria-checked="false"]:hover,
+  .chip[aria-pressed="false"]:hover {
     box-shadow: inset 0 0 0 1px var(--ink-3);
   }
 }

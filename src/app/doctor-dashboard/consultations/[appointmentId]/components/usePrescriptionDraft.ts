@@ -6,13 +6,17 @@
   page, says "Not saved yet" and tries again every 5 s. Leaving with anything unsaved asks first.
   The page's text is the doctor's: answers update the saved time, the PDF state and which medicines are
   on the list, never the words in the boxes (so the cursor never jumps).
+  A follow-up starts from the last prescription (`start`): shown at once, saved with the first change or at
+  Create PDF, so opening the page alone writes nothing and leaving it asks nothing.
 */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError, errorMessage } from "@/lib/http/apiClient";
 import { savePrescription } from "@/services/consultationService";
 import type {
+  ConsultationPage,
   MedicineLine,
+  MedicineLineView,
   Prescription,
   PrescriptionDraft,
 } from "@/types/consultation";
@@ -38,12 +42,32 @@ export function draftOf(rx: Prescription | null): PrescriptionDraft {
     remarks: rx.remarks,
     advice: rx.advice,
     planId: rx.planId,
-    medicines: rx.medicines.map(
+    medicines: linesOf(rx.medicines),
+  };
+}
+
+/** A follow-up's start: the last prescription's diagnosis, history, medicines and advice (remarks are the visit's own). */
+export function startFrom(last: ConsultationPage["lastPrescription"]): PrescriptionDraft | null {
+  if (!last) return null;
+  return {
+    diagnosis: last.diagnosis,
+    patientHistory: last.patientHistory,
+    remarks: "",
+    advice: last.advice,
+    planId: null,
+    medicines: linesOf(last.medicines),
+  };
+}
+
+function linesOf(medicines: MedicineLineView[]): MedicineLine[] {
+  return medicines.map(
       (m): MedicineLine => ({
         key: m.key || `${m.medicineId ?? m.name}`,
         medicineId: m.medicineId,
         name: m.name,
         genericName: m.genericName ?? null,
+        brand: m.brand ?? null,
+        form: m.form ?? "",
         dose: m.dose,
         frequency: m.frequency,
         frequencyOther: m.frequencyOther,
@@ -52,21 +76,24 @@ export function draftOf(rx: Prescription | null): PrescriptionDraft {
         intake: m.intake,
         unlisted: m.unlisted,
       }),
-    ),
-  };
+  );
 }
 
 export function usePrescriptionDraft(
   appointmentId: string,
   initial: Prescription | null,
+  start: PrescriptionDraft | null = null,
 ) {
-  const [draft, setDraft] = useState<PrescriptionDraft>(() => draftOf(initial));
+  const [draft, setDraft] = useState<PrescriptionDraft>(
+    () => (initial ? draftOf(initial) : (start ?? EMPTY)),
+  );
   const [saved, setSaved] = useState<Prescription | null>(initial);
   const [state, setState] = useState<SaveState>(
     initial?.savedAt ? "saved" : "idle",
   );
   const [problem, setProblem] = useState<string | null>(null);
-  const edits = useRef(0); // bumps on every change; a save covers the edits made before it began
+  // bumps on every change; a save covers the edits made before it began. A start counts as one, not yet saved
+  const edits = useRef(!initial && start ? 1 : 0);
   const savedEdits = useRef(0);
   const latest = useRef(draft);
   const inFlight = useRef<Promise<Prescription | null> | null>(null);

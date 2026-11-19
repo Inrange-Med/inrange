@@ -191,7 +191,7 @@ consultationRoutes.get("/doctor/consultations/:id", async (c) => {
     sql`select weight_kg, logged_at from weight_logs where user_id = ${patientId} order by logged_at desc limit 40`,
     sql`select id, source, title, file_name, file_path, uploaded_at, lab_booking_id from reports
         where user_id = ${patientId} and file_path is not null order by uploaded_at desc`,
-    // the last prescription issued before this consultation (follow-ups: "Copy into today's")
+    // the last prescription issued before this consultation: a follow-up's prescription starts from it
     sql`select x.*, d.full_name as doctor from prescriptions x join doctors d on d.id = x.doctor_id
         where x.patient_id = ${patientId} and x.status in ('SIGNED', 'SUPERSEDED') and coalesce(x.appointment_id, 0) <> ${id}
         order by coalesce(x.sent_at, x.signed_at) desc limit 1`,
@@ -222,6 +222,7 @@ consultationRoutes.get("/doctor/consultations/:id", async (c) => {
     })),
     lastPrescription: last ? {
       id: String(last.id), at: ist(last.sent_at ?? last.signed_at), doctorName: last.doctor, diagnosis: last.diagnosis ?? "",
+      patientHistory: last.patient_history ?? "", advice: last.advice ?? "",
       medicines: (last.items as Row[]).map(lineView), pdf: `/api/files/prescriptions/${last.id}`,
     } : null,
     prescription: prescriptionView(rx),
