@@ -1,31 +1,24 @@
 "use client";
 
 /*
-  The doctor's workspace around every /doctor-dashboard page (Arhaan's clinician ClinicShell): a
-  quiet rail of six places on a laptop, a top bar and a dock on a phone, and the toast. The places
-  lead (Today, Schedule, Patients); the two queues with counts (Notes, Messages) follow, and Hours,
-  set once and rarely changed, closes the list. The phone dock keeps five tabs so every label fits at
-  390px: Hours is left out there, lights Schedule, and is reached from the Schedule page head.
-  Sign out sits under the doctor's name on the rail and beside the avatar in the phone top bar.
+  The doctor's workspace around every /doctor-dashboard page. Three places only (doctor portal v2 PRD,
+  17 Nov 2026 call: "what a doctor needs, and nothing more"): Today, History, Availability, as a quiet
+  rail on a laptop and a three-tab dock on a phone, with the toast. Today carries the count of what is
+  waiting on the doctor (calls open, prescriptions to write or send). A consultation's page lights Today.
+  The rest of the old portal (Schedule, Patients, Notes, Messages, the patient record) is off the doctor's
+  navigation; its pages send old links to Today and its code stays for the back office.
   Only signed-in doctors get past it: anyone signed out goes to /sign-in (?next= brings them back to
   this page), anyone else (a patient, an admin, a coach) to their own home. Offline, a line above the
   page says so.
-
-  A loaded call note (/doctor-dashboard/notes/<id>) is a pushed screen: below a laptop it brings its
-  own top and bottom bars and marks itself data-own-bars, so the shell's phone chrome steps aside
-  (DoctorShell.module.css). Its loading and error states do the same, with a top bar of Back alone.
 */
 
 import { useEffect, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  CalendarBlank,
-  ChatsCircle,
+  ClockCounterClockwise,
   Clock,
-  Notepad,
   SquaresFour,
-  Users,
 } from "@phosphor-icons/react";
 import AppTheme from "@/components/ui/AppTheme";
 import Avatar from "@/components/ui/Avatar";
@@ -37,77 +30,49 @@ import { useSessionUser } from "@/hooks/useSessionUser";
 import { DATA_CHANGED_EVENT } from "@/lib/http/apiClient";
 import { signInHrefFor } from "@/lib/navigation/signInReturn";
 import { homePathFor } from "@/lib/session/authSession";
+import { toApiDate } from "@/lib/format/dateTime";
+import { countWaiting } from "@/services/consultationService";
 import { getMyDoctorProfile } from "@/services/doctorPortalService";
-import { getWorkCounts } from "@/services/patientRecordService";
-import type { DoctorWorkCounts } from "@/types/patientRecord";
 import ClinicSkeleton from "./ClinicSkeleton";
 import SignOutButton from "./SignOutButton";
 import clinicStyles from "@/app/doctor-dashboard/styles/ClinicSurfaces.module.css";
 import styles from "./DoctorShell.module.css";
 
-type Section =
-  | "today"
-  | "schedule"
-  | "patients"
-  | "notes"
-  | "messages"
-  | "hours";
+type Section = "today" | "history" | "hours";
 
 const SECTIONS: {
   id: Section;
   href: string;
   label: string;
-  icon: typeof Users;
-  count?: keyof DoctorWorkCounts;
-  /** false keeps a place off the phone dock (rail only) */
-  dock?: false;
+  icon: typeof SquaresFour;
+  /** carries the count of what is waiting on the doctor */
+  counted?: true;
 }[] = [
   {
     id: "today",
     href: "/doctor-dashboard",
     label: "Today",
     icon: SquaresFour,
-    count: "waitingOnYou",
+    counted: true,
   },
   {
-    id: "schedule",
-    href: "/doctor-dashboard/schedule",
-    label: "Schedule",
-    icon: CalendarBlank,
-  },
-  {
-    id: "patients",
-    href: "/doctor-dashboard/patients",
-    label: "Patients",
-    icon: Users,
-  },
-  {
-    id: "notes",
-    href: "/doctor-dashboard/notes",
-    label: "Notes",
-    icon: Notepad,
-    count: "notesToSign",
-  },
-  {
-    id: "messages",
-    href: "/doctor-dashboard/messages",
-    label: "Messages",
-    icon: ChatsCircle,
-    count: "messagesForYou",
+    id: "history",
+    href: "/doctor-dashboard/history",
+    label: "History",
+    icon: ClockCounterClockwise,
   },
   {
     id: "hours",
     href: "/doctor-dashboard/hours",
-    label: "Hours",
+    label: "Availability",
     icon: Clock,
-    dock: false,
   },
 ];
 
-/** Which section lights up for a page: its first folder (a patient's record sits under Patients, a note under Notes). */
+/** Which place lights up for a page: its first folder (a consultation's page sits under Today). */
 function sectionFor(pathname: string): Section | null {
   const folder = pathname.split("/")[2];
-  if (!folder) return "today";
+  if (!folder || folder === "consultations") return "today";
   return SECTIONS.find((section) => section.id === folder)?.id ?? null;
 }
 
@@ -121,11 +86,11 @@ export default function DoctorShell({ children }: { children: ReactNode }) {
     isDoctor ? "doctor-profile" : null,
     getMyDoctorProfile,
   );
-  // the badges refresh on every move between places and after every change the doctor makes
-  // (an answered message, a reviewed report, a signed note), so done work drops off at once
+  // the count refreshes on every move between places and after every change the doctor makes
+  // (a prescription sent), so done work drops off at once
   const counts = useApiResource(
-    isDoctor ? `work-counts-${pathname}` : null,
-    getWorkCounts,
+    isDoctor ? `waiting-count-${pathname}` : null,
+    () => countWaiting(toApiDate(new Date())),
   );
   const reloadCounts = counts.reload;
   useEffect(() => {
@@ -171,8 +136,8 @@ export default function DoctorShell({ children }: { children: ReactNode }) {
 
   const section = sectionFor(pathname);
   const name = profile.data?.fullName ?? user?.fullName ?? "Doctor";
-  const countOf = (key?: keyof DoctorWorkCounts) =>
-    key && counts.data ? counts.data[key] : 0;
+  const countOf = (counted?: true) =>
+    counted && counts.data ? counts.data : 0;
 
   return (
     <AppTheme>
@@ -190,7 +155,7 @@ export default function DoctorShell({ children }: { children: ReactNode }) {
             <nav className={styles.nav} aria-label="Clinician">
               {SECTIONS.map((item) => {
                 const Icon = item.icon;
-                const count = countOf(item.count);
+                const count = countOf(item.counted);
                 return (
                   <Link
                     key={item.id}
@@ -245,13 +210,10 @@ export default function DoctorShell({ children }: { children: ReactNode }) {
           </div>
 
           <nav className={styles.dock} aria-label="Clinician">
-            {SECTIONS.filter((item) => item.dock !== false).map((item) => {
+            {SECTIONS.map((item) => {
               const Icon = item.icon;
-              // Hours has no tab of its own on a phone: it sits under Schedule
-              const on =
-                item.id === section ||
-                (item.id === "schedule" && section === "hours");
-              const count = countOf(item.count);
+              const on = item.id === section;
+              const count = countOf(item.counted);
               return (
                 <Link
                   key={item.id}

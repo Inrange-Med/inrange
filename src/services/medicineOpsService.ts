@@ -5,6 +5,8 @@
  *   POST  /api/admin/medicine/tasks/:id/done               { outcome, note, callBackAt? }
  *   POST  /api/admin/medicine/tasks/:id/assign             { to: "me" | userId | null }
  *   POST  /api/admin/medicine/tasks/:id/send-link          the order link on WhatsApp
+ *   GET   /api/admin/medicine/tasks/:id/unmatched          a "Match a medicine" task's hand-typed lines (doctor-portal-v2.md)
+ *   POST  /api/admin/medicine/tasks/:id/match              { line, medicineId } (admin)
  *   GET   /api/admin/medicine/patients?q=                  patients with medicine activity
  *   GET   /api/admin/medicine/patients/:id                 one patient's medicines, messages, tasks and doses
  *   PATCH /api/admin/medicine/patients/:id/coach           { coachId | null } (admin)
@@ -30,6 +32,7 @@ import type {
   OpsTask,
   OrderMove,
   TaskOutcome,
+  UnmatchedLine,
 } from "@/types/medicineOps";
 
 const base = "/api/admin/medicine";
@@ -70,6 +73,25 @@ export async function assignTask(id: string, to: "me" | string | null) {
 
 export async function sendOrderLink(id: string) {
   await apiRequest(`${base}/tasks/${id}/send-link`, { method: "POST" });
+}
+
+export async function getUnmatched(id: string): Promise<UnmatchedLine[]> {
+  const body = await apiRequest<ApiEnvelope<{ lines: UnmatchedLine[] }>>(
+    `${base}/tasks/${id}/unmatched`,
+  );
+  return body.data?.lines ?? [];
+}
+
+export async function matchMedicine(
+  id: string,
+  line: number,
+  medicineId: string,
+): Promise<number> {
+  const body = await apiRequest<ApiEnvelope<{ left: number }>>(
+    `${base}/tasks/${id}/match`,
+    { method: "POST", body: { line, medicineId } },
+  );
+  return body.data?.left ?? 0;
 }
 
 export async function listPatients(q = ""): Promise<OpsPatientRow[]> {

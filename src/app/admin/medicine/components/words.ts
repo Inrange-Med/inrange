@@ -20,6 +20,7 @@ export const KIND_WORDS: Record<TaskKind, string> = {
   REFILL_GAP: "Ran out",
   ADHERENCE: "Doses",
   RECONCILE: "Payment check",
+  MATCH_MEDICINE: "Match a medicine",
 };
 
 /** Tasks about an order the patient has not paid for: the call can end in these. */

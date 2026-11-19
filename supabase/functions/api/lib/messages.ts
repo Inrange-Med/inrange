@@ -43,6 +43,9 @@ export type Template = {
 
 const CARE = "/patient-dashboard/care";
 const CONSULT = "/consultation/";
+/** the doctor's consultation page (doctor portal v2): reports, the prescription, and Join, which opens the call in a new tab */
+const DR_CONSULT = "/doctor-dashboard/consultations/";
+const RX = "/patient-dashboard/prescriptions";
 const HOUR = 3600;
 
 export const TEMPLATES = {
@@ -143,7 +146,7 @@ export const TEMPLATES = {
     name: "prescription_ready",
     body: "Hi {{1}}, your prescription from {{2}} is ready. You can see it in the inrange app.",
     examples: ["Asha", "Dr. Govind Singh"],
-    buttons: [{ kind: "URL", label: "See the prescription", path: `${CARE}?rx=`, dynamic: true }],
+    buttons: [{ kind: "URL", label: "See the prescription", path: `${RX}?rx=`, dynamic: true }],
   },
   CHECK_IN: {
     name: "prescription_check_in",
@@ -246,33 +249,34 @@ export const TEMPLATES = {
     name: "doctor_new_booking",
     body: "A new {{1}} is booked with you for {{2}}. Open it from the link below.",
     examples: ["first consultation", "Wed, 18 Nov, 10:30 am"],
-    buttons: [{ kind: "URL", label: "See the consultation", path: CONSULT, dynamic: true }],
+    buttons: [{ kind: "URL", label: "See the consultation", path: DR_CONSULT, dynamic: true }],
   },
   DR_MOVED: {
     name: "doctor_booking_moved",
     body: "A video consultation with you has moved from {{1}} to {{2}}. The link below stays the same.",
     examples: ["Wed, 18 Nov, 10:30 am", "Thu, 19 Nov, 4:00 pm"],
-    buttons: [{ kind: "URL", label: "See the consultation", path: CONSULT, dynamic: true }],
+    buttons: [{ kind: "URL", label: "See the consultation", path: DR_CONSULT, dynamic: true }],
   },
   DR_SOON: {
     name: "doctor_call_starting",
-    body: "Your video consultation at {{1}} starts soon. Open the room from the link below.",
+    body: "Your video consultation at {{1}} starts soon. Open it from the link below to see the reports and join.",
     examples: ["10:30 am"],
-    buttons: [{ kind: "URL", label: "Open the room", path: CONSULT, dynamic: true }],
+    buttons: [{ kind: "URL", label: "Open consultation", path: DR_CONSULT, dynamic: true }],
     ttl: HOUR,
   },
   DR_PATIENT_WAITING: {
     name: "doctor_patient_waiting",
-    body: "Your patient for the {{1}} consultation has joined and is waiting. Open the room from the link below.",
+    body: "Your patient for the {{1}} consultation has joined and is waiting. Open it from the link below to join.",
     examples: ["10:30 am"],
-    buttons: [{ kind: "URL", label: "Open the room", path: CONSULT, dynamic: true }],
+    buttons: [{ kind: "URL", label: "Open consultation", path: DR_CONSULT, dynamic: true }],
     ttl: HOUR,
   },
+  // the prescription not sent an hour after the call (doctor portal v2; the key keeps its old name)
   DR_NOTE_TO_SIGN: {
-    name: "doctor_note_to_sign",
-    body: "The call note for your {{1}} consultation is ready to review and sign. The prescription reaches the patient once it is signed.",
+    name: "doctor_prescription_to_send",
+    body: "The prescription for your {{1}} consultation has not reached the patient yet. Finish it and send it from the link below.",
     examples: ["10:30 am"],
-    buttons: [{ kind: "URL", label: "Open the notes", path: "/doctor-dashboard/notes" }],
+    buttons: [{ kind: "URL", label: "Open consultation", path: DR_CONSULT, dynamic: true }],
   },
   DR_PATIENT_MESSAGE: {
     name: "doctor_patient_message",
@@ -358,6 +362,6 @@ if (import.meta.main) {
   for (const [k, line] of Object.entries(ACKS)) assert(!banned.test(line) && !/[—–]/.test(line), `ack ${k}`);
   assert(fill("{{1}} and {{2}}", ["a", "b"]) === "a and b", "fill");
   const def = templateDefinition(TEMPLATES.RX_READY, "https://inrangemed.com");
-  assert(JSON.stringify(def).includes("https://inrangemed.com/patient-dashboard/care?rx={{1}}"), "dynamic url");
+  assert(JSON.stringify(def).includes("https://inrangemed.com/patient-dashboard/prescriptions?rx={{1}}"), "dynamic url");
   console.log(`messages ok: ${names.size} templates`);
 }

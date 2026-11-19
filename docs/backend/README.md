@@ -22,6 +22,8 @@ status, service function, screen), **Requests and responses** (examples), **Note
 | [medicine-cart.md](medicine-cart.md) | LIVE: the pharmacy catalogue, the one-signature prescription and PDF, the prefilled cart (nano plan: held back; on a plan: at once), medicine checkout; internal prices; plus the other asks from the 12 Nov call |
 | [medicine-flow.md](medicine-flow.md) | LIVE: after a prescription: the follow-up, the medicine queue (admin and health coach), deliveries and feedback, refills and renewals, dose reminders and adherence, the tick, the measures |
 | [whatsapp.md](whatsapp.md) | LIVE: WhatsApp for every notice, to patients and doctors (consultations with the link to the video room, blood tests, the review, prescriptions, orders, reminders, chat, payments): the templates, consent, retries, the webhook, the doctor's alerts, how to turn it on |
+| [doctor-portal-v2.md](doctor-portal-v2.md) | LIVE: the 17 Nov call's portal: the doctor's three places (Today, History, Availability), consultation states, the consultation page (reports, autosaved prescription, the master-list search, Create PDF then Send, new versions), the call in a new tab, matching a hand-typed medicine, and the patient's Home with one next step (GET /api/patient/next-step) |
+| [doctor-portal-v2-prd.md](doctor-portal-v2-prd.md) | The PRD from the 17 Nov call, as written |
 | [medicine-flow-prd.md](medicine-flow-prd.md) | The shared medicine flow PRD mapped to inrange: what is built, what to build next in order (WhatsApp check-ins, order updates, ops queue, coach view, refills, adherence), what does not apply, conflicts to settle; the prescription tool asks from the 16 Nov call |
 
 ## Conventions the app expects

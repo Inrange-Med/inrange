@@ -49,3 +49,6 @@ next-env.d.ts
 firebase-debug.log
 .firebase/
 .gstack/
+
+# python
+__pycache__/

@@ -1,12 +1,11 @@
 "use client";
 
 /*
-  Hours: when patients can book the doctor. The weekly timetable and the days off ahead both come
+  Availability (the doctor's third place, doctor portal v2): when the doctor can be booked. The weekly timetable and the days off ahead both come
   from GET /api/doctor/availability; every save answers the whole picture again, so each card hands
   it back here and the count of consultations left outside the hours stays current.
 */
 
-import Link from "next/link";
 import ErrorNotice from "@/components/ui/ErrorNotice";
 import ClinicSkeleton from "@/app/doctor-dashboard/components/ClinicSkeleton";
 import PageHead from "@/components/ui/PageHead";
@@ -45,8 +44,8 @@ export default function HoursView() {
     <main className={clinicStyles.page}>
       <PageHead
         className={clinicStyles.pageHead}
-        title="Hours"
-        sub="Set when patients can book you. Times are India time (IST)."
+        title="Availability"
+        sub="When you can be booked. Times are India time (IST)."
       />
 
       {bookedOutside > 0 && (
@@ -55,9 +54,8 @@ export default function HoursView() {
           {bookedOutside === 1
             ? "consultation stays booked"
             : "consultations stay booked"}{" "}
-          outside your hours. Move or cancel{" "}
-          {bookedOutside === 1 ? "it" : "them"} from{" "}
-          <Link href="/doctor-dashboard/schedule">Schedule</Link> if needed.
+          outside your hours. Ask the inrange team to move{" "}
+          {bookedOutside === 1 ? "it" : "them"} if needed.
         </p>
       )}
 

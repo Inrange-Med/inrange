@@ -159,6 +159,7 @@ export default function ProfileView() {
   return (
     <main className={layoutStyles.page}>
       <PageHead
+        back={{ href: "/patient-dashboard", label: "Home" }}
         title={<span className={styles.name}>{name}</span>}
         sub={
           mobile ? (

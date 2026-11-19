@@ -1,4 +1,5 @@
-/* The patient shell (Arhaan account/Shell.module.css): the four sections as centred pills in the bar on a laptop and a thumb-reach dock on a phone, and the toast lifted above the dock. */
+/* The patient shell: the wordmark (Home) and the patient's name (their profile) in one bar; no tabs, no dock
+   (doctor portal v2: Home is the one place). The tab and dock rules below stay for the old sections' code. */
 
 /* ---------- the app frame and the top bar ---------- */
 /* clip, not hidden: no scroll container, so the sticky bar still sticks, and iOS cannot pan the page sideways */
@@ -45,6 +46,35 @@
   align-items: center;
   min-height: 44px;
   color: var(--ink);
+}
+/* the patient's name, top right: their profile */
+.me {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 0 4px 0 16px;
+  border-radius: 999px;
+  font-size: 0.9375rem;
+  font-weight: 560;
+  color: var(--ink);
+  text-decoration: none;
+  box-shadow: inset 0 0 0 1px var(--hair);
+  transition: box-shadow 160ms var(--ease-out);
+}
+.me span {
+  max-width: 14ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.me[aria-current="page"] {
+  box-shadow: inset 0 0 0 1.5px var(--ink);
+}
+@media (hover: hover) and (pointer: fine) {
+  .me:hover {
+    box-shadow: inset 0 0 0 1px var(--ink-3);
+  }
 }
 .barEnd {
   display: flex;

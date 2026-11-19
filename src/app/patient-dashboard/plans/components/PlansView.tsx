@@ -77,7 +77,7 @@ export default function PlansView() {
     <main className={`${layoutStyles.page} ${layoutStyles.narrow}`}>
       <PageHead
         title="Plan and payments"
-        back={{ href: "/patient-dashboard/care", label: "Care" }}
+        back={{ href: "/patient-dashboard", label: "Home" }}
       />
       <div className={styles.stack}>
         {content()}

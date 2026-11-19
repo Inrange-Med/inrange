@@ -1,0 +1,53 @@
+/* Payments: one list, what and when on the left, the amount on the right. */
+
+.page {
+  max-width: calc(640px + var(--gutter) * 2);
+}
+
+.empty {
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+.list {
+  display: grid;
+  overflow: hidden;
+  border-radius: var(--r-surface);
+  background: var(--paper);
+  box-shadow: 0 0 0 1px var(--hair);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 72px;
+  padding: 14px 20px;
+}
+
+.row + .row {
+  border-top: 1px solid var(--hair);
+}
+
+.what {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.what strong {
+  font-weight: 560;
+  overflow-wrap: anywhere;
+}
+
+.what span {
+  font-size: 0.875rem;
+  color: var(--ink-3);
+}
+
+.amount {
+  font-weight: 600;
+  white-space: nowrap;
+}

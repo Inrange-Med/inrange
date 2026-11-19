@@ -20,7 +20,7 @@ export type RxPdf = {
   doctor: { name: string; qualification: string; registration: string; practiceAddress: string; contact: string };
   patient: { name: string; ageSex: string; patientId: string; mobile: string; city: string | null; vitals: string | null };
   consult: { mode: string; type: string; dateTime: string; signedAt: string };
-  clinical: { complaint: string; diagnosis: string; allergies: string; otherMedicines: string };
+  clinical: { complaint: string; diagnosis: string; history?: string | null; allergies: string; otherMedicines: string };
   items: RxPdfItem[];
   callout: string | null;
   advice: [string, string][];
@@ -170,6 +170,8 @@ export async function prescriptionPdf(rx: RxPdf): Promise<Uint8Array> {
   );
   fullCard("Clinical assessment", [
     ["Complaint", rx.clinical.complaint], ["Diagnosis", rx.clinical.diagnosis],
+    // the consultation page's "Patient history" (doctor portal v2), only when the doctor wrote one
+    ...(rx.clinical.history ? [["History", rx.clinical.history] as [string, string]] : []),
     ["Allergies", rx.clinical.allergies], ["Other medicines", rx.clinical.otherMedicines],
   ]);
 

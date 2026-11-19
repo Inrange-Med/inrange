@@ -53,7 +53,7 @@ export default function BookAppointmentView() {
         checkoutHref({
           purpose: "CONSULTATION_FEE",
           referenceId: slot.id,
-          returnTo: "/patient-dashboard/appointments",
+          returnTo: "/patient-dashboard",
         }),
       );
       return;
@@ -65,7 +65,7 @@ export default function BookAppointmentView() {
     });
     const at = new Date(slot.at);
     toast(`Booked for ${spokenDay(at)}, ${clockTime(at)}`);
-    router.push("/patient-dashboard/appointments");
+    router.push("/patient-dashboard");
   };
 
   const content = () => {
@@ -112,10 +112,7 @@ export default function BookAppointmentView() {
       <PageHead
         title="Book a consultation"
         sub="A video consultation with an inrange doctor."
-        back={{
-          href: "/patient-dashboard/appointments",
-          label: "Appointments",
-        }}
+        back={{ href: "/patient-dashboard", label: "Home" }}
       />
       <div className={styles.cols}>{content()}</div>
     </main>

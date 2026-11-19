@@ -1,0 +1,77 @@
+/* History: the name search and the date range on one line (wrapping on a phone), then the rows. */
+
+.page {
+  display: grid;
+  align-content: start;
+  gap: 20px;
+  max-width: calc(960px + var(--gutter) * 2);
+}
+
+.page > :first-child {
+  margin-bottom: 0;
+}
+
+.filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 10px;
+}
+
+.search,
+.date {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 0 18px;
+  border-radius: 999px;
+  background: var(--paper);
+  box-shadow: inset 0 0 0 1px var(--hair-2);
+  color: var(--ink-3);
+  transition: box-shadow 180ms var(--ease-out);
+}
+
+.search:focus-within,
+.date:focus-within {
+  box-shadow: inset 0 0 0 1.5px var(--ink);
+}
+
+.search input,
+.date input {
+  min-width: 0;
+  height: 50px;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 1rem;
+  color: var(--ink);
+}
+
+.search input {
+  flex: 1;
+}
+
+.search input:focus,
+.date input:focus {
+  outline: none;
+}
+
+.date span {
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+@media (max-width: 719px) {
+  .filters {
+    grid-template-columns: 1fr 1fr;
+  }
+  .search {
+    grid-column: 1 / -1;
+  }
+  .date {
+    padding: 0 14px;
+  }
+  .date input {
+    width: 100%;
+  }
+}

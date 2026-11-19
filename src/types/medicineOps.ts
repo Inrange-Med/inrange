@@ -13,7 +13,18 @@ export type TaskKind =
   | "RENEWAL"
   | "REFILL_GAP"
   | "ADHERENCE"
-  | "RECONCILE";
+  | "RECONCILE"
+  /** a medicine the doctor typed that is not on the master list (doctor portal v2) */
+  | "MATCH_MEDICINE";
+
+/** A hand-typed line waiting to be matched to the master list. */
+export type UnmatchedLine = {
+  index: number;
+  name: string;
+  dose: string;
+  frequencyWords: string;
+  duration: string;
+};
 
 export type TaskPriority = "CRITICAL" | "HIGH" | "NORMAL";
 

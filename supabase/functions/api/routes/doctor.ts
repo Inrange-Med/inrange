@@ -33,12 +33,11 @@ import type { Context } from "hono";
 import { sql } from "../lib/db.ts";
 import { body, fail, intParam, ok } from "../lib/http.ts";
 import { requireDoctor } from "../lib/auth.ts";
-import { signedUrl, uploadFile } from "../lib/storage.ts";
-import { cartAvailableAt, medicineColumns, searchInventory, type CartLine } from "../lib/pharmacy.ts";
-import { prescriptionPdf, type RxPdfItem } from "../lib/prescriptionPdf.ts";
-import { closeTasks, startMedicineFlow } from "../lib/medicineFlow.ts";
+import { signedUrl } from "../lib/storage.ts";
+import { medicineColumns, searchInventory } from "../lib/pharmacy.ts";
+import { rxItem, signRx } from "../lib/prescriptions.ts";
 import * as notices from "../lib/notices.ts";
-import { deliver, sendNow } from "../lib/notify.ts";
+import { sendNow } from "../lib/notify.ts";
 
 export const doctorRoutes = new Hono();
 
@@ -274,6 +273,10 @@ doctorRoutes.post("/doctor/notes/:noteId/sign", async (c) => {
       const stocked = new Map((ids.length ? await tx`select ${medicineColumns(tx)} from medicines m where m.id in ${tx(ids)}` : [])
         .map((m) => [m.id, m]));
       for (const m of changes.filter((x) => x.action !== "STOP")) items.push(rxItem(m, stocked.get(Number(m.medicineId))));
+      // the consultation page (doctor portal v2) may already be writing this visit's prescription
+      const [writing] = n.appointment_id
+        ? await tx`select 1 from prescriptions where appointment_id = ${n.appointment_id} and status = 'DRAFT'` : [];
+      if (writing) fail(409, "This consultation's prescription is being written on its page. Finish and send it there.");
       const [rx] = await tx`
         insert into prescriptions (patient_id, doctor_id, appointment_id, status, version, items)
         values (${n.patient_id}, ${doctor.id}, ${n.appointment_id}, 'DRAFT', ${next}, ${tx.json(items)}) returning id`;
@@ -618,191 +621,3 @@ doctorRoutes.get("/pharmacy/inventory", async (c) => {
   await requireDoctor(c);
   return ok(c, await searchInventory(String(c.req.query("query") ?? "").slice(0, 60)));
 });
-
-// ---------- prescriptions ----------
-
-const IST = { timeZone: "Asia/Kolkata" } as const;
-const dayOf = (d: Date) => new Intl.DateTimeFormat("en-IN", { ...IST, day: "numeric", month: "short", year: "numeric" }).format(d);
-const timeOf = (d: Date) => new Intl.DateTimeFormat("en-IN", { ...IST, hour: "numeric", minute: "2-digit", hour12: true }).format(d).toLowerCase();
-const monthsWord = (m: number) => `${m} ${m === 1 ? "month" : "months"}`;
-const daysWord = (d: number) => (d % 7 === 0 ? `${d / 7} ${d === 7 ? "week" : "weeks"}` : `${d} days`);
-
-/** A note's medicine as a prescription line; a catalogue item brings its generic name, form, route and pack. */
-function rxItem(m: Row, stocked: Row | undefined): Row {
-  if (!stocked)
-    return { medicineName: m.name, strength: m.strength, dose: "", frequency: m.detail, route: "", instructions: "",
-             reason: "", genericName: null, form: "", medicineId: null, quantity: null };
-  const quantity = Math.min(12, Math.max(1, Math.round(Number(m.quantity) || 1)));
-  // "pen (4 weekly doses)": the unit counts in Qty, its contents read with the form
-  const [, unit, contents] = /^(.*?)\s*(?:\((.*)\))?$/.exec(stocked.pack) ?? [];
-  return {
-    medicineId: stocked.id, medicineName: stocked.brand, genericName: stocked.molecule,
-    form: contents ? `${stocked.form}, ${contents} a ${unit}` : stocked.form,
-    strength: stocked.strength, dose: "", frequency: m.detail || stocked.default_frequency, route: stocked.route,
-    instructions: "", reason: "", quantity, quantityLabel: `${quantity} x ${unit || stocked.pack}`,
-    duration: daysWord(quantity * stocked.pack_days),
-  };
-}
-
-/**
- * Signs a draft prescription: the PDF, the patient's copy and, for everything the pharmacy stocks, a cart
- * at the prescribed quantities with the default discount. The first consultation without a plan (the nano
- * plan) is one month and its cart waits NANO_CART_DELAY_HOURS (12 Nov 2026 call); on a plan, the doctor's
- * months stand and the cart is ready at once. A newer prescription closes the patient's unpaid cart.
- */
-async function signRx(doctor: { id: number; name: string; qualification: string }, patientId: number, rxId: number, monthsAsked: number) {
-  const [rx] = await sql`select * from prescriptions where id = ${rxId} and patient_id = ${patientId}`;
-  if (!rx) fail(400, "That prescription was not found for this patient.");
-  if (rx.status !== "DRAFT") fail(409, "Only a draft prescription can be signed.");
-  const items = rx.items as Row[];
-  if (!items.length) fail(422, "This prescription has no medicines to sign.");
-  const signedAt = new Date();
-  const { onPlan, availableAt } = await cartAvailableAt(sql, patientId, signedAt);
-  const months = onPlan ? Math.min(12, Math.max(1, Math.round(monthsAsked))) : 1;
-  const validUntil = new Date(signedAt);
-  validUntil.setMonth(validUntil.getMonth() + months);
-
-  const ids = items.map((i) => Number(i.medicineId)).filter((id) => Number.isInteger(id) && id > 0);
-  const [[d], [u], [addr], [appt], [note], [clinical], [weight], [series], [previous], stockRows] = await Promise.all([
-    sql`select full_name, qualification, registration_no, council, practice_address, contact from doctors where id = ${doctor.id}`,
-    sql`select u.mobile, coalesce(u.full_name, nullif(concat_ws(' ', p.first_name, p.last_name), '')) as full_name,
-          p.age_years, p.gender, p.height_cm, p.weight_kg
-        from users u left join patient_profiles p on p.user_id = u.id where u.id = ${patientId}`,
-    sql`select * from addresses where user_id = ${patientId} order by is_default desc, id desc limit 1`,
-    sql`select a.visit_type, a.reason, coalesce(a.started_at, (s.slot_date + s.start_time) at time zone 'Asia/Kolkata', a.created_at) as at
-        from appointments a left join doctor_slots s on s.id = a.slot_id where a.id = ${rx.appointment_id}`,
-    sql`select sections, follow_ups from clinical_notes where prescription_id = ${rxId} or appointment_id = ${rx.appointment_id}
-        order by id desc limit 1`,
-    sql`select allergies, outside_medicines from patient_clinical where patient_id = ${patientId}`,
-    sql`select weight_kg from weight_logs where user_id = ${patientId} order by logged_at desc limit 1`,
-    // one Rx number per patient (their first prescription's), versions under it
-    sql`select min(id) as n from prescriptions where patient_id = ${patientId}`,
-    sql`select version, signed_at from prescriptions where patient_id = ${patientId} and status = 'SIGNED' order by version desc limit 1`,
-    ids.length ? sql`select id, molecule, brand, form, strength, pack, pack_days, route, storage, seek_help from medicines where id in ${sql(ids)}` : [],
-  ]);
-  const stock = new Map(stockRows.map((m: Row) => [m.id, m]));
-  const sections = (note?.sections ?? []) as Row[];
-  const said = (key: string) => sentences(sections, key).map((x) => String(x.text));
-  const kg = weight?.weight_kg ?? u?.weight_kg;
-  const bmi = kg && u?.height_cm ? (kg / (u.height_cm / 100) ** 2).toFixed(1) : null;
-  const outside = clinical?.outside_medicines as string[] | null | undefined;
-  const callAt = appt?.at ? new Date(appt.at) : signedAt;
-  const rxNumber = series?.n ?? rxId;
-  const env = (name: string) => Deno.env.get(name)?.trim() || "";
-
-  // "pen (4 weekly doses)": the unit that counts, and what one holds
-  const packOf = (m: Row) => { const [, unit, holds] = /^(.*?)\s*(?:\((.*)\))?$/.exec(String(m.pack)) ?? []; return { unit: unit || "pack", holds }; };
-  const qtyOf = (m: Row, q: number) => `${q} ${packOf(m).unit}${q === 1 ? "" : "s"}`;
-  // a dose step-up: two or more strengths of one molecule follow each other, the lowest first
-  const lines = items.map((i, at) => ({ i, at, m: stock.get(Number(i.medicineId)) as Row | undefined, q: Number(i.quantity) || 1 }));
-  const byMolecule = new Map<string, typeof lines>();
-  for (const l of lines) if (l.m) byMolecule.set(l.m.molecule, [...(byMolecule.get(l.m.molecule) ?? []), l]);
-  const steps = new Map<number, { step: number; when: string }>();
-  const callouts: string[] = [];
-  for (const [molecule, group] of byMolecule) {
-    if (group.length < 2) continue;
-    group.sort((a, b) => parseFloat(a.m!.strength) - parseFloat(b.m!.strength));
-    let week = 1;
-    group.forEach((l, k) => {
-      const weeks = Math.max(1, Math.round((l.q * l.m!.pack_days) / 7));
-      const unit = packOf(l.m!).unit;
-      steps.set(l.at, { step: k + 1, when: `Weeks ${week} to ${week + weeks - 1}${k ? `, after Step ${k} ${unit}s are finished` : ""}` });
-      week += weeks;
-    });
-    const unit = packOf(group[0].m!).unit;
-    callouts.push(group.length === 2
-      ? `Take only one ${molecule.toLowerCase()} strength at a time. Move to ${group[1].m!.strength} only after the ${group[0].m!.strength} ${unit}s are finished.`
-      : `Take only one ${molecule.toLowerCase()} strength at a time. Move to each next step only after the ${unit}s of the step before are finished.`);
-  }
-  // step-ups print in step order, where their first strength was prescribed
-  const firstAt = new Map<string, number>();
-  for (const l of lines) if (l.m && !firstAt.has(l.m.molecule)) firstAt.set(l.m.molecule, l.at);
-  lines.sort((a, b) => (a.m ? firstAt.get(a.m.molecule)! : a.at) - (b.m ? firstAt.get(b.m.molecule)! : b.at) ||
-    (steps.get(a.at)?.step ?? 0) - (steps.get(b.at)?.step ?? 0));
-  const pdfItems: RxPdfItem[] = lines.map(({ i, at, m, q }) => m
-    ? { generic: m.molecule, brand: m.brand, form: packOf(m).holds ? `${m.form}, ${packOf(m).holds} per ${packOf(m).unit}` : m.form,
-        strength: m.strength, how: i.frequency ?? "", route: m.route ?? "", step: steps.get(at)?.step ?? null,
-        when: steps.get(at)?.when ?? daysWord(q * m.pack_days), quantity: qtyOf(m, q), instructions: i.instructions ?? "" }
-    : { generic: i.medicineName ?? "", brand: null, form: i.form ?? "", strength: i.strength ?? "", how: i.frequency ?? "",
-        route: i.route ?? "", step: null, when: monthsWord(months), quantity: "", instructions: i.instructions ?? "" });
-  const unique = (key: string) => [...new Set(lines.map((l) => l.m?.[key]).filter(Boolean))].join(" ");
-  const followUps = ((note?.follow_ups ?? []) as Row[]).filter((f) => f.include).map((f) => String(f.text));
-  const advice = said("patient").length ? said("patient") : said("plan");
-  // ponytail: placeholders until inrange confirms them (16 Nov 2026); set the secret or doctor column, no deploy needed
-  const pdf = await prescriptionPdf({
-    rxNumber, version: rx.version,
-    supersedes: previous ? `Supersedes Rx ${rxNumber} version ${previous.version}, issued ${dayOf(new Date(previous.signed_at))}` : null,
-    practice: {
-      name: "inrange, by Novaxis Lifesciences Pvt Ltd",
-      address: `Registered office: ${env("PRACTICE_ADDRESS") || "to be confirmed"}`,
-      supportPhone: `Support: ${env("SUPPORT_PHONE") || "phone number to be confirmed"}`,
-      pharmacyLicence: `Pharmacy drug licence (Forms 20, 21): ${env("PHARMACY_LICENCE") || "to be confirmed"}`,
-    },
-    doctor: {
-      name: d?.full_name ?? doctor.name, qualification: d?.qualification ?? "",
-      registration: `Reg. No. ${d?.registration_no ?? "not recorded"}${d?.council ? ` · ${d.council}` : ""}`,
-      practiceAddress: d?.practice_address || "Practice address: to be confirmed", contact: d?.contact || "Contact: to be confirmed",
-    },
-    patient: {
-      name: u?.full_name ?? `Patient ${patientId}`,
-      ageSex: [u?.age_years ? `${u.age_years} years` : null, u?.gender].filter(Boolean).join(", ") || "Not recorded",
-      patientId: `IR-${String(patientId).padStart(6, "0")}`, mobile: u?.mobile ? `+91 ${u.mobile}` : "",
-      city: addr?.city ?? null,
-      vitals: [kg ? `Weight ${kg} kg` : null, u?.height_cm ? `Height ${u.height_cm} cm` : null, bmi ? `BMI ${bmi}` : null]
-        .filter(Boolean).join("  ·  ") || null,
-    },
-    consult: { mode: "Video teleconsultation", type: appt?.visit_type === "FOLLOW_UP" ? "Follow-up" : "First consultation",
-      dateTime: `${dayOf(callAt)}, ${timeOf(callAt)}`, signedAt: `${dayOf(signedAt)}, ${timeOf(signedAt)}` },
-    clinical: {
-      complaint: String(appt?.reason ?? "").split(" | Note:")[0] || "Weight and metabolic care",
-      diagnosis: said("assessment").join(" ") || "Not recorded",
-      allergies: clinical?.allergies || "Not recorded",
-      otherMedicines: outside == null ? "Not recorded" : outside.length ? outside.join(", ") : "None",
-    },
-    items: pdfItems,
-    callout: callouts.join(" ") || null,
-    advice: [
-      ...(advice.length ? [["Advice", advice.join(" ")] as [string, string]] : []),
-      ...(unique("storage") ? [["Storage", unique("storage")] as [string, string]] : []),
-      ...(unique("seek_help") ? [["Contact us if", unique("seek_help")] as [string, string]] : []),
-      ...(followUps.length ? [["Investigations", followUps.join("; ")] as [string, string]] : []),
-      ["Follow-up", "Review with your doctor in 1 month"],
-      ["Valid until", dayOf(validUntil)],
-    ],
-    signature: { method: env("ESIGN_METHOD") || "Aadhaar eSign or DSC, to be confirmed", reference: "to be confirmed" },
-  });
-  const path = `${patientId}/rx-${rxId}-v${rx.version}.pdf`;
-  await uploadFile("prescriptions", path, new Blob([pdf as Uint8Array<ArrayBuffer>], { type: "application/pdf" }), "application/pdf");
-
-  const merged = new Map<number, CartLine>();
-  for (const i of items.filter((x) => x.medicineId)) {
-    const id = Number(i.medicineId), q = Number(i.quantity) || 1;
-    const prev = merged.get(id);
-    merged.set(id, { medicineId: id, quantity: (prev?.quantity ?? 0) + q, prescribed: (prev?.prescribed ?? 0) + q });
-  }
-  const messageId = await sql.begin(async (tx) => {
-    await tx`update prescriptions set status = 'SUPERSEDED' where patient_id = ${patientId} and status = 'SIGNED'`;
-    await tx`update prescriptions set status = 'SIGNED', signed_at = ${signedAt}, pdf_path = ${path}, months = ${months},
-               valid_until = ${validUntil} where id = ${rxId}`;
-    const replaced = await tx`update medicine_carts set status = 'CLOSED' where patient_id = ${patientId} and status = 'OPEN' returning id`;
-    // the replaced orders' follow-ups and calls close with them: nobody calls about an order that is gone
-    for (const { id } of replaced) {
-      await tx`update medicine_followups set stage = 'DONE', next_at = null, closed_reason = 'SUPERSEDED', closed_at = now()
-               where cart_id = ${id} and closed_at is null`;
-      await closeTasks(tx, { cartId: id }, ["NO_REPLY", "PLAN_CALL", "PAYMENT_FAILED", "QUESTIONS"], "RESOLVED", "A newer prescription replaced this order");
-    }
-    const [cart] = merged.size
-      ? await tx`insert into medicine_carts (patient_id, prescription_id, available_at, lines, address_id)
-               values (${patientId}, ${rxId}, ${availableAt}, ${tx.json([...merged.values()])}, ${addr?.id ?? null}) returning id`
-      : [];
-    await tx`insert into audit_log (patient_id, actor_id, action) values (${patientId}, ${doctor.id}, ${`Signed prescription version ${rx.version}, ${doctor.name}`})`;
-    // the prescription on WhatsApp now (a link into the app; the PDF stays with us), and the follow-up (lib/medicineFlow.ts)
-    return await startMedicineFlow(tx, {
-      patientId, prescriptionId: rxId, version: rx.version, cartId: cart?.id ?? null, onPlan, signedAt, availableAt,
-      doctorName: doctor.name,
-    });
-  });
-  if (messageId) await deliver(messageId).catch((e) => console.error("prescription message", e.message));
-  return { id: String(rxId), version: rx.version, status: "SIGNED", signedAt: ist(signedAt), months,
-           validUntil: ist(validUntil), cartAvailableAt: merged.size ? ist(availableAt) : null };
-}

@@ -65,8 +65,9 @@ export async function priceCart(tx: Tx, lines: CartLine[], months: number) {
   const percent = await discountPercent(tx, months);
   const priced = lines.map((l) => {
     const m = byId.get(l.medicineId);
-    const available = Boolean(m?.active);
-    const unit = m ? unitPrice(m.mrp_paise, percent, m.cost_paise ?? null) : 0;
+    // an item on the master list without a price is not sold (doctor portal v2): never in a bill
+    const available = Boolean(m?.active) && m?.mrp_paise != null;
+    const unit = m && available ? unitPrice(m.mrp_paise, percent, m.cost_paise ?? null) : 0;
     return {
       medicineId: String(l.medicineId), brand: m?.brand ?? "", molecule: m?.molecule ?? "", strength: m?.strength ?? "",
       form: m?.form ?? "", pack: m?.pack ?? "", quantity: available ? l.quantity : 0, prescribed: l.prescribed,

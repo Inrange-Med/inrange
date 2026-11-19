@@ -1,0 +1,58 @@
+/* Home: the greeting, the one card, three rows. One narrow column at every width. */
+
+.home {
+  display: grid;
+  align-content: start;
+  gap: 20px;
+  max-width: calc(560px + var(--gutter) * 2);
+  margin-inline: auto;
+  padding: clamp(16px, 4vw, 40px) var(--gutter) 48px;
+}
+
+.hello {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 1.7rem + 1.2vw, 2.5rem);
+  font-weight: 500;
+  line-height: 1.05;
+  letter-spacing: -0.025em;
+}
+
+.rows {
+  display: grid;
+  overflow: hidden;
+  border-radius: var(--r-surface);
+  background: var(--paper);
+  box-shadow: 0 0 0 1px var(--hair);
+}
+
+.rows li + li {
+  border-top: 1px solid var(--hair);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 60px;
+  padding: 0 20px;
+  font-size: 1.0625rem;
+  font-weight: 560;
+  color: var(--ink);
+  text-decoration: none;
+  transition: background-color 160ms var(--ease-out);
+}
+
+.row svg {
+  color: var(--ink-3);
+}
+
+.row:active {
+  background: var(--bg);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .row:hover {
+    background: var(--bg);
+  }
+}
