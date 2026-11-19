@@ -193,6 +193,10 @@ export async function listPackages(): Promise<LabPackage[]> {
 }
 
 export async function findPackage(code: string): Promise<LabPackage> {
+  if (!redcliffeLive()) {
+    const { groups: _g, ...p } = mockPackage(code);
+    return p;
+  }
   const found = (await listPackages()).find((p) => p.code === code);
   if (!found) throw new RedcliffeError("That test package is not offered.");
   return found;

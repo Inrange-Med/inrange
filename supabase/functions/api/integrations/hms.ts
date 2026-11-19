@@ -50,7 +50,8 @@ export async function joinLink(roomId: string, role: CallRole, name: string, use
   if (!codes.length) codes = (await hms(`/room-codes/room/${roomId}`, {})).data ?? [];
   const code = codes.find((c) => c.role === role && c.enabled)?.code;
   if (!code) throw new Error(`100ms room ${roomId} has no enabled code for role "${role}"`);
-  const q = new URLSearchParams({ name, userId: String(userId) });
+  // skip_preview: our page already ran the camera check and its one "Join now"; 100ms's own preview would be a second
+  const q = new URLSearchParams({ name, userId: String(userId), skip_preview: "true" });
   // HMS_SUBDOMAIN may be "inrange" or the full "inrange.app.100ms.live"
   const sub = env.hmsSubdomain.replace(/^https?:\/\//, "").replace(/\.app\.100ms\.live\/?$/, "");
   return `https://${sub}.app.100ms.live/meeting/${code}?${q}`;

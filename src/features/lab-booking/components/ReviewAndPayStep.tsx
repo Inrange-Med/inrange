@@ -9,7 +9,7 @@
  */
 
 import { addressText } from "@/lib/format/address";
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, WarningCircle } from "@phosphor-icons/react";
@@ -48,6 +48,12 @@ export default function ReviewAndPayStep({
   const now = useNow(10_000);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // the error sits below the docked button on a phone: bring it into view, or the press seems to do nothing
+  const errorRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (error)
+      errorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [error]);
   const {
     chosenPackage: labPackage,
     carePackage,
@@ -191,7 +197,7 @@ export default function ReviewAndPayStep({
       {beforePay}
 
       {error && (
-        <div>
+        <div ref={errorRef}>
           <p className={formStyles.err} role="alert">
             <WarningCircle size={16} weight="fill" aria-hidden="true" />
             <span>{error}</span>
