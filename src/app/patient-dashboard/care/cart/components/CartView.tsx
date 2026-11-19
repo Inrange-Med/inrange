@@ -220,8 +220,18 @@ export default function CartView() {
 
             <Card className={styles.billCard}>
               <ItemisedBill
-                lines={
-                  cart.discountPaise > 0
+                lines={[
+                  // the plan the doctor prescribed: one bill, one payment with the medicines
+                  ...(cart.plan
+                    ? [
+                        {
+                          key: "plan",
+                          label: cart.plan.name,
+                          amount: rupees(cart.plan.pricePaise),
+                        },
+                      ]
+                    : []),
+                  ...(cart.discountPaise > 0
                     ? [
                         {
                           key: "mrp",
@@ -234,8 +244,16 @@ export default function CartView() {
                           amount: `- ${rupees(cart.discountPaise)}`,
                         },
                       ]
-                    : []
-                }
+                    : cart.plan
+                      ? [
+                          {
+                            key: "medicines",
+                            label: "Medicines",
+                            amount: rupees(cart.mrpTotalPaise),
+                          },
+                        ]
+                      : []),
+                ]}
                 total={{
                   label: "To pay",
                   note: "From inrange's licensed pharmacy",

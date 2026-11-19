@@ -5,14 +5,8 @@
 // annotated reference client this is ported from.
 import { env, live } from "../lib/env.ts";
 import { sql } from "../lib/db.ts";
-import { AsyncLocalStorage } from "node:async_hooks";
 
-/**
- * Test accounts (TEST_MOBILES) always get the mock lab, whatever the keys: a test run never books a real home
- * collection. index.ts runs a test account's /api/labs requests inside mockLab; everyone else gets Redcliffe.
- */
-export const mockLab = new AsyncLocalStorage<true>();
-export const redcliffeLive = () => live.redcliffe() && !mockLab.getStore();
+export const redcliffeLive = live.redcliffe;
 
 /** httpStatus null = refused before sending (bad input); the route answers 422 then, else 502. */
 export class RedcliffeError extends Error {
@@ -132,8 +126,6 @@ const inNcr = (lat: number, lng: number) => lat > 28.2 && lat < 28.95 && lng > 7
 
 const mockPackage = (code: string) => {
   const found = MOCK_PACKAGES.find((p) => p.code === code);
-  // a real lab code (the care package's PL70) books as the metabolic panel; a care package sets its own price
-  if (!found && /^[A-Z]+\d+$/.test(code)) return { ...MOCK_PACKAGES[0], code };
   if (!found) throw new RedcliffeError("That test package is not offered.");
   return found;
 };
@@ -193,10 +185,6 @@ export async function listPackages(): Promise<LabPackage[]> {
 }
 
 export async function findPackage(code: string): Promise<LabPackage> {
-  if (!redcliffeLive()) {
-    const { groups: _g, ...p } = mockPackage(code);
-    return p;
-  }
   const found = (await listPackages()).find((p) => p.code === code);
   if (!found) throw new RedcliffeError("That test package is not offered.");
   return found;

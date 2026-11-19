@@ -77,12 +77,16 @@ function wordsFor(step: NextStep): Words {
       const plan = step.payFor === "PLAN";
       const total = rupees(step.bill.totalPaise);
       return {
-        title: plan ? "Your plan" : "Your medicines",
+        title: plan
+          ? "Your plan"
+          : step.withPlan
+            ? "Your plan and medicines"
+            : "Your medicines",
         text: plan
-          ? step.followedBy === "MEDICINES"
-            ? "First your plan, then your medicines, as the next step."
-            : "The plan your care team recommended."
-          : "As your doctor prescribed. Delivered to your door.",
+          ? "The plan your care team recommended."
+          : step.withPlan
+            ? "As your doctor prescribed, in one payment. Medicines delivered to your door."
+            : "As your doctor prescribed. Delivered to your door.",
         bill: step.bill,
         action: {
           label: `Pay ${total}`,

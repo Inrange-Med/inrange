@@ -1,7 +1,5 @@
 /** The doctor's consultations (doctor portal v2): Today, History and the consultation page. consultationService. */
 
-import type { PlanRecommendation } from "./patientRecord";
-
 /** One state per consultation, from the backend, so Today, History and the page always agree. */
 export type ConsultationState =
   | "UPCOMING"
@@ -86,6 +84,8 @@ export type Prescription = {
   remarks: string;
   advice: string;
   medicines: MedicineLineView[];
+  /** the plan in this prescription, bought with the medicines in one payment */
+  planId: string | null;
   savedAt: string | null;
   /** the PDF on the page is current (null once an edit makes it stale) */
   pdfMadeAt: string | null;
@@ -96,7 +96,7 @@ export type Prescription = {
 
 export type PrescriptionDraft = Pick<
   Prescription,
-  "diagnosis" | "patientHistory" | "remarks" | "advice"
+  "diagnosis" | "patientHistory" | "remarks" | "advice" | "planId"
 > & { medicines: MedicineLine[] };
 
 export type ConsultationReport = {
@@ -108,8 +108,8 @@ export type ConsultationReport = {
 };
 
 export type ConsultationPage = {
-  /** the plan the doctor recommends on this page; the patient pays for it on Home */
-  planRecommendation: PlanRecommendation | null;
+  /** the plans the doctor can add to the prescription; none while the patient has an active plan */
+  plans: { id: string; name: string; months: number }[];
   activePlan: { planName: string; endsAt: string } | null;
   /** callOpen: the call can be joined now (it stays true after a mid-call send, so Join stays) */
   consultation: ConsultationRow & {

@@ -5,9 +5,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { HttpError } from "./lib/http.ts";
 import { withDb } from "./lib/db.ts";
-import { isTestMobile, live } from "./lib/env.ts";
-import { optionalUser } from "./lib/auth.ts";
-import { mockLab } from "./integrations/redcliffe.ts";
+import { live } from "./lib/env.ts";
 import { auth } from "./routes/auth.ts";
 import { patientRoutes } from "./routes/patient.ts";
 import { careRoutes } from "./routes/care.ts";
@@ -42,11 +40,6 @@ app.use("*", cors({ origin: (o) => o ?? "*", allowHeaders: ["Authorization", "Co
 
 // every request gets its own database client, closed when the response is ready
 app.use("/api/*", (_c, next) => withDb(() => next()));
-// a test account's lab requests use the mock lab (integrations/redcliffe.ts mockLab): no real collection is booked
-app.use("/api/labs/*", async (c, next) => {
-  const user = await optionalUser(c);
-  return user && isTestMobile(user.mobile) ? await mockLab.run(true, next) : await next();
-});
 
 app.get("/api/health", (c) => c.json({
   success: true,

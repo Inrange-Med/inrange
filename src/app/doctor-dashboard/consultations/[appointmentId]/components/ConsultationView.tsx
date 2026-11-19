@@ -41,12 +41,12 @@ import type {
   Prescription,
 } from "@/types/consultation";
 import ClinicSkeleton from "@/app/doctor-dashboard/components/ClinicSkeleton";
-import ProgrammePlanPanel from "@/app/doctor-dashboard/patients/[patientId]/components/ProgrammePlanPanel";
 import {
   factsLine,
   sentWords,
   whenWords,
 } from "@/app/doctor-dashboard/components/consultations/consultationWords";
+import ChoiceChips from "./ChoiceChips";
 import MedicineLines, { newKey } from "./MedicineLines";
 import PdfPanel from "./PdfPanel";
 import { usePrescriptionDraft, type SaveState } from "./usePrescriptionDraft";
@@ -205,7 +205,7 @@ function Loaded({
           : line.durationUnit === "WEEKS"
             ? 7
             : 1);
-      if (!p.onPlan && days > 31)
+      if (!p.onPlan && !draft.planId && days > 31)
         return {
           text: `This patient is not on a plan yet, so the prescription is for one month. Set ${which} to 1 month or less.`,
           line: line.key,
@@ -520,7 +520,7 @@ function Loaded({
           <div className={styles.field}>
             <span className={styles.fieldLabel}>
               Medicines
-              {!p.onPlan && (
+              {!p.onPlan && !draft.planId && (
                 // the nano plan (12 Nov 2026 call): said before the doctor writes, not found out at Create PDF
                 <span className={styles.fieldHint}>
                   One month at most: this patient is not on a plan yet
@@ -535,6 +535,32 @@ function Loaded({
                 if (problem?.line) setProblem(null);
               }}
             />
+          </div>
+          <div className={styles.field}>
+            <span className={styles.fieldLabel}>
+              Plan
+              <span className={styles.fieldHint}>
+                {data.activePlan
+                  ? `On ${data.activePlan.planName} until ${shortDate(data.activePlan.endsAt)}`
+                  : "The patient pays for it with the medicines, in one payment"}
+              </span>
+            </span>
+            {!data.activePlan && data.plans.length > 0 && (
+              <ChoiceChips
+                label="Plan"
+                value={draft.planId ?? "none"}
+                options={[
+                  { value: "none", label: "No plan" },
+                  ...data.plans.map((plan) => ({
+                    value: plan.id,
+                    label: `${plan.months} months`,
+                  })),
+                ]}
+                onChange={(value) =>
+                  change({ planId: value && value !== "none" ? value : null })
+                }
+              />
+            )}
           </div>
           {field("advice", "Advice")}
         </section>
@@ -551,16 +577,6 @@ function Loaded({
           }
         />
       )}
-
-      {/* the plan: the doctor's patient record is off the portal, so the recommendation is made here */}
-      <ProgrammePlanPanel
-        patientId={p.id}
-        record={{
-          planRecommendation: data.planRecommendation,
-          activePlan: data.activePlan,
-        }}
-        onChanged={reload}
-      />
 
       <div className={styles.bar} role="region" aria-label="Prescription">
         <div className={styles.barInner}>

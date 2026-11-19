@@ -11,8 +11,8 @@ Walks:
            makes it stale -> made again -> Send (WhatsApp, the cart, the match task) -> Send again -> Edit and send
            new version (the first one superseded) -> History finds it -> the hour-later reminder is dropped
   admin    matches the hand-typed medicine to the list: the line joins the order, the task closes
-  patient  prescription sent (the order opens later) -> the prescriptions list and the PDF -> the order opens:
-           payment due with the bill -> paid: medicines on the way
+  patient  the new version carries a plan: one bill (the plan and the medicines) at once -> the prescriptions list
+           and the PDF -> one payment -> the plan active, medicines on the way
 """
 import os, sys, time, uuid
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -172,7 +172,11 @@ def main():
     s, b = call("POST", f"/api/doctor/consultations/{appt}/prescription/pdf", doctor)
     step("no plan: a line longer than a month is refused, in words", s == 422 and "one month" in b.get("message", ""), b)
     lines[0]["durationValue"] = 1
-    call("PUT", f"/api/doctor/consultations/{appt}/prescription", doctor, {"medicines": lines, "remarks": "Review sugar in a month."})
+    # the plan goes in the prescription, so the patient buys it with the medicines in one payment
+    plan_id = one("select id from plans where active and price_rupees > 0 order by duration_months limit 1")
+    s, b = call("PUT", f"/api/doctor/consultations/{appt}/prescription", doctor,
+                {"medicines": lines, "remarks": "Review sugar in a month.", "planId": plan_id})
+    step("the plan is part of the prescription", s == 200 and b["data"]["planId"] == plan_id, b)
     s, b = call("GET", "/api/doctor/consultations", doctor)
     row = next(r for r in b["data"]["waiting"] if r["id"] == appt)
     step("Do this now: the new version to write", row["state"] == "TO_WRITE" and row["revising"], row)
@@ -211,25 +215,26 @@ def main():
 
     # ---------------------------------------------------------------- the patient after the call
     s, b = call("GET", "/api/patient/next-step", patient)
-    step("patient: prescription ready, the order opens later", b["data"]["stage"] == "PRESCRIPTION_SENT" and b["data"]["orderOpensAt"], b)
+    bill = b["data"].get("bill", {})
+    step("patient: one bill at once, the plan and the medicines together", b["data"]["stage"] == "PAYMENT_DUE"
+         and b["data"]["payFor"] == "MEDICINES" and b["data"].get("withPlan") and [l["key"] for l in bill.get("lines", [])][:1] == ["plan"]
+         and len(bill["lines"]) == 3 and bill["totalPaise"] == sum(l["amountPaise"] for l in bill["lines"]), b)
+    cart_ref = b["data"]["referenceId"]
     s, b = call("GET", "/api/care/prescriptions", patient)
     ps = b["data"]["prescriptions"]
     step("patient: both versions listed, the current first", s == 200 and [p["version"] for p in ps] == [2, 1] and ps[0]["current"] and not ps[1]["current"], ps)
     s = file_status(f"/api/files/prescriptions/{ps[0]['id']}", patient)
     step("patient: the PDF opens", s == 200)
-    sql(f"update medicine_carts set available_at = now() - interval '1 minute' where patient_id = {pid} and status = 'OPEN'")
-    s, b = call("GET", "/api/patient/next-step", patient)
-    bill = b["data"].get("bill", {})
-    step("patient: payment due, with the itemised bill", b["data"]["stage"] == "PAYMENT_DUE" and b["data"]["payFor"] == "MEDICINES"
-         and len(bill.get("lines", [])) == 2 and bill["totalPaise"] == sum(l["amountPaise"] for l in bill["lines"]), b)
-    s, o = call("POST", "/api/payments/orders", patient, {"purpose": "MEDICINE_ORDER", "referenceId": b["data"]["referenceId"]})
-    step("patient: the server charges the bill's total", s == 200 and o["data"]["amountPaise"] == bill["totalPaise"], o)
+    s, o = call("POST", "/api/payments/orders", patient, {"purpose": "MEDICINE_ORDER", "referenceId": cart_ref})
+    step("patient: one payment for the bill's total, the plan in it", s == 200 and o["data"]["amountPaise"] == bill["totalPaise"]
+         and o["data"]["lineItems"][0]["label"] == bill["lines"][0]["label"], o)
     if live_pay:
         print("SKIP paying, and a new version after paying (Razorpay is live here: pay in the browser)")
         newest = ps[0]["id"]
     else:
         s, v = call("POST", "/api/payments/verify", patient, {"orderId": o["data"].get("orderId") or o["data"]["id"], "razorpayPaymentId": "pay_mock_" + uuid.uuid4().hex[:10]})
         step("patient: paid (mock)", s == 200, v)
+        step("the one payment started the plan", one(f"select count(*) from subscriptions where user_id = {pid} and status = 'Active'") == "1")
         s, b = call("GET", "/api/patient/next-step", patient)
         step("patient: medicines on the way", b["data"]["stage"] == "ON_THE_WAY", b)
 

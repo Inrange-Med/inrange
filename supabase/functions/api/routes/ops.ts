@@ -328,7 +328,7 @@ opsRoutes.get("/admin/medicine/patients/:patientId", async (c) => {
     p.coach_id ? sql`select id, full_name from users where id = ${p.coach_id}` : Promise.resolve([]),
     sql`select ${iso("accepted_at")} as at from consents where user_id = ${p.id} and consent_type = 'WHATSAPP' and revoked_at is null limit 1`,
   ]);
-  const priced = await Promise.all(carts.map((k) => priceCart(sql, k.lines as CartLine[], k.months)));
+  const priced = await Promise.all(carts.map((k) => priceCart(sql, k as never)));
   return ok(c, {
     patient: { id: String(p.id), name: p.name, mobile: p.mobile, plan: plan?.name ?? null, whatsappSince: consent?.at ?? null,
       coach: coach ? { id: String(coach.id), name: coach.full_name } : null },

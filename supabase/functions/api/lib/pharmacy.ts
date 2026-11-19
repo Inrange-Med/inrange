@@ -54,8 +54,13 @@ export function unitPrice(mrpPaise: number, percent: number, costPaise: number |
   return discounted;
 }
 
-/** Prices a cart's lines from the live catalogue. Lines whose item was withdrawn come back unavailable. */
-export async function priceCart(tx: Tx, lines: CartLine[], months: number) {
+/**
+ * Prices a cart from the live catalogue: its medicines (a withdrawn item comes back unavailable) and the plan its
+ * prescription carries, so the plan and the medicines are one bill and one payment (19 Nov 2026). The plan is never
+ * charged to someone already on a plan.
+ */
+export async function priceCart(tx: Tx, cart: { lines: CartLine[]; months: number; plan_id?: number | null; patient_id?: number }) {
+  const { lines, months } = cart;
   const ids = lines.map((l) => l.medicineId);
   const rows = ids.length
     ? await tx`select ${medicineColumns(tx)}, c.cost_paise from medicines m
@@ -75,8 +80,16 @@ export async function priceCart(tx: Tx, lines: CartLine[], months: number) {
     };
   });
   const mrpTotalPaise = priced.reduce((n, l) => n + l.mrpPaise * l.quantity, 0);
-  const totalPaise = priced.reduce((n, l) => n + l.pricePaise * l.quantity, 0);
-  return { lines: priced, discountPercent: percent, mrpTotalPaise, discountPaise: mrpTotalPaise - totalPaise, totalPaise };
+  const medicinesPaise = priced.reduce((n, l) => n + l.pricePaise * l.quantity, 0);
+  const [p] = cart.plan_id
+    ? await tx`select id, name, price_rupees from plans where id = ${cart.plan_id} and active and price_rupees > 0
+               and not exists (select 1 from subscriptions s where s.user_id = ${cart.patient_id ?? 0} and s.status = 'Active' and s.ends_at > now())`
+    : [];
+  const plan = p ? { id: String(p.id), name: String(p.name), pricePaise: Math.round(Number(p.price_rupees) * 100) } : null;
+  return {
+    lines: priced, discountPercent: percent, mrpTotalPaise, discountPaise: mrpTotalPaise - medicinesPaise, plan,
+    totalPaise: medicinesPaise + (plan?.pricePaise ?? 0),
+  };
 }
 
 /** A patient with an active plan gets the cart at once; anyone else (the nano plan) after the delay. */

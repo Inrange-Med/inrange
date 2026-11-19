@@ -85,6 +85,10 @@ autosave (DRAFT, saved_at)  ->  Create PDF (pdf_made_at, pdf_path)  ->  Send (SI
   presses at once send once (the other is told it was sent) and an edit that lands mid-send is refused.
 - **A new version after the patient paid** does not bill again: the paid order moves to the new version (so refills
   follow it) and the new order carries only what is left to buy.
+- **The plan is part of the prescription** (19 Nov 2026: no friction, everything bought together): the doctor taps
+  No plan or 3, 6, 9, 12 months under the medicines. Send puts the plan in the same cart as the medicines, the cart
+  opens at once with full quantities, and one payment (`MEDICINE_ORDER`, the plan in its bill) buys everything and
+  starts the plan. A patient already on a plan sees it instead of the choice, and is never charged twice.
 - **Without a plan** (the nano plan) the prescription is for one month: the page says "One month at most" above the
   medicines and Create PDF asks for 1 month or less, so the PDF never prescribes more than the order carries.
 - Every Create PDF writes a new file (storage never overwrites), so the PDF can be made again after an edit.
@@ -139,7 +143,7 @@ starts that order's follow-up too.
 | Stage                                                                                                                                                      | Card                                                                     | Button                                                                                     |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
 | `CALL_OPEN`                                                                                                                                                | Your video call with Dr. X is open                                       | Join video call                                                                            |
-| `PAYMENT_DUE` (`payFor` PLAN, then MEDICINES)                                                                                                              | Your plan / Your medicines, with the itemised bill                       | Pay ₹X (checkout; no address yet: the cart page)                                           |
+| `PAYMENT_DUE` (`payFor` MEDICINES; `withPlan` when the prescription carries a plan)                                                                        | Your plan and medicines, with the itemised bill                          | Pay ₹X (checkout; no address yet: the cart page)                                           |
 | `CALL_BOOKED`                                                                                                                                              | Video call with Dr. X, Tue 17 Nov, 7 pm. Join opens at 6:50 pm.          | none                                                                                       |
 | `AFTER_CALL`                                                                                                                                               | Your doctor is writing your prescription                                 | none                                                                                       |
 | `ON_THE_WAY`                                                                                                                                               | Your medicines are on the way. Arriving Thu 26 Nov.                      | Track delivery                                                                             |
@@ -148,28 +152,28 @@ starts that order's follow-up too.
 | before the first consultation: `LAB_UNPAID`, `TEST_BOOKED`, `WAITING_FOR_REPORT`, `UNDER_REVIEW`, `NOT_APPROVED`, `BOOK_CONSULTATION`, `BLOOD_TEST_NEEDED` | from the eligibility review, as before                                   | Pay / none / none / View report / Upload a newer report / Book video call / Book home test |
 | `IN_CARE`                                                                                                                                                  | You're all set                                                           | Book your review                                                                           |
 
-The plan is billed only when the care team recommended one (`plan_recommendations`) and there is no active plan; plan
-and medicines are two payments, shown one after the other.
+One bill, one payment: the plan the doctor prescribed is a line in the cart's bill. A plan recommended without a
+prescription (`plan_recommendations`, the older record page) is billed only when there is no cart.
 
 ## Endpoints
 
-| Method and path                                           | Who                      | Answer                                                                                  |
-| --------------------------------------------------------- | ------------------------ | --------------------------------------------------------------------------------------- |
-| `GET /api/doctor/consultations?date=YYYY-MM-DD`           | doctor                   | `{ date, day: Row[], waiting: Row[] }`                                                  |
-| `GET /api/doctor/consultations/history?from=&to=&q=`      | doctor                   | `{ from, to, consultations: Row[] }` (default: the last 30 days; 300 at most)           |
-| `GET /api/doctor/consultations/:id`                       | doctor                   | `{ consultation, patient, reports, lastPrescription, prescription }` (audited)          |
-| `PUT /api/doctor/consultations/:id/prescription`          | doctor                   | `{ diagnosis?, patientHistory?, remarks?, advice?, medicines? }` -> Prescription        |
-| `POST /api/doctor/consultations/:id/prescription/pdf`     | doctor                   | Prescription with `pdf`; 422 with the first gap ("Write the diagnosis first.")          |
-| `POST /api/doctor/consultations/:id/prescription/send`    | doctor                   | Prescription, `status: SENT`; 409 when the PDF is stale                                 |
-| `POST /api/doctor/consultations/:id/prescription/resend`  | doctor                   | Prescription with `resentAt`                                                            |
-| `POST /api/doctor/consultations/:id/prescription/revise`  | doctor                   | the new draft                                                                           |
-| `POST /api/doctor/consultations/:id/prescription/discard` | doctor                   | "Keep the version already sent": drops the new draft; the sent Prescription             |
-| `GET /api/medicines/search?q=`                            | doctor, admin            | `{ matches: ListItem[], didYouMean: ListItem[] }`                                       |
-| `GET /api/patient/next-step`                              | patient                  | the stage above                                                                         |
-| `GET /api/care/prescriptions`                             | patient                  | `{ prescriptions: [...] }`, newest first                                                |
-| `GET /api/admin/medicine/tasks/:taskId/unmatched`         | admin                    | `{ prescriptionId, current, lines }`                                                    |
-| `POST /api/admin/medicine/tasks/:taskId/match`            | admin                    | `{ line, medicineId }` -> `{ left }`                                                    |
-| `GET /api/files/prescriptions/:id`                        | patient, treating doctor | now also superseded ones (the patient's list), and a draft's PDF to its own doctor only |
+| Method and path                                           | Who                      | Answer                                                                                    |
+| --------------------------------------------------------- | ------------------------ | ----------------------------------------------------------------------------------------- |
+| `GET /api/doctor/consultations?date=YYYY-MM-DD`           | doctor                   | `{ date, day: Row[], waiting: Row[] }`                                                    |
+| `GET /api/doctor/consultations/history?from=&to=&q=`      | doctor                   | `{ from, to, consultations: Row[] }` (default: the last 30 days; 300 at most)             |
+| `GET /api/doctor/consultations/:id`                       | doctor                   | `{ consultation, patient, reports, lastPrescription, prescription }` (audited)            |
+| `PUT /api/doctor/consultations/:id/prescription`          | doctor                   | `{ diagnosis?, patientHistory?, remarks?, advice?, medicines?, planId? }` -> Prescription |
+| `POST /api/doctor/consultations/:id/prescription/pdf`     | doctor                   | Prescription with `pdf`; 422 with the first gap ("Write the diagnosis first.")            |
+| `POST /api/doctor/consultations/:id/prescription/send`    | doctor                   | Prescription, `status: SENT`; 409 when the PDF is stale                                   |
+| `POST /api/doctor/consultations/:id/prescription/resend`  | doctor                   | Prescription with `resentAt`                                                              |
+| `POST /api/doctor/consultations/:id/prescription/revise`  | doctor                   | the new draft                                                                             |
+| `POST /api/doctor/consultations/:id/prescription/discard` | doctor                   | "Keep the version already sent": drops the new draft; the sent Prescription               |
+| `GET /api/medicines/search?q=`                            | doctor, admin            | `{ matches: ListItem[], didYouMean: ListItem[] }`                                         |
+| `GET /api/patient/next-step`                              | patient                  | the stage above                                                                           |
+| `GET /api/care/prescriptions`                             | patient                  | `{ prescriptions: [...] }`, newest first                                                  |
+| `GET /api/admin/medicine/tasks/:taskId/unmatched`         | admin                    | `{ prescriptionId, current, lines }`                                                      |
+| `POST /api/admin/medicine/tasks/:taskId/match`            | admin                    | `{ line, medicineId }` -> `{ left }`                                                      |
+| `GET /api/files/prescriptions/:id`                        | patient, treating doctor | now also superseded ones (the patient's list), and a draft's PDF to its own doctor only   |
 
 A Row: `{ id, patientId, patientName, age, sex, visitType, startsAt, state, revising, sentAt, resentAt, pdf }`. No row,
 page or list carries a patient's phone number.

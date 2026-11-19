@@ -25,6 +25,7 @@ const EMPTY: PrescriptionDraft = {
   patientHistory: "",
   remarks: "",
   advice: "",
+  planId: null,
   medicines: [],
 };
 
@@ -36,6 +37,7 @@ export function draftOf(rx: Prescription | null): PrescriptionDraft {
     patientHistory: rx.patientHistory,
     remarks: rx.remarks,
     advice: rx.advice,
+    planId: rx.planId,
     medicines: rx.medicines.map(
       (m): MedicineLine => ({
         key: m.key || `${m.medicineId ?? m.name}`,

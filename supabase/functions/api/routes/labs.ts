@@ -128,12 +128,7 @@ async function findSlot(date: string, slotId: number, a: Row) {
 
 labRoutes.get("/labs/packages", async (c) => {
   await requirePatient(c);
-  const list = await lab(rc.listPackages());
-  if (rc.redcliffeLive()) return ok(c, list);
-  // the mock lab also offers what the care packages book (their real lab codes, as the metabolic panel)
-  const codes = await sql`select lab_package_code as code from care_packages where lab_package_code is not null`;
-  const extra = codes.filter(({ code }) => !list.some((p) => p.code === code)).map(({ code }) => ({ ...list[0], code }));
-  return ok(c, [...extra, ...list]);
+  return ok(c, await lab(rc.listPackages()));
 });
 
 labRoutes.get("/labs/packages/:code", async (c) => {

@@ -77,16 +77,21 @@ async function price(tx: TransactionSql, userId: number, purpose: Purpose, refer
       fail(400, "This prescription has ended. Your doctor will send a new one.");
     if (new Date(k.available_at) > new Date()) fail(400, "Your medicine quote is not ready yet.");
     if (!k.address_id) fail(400, "Add a delivery address first.");
-    const priced = await priceCart(tx, k.lines as CartLine[], k.months);
+    const priced = await priceCart(tx, k as never);
     const bought = priced.lines.filter((l) => l.quantity > 0);
-    if (!bought.length) fail(400, "Your cart is empty.");
-    const lineItems = bought.map((l) => ({ label: `${l.brand} ${l.strength} x ${l.quantity}`, amountPaise: l.mrpPaise * l.quantity }));
+    if (!bought.length && !priced.plan) fail(400, "Your cart is empty.");
+    // one payment for everything the prescription carries: the plan and the medicines (19 Nov 2026)
+    const lineItems = [
+      ...(priced.plan ? [{ label: priced.plan.name, amountPaise: priced.plan.pricePaise }] : []),
+      ...bought.map((l) => ({ label: `${l.brand} ${l.strength} x ${l.quantity}`, amountPaise: l.mrpPaise * l.quantity })),
+    ];
     if (priced.discountPaise > 0) lineItems.push({ label: `Discount, ${priced.discountPercent}%`, amountPaise: -priced.discountPaise });
     return {
-      amountPaise: priced.totalPaise, title: "Your medicines", lineItems,
+      amountPaise: priced.totalPaise, title: priced.plan ? "Your plan and medicines" : "Your medicines", lineItems,
       // `paid`: the quantities this payment is for; fulfil writes them back, so a cart changed in another tab
       // during checkout never decides the supply, the doses or the refill
-      meta: { addressId: k.address_id, lines: bought.map((l) => ({ name: `${l.brand} ${l.strength}`, quantity: `${l.quantity} x ${l.pack}` })),
+      meta: { addressId: k.address_id, planId: priced.plan ? Number(priced.plan.id) : null,
+        lines: bought.map((l) => ({ name: `${l.brand} ${l.strength}`, quantity: `${l.quantity} x ${l.pack}` })),
         paid: bought.map((l) => ({ medicineId: Number(l.medicineId), quantity: l.quantity })) },
     };
   }
@@ -150,6 +155,16 @@ paymentRoutes.post("/payments/orders", async (c) => {
   return ok(c, toOrder(order), "Order created");
 });
 
+/** A paid plan starts now. A held first-consultation order opens at once and its follow-up moves to the plan rhythm. */
+async function startPlan(tx: TransactionSql, userId: number, planId: number, orderId: string) {
+  const [plan] = await tx`select duration_months from plans where id = ${planId}`;
+  await tx`update subscriptions set status = 'Expired' where user_id = ${userId} and status = 'Active' and ends_at <= now()`;
+  await tx`insert into subscriptions (user_id, plan_id, status, starts_at, ends_at, payment_order_id)
+    values (${userId}, ${planId}, 'Active', now(), now() + make_interval(months => ${plan?.duration_months ?? 1}), ${orderId})`;
+  await tx`update medicine_carts set available_at = least(available_at, now()) where patient_id = ${userId} and status = 'OPEN'`;
+  await tx`update medicine_followups set next_at = now() where patient_id = ${userId} and closed_at is null and flow = 'NANO' and stage = 'WAITING'`;
+}
+
 /**
  * Marks the order PAID and fulfils it, once (guarded by fulfilled_at under a row lock). Shared by
  * /payments/verify and the webhook, so whichever arrives second does nothing. A fulfilment the
@@ -168,16 +183,10 @@ export async function fulfil(orderId: string, paymentId: string) {
     const meta: Record<string, unknown> = { ...(o.meta ?? {}) };
 
     if (o.purpose === "PLAN") {
-      const [plan] = await tx`select duration_months from plans where id = ${Number(o.reference_id)}`;
-      await tx`update subscriptions set status = 'Expired' where user_id = ${o.user_id} and status = 'Active' and ends_at <= now()`;
-      await tx`insert into subscriptions (user_id, plan_id, status, starts_at, ends_at, payment_order_id)
-        values (${o.user_id}, ${Number(o.reference_id)}, 'Active', now(),
-          now() + make_interval(months => ${plan?.duration_months ?? 1}), ${o.id})`;
-      // on a plan now (PRD 7.2 EC4): a held first-consultation order opens at once, and its follow-up
-      // moves to the plan rhythm on its next step
-      await tx`update medicine_carts set available_at = least(available_at, now()) where patient_id = ${o.user_id} and status = 'OPEN'`;
-      await tx`update medicine_followups set next_at = now() where patient_id = ${o.user_id} and closed_at is null and flow = 'NANO' and stage = 'WAITING'`;
+      await startPlan(tx, o.user_id, Number(o.reference_id), o.id);
     } else if (o.purpose === "MEDICINE_ORDER") {
+      // the plan the prescription carried was in this payment: it starts now
+      if (meta.planId) await startPlan(tx, o.user_id, Number(meta.planId), o.id);
       // the cart keeps every prescribed line, with the quantities this payment was for
       const paid = (meta.paid ?? null) as { medicineId: number; quantity: number }[] | null;
       const [cart] = await tx`select lines from medicine_carts where id = ${Number(o.reference_id)} for update`;
@@ -186,14 +195,14 @@ export async function fulfil(orderId: string, paymentId: string) {
         : cart?.lines ?? [];
       const [k] = await tx`update medicine_carts set status = 'PAID', paid_at = now(), lines = ${tx.json(lines as never)}
                            where id = ${Number(o.reference_id)} returning prescription_id`;
-      const [mo] = await tx`insert into medicine_orders (patient_id, prescription_id, cart_id, address_id, payment_order_id, status, expected_at, items, history)
+      const [mo] = !paid || paid.length ? await tx`insert into medicine_orders (patient_id, prescription_id, cart_id, address_id, payment_order_id, status, expected_at, items, history)
         values (${o.user_id}, ${k?.prescription_id ?? null}, ${Number(o.reference_id)}, ${(meta.addressId as number) ?? null}, ${o.id},
           'PLACED', now() + interval '3 days', ${tx.json((meta.lines ?? []) as never)},
           ${tx.json([{ status: "PLACED", at: new Date().toISOString(), note: "Order received by the pharmacy" }])})
-        returning id`;
+        returning id` : [];
       // the follow-up closes, the supply and the dose rhythm are worked out, the confirmation is queued (lib/medicineFlow.ts)
-      await onMedicinePaid(tx, mo.id);
-      medicineOrderId = mo.id;
+      if (mo) await onMedicinePaid(tx, mo.id);
+      medicineOrderId = mo?.id ?? null;
     } else if (o.purpose === "LAB_BOOKING") {
       await fulfilLabBooking(tx, o.reference_id, o.user_id);
       messages.push(...(await notices.within(tx, (sp) => notices.labBooked(sp, o.reference_id))));

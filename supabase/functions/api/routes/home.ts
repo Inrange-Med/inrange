@@ -17,7 +17,7 @@ import { Hono } from "hono";
 import { sql } from "../lib/db.ts";
 import { ok } from "../lib/http.ts";
 import { requirePatient } from "../lib/auth.ts";
-import { priceCart, type CartLine } from "../lib/pharmacy.ts";
+import { priceCart } from "../lib/pharmacy.ts";
 import { ist, lineView } from "../lib/prescriptions.ts";
 
 export const homeRoutes = new Hono();
@@ -51,7 +51,7 @@ export async function nextStep(patientId: number, now = new Date()) {
     sql`select x.id, x.appointment_id, coalesce(x.sent_at, x.signed_at) as sent_at, x.items, d.full_name as doctor
         from prescriptions x join doctors d on d.id = x.doctor_id
         where x.patient_id = ${patientId} and x.status = 'SIGNED' order by x.signed_at desc limit 1`,
-    sql`select k.id, k.lines, k.available_at, k.elsewhere_at, k.address_id, p.months from medicine_carts k join prescriptions p on p.id = k.prescription_id
+    sql`select k.id, k.lines, k.available_at, k.elsewhere_at, k.address_id, k.plan_id, k.patient_id, p.months from medicine_carts k join prescriptions p on p.id = k.prescription_id
         where k.patient_id = ${patientId} and k.status = 'OPEN' and (p.valid_until is null or p.valid_until > now())
         order by k.id desc limit 1`,
     sql`select id, status, expected_at from medicine_orders where patient_id = ${patientId}
@@ -64,26 +64,30 @@ export async function nextStep(patientId: number, now = new Date()) {
   const open = live.find((a) => new Date(a.starts_at).getTime() - 10 * MIN <= t);
   if (open) return { stage: "CALL_OPEN", appointment: appointmentView(open) };
 
-  // money: the recommended plan first (when there is no active one), then the medicines; one bill at a time
-  if (rec && !plan) {
+  // money: one bill. The plan the doctor prescribed rides in the prescription's cart with the medicines (19 Nov
+  // 2026); a plan recommended without a prescription (the older record page) is billed only when there is no cart.
+  if (rec && !plan && !cart) {
     return {
       stage: "PAYMENT_DUE", payFor: "PLAN", referenceId: String(rec.plan_id),
       bill: { lines: [{ key: "plan", label: rec.name, mrpPaise: rec.mrp_rupees ? rec.mrp_rupees * 100 : null, amountPaise: rec.price_rupees * 100 }],
               totalPaise: rec.price_rupees * 100 },
       hasAddress: true,
-      followedBy: cart ? "MEDICINES" : null,
+      followedBy: null,
     };
   }
   const cartReady = cart && !cart.elsewhere_at && new Date(cart.available_at).getTime() <= t;
   if (cartReady) {
-    const priced = await priceCart(sql, cart.lines as CartLine[], cart.months);
+    const priced = await priceCart(sql, cart as never);
     const lines = priced.lines.filter((l) => l.available && l.quantity > 0);
-    if (lines.length)
+    if (lines.length || priced.plan)
       return {
-        stage: "PAYMENT_DUE", payFor: "MEDICINES", referenceId: String(cart.id),
+        stage: "PAYMENT_DUE", payFor: "MEDICINES", referenceId: String(cart.id), withPlan: Boolean(priced.plan),
         bill: {
-          lines: lines.map((l) => ({ key: l.medicineId, label: `${l.brand} ${l.strength}`.trim(), quantity: l.quantity,
-            mrpPaise: l.mrpPaise * l.quantity, amountPaise: l.pricePaise * l.quantity })),
+          lines: [
+            ...(priced.plan ? [{ key: "plan", label: priced.plan.name, amountPaise: priced.plan.pricePaise }] : []),
+            ...lines.map((l) => ({ key: l.medicineId, label: `${l.brand} ${l.strength}`.trim(), quantity: l.quantity,
+              mrpPaise: l.mrpPaise * l.quantity, amountPaise: l.pricePaise * l.quantity })),
+          ],
           discountPercent: priced.discountPercent, totalPaise: priced.totalPaise,
         },
         // without a delivery address, Pay goes through the cart page to add one

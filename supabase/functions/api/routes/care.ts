@@ -513,7 +513,7 @@ async function cartView(patientId: number) {
   if (!k || (k.valid_until && new Date(k.valid_until) <= new Date())) return { data: null };
   if (new Date(k.available_at) > new Date()) return { data: null, availableAt: k.available_iso };
   const [priced, [address]] = await Promise.all([
-    priceCart(sql, k.lines as CartLine[], k.months),
+    priceCart(sql, k as never),
     sql`select * from addresses where user_id = ${patientId}
         order by (id = ${k.address_id ?? 0}) desc, is_default desc, id desc limit 1`,
   ]);

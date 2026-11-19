@@ -252,9 +252,13 @@ export async function renderRx(doctor: Doctor, patientId: number, rx: Row, signe
   return path;
 }
 
-/** The months a prescription is issued for: a first consultation without a plan (the nano plan) is one month. */
-export async function issueMonths(patientId: number, asked: number, at: Date) {
-  const { onPlan, availableAt } = await cartAvailableAt(sql, patientId, at);
+/**
+ * The months a prescription is issued for: without a plan (the nano plan) one month. A plan in the prescription
+ * counts as on a plan: it is bought with the medicines, in the same payment.
+ */
+export async function issueMonths(patientId: number, asked: number, at: Date, withPlan = false) {
+  const { onPlan: active, availableAt } = await cartAvailableAt(sql, patientId, at);
+  const onPlan = active || withPlan;
   return { onPlan, availableAt, months: onPlan ? Math.min(12, Math.max(1, Math.round(asked))) : 1 };
 }
 
@@ -271,7 +275,11 @@ export async function issueRx(doctor: Doctor, patientId: number, rxId: number,
   if (rx.status !== "DRAFT") fail(409, "This prescription was sent already.");
   const items = rx.items as Row[];
   const at = o.sentAt ?? o.signedAt;
-  const { onPlan, availableAt } = await cartAvailableAt(sql, patientId, at);
+  const { onPlan: active, availableAt: later } = await cartAvailableAt(sql, patientId, at);
+  // the plan the doctor prescribed goes in the same cart as the medicines: one payment, the cart open at once
+  const planId: number | null = rx.plan_id && !active ? rx.plan_id : null;
+  const onPlan = active || planId !== null;
+  const availableAt = onPlan ? at : later;
   const validUntil = new Date(o.signedAt);
   validUntil.setMonth(validUntil.getMonth() + o.months);
   const ids = items.map((i) => Number(i.medicineId)).filter((id) => Number.isInteger(id) && id > 0);
@@ -340,7 +348,7 @@ export async function issueRx(doctor: Doctor, patientId: number, rxId: number,
         await tx`update medicine_orders set prescription_id = ${rxId} where cart_id in ${tx(ids)}`;
       }
     }
-    carted = merged.size > 0;
+    carted = merged.size > 0 || planId !== null;
     const replaced = await tx`update medicine_carts set status = 'CLOSED' where patient_id = ${patientId} and status = 'OPEN' returning id`;
     // the replaced orders' follow-ups and calls close with them: nobody calls about an order that is gone
     for (const { id } of replaced) {
@@ -348,9 +356,9 @@ export async function issueRx(doctor: Doctor, patientId: number, rxId: number,
                where cart_id = ${id} and closed_at is null`;
       await closeTasks(tx, { cartId: id }, ["NO_REPLY", "PLAN_CALL", "PAYMENT_FAILED", "QUESTIONS"], "RESOLVED", "A newer prescription replaced this order");
     }
-    const [cart] = merged.size
-      ? await tx`insert into medicine_carts (patient_id, prescription_id, available_at, lines, address_id)
-               values (${patientId}, ${rxId}, ${availableAt}, ${tx.json([...merged.values()])}, ${addr?.id ?? null}) returning id`
+    const [cart] = carted
+      ? await tx`insert into medicine_carts (patient_id, prescription_id, available_at, lines, address_id, plan_id)
+               values (${patientId}, ${rxId}, ${availableAt}, ${tx.json([...merged.values()])}, ${addr?.id ?? null}, ${planId}) returning id`
       : [];
     if (unlisted.length)
       await openTask(tx, {

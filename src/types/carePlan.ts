@@ -113,6 +113,8 @@ export type MedicineCart = {
   discountPercent: number;
   mrpTotalPaise: number;
   discountPaise: number;
+  /** the plan the prescription carries, in this bill with the medicines (totalPaise includes it) */
+  plan: { id: string; name: string; pricePaise: number } | null;
   totalPaise: number;
   address: { id: string; label: string; name: string; line: string } | null;
   /** REFILL: the next supply on the same prescription */
