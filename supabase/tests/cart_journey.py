@@ -6,7 +6,7 @@ Supabase CLI linked. Writes only test patients (mobile 98000...). What the API c
 (the admin's report review, a paid booking, a plan bought through Razorpay) is staged with SQL that
 mirrors what those routes write; paying the cart itself needs the browser (test card 4100 2800 0000 1007).
 Walks: sign-up -> first consultation -> doctor picks two strengths from the pharmacy -> one signature signs
-the prescription (one month, cart held back) -> plan -> follow-up (3 months, cart at once) -> prices,
+the prescription (one month, cart at once) -> plan -> follow-up (3 months, cart at once) -> prices,
 discount, quantity limits, server-priced medicine order, forged payment refused. Clean up afterwards with
 supabase/tests/cleanup_test_patients.sql.
 """
@@ -116,7 +116,7 @@ def write_and_sign(rx_months, picks, expect_type):
     step(f"{expect_type}: one signature signs the prescription", s == 200 and b["data"]["signed"]["prescriptionStatus"] == "SIGNED", b)
 
 
-# --- first consultation (no plan): one month, cart held back ---
+# --- first consultation (no plan): one month, the cart open at once ---
 write_and_sign(3, [("2.5 mg", 1), ("5 mg", 1)], "first")
 s, b = call("GET", f"/api/doctor/patients/{pid}/record", dt)
 rx = [p for p in b["data"]["prescriptions"] if p["status"] == "SIGNED"][0]
@@ -126,8 +126,7 @@ s, b = call("GET", "/api/care/prescription/current", pt); step("patient has the 
 with urllib.request.urlopen(b["data"]["pdfUrl"], timeout=60) as r, open(f"{OUT}/rx-first.pdf", "wb") as f:
     f.write(r.read())
 s, b = call("GET", "/api/care/cart", pt)
-step("nano: cart held back with availableAt", b["data"] is None and b.get("availableAt"), b)
-s, b = call("PATCH", "/api/care/cart", pt, {"lines": []}); step("held cart cannot be changed", s == 404, b)
+step("nano: the cart is open at once", s == 200 and b["data"] and b["data"]["lines"], b)
 
 # --- staged: patient buys the 3-month plan, then a follow-up ---
 sql(f"""with u as (select id from users where mobile = '{PATIENT}' and mobile like '98000%')

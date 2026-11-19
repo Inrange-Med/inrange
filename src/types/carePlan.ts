@@ -122,11 +122,8 @@ export type MedicineCart = {
   boughtElsewhere?: boolean;
 };
 
-/** The cart, or when it opens (a first consultation's cart waits for the programme call). */
-export type CartState = {
-  cart: MedicineCart | null;
-  availableAt: string | null; // ISO, while held back
-};
+/** The prescription's cart, open the moment it is sent. */
+export type CartState = { cart: MedicineCart | null };
 
 /** What the Care tab shows about treatment. `available` is false until the backend serves it. */
 export type CarePlan = {

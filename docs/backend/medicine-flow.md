@@ -28,17 +28,15 @@ patient** has an active subscription (the PRD's Program).
 
 | When | Nano plan | Plan patient |
 | --- | --- | --- |
-| Signing | Prescription on WhatsApp, a button that opens it in the app. The order is held `NANO_CART_DELAY_HOURS` (48) | The same; the order is ready at once in the app |
-| Order opens (+48 h) | Check-in 1: All clear / I have questions / Remind me later / I have them already | |
-| +24 h after signing | | Check-in: the same buttons |
+| Signing | Prescription on WhatsApp, a button that opens it in the app. The order is ready at once in the app | The same |
+| +24 h after signing | Check-in 1: All clear / I have questions / Remind me later / I have them already | Check-in: the same buttons |
 | +24 h | Check-in 2: the same | Call task, critical, due in 2 working hours |
 | +24 h | Call task, due within a working day | |
 | Paying | Follow-up closes, call and payment tasks close, order confirmed on WhatsApp | The same |
 
-The nano plan's check-ins are timed from when its order opens, not from signing. That keeps the 12 Nov
-call's 48-hour hold (Sachchidanand's data: holding medicine 48 hours raised programme conversion by 3 to
-4 points) and the PRD's two check-ins and call. Set `NANO_CART_DELAY_HOURS=24` and it is exactly the PRD's
-T+24 / T+48 / T+72.
+Every order is payable the moment the prescription is sent, plan or not (19 Nov 2026: no waiting, no
+friction; this replaces the 12 Nov call's 48-hour hold for patients without a plan). The nano plan keeps the
+PRD's two check-ins and call: T+24 / T+48 / T+72.
 
 - **Before every automated message** the step re-reads the state (PRD 7.2 BR1): a paid order, a newer
   prescription, "I have them", or an ended prescription closes the follow-up instead. A nano patient who
@@ -122,7 +120,6 @@ patients, or the numbers. Every look at a patient's medicines is written to `aud
 | POST | `/api/webhooks/whatsapp` | LIVE, signed | (Meta) | Taps, picks, text, delivery statuses |
 | GET | `/api/care/medicine-orders` | LIVE, extended | `loadCarePlan` | Adds `orderNumber`, `courier`, `dispatchedAt`, `deliveredAt`, `runOutOn`, `feedback`, `canGiveFeedback`, `cancelReason`, `refundedPaise`; statuses `OUT_FOR_DELIVERY`, `CANCELLED` |
 | GET | `/api/care/cart` | LIVE, extended | `getCart` | Adds `kind` (`FIRST` or `REFILL`) and `boughtElsewhere` |
-| POST | `/api/care/cart/open-now` | LIVE | `openCartNow` | The held order opened because the patient asked |
 | POST | `/api/care/cart/elsewhere` | LIVE | `boughtElsewhere` | No more reminders about this order |
 | POST | `/api/care/medicine-orders/:id/feedback` | LIVE | `rateDelivery` | `{ rating: GOOD \| ISSUE, note? }` |
 | GET | `/api/care/doses` | LIVE | `getDoses` | Schedules and the last 35 days of doses |

@@ -118,7 +118,7 @@ export default function SignSheet({
             where={
               onPlan
                 ? `To ${their} app, with a cart of what our pharmacy stocks`
-                : `One month, as a first consultation. ${first}'s medicine quote follows after the programme call`
+                : `One month, as a first consultation, with a cart of what our pharmacy stocks`
             }
           >
             {onPlan && (

@@ -85,13 +85,12 @@ export async function closeTasks(tx: Tx, where: { cartId?: number; medicineOrder
 /**
  * On signing (routes/doctor.ts signRx, inside its transaction): the prescription message, with a button
  * that opens it in the app (the PDF itself never goes to WhatsApp), and, when a cart was made, its
- * follow-up. A plan patient's first check-in is 24 hours after signing; the nano plan's first is when
- * its cart opens (NANO_CART_DELAY_HOURS), the second a day later. Returns the message to send once the
- * transaction commits.
+ * follow-up. The cart is open at once; the first check-in is 24 hours after signing (without a plan, a
+ * second a day later). Returns the message to send once the transaction commits.
  */
 export async function startMedicineFlow(tx: Tx, input: {
   patientId: number; prescriptionId: number; version: number; cartId: number | null; onPlan: boolean;
-  signedAt: Date; availableAt: Date; doctorName: string;
+  signedAt: Date; doctorName: string;
 }): Promise<number | null> {
   const name = await firstName(tx, input.patientId);
   const messageId = await queueMessage(tx, {
@@ -100,11 +99,10 @@ export async function startMedicineFlow(tx: Tx, input: {
   });
   if (input.cartId) {
     const flow = input.onPlan ? "PLAN" : "NANO";
-    const nextAt = input.onPlan ? new Date(input.signedAt.getTime() + DAY) : input.availableAt;
     await tx`
       insert into medicine_followups (cart_id, patient_id, flow, stage, next_at, history)
-      values (${input.cartId}, ${input.patientId}, ${flow}, 'WAITING', ${nextAt},
-        ${tx.json(historyEntry(input.onPlan ? "Prescription sent with the order ready" : "Prescription sent; the order opens later"))})
+      values (${input.cartId}, ${input.patientId}, ${flow}, 'WAITING', ${new Date(input.signedAt.getTime() + DAY)},
+        ${tx.json(historyEntry("Prescription sent with the order ready"))})
       on conflict (cart_id) do nothing`;
   }
   return messageId;
@@ -138,12 +136,11 @@ export async function advanceFollowup(id: number): Promise<string> {
     let stage = f.stage as string;
     const [plan] = await tx`select 1 from subscriptions where user_id = ${f.patient_id} and status = 'Active' and ends_at > now()`;
     if (flow === "NANO" && plan) {
-      // moved onto a plan mid-way (PRD 7.2 EC4): the order opens at once and the plan's rhythm takes over
+      // moved onto a plan mid-way (PRD 7.2 EC4): the plan's rhythm takes over
       flow = "PLAN";
       stage = "WAITING";
-      await tx`update medicine_carts set available_at = least(available_at, now()) where id = ${k.id}`;
       await tx`update medicine_followups set flow = 'PLAN', stage = 'WAITING',
-               history = history || ${tx.json(historyEntry("On a plan now: the order opened at once"))} where id = ${f.id}`;
+               history = history || ${tx.json(historyEntry("On a plan now"))} where id = ${f.id}`;
     }
     const name = await firstName(tx, f.patient_id);
     const n = f.check_ins + 1;
@@ -190,18 +187,6 @@ export async function advanceDueFollowups(limit = 50) {
     out[r] = (out[r] ?? 0) + 1;
   }
   return out;
-}
-
-/** "Order now instead" in the app: a held nano order opens early because the patient asked (conflict 1 in the PRD doc). */
-export async function orderNow(cartId: number, patientId: number, via: string) {
-  const [k] = await sql`select * from medicine_carts where id = ${cartId} and patient_id = ${patientId} and status = 'OPEN'`;
-  if (!k) return "No open order";
-  const early = new Date(k.available_at) > new Date();
-  if (early) await sql`update medicine_carts set available_at = now() where id = ${k.id}`;
-  await sql`update medicine_followups set next_at = greatest(coalesce(next_at, now()), now() + interval '1 day'),
-            history = history || ${sql.json(historyEntry(early ? `Opened early at the patient's request (${via})` : `Asked for the order link (${via})`))}
-            where cart_id = ${k.id} and closed_at is null`;
-  return early ? "Opened early" : "Already open";
 }
 
 /** "I have them": no more reminders about this order. */

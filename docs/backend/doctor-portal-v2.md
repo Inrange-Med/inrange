@@ -69,8 +69,8 @@ autosave (DRAFT, saved_at)  ->  Create PDF (pdf_made_at, pdf_path)  ->  Send (SI
 - **Create PDF** renders the patient's copy with the time it was made as its signature time; the PDF on the page is
   exactly what the patient gets. An edit after that makes it stale: Send refuses (409) until the PDF is made again.
 - **Send** issues that same file (`issueRx` in `lib/prescriptions.ts`): the previous prescription is superseded, the
-  patient's unpaid cart closes with its follow-ups, a new cart holds every line the pharmacy sells (a first
-  consultation without a plan carries one month and opens `NANO_CART_DELAY_HOURS` later, as before), WhatsApp
+  patient's unpaid cart closes with its follow-ups, a new cart holds every line the pharmacy sells, payable at once (a first
+  consultation without a plan carries one month), WhatsApp
   `RX_READY` goes (its button now opens `/patient-dashboard/prescriptions?rx=`), and the patient joins the doctor's
   care team.
 - **Only once the call opens, never for a cancelled consultation:** the doctor may write ahead, but Create PDF and

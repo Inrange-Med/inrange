@@ -4,7 +4,7 @@ Usage: python3 supabase/tests/journey.py [patient_mobile]
 Walks: patient sign-in -> onboarding -> eligibility report -> pay + book first consultation ->
 doctor sees it -> video links -> chat both ways -> doctor ends the call -> draft note -> sign note
 with medicines from the pharmacy and from the plan -> the one signature signs the prescription (PDF,
-first consultation: one month, cart held back) -> patient buys a plan -> invoices. Prints PASS/FAIL per step; exits 1 on the first failure.
+first consultation: one month, the cart open at once) -> patient buys a plan -> invoices. Prints PASS/FAIL per step; exits 1 on the first failure.
 Needs the pilot OTP (123456, SMS mocked). With Razorpay live (test keys) a payment needs the checkout
 window, so the journey checks the live order and that an unsigned payment is refused, then stops: pay
 in the browser instead (test card 4100 2800 0000 1007).
@@ -174,7 +174,7 @@ step("prescription has the added, the plan and both pharmacy medicines",
 if len(sys.argv) > 2:  # save the PDF to look at it: journey.py <mobile> <out.pdf>
     with urllib.request.urlopen(b["data"]["pdfUrl"], timeout=30) as r, open(sys.argv[2], "wb") as f: f.write(r.read())
 s, b = call("GET", "/api/care/cart", pt)
-step("first consultation: cart held back until after the programme call", s == 200 and b["data"] is None and b.get("availableAt"), b)
+step("first consultation, no plan: the cart is open at once", s == 200 and b["data"] and b["data"]["lines"], b)
 s, b = call("GET", "/api/care/medicine-orders", pt); step("no delivery before payment", len(b["data"]) == 0, b)
 
 # --- plan purchase -------------------------------------------------------------------------------

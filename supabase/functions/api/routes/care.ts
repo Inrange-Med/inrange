@@ -10,7 +10,7 @@
 //   GET    /care-team                                 patient: the care-team doctor
 //   GET    /care/prescription/current                 patient: latest signed prescription
 //   GET    /care/medicine-orders                      patient: deliveries, newest first
-//   GET    /care/cart                                 patient: the prescription's prefilled cart, or null (+ availableAt while held back)
+//   GET    /care/cart                                 patient: the prescription's prefilled cart, or null
 //   PATCH  /care/cart                                 patient: { lines?: [{ medicineId, quantity }], addressId? } within the prescription
 //                                                     (checkout: POST /payments/orders { purpose: "MEDICINE_ORDER", referenceId: cartId })
 //   POST   /chat/init                                 { doctorId } (patient) or { patientId } (doctor) -> { sessionId }
@@ -504,33 +504,29 @@ careRoutes.post("/video/appointments/:appointmentId/end", async (c) => {
 const addressLine = (a: Record<string, unknown>) =>
   [a.line1, a.line2, a.landmark, a.city, a.pincode].filter(Boolean).join(", ");
 
-/** The patient's open cart as the cart page shows it (customer prices only), or null with availableAt. */
+/** The patient's open cart as the cart page shows it (customer prices only), or null. */
 async function cartView(patientId: number) {
   const [k] = await sql`
-    select k.*, p.months, ${iso("p.valid_until")} as valid_iso, p.valid_until, ${iso("k.available_at")} as available_iso
+    select k.*, p.months, ${iso("p.valid_until")} as valid_iso, p.valid_until
     from medicine_carts k join prescriptions p on p.id = k.prescription_id
     where k.patient_id = ${patientId} and k.status = 'OPEN' order by k.id desc limit 1`;
-  if (!k || (k.valid_until && new Date(k.valid_until) <= new Date())) return { data: null };
-  if (new Date(k.available_at) > new Date()) return { data: null, availableAt: k.available_iso };
+  if (!k || (k.valid_until && new Date(k.valid_until) <= new Date())) return null;
   const [priced, [address]] = await Promise.all([
     priceCart(sql, k as never),
     sql`select * from addresses where user_id = ${patientId}
         order by (id = ${k.address_id ?? 0}) desc, is_default desc, id desc limit 1`,
   ]);
   return {
-    data: {
-      id: String(k.id), prescriptionId: String(k.prescription_id), months: k.months, validUntil: k.valid_iso, ...priced,
-      // a refill is the next supply on the same prescription (lib/medicineFlow.ts checkRefills)
-      kind: k.kind, boughtElsewhere: Boolean(k.elsewhere_at),
-      address: address ? { id: String(address.id), label: address.label, name: address.full_name ?? "", line: addressLine(address) } : null,
-    },
+    id: String(k.id), prescriptionId: String(k.prescription_id), months: k.months, validUntil: k.valid_iso, ...priced,
+    // a refill is the next supply on the same prescription (lib/medicineFlow.ts checkRefills)
+    kind: k.kind, boughtElsewhere: Boolean(k.elsewhere_at),
+    address: address ? { id: String(address.id), label: address.label, name: address.full_name ?? "", line: addressLine(address) } : null,
   };
 }
 
 careRoutes.get("/care/cart", async (c) => {
   const me = await requirePatient(c);
-  const { data, availableAt } = await cartView(me.id);
-  return ok(c, data, "OK", availableAt ? { availableAt } : {});
+  return ok(c, await cartView(me.id));
 });
 
 careRoutes.patch("/care/cart", async (c) => {
@@ -538,7 +534,7 @@ careRoutes.patch("/care/cart", async (c) => {
   const input = await body<{ lines?: { medicineId?: unknown; quantity?: unknown }[]; addressId?: unknown }>(c);
   const [k] = await sql`
     select k.* from medicine_carts k join prescriptions p on p.id = k.prescription_id
-    where k.patient_id = ${me.id} and k.status = 'OPEN' and k.available_at <= now()
+    where k.patient_id = ${me.id} and k.status = 'OPEN'
       and (p.valid_until is null or p.valid_until > now()) order by k.id desc limit 1`;
   if (!k) fail(404, "There is no cart to change.");
   let lines = k.lines as CartLine[];
@@ -559,5 +555,5 @@ careRoutes.patch("/care/cart", async (c) => {
     addressId = a.id;
   }
   await sql`update medicine_carts set lines = ${sql.json(lines)}, address_id = ${addressId} where id = ${k.id}`;
-  return ok(c, (await cartView(me.id)).data, "Saved");
+  return ok(c, await cartView(me.id), "Saved");
 });

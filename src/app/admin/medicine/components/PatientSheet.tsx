@@ -348,9 +348,7 @@ export default function PatientSheet({
                   <span className="num">
                     {formatRupees(cart.totalPaise / 100)}
                   </span>
-                  {new Date(cart.availableAt) > new Date()
-                    ? `, opens ${shortDate(cart.availableAt)}`
-                    : ", ready to pay in the app"}
+                  , ready to pay in the app
                   {cart.boughtElsewhere
                     ? ". Bought elsewhere, no reminders."
                     : ""}

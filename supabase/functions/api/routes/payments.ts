@@ -75,7 +75,6 @@ async function price(tx: TransactionSql, userId: number, purpose: Purpose, refer
     if (k.status === "PAID") fail(409, "These medicines are already paid for.");
     if (k.status !== "OPEN" || (k.valid_until && new Date(k.valid_until) <= new Date()))
       fail(400, "This prescription has ended. Your doctor will send a new one.");
-    if (new Date(k.available_at) > new Date()) fail(400, "Your medicine quote is not ready yet.");
     if (!k.address_id) fail(400, "Add a delivery address first.");
     const priced = await priceCart(tx, k as never);
     const bought = priced.lines.filter((l) => l.quantity > 0);
@@ -155,14 +154,12 @@ paymentRoutes.post("/payments/orders", async (c) => {
   return ok(c, toOrder(order), "Order created");
 });
 
-/** A paid plan starts now. A held first-consultation order opens at once and its follow-up moves to the plan rhythm. */
+/** A paid plan starts now. */
 async function startPlan(tx: TransactionSql, userId: number, planId: number, orderId: string) {
   const [plan] = await tx`select duration_months from plans where id = ${planId}`;
   await tx`update subscriptions set status = 'Expired' where user_id = ${userId} and status = 'Active' and ends_at <= now()`;
   await tx`insert into subscriptions (user_id, plan_id, status, starts_at, ends_at, payment_order_id)
     values (${userId}, ${planId}, 'Active', now(), now() + make_interval(months => ${plan?.duration_months ?? 1}), ${orderId})`;
-  await tx`update medicine_carts set available_at = least(available_at, now()) where patient_id = ${userId} and status = 'OPEN'`;
-  await tx`update medicine_followups set next_at = now() where patient_id = ${userId} and closed_at is null and flow = 'NANO' and stage = 'WAITING'`;
 }
 
 /**

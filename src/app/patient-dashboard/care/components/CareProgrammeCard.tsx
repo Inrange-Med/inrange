@@ -7,7 +7,7 @@
 import Link from "next/link";
 import { ArrowRight, CaretRight } from "@phosphor-icons/react/dist/ssr";
 import Card from "@/components/ui/Card";
-import { shortDate, spokenDay } from "@/lib/format/dateTime";
+import { shortDate } from "@/lib/format/dateTime";
 import { formatRupees } from "@/lib/format/money";
 import ErrorNotice from "@/components/ui/ErrorNotice";
 import type { CarePlan, MedicineOrder } from "@/types/carePlan";
@@ -48,7 +48,6 @@ export default function CareProgrammeCard({
   const medicine = carePlan?.prescription?.items[0] ?? null;
   const moving = !!order && isMoving(order);
   const cart = carePlan?.cart.cart ?? null;
-  const cartOpensAt = carePlan?.cart.availableAt ?? null;
   return (
     <Card
       title="Your programme"
@@ -130,11 +129,6 @@ export default function CareProgrammeCard({
             />
           </Link>
         </div>
-      )}
-      {!cart && cartOpensAt && (
-        <p className={pageStyles.foot}>
-          Your medicine quote opens {spokenDay(new Date(cartOpensAt))}.
-        </p>
       )}
 
       {order && (

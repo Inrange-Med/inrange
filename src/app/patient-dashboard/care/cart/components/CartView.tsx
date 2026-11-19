@@ -4,18 +4,16 @@
  * Your medicines: the cart a signed prescription filled, opened from Care or the WhatsApp link.
  * Everything is ready on arrival (the prescribed quantities, the discount, the delivery address), so
  * the one required tap is Pay, which opens Razorpay at once (checkout with payNow). The patient may
- * lower a quantity or take a line out, never go past the prescription. A first consultation's cart is
- * held back for the programme call (12 Nov 2026 call); until then the page says when it opens and
- * offers the prescription and a call back, and, quietly, ordering now if the patient asks (it is
- * their request, never a push: docs/backend/medicine-flow-prd.md, conflict 1). "I already have these"
- * stops the reminders about this order (the same as the WhatsApp button).
+ * lower a quantity or take a line out, never go past the prescription. The cart is open the moment the
+ * prescription is sent, plan or not (19 Nov 2026: no waiting). "I already have these" stops the
+ * reminders about this order (the same as the WhatsApp button).
  * Data: GET/PATCH /api/care/cart and the prescription (carePlanService). Phone: one column, Pay right
  * under the bill; laptop: the lines left, the address and bill in a sticky column right.
  */
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowRight, FilePdf, Phone } from "@phosphor-icons/react";
+import { ArrowRight, FilePdf } from "@phosphor-icons/react";
 import ItemisedBill from "@/app/patient-dashboard/components/ItemisedBill";
 import PageGhosts from "@/app/patient-dashboard/components/PageGhosts";
 import Card from "@/components/ui/Card";
@@ -24,18 +22,16 @@ import FileOpenButton from "@/components/ui/FileOpenButton";
 import PageHead from "@/components/ui/PageHead";
 import { useToast } from "@/components/ui/ToastProvider";
 import { useApiResource } from "@/hooks/useApiResource";
-import { longDate, shortDate, spokenDay } from "@/lib/format/dateTime";
+import { longDate, shortDate } from "@/lib/format/dateTime";
 import { formatRupees } from "@/lib/format/money";
 import { errorMessage } from "@/lib/http/apiClient";
 import { checkoutHref } from "@/lib/payments/checkoutHref";
 import {
   boughtElsewhere,
   loadCarePlan,
-  openCartNow,
   updateCart,
 } from "@/services/carePlanService";
 import { getFile } from "@/services/fileService";
-import { contactSupport } from "@/services/patientProfileService";
 import type { MedicineCart } from "@/types/carePlan";
 import CartLineRow from "./CartLineRow";
 import DeliveryAddress from "./DeliveryAddress";
@@ -51,13 +47,10 @@ export default function CartView() {
   // the server's answer after each change replaces the cart; until the first change, the loaded one
   const [edited, setEdited] = useState<MedicineCart | null>(null);
   const [saving, setSaving] = useState(false);
-  const [calledBack, setCalledBack] = useState(false);
-  const [opening, setOpening] = useState(false);
   const [elsewhere, setElsewhere] = useState(false);
 
   const prescription = plan.data?.prescription ?? null;
   const cart = edited ?? plan.data?.cart.cart ?? null;
-  const availableAt = plan.data?.cart.availableAt ?? null;
 
   const change = async (next: Parameters<typeof updateCart>[0]) => {
     setSaving(true);
@@ -67,18 +60,6 @@ export default function CartView() {
       toast(errorMessage(caught, "That change was not saved."));
     } finally {
       setSaving(false);
-    }
-  };
-
-  const orderNow = async () => {
-    setOpening(true);
-    try {
-      await openCartNow();
-      plan.reload();
-    } catch (caught) {
-      toast(errorMessage(caught, "Your order could not be opened. Try again."));
-    } finally {
-      setOpening(false);
     }
   };
 
@@ -92,20 +73,7 @@ export default function CartView() {
     }
   };
 
-  const callBack = async () => {
-    try {
-      await contactSupport(
-        "Call back about my medicines",
-        "Please call me about the medicines on my prescription.",
-      );
-      setCalledBack(true);
-      toast("We will call you soon");
-    } catch (caught) {
-      toast(errorMessage(caught));
-    }
-  };
-
-  // a text link beside a card title; a pill beside "Call me" on the held screen
+  // a text link beside a card title; a pill on the nothing-to-order card
   const openPrescription = (className: string) =>
     prescription?.pdf ? (
       <FileOpenButton
@@ -121,7 +89,7 @@ export default function CartView() {
     ? `${prescription.doctorName} prescribed these on ${shortDate(prescription.signedAt)}.`
     : undefined;
   const bought = cart?.lines.filter((line) => line.quantity > 0) ?? [];
-  const canPay = Boolean(cart && cart.address && bought.length && !saving);
+  const canPay = Boolean(cart && cart.address && (bought.length || cart.plan) && !saving);
 
   return (
     <main className={`${layoutStyles.page} ${styles.page}`}>
@@ -136,45 +104,13 @@ export default function CartView() {
 
       {plan.data && !cart && (
         <Card className={styles.held}>
-          {availableAt ? (
-            <>
-              <p className={styles.heldTitle}>Your prescription is ready</p>
-              <p className={styles.text}>
-                Your medicine quote opens here{" "}
-                {spokenDay(new Date(availableAt))}. Your care team calls you
-                before then about your programme.{" "}
-                <button
-                  type="button"
-                  className={styles.inlineLink}
-                  disabled={opening}
-                  onClick={orderNow}
-                >
-                  {opening ? "Opening your order" : "Order now instead"}
-                </button>
-              </p>
-            </>
-          ) : (
-            <>
-              <p className={styles.heldTitle}>Nothing to order right now</p>
-              <p className={styles.text}>
-                When your doctor prescribes medicine our pharmacy stocks, it is
-                added here for you, ready to pay.
-              </p>
-            </>
-          )}
+          <p className={styles.heldTitle}>Nothing to order right now</p>
+          <p className={styles.text}>
+            When your doctor prescribes medicine our pharmacy stocks, it is
+            added here for you, ready to pay.
+          </p>
           <div className={styles.heldActions}>
             {openPrescription(`btn btn--ghost ${styles.secondary}`)}
-            {availableAt && (
-              <button
-                type="button"
-                className={`btn btn--ghost ${styles.secondary}`}
-                disabled={calledBack}
-                onClick={callBack}
-              >
-                <Phone size={18} aria-hidden="true" />
-                <span>{calledBack ? "We will call you" : "Call me"}</span>
-              </button>
-            )}
           </div>
         </Card>
       )}
@@ -282,7 +218,7 @@ export default function CartView() {
                   disabled
                 >
                   <span>
-                    {!bought.length
+                    {!bought.length && !cart.plan
                       ? "Nothing in your cart"
                       : !cart.address
                         ? "Add an address to pay"

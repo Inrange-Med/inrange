@@ -1,6 +1,5 @@
 // The patient's side of the medicine flow, the same actions WhatsApp's buttons take, for anyone who uses
 // the app instead (or has WhatsApp off). Mounted at /api. docs/backend/medicine-flow.md.
-//   POST  /care/cart/open-now                     the held nano order, opened early because the patient asked
 //   POST  /care/cart/elsewhere                    "I bought them elsewhere": no more reminders about this order
 //   POST  /care/medicine-orders/:orderId/feedback { rating: "GOOD" | "ISSUE", note? } after delivery
 //   GET   /care/doses                             the dose schedules and the last and next doses (patients on a plan)
@@ -26,13 +25,6 @@ async function openCart(patientId: number) {
   if (!k) fail(404, "There is no medicines order waiting.");
   return k;
 }
-
-medicineRoutes.post("/care/cart/open-now", async (c) => {
-  const me = await requirePatient(c);
-  const k = await openCart(me.id);
-  await flow.orderNow(k.id, me.id, "app");
-  return ok(c, { cartId: String(k.id) }, "Your order is ready");
-});
 
 medicineRoutes.post("/care/cart/elsewhere", async (c) => {
   const me = await requirePatient(c);

@@ -181,7 +181,6 @@ export type OpsPatient = {
     id: string;
     kind: "FIRST" | "REFILL";
     status: "OPEN" | "PAID" | "CLOSED";
-    availableAt: string;
     boughtElsewhere: boolean;
     totalPaise: number;
     lines: { name: string; quantity: number; prescribed: number }[];

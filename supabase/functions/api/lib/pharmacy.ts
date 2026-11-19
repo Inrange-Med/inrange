@@ -1,4 +1,4 @@
-// The pharmacy: catalogue search, cart pricing and when a cart may be shown. docs/backend/medicine-cart.md.
+// The pharmacy: catalogue search and cart pricing. docs/backend/medicine-cart.md.
 // Customer prices only leave this file. The internal cost (medicine_costs) is read for one thing: no
 // line is ever sold below what it costs us, whatever the discount table says.
 import type { TransactionSql } from "postgres";
@@ -6,13 +6,6 @@ import { sql } from "./db.ts";
 
 type Tx = TransactionSql | typeof sql;
 export type CartLine = { medicineId: number; quantity: number; prescribed: number };
-
-const get = (name: string) => Deno.env.get(name)?.trim() || "";
-/** First consultation without a plan: hours between the prescription and its cart (12 Nov 2026 call: pilot 24 or 48). */
-export const nanoCartDelayHours = () => {
-  const n = Number(get("NANO_CART_DELAY_HOURS") || 48);
-  return Number.isFinite(n) && n >= 0 ? n : 48;
-};
 
 /** The catalogue row as the doctor's search and the prescription see it. */
 export const medicineColumns = (tx: Tx) => tx`
@@ -92,10 +85,10 @@ export async function priceCart(tx: Tx, cart: { lines: CartLine[]; months: numbe
   };
 }
 
-/** A patient with an active plan gets the cart at once; anyone else (the nano plan) after the delay. */
-export async function cartAvailableAt(tx: Tx, patientId: number, signedAt: Date) {
+/** Whether the patient has an active plan. Every cart opens the moment its prescription is sent, plan or not (19 Nov 2026). */
+export async function onPlan(tx: Tx, patientId: number) {
   const [plan] = await tx`select 1 from subscriptions where user_id = ${patientId} and status = 'Active' and ends_at > now()`;
-  return { onPlan: Boolean(plan), availableAt: plan ? signedAt : new Date(signedAt.getTime() + nanoCartDelayHours() * 3600_000) };
+  return Boolean(plan);
 }
 
 if (import.meta.main) {

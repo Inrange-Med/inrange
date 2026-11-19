@@ -151,8 +151,8 @@ def main():
     step("Send to patient", b["data"]["status"] == "SENT" and b["data"]["sentAt"], b)
     m = sql(f"select kind, status from patient_messages where patient_id = {pid} and kind = 'RX_READY'")
     step("the patient got it on WhatsApp", m == [["RX_READY", "SENT"]], m)
-    k = sql(f"select lines, available_at > now() from medicine_carts where patient_id = {pid} and status = 'OPEN'")
-    step("the cart holds only the listed pen, opening later (first consultation, no plan)",
+    k = sql(f"select lines, available_at <= now() from medicine_carts where patient_id = {pid} and status = 'OPEN'")
+    step("the cart holds only the listed pen, open at once (first consultation, no plan)",
          len(k) == 1 and f'"medicineId": {mounjaro["id"]}' in k[0][0] and k[0][0].count("medicineId") == 1 and k[0][1] == "t", k)
     t = sql(f"select id, status, priority from ops_tasks where patient_id = {pid} and kind = 'MATCH_MEDICINE'")
     step("admin is asked to match the hand-typed medicine", t and t[0][1] == "OPEN" and t[0][2] == "HIGH", t)

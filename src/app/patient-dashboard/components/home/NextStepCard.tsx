@@ -65,9 +65,7 @@ function wordsFor(step: NextStep): Words {
     case "PRESCRIPTION_SENT":
       return {
         title: "Your prescription is ready",
-        text: step.orderOpensAt
-          ? `From ${doctor(step.prescription.doctorName)}. You can order your medicines from ${when(step.orderOpensAt)}.`
-          : `From ${doctor(step.prescription.doctorName)}, ${shortDate(step.prescription.sentAt)}.`,
+        text: `From ${doctor(step.prescription.doctorName)}, ${shortDate(step.prescription.sentAt)}.`,
         action: {
           label: "View prescription",
           href: `${HOME}/prescriptions?rx=${step.prescription.id}`,

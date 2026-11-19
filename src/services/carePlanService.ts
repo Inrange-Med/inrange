@@ -3,9 +3,8 @@
  * docs/backend/medicine-cart.md
  *   GET   /api/care/prescription/current   The latest signed prescription -> { data: Prescription | null }
  *   GET   /api/care/medicine-orders        Medicine deliveries, newest first -> { data: MedicineOrder[] }
- *   GET   /api/care/cart                   The prescription's prefilled cart -> { data: MedicineCart | null, availableAt? }
+ *   GET   /api/care/cart                   The prescription's prefilled cart -> { data: MedicineCart | null }
  *   PATCH /api/care/cart                   { lines?: [{ medicineId, quantity }], addressId? } -> { data: MedicineCart }
- *   POST  /api/care/cart/open-now          The held order, opened early because the patient asked
  *   POST  /api/care/cart/elsewhere         "I bought them elsewhere": no more reminders about this order
  *   POST  /api/care/medicine-orders/:id/feedback  { rating: GOOD | ISSUE, note? } -> { callBy }
  *   GET   /api/care/doses                  Dose reminders and the recent doses -> { schedules, events }
@@ -27,7 +26,7 @@ import type {
   Prescription,
 } from "@/types/carePlan";
 
-const NO_CART: CartState = { cart: null, availableAt: null };
+const NO_CART: CartState = { cart: null };
 
 export async function loadCarePlan(): Promise<CarePlan> {
   try {
@@ -58,11 +57,10 @@ export async function loadCarePlan(): Promise<CarePlan> {
 
 export async function getCart(): Promise<CartState> {
   try {
-    const body = await apiRequest<{
-      data?: MedicineCart | null;
-      availableAt?: string | null;
-    }>("/api/care/cart");
-    return { cart: body.data ?? null, availableAt: body.availableAt ?? null };
+    const body = await apiRequest<{ data?: MedicineCart | null }>(
+      "/api/care/cart",
+    );
+    return { cart: body.data ?? null };
   } catch (caught) {
     if (caught instanceof ApiError && caught.isMissingEndpoint) return NO_CART;
     throw caught;
@@ -78,10 +76,6 @@ export async function updateCart(change: {
     body: change,
   });
   return body.data;
-}
-
-export async function openCartNow(): Promise<void> {
-  await apiRequest("/api/care/cart/open-now", { method: "POST" });
 }
 
 export async function boughtElsewhere(): Promise<void> {

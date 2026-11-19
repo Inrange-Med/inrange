@@ -63,7 +63,6 @@ the secret it answers 503 and nothing runs. `job_runs` records each run.
 | `APP_URL` | `https://inrange-pilot.vercel.app` | Links the API hands out (the mock video room) and the base of every WhatsApp button (re-sync the templates when it changes). |
 | `DB_POOLER_URL` | set | Postgres through the transaction pooler (port 6543). |
 | `APP_JWT_SECRET` | set | Signs sign-in tokens (14 days). Changing it signs everyone out. |
-| `NANO_CART_DELAY_HOURS` | `48` | Hours between a first consultation's prescription and its cart (pilot 24 or 48). |
 | `PRACTICE_ADDRESS` | placeholder | The registered office, printed on prescriptions (CONFIRM first). Each doctor's practice address and contact are `doctors.practice_address` and `doctors.contact`. |
 | `PHARMACY_LICENCE` | placeholder | The pharmacy's drug licence numbers (Forms 20, 21), printed on prescriptions (CONFIRM first). |
 | `SUPPORT_PHONE` | placeholder | The support number on prescriptions (header and the grievance line); there is no care@ inbox. |
@@ -87,7 +86,7 @@ select id, 'Dr. Full Name', 'Endocrinology', 'MBBS, MD', 'DMC/R/00000', 499 from
 Writing a prescription: in the note after the call, "Add a medicine" and pick it from the pharmacy list (or
 write a Plan sentence such as "Start Metformin 500 mg, twice a day after meals." for something not stocked),
 then sign the note. The one signature signs the prescription: the PDF, the patient's copy and a prefilled
-cart (held back `NANO_CART_DELAY_HOURS` for a first consultation without a plan). The delivery order is
+cart, payable at once, plan or not. The delivery order is
 created when the patient pays. Prices and internal costs: `docs/backend/medicine-cart.md`.
 
 ## Security

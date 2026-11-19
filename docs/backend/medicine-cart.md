@@ -19,7 +19,7 @@ consultation, and how it is built (15 Nov 2026). Sachchidanand is writing the fu
 | GET | `/api/pharmacy/inventory?query=` | LIVE (doctor) | Add a medicine: what the pharmacy stocks, matched on brand, molecule and strength. Customer MRP only |
 | POST | `/api/doctor/notes/:noteId/sign` | LIVE, `{ sendToApp, rxMonths }` | One signature: the note, then the prescription (PDF, cart) |
 | POST | `/api/doctor/patients/:patientId/prescriptions/:id/sign` | LIVE, `{ months }` | Fallback for a draft left when the PDF could not be made |
-| GET | `/api/care/cart` | LIVE (patient) | The open cart, or `{ data: null, availableAt }` while held back, or `{ data: null }` |
+| GET | `/api/care/cart` | LIVE (patient) | The open cart, or `{ data: null }` |
 | PATCH | `/api/care/cart` | LIVE (patient) | `{ lines: [{ medicineId, quantity }], addressId }`: 0 up to the prescribed quantity |
 | POST | `/api/payments/orders` | LIVE, `purpose: "MEDICINE_ORDER"`, `referenceId`: the cart id | Checkout; paying creates the delivery (`medicine_orders`) |
 
@@ -34,10 +34,9 @@ consultation, and how it is built (15 Nov 2026). Sachchidanand is writing the fu
 2. **One signature.** Signing the note signs the prescription too: the PDF, the patient's copy and a
    cart of every stocked item at its prescribed quantity, with the default discount. A newer prescription
    closes the unpaid cart. If the PDF fails, the prescription stays a draft the doctor signs from the record.
-3. **First consultation without a plan (the nano plan): one month, cart later.** The prescription is
-   one month whatever the doctor picked, valid one month, and the cart opens
-   `NANO_CART_DELAY_HOURS` (secret, default 48) after signing. Until then `GET /api/care/cart` answers
-   `availableAt`; Care and Your medicines show the date, the prescription and "Call me" (a support request).
+3. **First consultation without a plan (the nano plan): one month, cart at once.** The prescription is
+   one month whatever the doctor picked, valid one month, and its cart is payable the moment it is sent
+   (19 Nov 2026: no waiting; the 48-hour hold of the 12 Nov call is gone).
 4. **Patients on a plan: cart at once,** for the 1, 2, 3 or 6 months the doctor picked in the Sign sheet.
 5. **Self-checkout.** Your medicines arrives filled in (quantities, discount, the default address), so
    Pay is the one required tap; it opens Razorpay straight away.
@@ -72,7 +71,7 @@ digital signature, and the PDF says "Digitally signed" with the prescriber's det
 
 - WhatsApp (Meta Cloud API): the prescription and cart messages, the 24-hour agent call task and the
   6 to 12-hour reminders (rules 3 and 4 of the call) need the Meta integration and a scheduler. The cart
-  already carries `available_at`, which is when the message should go.
+  opens when the prescription is sent, which is when the message should go.
 - Program + medicine bundles (sheet Step 4): sales quotes, not an app purchase.
 
 ## Other asks from the call

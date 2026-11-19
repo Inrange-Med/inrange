@@ -9,7 +9,7 @@
 //   CALL_BOOKED        the next consultation (first or follow-up)              appointment
 //   AFTER_CALL         the call happened, the prescription is not sent yet     appointment
 //   ON_THE_WAY         medicines paid and moving                               order
-//   PRESCRIPTION_SENT  sent; the order opens later or nothing to order         prescription, orderOpensAt
+//   PRESCRIPTION_SENT  sent, with nothing to order                             prescription
 //   before the first consultation, from the eligibility review:
 //   BLOOD_TEST_NEEDED  LAB_UNPAID  TEST_BOOKED  WAITING_FOR_REPORT  UNDER_REVIEW  NOT_APPROVED  BOOK_CONSULTATION
 //   IN_CARE            nothing waiting: the next monthly review is theirs to book
@@ -51,7 +51,7 @@ export async function nextStep(patientId: number, now = new Date()) {
     sql`select x.id, x.appointment_id, coalesce(x.sent_at, x.signed_at) as sent_at, x.items, d.full_name as doctor
         from prescriptions x join doctors d on d.id = x.doctor_id
         where x.patient_id = ${patientId} and x.status = 'SIGNED' order by x.signed_at desc limit 1`,
-    sql`select k.id, k.lines, k.available_at, k.elsewhere_at, k.address_id, k.plan_id, k.patient_id, p.months from medicine_carts k join prescriptions p on p.id = k.prescription_id
+    sql`select k.id, k.lines, k.elsewhere_at, k.address_id, k.plan_id, k.patient_id, p.months from medicine_carts k join prescriptions p on p.id = k.prescription_id
         where k.patient_id = ${patientId} and k.status = 'OPEN' and (p.valid_until is null or p.valid_until > now())
         order by k.id desc limit 1`,
     sql`select id, status, expected_at from medicine_orders where patient_id = ${patientId}
@@ -75,8 +75,7 @@ export async function nextStep(patientId: number, now = new Date()) {
       followedBy: null,
     };
   }
-  const cartReady = cart && !cart.elsewhere_at && new Date(cart.available_at).getTime() <= t;
-  if (cartReady) {
+  if (cart && !cart.elsewhere_at) {
     const priced = await priceCart(sql, cart as never);
     const lines = priced.lines.filter((l) => l.available && l.quantity > 0);
     if (lines.length || priced.plan)
@@ -109,11 +108,7 @@ export async function nextStep(patientId: number, now = new Date()) {
     medicines: (rx.items as Row[]).length } : null;
   if (delivered) return { stage: "DELIVERED", order: { id: String(delivered.id), deliveredAt: ist(delivered.delivered_at) }, prescription: rxView };
   if (rx && t - new Date(rx.sent_at).getTime() < 30 * DAY)
-    return {
-      stage: "PRESCRIPTION_SENT", prescription: rxView,
-      // the first consultation without a plan: the order opens 48 hours later (12 Nov 2026 call)
-      orderOpensAt: cart && !cart.elsewhere_at && new Date(cart.available_at).getTime() > t ? ist(cart.available_at) : null,
-    };
+    return { stage: "PRESCRIPTION_SENT", prescription: rxView };
 
   if (!happened) {
     const stage = e?.stage ?? "NOT_STARTED";

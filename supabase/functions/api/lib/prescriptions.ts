@@ -5,13 +5,13 @@
 // - The call note (routes/doctor.ts, kept for the back office): signing a note signs its prescription in one
 //   step (signRx), the clinical words taken from the note's sections.
 // Issuing: the previous prescription is superseded, the patient's unpaid cart closes with its follow-ups,
-// a new cart holds every line the pharmacy sells (a first consultation without a plan: one month, held
-// NANO_CART_DELAY_HOURS), a medicine typed by hand opens a MATCH_MEDICINE task for admin, and the patient
-// gets the prescription on WhatsApp and in the app. docs/backend/doctor-portal-v2.md.
+// a new cart holds every line the pharmacy sells, open at once (without a plan: one month), a medicine typed
+// by hand opens a MATCH_MEDICINE task for admin, and the patient gets the prescription on WhatsApp and in the
+// app. docs/backend/doctor-portal-v2.md.
 import { sql } from "./db.ts";
 import { fail } from "./http.ts";
 import { uploadFile } from "./storage.ts";
-import { cartAvailableAt, type CartLine } from "./pharmacy.ts";
+import { onPlan as hasPlan, type CartLine } from "./pharmacy.ts";
 import { prescriptionPdf, type RxPdfItem } from "./prescriptionPdf.ts";
 import { closeTasks, openTask, startMedicineFlow } from "./medicineFlow.ts";
 import { deliver } from "./notify.ts";
@@ -256,10 +256,9 @@ export async function renderRx(doctor: Doctor, patientId: number, rx: Row, signe
  * The months a prescription is issued for: without a plan (the nano plan) one month. A plan in the prescription
  * counts as on a plan: it is bought with the medicines, in the same payment.
  */
-export async function issueMonths(patientId: number, asked: number, at: Date, withPlan = false) {
-  const { onPlan: active, availableAt } = await cartAvailableAt(sql, patientId, at);
-  const onPlan = active || withPlan;
-  return { onPlan, availableAt, months: onPlan ? Math.min(12, Math.max(1, Math.round(asked))) : 1 };
+export async function issueMonths(patientId: number, asked: number, withPlan = false) {
+  const onPlan = withPlan || await hasPlan(sql, patientId);
+  return { onPlan, months: onPlan ? Math.min(12, Math.max(1, Math.round(asked))) : 1 };
 }
 
 // ---------------------------------------------------------------- issuing
@@ -275,11 +274,10 @@ export async function issueRx(doctor: Doctor, patientId: number, rxId: number,
   if (rx.status !== "DRAFT") fail(409, "This prescription was sent already.");
   const items = rx.items as Row[];
   const at = o.sentAt ?? o.signedAt;
-  const { onPlan: active, availableAt: later } = await cartAvailableAt(sql, patientId, at);
+  const active = await hasPlan(sql, patientId);
   // the plan the doctor prescribed goes in the same cart as the medicines: one payment, the cart open at once
   const planId: number | null = rx.plan_id && !active ? rx.plan_id : null;
   const onPlan = active || planId !== null;
-  const availableAt = onPlan ? at : later;
   const validUntil = new Date(o.signedAt);
   validUntil.setMonth(validUntil.getMonth() + o.months);
   const ids = items.map((i) => Number(i.medicineId)).filter((id) => Number.isInteger(id) && id > 0);
@@ -358,7 +356,7 @@ export async function issueRx(doctor: Doctor, patientId: number, rxId: number,
     }
     const [cart] = carted
       ? await tx`insert into medicine_carts (patient_id, prescription_id, available_at, lines, address_id, plan_id)
-               values (${patientId}, ${rxId}, ${availableAt}, ${tx.json([...merged.values()])}, ${addr?.id ?? null}, ${planId}) returning id`
+               values (${patientId}, ${rxId}, ${at}, ${tx.json([...merged.values()])}, ${addr?.id ?? null}, ${planId}) returning id`
       : [];
     if (unlisted.length)
       await openTask(tx, {
@@ -370,19 +368,19 @@ export async function issueRx(doctor: Doctor, patientId: number, rxId: number,
     await tx`insert into audit_log (patient_id, actor_id, action) values (${patientId}, ${doctor.id}, ${`Signed prescription version ${rx.version}, ${doctor.name}`})`;
     // the prescription on WhatsApp now (a link into the app; the PDF stays with us), and the follow-up (lib/medicineFlow.ts)
     return await startMedicineFlow(tx, {
-      patientId, prescriptionId: rxId, version: rx.version, cartId: cart?.id ?? null, onPlan, signedAt: at, availableAt,
+      patientId, prescriptionId: rxId, version: rx.version, cartId: cart?.id ?? null, onPlan, signedAt: at,
       doctorName: doctor.name,
     });
   });
   if (messageId) await deliver(messageId).catch((e) => console.error("prescription message", e.message));
   return { id: String(rxId), version: rx.version, status: "SIGNED", signedAt: ist(o.signedAt), months: o.months,
-           validUntil: ist(validUntil), cartAvailableAt: carted ? ist(availableAt) : null };
+           validUntil: ist(validUntil) };
 }
 
 /**
- * The call note's one-step signature (back office): renders the PDF now and issues it. The first consultation
- * without a plan is one month and its cart waits NANO_CART_DELAY_HOURS (12 Nov 2026 call); on a plan, the
- * doctor's months stand and the cart is ready at once. A newer prescription closes the patient's unpaid cart.
+ * The call note's one-step signature (back office): renders the PDF now and issues it. Without a plan the
+ * prescription is one month (12 Nov 2026 call); on a plan, the doctor's months stand. Either way the cart is
+ * ready at once. A newer prescription closes the patient's unpaid cart.
  */
 export async function signRx(doctor: Doctor, patientId: number, rxId: number, monthsAsked: number) {
   const [rx] = await sql`select * from prescriptions where id = ${rxId} and patient_id = ${patientId}`;
@@ -390,7 +388,7 @@ export async function signRx(doctor: Doctor, patientId: number, rxId: number, mo
   if (rx.status !== "DRAFT") fail(409, "Only a draft prescription can be signed.");
   if (!(rx.items as Row[]).length) fail(422, "This prescription has no medicines to sign.");
   const signedAt = new Date();
-  const { months } = await issueMonths(patientId, monthsAsked, signedAt);
+  const { months } = await issueMonths(patientId, monthsAsked);
   const path = await renderRx(doctor, patientId, rx, signedAt, months);
   return await issueRx(doctor, patientId, rxId, { signedAt, months, path });
 }

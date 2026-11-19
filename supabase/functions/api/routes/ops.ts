@@ -38,7 +38,7 @@ import { env } from "../lib/env.ts";
 import { TEMPLATES, type Template } from "../lib/messages.ts";
 import { lineOf, lineView } from "../lib/prescriptions.ts";
 import { packsFor } from "../lib/medicineSearch.ts";
-import { cartAvailableAt } from "../lib/pharmacy.ts";
+import { onPlan as hasPlan } from "../lib/pharmacy.ts";
 
 export const opsRoutes = new Hono();
 
@@ -177,7 +177,6 @@ opsRoutes.post("/admin/medicine/tasks/:taskId/send-link", async (c) => {
   const [{ n }] = await sql`select count(*)::int as n from patient_messages where dedupe_key like ${`task:${t.id}:link:%`}`;
   if (n >= 3) fail(429, "The link was sent three times already. Call the patient instead.");
   const [p] = await sql`select coalesce(nullif(first_name, ''), 'there') as first from patient_profiles where user_id = ${k.patient_id}`;
-  if (new Date(k.available_at) > new Date()) await sql`update medicine_carts set available_at = now() where id = ${k.id}`;
   const id = await queueMessage(sql, { patientId: k.patient_id, kind: "CARE_LINK", values: [p?.first ?? "there"], dedupeKey: `task:${t.id}:link:${n + 1}`, cartId: k.id });
   const result = id ? await deliver(id) : "SKIPPED";
   await sql`update ops_tasks set history = history || ${entry(me, result === "SENT" ? "Sent the app link on WhatsApp" : `App link not sent (${result.toLowerCase()})`)}
@@ -233,7 +232,7 @@ opsRoutes.post("/admin/medicine/tasks/:taskId/match", async (c) => {
     items[index] = matched;
     await tx`update prescriptions set items = ${tx.json(items as never)} where id = ${cur.id}`;
     if (cur.status === "SIGNED" && m.mrp_paise != null) {
-      const { onPlan, availableAt } = await cartAvailableAt(tx, cur.patient_id, new Date(cur.sent_at ?? cur.signed_at));
+      const onPlan = await hasPlan(tx, cur.patient_id);
       // as at Send: without a plan the order carries one month (lib/prescriptions.ts issueRx)
       const full = Number(matched.quantity) || 1;
       const q = onPlan ? full : Math.min(full, packsFor(30, m.pack_days));
@@ -251,12 +250,12 @@ opsRoutes.post("/admin/medicine/tasks/:taskId/match", async (c) => {
           const [addr] = await tx`select id from addresses where user_id = ${cur.patient_id} order by is_default desc, id desc limit 1`;
           const [cart] = await tx`
             insert into medicine_carts (patient_id, prescription_id, available_at, lines, address_id)
-            values (${cur.patient_id}, ${cur.id}, ${availableAt}, ${tx.json([{ medicineId: m.id, quantity: q, prescribed: q }])}, ${addr?.id ?? null})
+            values (${cur.patient_id}, ${cur.id}, now(), ${tx.json([{ medicineId: m.id, quantity: q, prescribed: q }])}, ${addr?.id ?? null})
             returning id`;
           await tx`
             insert into medicine_followups (cart_id, patient_id, flow, stage, next_at, history)
             values (${cart.id}, ${cur.patient_id}, ${onPlan ? "PLAN" : "NANO"}, 'WAITING',
-              ${onPlan ? new Date(Date.now() + 86_400_000) : availableAt},
+              now() + interval '1 day',
               ${tx.json([{ at: new Date().toISOString(), what: "Order opened when the care team matched a medicine" }])})
             on conflict (cart_id) do nothing`;
           await tx`update ops_tasks set cart_id = ${cart.id} where id = ${t.id}`;
@@ -308,7 +307,7 @@ opsRoutes.get("/admin/medicine/patients/:patientId", async (c) => {
   const [[rx], carts, followups, orders, messages, replies, tasks, schedules, events, [plan], [coach], [consent]] = await Promise.all([
     sql`select p.id, p.items, p.months, ${iso("p.signed_at")} as signed, ${iso("p.valid_until")} as valid, d.full_name as doctor
         from prescriptions p join doctors d on d.id = p.doctor_id where p.patient_id = ${p.id} and p.status = 'SIGNED' order by p.signed_at desc limit 1`,
-    sql`select k.*, rx.months, ${iso("k.available_at")} as available_iso from medicine_carts k join prescriptions rx on rx.id = k.prescription_id
+    sql`select k.*, rx.months from medicine_carts k join prescriptions rx on rx.id = k.prescription_id
         where k.patient_id = ${p.id} order by k.id desc limit 5`,
     sql`select f.*, ${iso("f.next_at")} as next_iso from medicine_followups f where f.patient_id = ${p.id} order by f.id desc limit 5`,
     sql`select o.*, ${iso("o.placed_at")} as placed_iso, ${iso("o.expected_at")} as expected_iso, ${iso("o.delivered_at")} as delivered_iso
@@ -334,7 +333,7 @@ opsRoutes.get("/admin/medicine/patients/:patientId", async (c) => {
       coach: coach ? { id: String(coach.id), name: coach.full_name } : null },
     prescription: rx ? { id: String(rx.id), doctor: rx.doctor, signedAt: rx.signed, validUntil: rx.valid, months: rx.months,
       items: (rx.items ?? []).map((i: Record<string, unknown>) => ({ name: `${i.medicineName ?? ""} ${i.strength ?? ""}`.trim(), frequency: i.frequency ?? "", stocked: Boolean(i.medicineId) })) } : null,
-    carts: carts.map((k, i) => ({ id: String(k.id), kind: k.kind, status: k.status, availableAt: k.available_iso, boughtElsewhere: Boolean(k.elsewhere_at),
+    carts: carts.map((k, i) => ({ id: String(k.id), kind: k.kind, status: k.status, boughtElsewhere: Boolean(k.elsewhere_at),
       totalPaise: priced[i].totalPaise, lines: priced[i].lines.map((l) => ({ name: `${l.brand} ${l.strength}`, quantity: l.quantity, prescribed: l.prescribed })) })),
     followups: followups.map((f) => ({ id: String(f.id), cartId: String(f.cart_id), flow: f.flow, stage: f.stage, nextAt: f.next_iso, closedReason: f.closed_reason, history: f.history })),
     orders: orders.map((o) => ({ id: String(o.id), orderNumber: flow.orderNumber(o.id), status: o.status, flow: o.flow, placedAt: o.placed_iso,

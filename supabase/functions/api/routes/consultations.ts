@@ -314,7 +314,7 @@ consultationRoutes.post("/doctor/consultations/:id/prescription/pdf", async (c) 
   // the database's clock, as autosave's: a save that lands while the PDF renders is later than `at`
   // milliseconds, as saved_at: a JS Date carries no finer, so the comparison is exact both ways
   const [{ at }] = await sql`select date_trunc('milliseconds', clock_timestamp()) as at`;
-  const { months, onPlan } = await issueMonths(r.patient_id, monthsOf(rx.items), at, Boolean(rx.plan_id));
+  const { months, onPlan } = await issueMonths(r.patient_id, monthsOf(rx.items), Boolean(rx.plan_id));
   const missing = missingFor(rx, onPlan);
   if (missing) fail(422, missing);
   const path = await renderRx(doctor, r.patient_id, rx, at, months);

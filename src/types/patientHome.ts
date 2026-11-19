@@ -60,7 +60,6 @@ export type NextStep =
   | {
       stage: "PRESCRIPTION_SENT";
       prescription: PrescriptionSummary;
-      orderOpensAt: string | null;
     }
   | {
       stage: "LAB_UNPAID";

@@ -21,7 +21,7 @@ indicative at ₹1,499 until Redcliffe's quote); its **Program** is our **plans*
 | PRD | inrange today |
 | --- | --- |
 | The prescription reaches the patient at once on signing (T+0) | One signature makes the PDF, the patient's copy in the app and the cart (`POST /api/doctor/notes/:noteId/sign`). The WhatsApp copy is still to come (below) |
-| ₹1799: no purchase push at T+0 | Nano plan: the cart opens `NANO_CART_DELAY_HOURS` (48) after signing; until then the app shows the date, the prescription and "Call me" |
+| ₹1799: no purchase push at T+0 | Replaced 19 Nov 2026: every cart is payable the moment the prescription is sent, plan or not. No purchase link goes on WhatsApp at T+0; the cart is in the app |
 | Program: instant "Buy now" with a ready quote | Patients on a plan get the cart at once, filled in (quantities, discount, address), so Pay is one tap |
 | One system of record, no spreadsheets | Carts, orders and prescriptions live in Supabase; nothing is keyed in twice |
 | Discount shown as its own line, before tax | `medicine_discounts` (13% from 1 month, 14% from 6), MRP struck through in the cart; a guard never sells below cost |

@@ -6,11 +6,11 @@ Runs against a local API by default (supabase/tests/local/README.md), or the dep
   OTP          the sign-in code (default 123456, the pilot code while SMS is mocked)
   JOBS_SECRET, RAZORPAY_WEBHOOK_SECRET, WHATSAPP_APP_SECRET   the API's own values, to call the tick and sign webhooks
 WhatsApp must be in mock mode (no WHATSAPP_TOKEN): replies are played through the admin panel's route and
-the signed webhook. Time is moved with SQL (next_at, available_at, delivered_at, due_at), never by waiting.
+the signed webhook. Time is moved with SQL (next_at, delivered_at, due_at), never by waiting.
 Writes only test users (mobile 98000...). Clean up with supabase/tests/cleanup_test_patients.sql.
 
 Walks:
-  nano plan  sign (prescription message, cart held) -> the cart opens -> check-in 1 -> "Need more time" ->
+  nano plan  sign (prescription message, cart open at once) -> check-in 1 -> "Need more time" ->
              check-in 2 -> "I have questions" (task) -> no reply -> call task -> pay (follow-up and tasks close,
              order confirmation) -> pack, dispatch (needs tracking), out for delivery, deliver -> feedback
              "Something is wrong" (urgent task) -> renewal (one-month prescription) -> STOP on WhatsApp
@@ -179,16 +179,15 @@ def main():
 
     # ---------------------------------------------------------------- nano plan
     rx, signed = sign(doctor, nano_id)
-    step("nano: the order is held (cartAvailableAt in the future)", signed["cartAvailableAt"] is not None, signed)
     m = messages(nano_id)
     step("nano: prescription sent on WhatsApp with no purchase link", [r[1] for r in m] == ["RX_READY"] and m[0][2] == "SENT", m)
-    f = sql(f"select stage, next_at > now() + interval '40 hours' from medicine_followups where patient_id = {nano_id}")
-    step("nano: first check-in waits for the order to open (48 h)", f == [["WAITING", "t"]], f)
+    f = sql(f"select stage, next_at between now() + interval '23 hours' and now() + interval '25 hours' from medicine_followups where patient_id = {nano_id}")
+    step("nano: first check-in a day after signing", f == [["WAITING", "t"]], f)
     s, b = call("GET", "/api/care/cart", nano)
-    step("nano: the app shows when the order opens", s == 200 and b["data"] is None and b.get("availableAt"), b)
+    step("nano: the order is open at once in the app", s == 200 and b["data"] and b["data"]["lines"], b)
 
-    # the order opens: time moves on
-    sql(f"update medicine_carts set available_at = now() - interval '1 minute' where patient_id = {nano_id}; update medicine_followups set next_at = now() - interval '1 minute' where patient_id = {nano_id}")
+    # a day on
+    sql(f"update medicine_followups set next_at = now() - interval '1 minute' where patient_id = {nano_id}")
     tick()
     c1 = last(nano_id, "CHECK_IN")
     step("nano: first check-in sent", c1 is not None and one(f"select status from patient_messages where id = {c1}") == "SENT")
