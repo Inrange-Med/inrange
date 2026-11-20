@@ -12,7 +12,8 @@
 //   GET  /doctor/consultations?date=YYYY-MM-DD        { day: Row[], waiting: Row[] } (waiting: "Do this now", any date)
 //   GET  /doctor/consultations/history?from=&to=&q=   past consultations, newest first, no phone numbers
 //   GET  /doctor/consultations/:id                    the consultation page
-//   PUT  /doctor/consultations/:id/prescription       { diagnosis, patientHistory, remarks, advice, medicines, planId } autosave
+//   PUT  /doctor/consultations/:id/prescription       { diagnosis, patientHistory, remarks, advice, medicines } autosave
+//                                                     (no plan: a salesperson sells it, never the doctor; 19 Nov 2026 call)
 //   POST /doctor/consultations/:id/prescription/pdf   "Create PDF": the patient's copy, shown on the page
 //   POST /doctor/consultations/:id/prescription/send  "Send to patient": that PDF, on WhatsApp and in the app
 //   POST /doctor/consultations/:id/prescription/resend  "Send again" (the WhatsApp message again)
@@ -173,7 +174,6 @@ function prescriptionView(rx: Row | null) {
   return {
     id: String(rx.id), version: rx.version, status: rx.status === "DRAFT" ? "DRAFT" : "SENT",
     diagnosis: rx.diagnosis ?? "", patientHistory: rx.patient_history ?? "", remarks: rx.remarks ?? "", advice: rx.advice ?? "",
-    planId: rx.plan_id ? String(rx.plan_id) : null,
     medicines: (rx.items as Row[]).map(lineView),
     savedAt: ist(rx.saved_at), pdfMadeAt: rx.status === "DRAFT" && !pdfCurrent(rx) ? null : ist(rx.pdf_made_at ?? rx.signed_at),
     pdf: pdfLink(rx), sentAt: ist(rx.sent_at ?? (rx.status !== "DRAFT" ? rx.signed_at : null)), resentAt: ist(rx.resent_at),
@@ -185,7 +185,7 @@ consultationRoutes.get("/doctor/consultations/:id", async (c) => {
   const id = intParam(c.req.param("id"), "consultation");
   const r = await consultationOf(doctor.id, id);
   const patientId = r.patient_id;
-  const [[p], [clinical], weights, reports, [last], rx, [plan], plans] = await Promise.all([
+  const [[p], [clinical], weights, reports, [last], rx, [plan]] = await Promise.all([
     sql`select * from patient_profiles where user_id = ${patientId}`,
     sql`select allergies, outside_medicines from patient_clinical where patient_id = ${patientId}`,
     sql`select weight_kg, logged_at from weight_logs where user_id = ${patientId} order by logged_at desc limit 40`,
@@ -198,8 +198,6 @@ consultationRoutes.get("/doctor/consultations/:id", async (c) => {
     prescriptionOf(id),
     sql`select pl.name, s.ends_at from subscriptions s join plans pl on pl.id = s.plan_id
         where s.user_id = ${patientId} and s.status = 'Active' and s.ends_at > now() order by s.ends_at desc limit 1`,
-    // the plans the doctor can add to the prescription (bought with the medicines, in one payment)
-    sql`select id, name, duration_months from plans where active and price_rupees > 0 order by duration_months`,
   ]);
   await sql`insert into audit_log (patient_id, actor_id, action) values (${patientId}, ${doctor.id}, ${`Opened the consultation, ${doctor.name}`})`;
   const kg = weights[0]?.weight_kg ?? p?.weight_kg ?? null;
@@ -226,7 +224,6 @@ consultationRoutes.get("/doctor/consultations/:id", async (c) => {
       medicines: (last.items as Row[]).map(lineView), pdf: `/api/files/prescriptions/${last.id}`,
     } : null,
     prescription: prescriptionView(rx),
-    plans: plans.map((x) => ({ id: String(x.id), name: x.name, months: x.duration_months })),
     activePlan: plan ? { planName: plan.name, endsAt: ist(plan.ends_at) } : null,
   });
 });
@@ -258,14 +255,6 @@ consultationRoutes.put("/doctor/consultations/:id/prescription", async (c) => {
   const ids = (lines ?? []).map((l: Row) => Number(l.medicineId)).filter((n: number) => Number.isInteger(n) && n > 0);
   const listed = new Map((ids.length
     ? await sql`select * from medicines where id in ${sql(ids)} and active` : []).map((m: Row) => [m.id, m]));
-  // the plan, bought with the medicines: an active plan from the list, or none
-  let planId = undefined as number | null | undefined;
-  if (input.planId !== undefined) {
-    planId = input.planId ? Number(input.planId) : null;
-    if (planId !== null && (!Number.isInteger(planId) ||
-        !(await sql`select 1 from plans where id = ${planId} and active and price_rupees > 0`).length))
-      fail(400, "That plan is not available.");
-  }
   const draft = await draftFor(doctor, r);
   const items = lines ? lines.map((l: Row, i: number) => lineOf(l, listed.get(Number(l.medicineId)), i)) : draft.items;
   const [saved] = await sql`
@@ -274,7 +263,7 @@ consultationRoutes.put("/doctor/consultations/:id/prescription", async (c) => {
       patient_history = ${input.patientHistory !== undefined ? text(input.patientHistory, 4000) : draft.patient_history},
       remarks = ${input.remarks !== undefined ? text(input.remarks, 2000) : draft.remarks},
       advice = ${input.advice !== undefined ? text(input.advice, 4000) : draft.advice},
-      items = ${sql.json(items)}, plan_id = ${planId === undefined ? draft.plan_id : planId},
+      items = ${sql.json(items)}, plan_id = null,
       saved_at = date_trunc('milliseconds', clock_timestamp())
     where id = ${draft.id} and status = 'DRAFT' returning *`;
   if (!saved) fail(409, "This prescription was sent a moment ago. Reload the page.");
@@ -284,11 +273,12 @@ consultationRoutes.put("/doctor/consultations/:id/prescription", async (c) => {
 /** The longest a line may run for a patient with no plan (the nano plan): one month (12 Nov 2026 call). */
 const NANO_DAYS = 31;
 
-/** A prescription is issued only for a consultation that is not cancelled and whose call has opened. */
+/**
+ * A prescription is issued for any consultation that is not cancelled, before or after its call: it does not
+ * depend on the call (19 Nov 2026 call: a month's refill when doctor or patient cannot make the call).
+ */
 function mayIssue(r: Row) {
   if (r.status === "Cancelled") fail(409, "This consultation was cancelled.");
-  if (Date.now() < new Date(r.starts_at).getTime() - OPENS_BEFORE)
-    fail(409, "The prescription can be finished once the call opens.");
 }
 
 /** What the PDF needs before it can be made; the first gap, in the words the doctor sees. */
@@ -315,7 +305,7 @@ consultationRoutes.post("/doctor/consultations/:id/prescription/pdf", async (c) 
   // the database's clock, as autosave's: a save that lands while the PDF renders is later than `at`
   // milliseconds, as saved_at: a JS Date carries no finer, so the comparison is exact both ways
   const [{ at }] = await sql`select date_trunc('milliseconds', clock_timestamp()) as at`;
-  const { months, onPlan } = await issueMonths(r.patient_id, monthsOf(rx.items), Boolean(rx.plan_id));
+  const { months, onPlan } = await issueMonths(r.patient_id, monthsOf(rx.items));
   const missing = missingFor(rx, onPlan);
   if (missing) fail(422, missing);
   const path = await renderRx(doctor, r.patient_id, rx, at, months);
@@ -370,10 +360,10 @@ consultationRoutes.post("/doctor/consultations/:id/prescription/revise", async (
   if (!sent) fail(409, "Only the current prescription can be changed. A newer one replaced this one.");
   const [draft] = await sql`
     insert into prescriptions (patient_id, doctor_id, appointment_id, status, version, items, diagnosis, patient_history,
-                               remarks, advice, plan_id, saved_at)
+                               remarks, advice, saved_at)
     values (${r.patient_id}, ${doctor.id}, ${r.id}, 'DRAFT',
       (select coalesce(max(version), 0) + 1 from prescriptions where patient_id = ${r.patient_id}),
-      ${sql.json(sent.items)}, ${sent.diagnosis ?? ""}, ${sent.patient_history}, ${sent.remarks}, ${sent.advice}, ${sent.plan_id},
+      ${sql.json(sent.items)}, ${sent.diagnosis ?? ""}, ${sent.patient_history}, ${sent.remarks}, ${sent.advice},
       date_trunc('milliseconds', clock_timestamp()))
     on conflict (appointment_id) where status = 'DRAFT' and appointment_id is not null do nothing returning *`;
   return ok(c, prescriptionView(draft ?? (await prescriptionOf(r.id))), "Editing the new version");

@@ -9,10 +9,12 @@ Walks:
            -> the master list (forgiving search, "Did you mean") -> autosave with a listed and a hand-typed medicine
            -> Create PDF needs a diagnosis -> the PDF (the doctor sees it, the patient does not yet) -> an edit
            makes it stale -> made again -> Send (WhatsApp, the cart, the match task) -> Send again -> Edit and send
-           new version (the first one superseded) -> History finds it -> the hour-later reminder is dropped
+           new version (the first one superseded; the doctor cannot add a plan) -> the record says who sent each
+           version and when, with a PDF only for the current one -> History finds it -> the hour-later reminder
+           is dropped -> a follow-up's prescription can be made and sent before its call
   admin    matches the hand-typed medicine to the list: the line joins the order, the task closes
-  patient  the new version carries a plan: one bill (the plan and the medicines) at once -> the prescriptions list
-           and the PDF -> one payment -> the plan active, medicines on the way
+  patient  one bill for the medicines at once (the plan is sold by a salesperson, never prescribed) -> the
+           prescriptions list and the PDF -> one payment -> medicines on the way
 """
 import os, sys, time, uuid
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -98,7 +100,7 @@ def main():
 
     # ---------------------------------------------------------------- the master list
     s, b = call("GET", "/api/medicines/search?q=MOUNJARO%202.5", doctor)
-    step("search: case and spaces do not matter", s == 200 and b["data"]["matches"][0]["name"] == "Mounjaro KwikPen 2.5 mg", b)
+    step("search: case and spaces do not matter, and a pen reads Inj.", s == 200 and b["data"]["matches"][0]["name"] == "Inj. Mounjaro KwikPen 2.5 mg", b)
     mounjaro = b["data"]["matches"][0]
     step("search: a listed pen comes with its dose and is orderable", mounjaro["dose"] == "1 injection" and mounjaro["orderable"], mounjaro)
     s, b = call("GET", "/api/medicines/search?q=monjaro", doctor)
@@ -120,6 +122,8 @@ def main():
     step("Create PDF asks for the diagnosis first", s == 422 and "diagnosis" in b.get("message", "").lower(), b)
     s, b = call("PUT", f"/api/doctor/consultations/{appt}/prescription", doctor, {"diagnosis": "Obesity, class 1. Prediabetes.", "advice": "Walk 30 minutes a day."})
     step("autosave: diagnosis and advice", s == 200 and b["data"]["diagnosis"].startswith("Obesity") and b["data"]["medicines"][0]["name"], b)
+    step("the listed pen is Inj. on the line; the hand-typed name is as written",
+         b["data"]["medicines"][0]["name"].startswith("Inj. Mounjaro") and b["data"]["medicines"][1]["name"].startswith("Glycomet"), b["data"]["medicines"])
     s, b = call("POST", f"/api/doctor/consultations/{appt}/prescription/pdf", doctor)
     step("Create PDF", s == 200 and b["data"]["pdf"] and b["data"]["pdfMadeAt"], b)
     rx = b["data"]["id"]
@@ -172,11 +176,14 @@ def main():
     s, b = call("POST", f"/api/doctor/consultations/{appt}/prescription/pdf", doctor)
     step("no plan: a line longer than a month is refused, in words", s == 422 and "one month" in b.get("message", ""), b)
     lines[0]["durationValue"] = 1
-    # the plan goes in the prescription, so the patient buys it with the medicines in one payment
+    # the doctor never adds a plan (19 Nov 2026 call: a salesperson sells it); one sent anyway is ignored
     plan_id = one("select id from plans where active and price_rupees > 0 order by duration_months limit 1")
     s, b = call("PUT", f"/api/doctor/consultations/{appt}/prescription", doctor,
                 {"medicines": lines, "remarks": "Review sugar in a month.", "planId": plan_id})
-    step("the plan is part of the prescription", s == 200 and b["data"]["planId"] == plan_id, b)
+    step("a plan is never part of the prescription", s == 200 and "planId" not in b["data"]
+         and one(f"select count(*) from prescriptions where patient_id = {pid} and plan_id is not null") == "0", b)
+    s, b = call("GET", f"/api/doctor/consultations/{appt}", doctor)
+    step("the page offers no plans to choose", s == 200 and "plans" not in b["data"], list(b["data"]))
     s, b = call("GET", "/api/doctor/consultations", doctor)
     row = next(r for r in b["data"]["waiting"] if r["id"] == appt)
     step("Do this now: the new version to write", row["state"] == "TO_WRITE" and row["revising"], row)
@@ -188,6 +195,11 @@ def main():
     step("one open cart, for the new version", one(f"select count(*) from medicine_carts where patient_id = {pid} and status = 'OPEN'") == "1")
     m = sql(f"select status from ops_tasks where patient_id = {pid} and kind = 'MATCH_MEDICINE' order by id")
     step("the replaced version's match task closes; the new version has its own", m == [["DONE"], ["OPEN"]], m)
+    s, b = call("GET", f"/api/doctor/patients/{pid}/record", doctor)
+    rec = {p["version"]: p for p in b["data"]["prescriptions"]}
+    step("the record: who sent each version and when, the new one marked edited",
+         s == 200 and rec[1]["doctorName"] and rec[1]["sentAt"] and not rec[1]["edited"] and rec[2]["edited"], b["data"]["prescriptions"])
+    step("the record: only the current version has a PDF", rec[2]["pdf"] and rec[1]["pdf"] is None, rec)
 
     s, b = call("GET", "/api/doctor/consultations/history?q=riya", doctor)
     step("History finds it by name", s == 200 and any(r["id"] == appt and r["state"] == "SENT" for r in b["data"]["consultations"]), b)
@@ -216,9 +228,9 @@ def main():
     # ---------------------------------------------------------------- the patient after the call
     s, b = call("GET", "/api/patient/next-step", patient)
     bill = b["data"].get("bill", {})
-    step("patient: one bill at once, the plan and the medicines together", b["data"]["stage"] == "PAYMENT_DUE"
-         and b["data"]["payFor"] == "MEDICINES" and b["data"].get("withPlan") and [l["key"] for l in bill.get("lines", [])][:1] == ["plan"]
-         and len(bill["lines"]) == 3 and bill["totalPaise"] == sum(l["amountPaise"] for l in bill["lines"]), b)
+    step("patient: one bill at once, the medicines only", b["data"]["stage"] == "PAYMENT_DUE"
+         and b["data"]["payFor"] == "MEDICINES" and not b["data"].get("withPlan") and "plan" not in [l["key"] for l in bill.get("lines", [])]
+         and len(bill["lines"]) == 2 and bill["totalPaise"] == sum(l["amountPaise"] for l in bill["lines"]), b)
     cart_ref = b["data"]["referenceId"]
     s, b = call("GET", "/api/care/prescriptions", patient)
     ps = b["data"]["prescriptions"]
@@ -226,15 +238,13 @@ def main():
     s = file_status(f"/api/files/prescriptions/{ps[0]['id']}", patient)
     step("patient: the PDF opens", s == 200)
     s, o = call("POST", "/api/payments/orders", patient, {"purpose": "MEDICINE_ORDER", "referenceId": cart_ref})
-    step("patient: one payment for the bill's total, the plan in it", s == 200 and o["data"]["amountPaise"] == bill["totalPaise"]
-         and o["data"]["lineItems"][0]["label"] == bill["lines"][0]["label"], o)
+    step("patient: one payment for the bill's total", s == 200 and o["data"]["amountPaise"] == bill["totalPaise"], o)
     if live_pay:
         print("SKIP paying, and a new version after paying (Razorpay is live here: pay in the browser)")
         newest = ps[0]["id"]
     else:
         s, v = call("POST", "/api/payments/verify", patient, {"orderId": o["data"].get("orderId") or o["data"]["id"], "razorpayPaymentId": "pay_mock_" + uuid.uuid4().hex[:10]})
         step("patient: paid (mock)", s == 200, v)
-        step("the one payment started the plan", one(f"select count(*) from subscriptions where user_id = {pid} and status = 'Active'") == "1")
         s, b = call("GET", "/api/patient/next-step", patient)
         step("patient: medicines on the way", b["data"]["stage"] == "ON_THE_WAY", b)
 
@@ -279,7 +289,9 @@ def main():
     step("how often is plain words, never a code", all("(" not in m["frequencyWords"] for m in lp.get("medicines", [])), lp)
     call("PUT", f"/api/doctor/consultations/{later}/prescription", doctor, {"diagnosis": "Written ahead."})
     s, b = call("POST", f"/api/doctor/consultations/{later}/prescription/pdf", doctor)
-    step("written ahead: no PDF before the call opens", s == 409 and "call opens" in b.get("message", ""), b)
+    step("written ahead: the PDF is made before the call (a prescription does not wait for it)", s == 200 and b["data"]["pdf"], b)
+    s, b = call("POST", f"/api/doctor/consultations/{later}/prescription/send", doctor)
+    step("and sent before the call", s == 200 and b["data"]["status"] == "SENT", b)
     older = booked("(now() at time zone 'Asia/Kolkata')::date - 3", early)
     call("PUT", f"/api/doctor/consultations/{older}/prescription", doctor, {"diagnosis": "Left unsent."})
     s, b = call("POST", f"/api/doctor/consultations/{older}/prescription/pdf", doctor)

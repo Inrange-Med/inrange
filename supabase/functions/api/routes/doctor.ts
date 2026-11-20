@@ -36,6 +36,7 @@ import { requireDoctor } from "../lib/auth.ts";
 import { signedUrl } from "../lib/storage.ts";
 import { medicineColumns, searchInventory } from "../lib/pharmacy.ts";
 import { rxItem, signRx } from "../lib/prescriptions.ts";
+import { withForm } from "../lib/medicineSearch.ts";
 import * as notices from "../lib/notices.ts";
 import { sendNow } from "../lib/notify.ts";
 
@@ -441,7 +442,9 @@ doctorRoutes.get("/doctor/patients/:patientId/record", async (c) => {
       sql`select weight_kg, logged_at, source from weight_logs where user_id = ${patientId} order by logged_at`,
       sql`select consent_type from consents where user_id = ${patientId} and revoked_at is null order by id`,
       sql`select * from reports where user_id = ${patientId} order by uploaded_at desc`,
-      sql`select * from prescriptions where patient_id = ${patientId} and status <> 'VOID' order by version desc, id desc`,
+      // every doctor's prescriptions for this patient, each with who issued it (19 Nov 2026: the whole history, any doctor)
+      sql`select x.*, d.full_name as doctor_name from prescriptions x left join doctors d on d.id = x.doctor_id
+          where x.patient_id = ${patientId} and x.status <> 'VOID' order by x.version desc, x.id desc`,
       sql`select * from clinical_notes where patient_id = ${patientId} and status = 'SIGNED' order by call_at desc`,
       sql`select * from symptom_logs where patient_id = ${patientId} order by at desc limit 50`,
       sql`select n.*, d.full_name from private_notes n join doctors d on d.id = n.doctor_id
@@ -490,10 +493,15 @@ doctorRoutes.get("/doctor/patients/:patientId/record", async (c) => {
       // review_note also carries the eligibility outcome; only a doctor's review counts as their comment
       results: [], doctorComment: r.reviewed_by ? r.review_note ?? null : null, reviewedAt: ist(r.reviewed_at),
     }))),
-    prescriptions: rxs.map((x) => ({
+    prescriptions: rxs.map((x, i) => ({
       id: String(x.id), version: x.version, status: x.status, date: ist(x.signed_at ?? x.created_at),
       months: x.months, validUntil: ist(x.valid_until),
-      items: (x.items as Row[]).map((i) => ({ name: i.medicineName ?? "", strength: i.strength ?? "", dose: i.dose ?? "",
+      // beside each one: who sent it and when; "edited" when it is a new version of the same consultation's
+      doctorName: x.doctor_name ?? "", sentAt: ist(x.sent_at ?? x.signed_at),
+      edited: Boolean(x.appointment_id && rxs.slice(i + 1).find((y) => y.status !== "DRAFT")?.appointment_id === x.appointment_id),
+      // only the current prescription downloads; replaced ones are read here, never handed out as a PDF
+      pdf: x.status === "SIGNED" && x.pdf_path ? `/api/files/prescriptions/${x.id}` : null,
+      items: (x.items as Row[]).map((i) => ({ name: i.unlisted ? i.medicineName ?? "" : withForm(i.form, i.medicineName ?? ""), strength: i.strength ?? "", dose: i.dose ?? "",
         frequency: i.frequency ?? "", duration: i.duration ?? "", quantity: i.quantityLabel ?? "" })),
       // instructions that only repeat the frequency (doctor-added medicines) are not shown twice
       advice: (x.items as Row[]).filter((i) => i.instructions && i.instructions !== i.frequency).map((i) => i.instructions).join(" "),

@@ -5,10 +5,12 @@
   "wherever the patient's profile opens, keep everything right there"):
   1. The patient and the consultation, with Join video call (a new tab, so this page stays open).
   2. Reports: every report on the account, any date, each opening its PDF.
-  3. The prescription: what we know filled in (age, sex, height, weight, BMI, allergies), then diagnosis
-     (the only required field), history, remarks, medicines, plan and advice. It saves as the doctor types.
+  3. The prescription: what we know filled in (age, sex, height, weight, BMI, allergies, the plan), then
+     diagnosis (the only required field), history, remarks, medicines and advice. It saves as the doctor types.
      A follow-up starts from the last prescription, so the doctor changes only what is different; diagnosis
-     and advice offer the usual words as taps (19 Nov 2026: as little typing as possible).
+     opens a list and advice offers the usual words as taps (19 Nov 2026: as little typing as possible).
+     The doctor never chooses a plan: a salesperson sells it (19 Nov 2026 call). The prescription does not
+     wait for the call either: it can be made and sent at any time (a refill when no call can happen).
   4. A bar fixed at the bottom with the one next step: Create PDF, then Send to patient (the PDF shows on
      the page first, and that is the check: no "are you sure"), then "Sent to patient, 7:42 pm" with
      Send again and Edit and send new version.
@@ -42,7 +44,6 @@ import {
   sentWords,
   whenWords,
 } from "@/app/doctor-dashboard/components/consultations/consultationWords";
-import ChoiceChips from "./ChoiceChips";
 import MedicineLines, { daysOf } from "./MedicineLines";
 import PdfPanel from "./PdfPanel";
 import QuickPicks from "./QuickPicks";
@@ -182,8 +183,6 @@ function Loaded({
   const callOpen =
     c.callOpen ||
     (c.state === "UPCOMING" && Date.parse(c.startsAt) - 10 * 60_000 <= now);
-  // the prescription is written ahead if the doctor likes, but made and sent only once the call opens
-  const beforeCall = c.state === "UPCOMING" && !callOpen;
   const opensAt = clockTime(new Date(Date.parse(c.startsAt) - 10 * 60_000));
   useEffect(() => {
     // the page learns when the call opens or ends while it sits open
@@ -228,11 +227,7 @@ function Loaded({
       if (!line.durationValue)
         return { text: `Write for how long for ${which}.`, line: line.key };
       // without a plan (the nano plan) the prescription is for one month: said here, as the server does
-      if (
-        !p.onPlan &&
-        !draft.planId &&
-        daysOf(line.durationValue, line.durationUnit) > 31
-      )
+      if (!p.onPlan && daysOf(line.durationValue, line.durationUnit) > 31)
         return {
           text: `This patient is not on a plan yet, so the prescription is for one month. Set ${which} to 1 month or less.`,
           line: line.key,
@@ -345,12 +340,16 @@ function Loaded({
       : null,
     p.bmi ? `BMI ${p.bmi}` : null,
   ].filter(Boolean);
+  // the plan the salesperson sold, for the doctor to see (never to choose)
+  const planWords = data.activePlan
+    ? `Plan: ${data.activePlan.planName}, until ${shortDate(data.activePlan.endsAt)}`
+    : "Plan: none yet, so this prescription is for one month";
 
   const field = (
     key: "diagnosis" | "patientHistory" | "remarks" | "advice",
     label: string,
     hint?: string,
-    picks?: { options: string[]; perLine?: boolean },
+    picks?: { options: string[]; perLine?: boolean; menu?: boolean },
   ) => (
     <div
       className={styles.field}
@@ -365,6 +364,7 @@ function Loaded({
           label={label}
           options={picks.options}
           perLine={picks.perLine}
+          menu={picks.menu}
           text={draft[key]}
           onChange={(text) => {
             change({ [key]: text });
@@ -496,16 +496,18 @@ function Loaded({
                 <>. Conditions: {p.conditions.join(", ")}</>
               )}
             </p>
+            <p className="num">{planWords}</p>
           </div>
           {field("diagnosis", "Diagnosis", "Needed for the PDF", {
             options: DIAGNOSES,
+            menu: true,
           })}
           {field("patientHistory", "Patient history")}
           {field("remarks", "Remarks")}
           <div className={styles.field}>
             <span className={styles.fieldLabel}>
               Medicines
-              {!p.onPlan && !draft.planId && (
+              {!p.onPlan && (
                 // the nano plan (12 Nov 2026 call): said before the doctor writes, not found out at Create PDF
                 <span className={styles.fieldHint}>
                   One month at most: this patient is not on a plan yet
@@ -514,39 +516,13 @@ function Loaded({
             </span>
             <MedicineLines
               lines={draft.medicines}
-              maxDays={!p.onPlan && !draft.planId ? 31 : undefined}
+              maxDays={!p.onPlan ? 31 : undefined}
               problemKey={problem?.line ?? null}
               onChange={(medicines) => {
                 change({ medicines });
                 if (problem?.line) setProblem(null);
               }}
             />
-          </div>
-          <div className={styles.field}>
-            <span className={styles.fieldLabel}>
-              Plan
-              <span className={styles.fieldHint}>
-                {data.activePlan
-                  ? `On ${data.activePlan.planName} until ${shortDate(data.activePlan.endsAt)}`
-                  : "The patient pays for it with the medicines, in one payment"}
-              </span>
-            </span>
-            {!data.activePlan && data.plans.length > 0 && (
-              <ChoiceChips
-                label="Plan"
-                value={draft.planId ?? "none"}
-                options={[
-                  { value: "none", label: "No plan" },
-                  ...data.plans.map((plan) => ({
-                    value: plan.id,
-                    label: `${plan.months} months`,
-                  })),
-                ]}
-                onChange={(value) =>
-                  change({ planId: value && value !== "none" ? value : null })
-                }
-              />
-            )}
           </div>
           {field("advice", "Advice", undefined, {
             options: ADVICE,
@@ -602,13 +578,6 @@ function Loaded({
                   )}
                 </span>
               </button>
-            </div>
-          ) : beforeCall ? (
-            <div className={styles.barRow}>
-              <p className={styles.barText}>
-                You can write now. The PDF can be made once the call opens at{" "}
-                {opensAt}.
-              </p>
             </div>
           ) : (
             <div className={styles.barRow}>

@@ -5,7 +5,8 @@
 // - The call note (routes/doctor.ts, kept for the back office): signing a note signs its prescription in one
 //   step (signRx), the clinical words taken from the note's sections.
 // Issuing: the previous prescription is superseded, the patient's unpaid cart closes with its follow-ups,
-// a new cart holds every line the pharmacy sells, open at once (without a plan: one month), a medicine typed
+// a new cart holds every line the pharmacy sells, open at once (without a plan: one month; the doctor never
+// chooses the plan, a salesperson sells it: 19 Nov 2026 call), a medicine typed
 // by hand opens a MATCH_MEDICINE task for admin, and the patient gets the prescription on WhatsApp and in the
 // app. docs/backend/doctor-portal-v2.md.
 import { sql } from "./db.ts";
@@ -15,7 +16,7 @@ import { onPlan as hasPlan, type CartLine } from "./pharmacy.ts";
 import { prescriptionPdf, type RxPdfItem } from "./prescriptionPdf.ts";
 import { closeTasks, openTask, startMedicineFlow } from "./medicineFlow.ts";
 import { deliver } from "./notify.ts";
-import { daysOf, displayName, packsFor } from "./medicineSearch.ts";
+import { daysOf, displayName, packsFor, withForm } from "./medicineSearch.ts";
 import { workingDue } from "./hours.ts";
 
 // deno-lint-ignore no-explicit-any
@@ -84,7 +85,7 @@ export function lineOf(input: Row, listed: Row | undefined, index: number): Row 
     ...base, medicineId: listed.id, unlisted: false, orderable: listed.mrp_paise != null,
     medicineName: listed.brand, genericName: listed.molecule, form: listed.form, strength: listed.strength,
     route: listed.route ?? "", quantity: packs, quantityLabel: `${packs} x ${unitName || listed.pack}`,
-    name: displayName(listed as { brand: string; strength: string }),
+    name: displayName(listed as { brand: string; strength: string; form: string }),
   };
 }
 
@@ -95,7 +96,8 @@ export const monthsOf = (items: Row[]) =>
 /** What a line says to a reader (the record, the history, the patient app). */
 export const lineView = (i: Row) => ({
   key: String(i.key ?? ""), medicineId: i.medicineId != null ? String(i.medicineId) : null,
-  name: i.name ?? ([i.medicineName, i.strength].filter(Boolean).join(" ") || ""),
+  // "Inj. Ozempic 0.25 mg": lines saved before the prefix (19 Nov 2026) get it here; one typed by hand is as written
+  name: i.unlisted ? i.name ?? i.medicineName ?? "" : withForm(i.form, i.name ?? ([i.medicineName, i.strength].filter(Boolean).join(" ") || "")),
   genericName: i.genericName ?? null, brand: i.unlisted ? null : i.medicineName ?? null, form: i.form ?? "",
   dose: i.dose ?? "", frequency: i.frequencyCode ?? "", frequencyOther: i.frequencyOther ?? "",
   frequencyWords: i.frequency ?? "", durationValue: i.durationValue ?? null, durationUnit: i.durationUnit ?? null,
@@ -195,7 +197,7 @@ export async function renderRx(doctor: Doctor, patientId: number, rx: Row, signe
     return [i.dose, i.dose && /^[A-Z][a-z]/.test(f) ? f.charAt(0).toLowerCase() + f.slice(1) : f].filter(Boolean).join(", ");
   };
   const pdfItems: RxPdfItem[] = lines.map(({ i, at, m, q }) => m
-    ? { generic: m.molecule, brand: m.brand, form: packOf(m).holds ? `${m.form}, ${packOf(m).holds} per ${packOf(m).unit}` : m.form,
+    ? { generic: m.molecule, brand: withForm(m.form, m.brand), form: packOf(m).holds ? `${m.form}, ${packOf(m).holds} per ${packOf(m).unit}` : m.form,
         strength: m.strength, how: how(i), route: m.route ?? "", step: steps.get(at)?.step ?? null,
         when: steps.get(at)?.when ?? (v2 && i.duration ? `For ${i.duration}` : daysWord(q * m.pack_days)), quantity: qtyOf(m, q),
         instructions: i.instructions ?? "" }
@@ -213,7 +215,6 @@ export async function renderRx(doctor: Doctor, patientId: number, rx: Row, signe
       name: "inrange, by Novaxis Lifesciences Pvt Ltd",
       address: `Registered office: ${env("PRACTICE_ADDRESS") || "to be confirmed"}`,
       supportPhone: `Support: ${env("SUPPORT_PHONE") || "phone number to be confirmed"}`,
-      pharmacyLicence: `Pharmacy drug licence (Forms 20, 21): ${env("PHARMACY_LICENCE") || "to be confirmed"}`,
     },
     doctor: {
       name: d?.full_name ?? doctor.name, qualification: d?.qualification ?? "",
@@ -256,12 +257,9 @@ export async function renderRx(doctor: Doctor, patientId: number, rx: Row, signe
   return path;
 }
 
-/**
- * The months a prescription is issued for: without a plan (the nano plan) one month. A plan in the prescription
- * counts as on a plan: it is bought with the medicines, in the same payment.
- */
-export async function issueMonths(patientId: number, asked: number, withPlan = false) {
-  const onPlan = withPlan || await hasPlan(sql, patientId);
+/** The months a prescription is issued for: without an active plan (the nano plan) one month. */
+export async function issueMonths(patientId: number, asked: number) {
+  const onPlan = await hasPlan(sql, patientId);
   return { onPlan, months: onPlan ? Math.min(12, Math.max(1, Math.round(asked))) : 1 };
 }
 
@@ -278,10 +276,7 @@ export async function issueRx(doctor: Doctor, patientId: number, rxId: number,
   if (rx.status !== "DRAFT") fail(409, "This prescription was sent already.");
   const items = rx.items as Row[];
   const at = o.sentAt ?? o.signedAt;
-  const active = await hasPlan(sql, patientId);
-  // the plan the doctor prescribed goes in the same cart as the medicines: one payment, the cart open at once
-  const planId: number | null = rx.plan_id && !active ? rx.plan_id : null;
-  const onPlan = active || planId !== null;
+  const onPlan = await hasPlan(sql, patientId);
   const validUntil = new Date(o.signedAt);
   validUntil.setMonth(validUntil.getMonth() + o.months);
   const ids = items.map((i) => Number(i.medicineId)).filter((id) => Number.isInteger(id) && id > 0);
@@ -350,7 +345,7 @@ export async function issueRx(doctor: Doctor, patientId: number, rxId: number,
         await tx`update medicine_orders set prescription_id = ${rxId} where cart_id in ${tx(ids)}`;
       }
     }
-    carted = merged.size > 0 || planId !== null;
+    carted = merged.size > 0;
     const replaced = await tx`update medicine_carts set status = 'CLOSED' where patient_id = ${patientId} and status = 'OPEN' returning id`;
     // the replaced orders' follow-ups and calls close with them: nobody calls about an order that is gone
     for (const { id } of replaced) {
@@ -360,7 +355,7 @@ export async function issueRx(doctor: Doctor, patientId: number, rxId: number,
     }
     const [cart] = carted
       ? await tx`insert into medicine_carts (patient_id, prescription_id, available_at, lines, address_id, plan_id)
-               values (${patientId}, ${rxId}, ${at}, ${tx.json([...merged.values()])}, ${addr?.id ?? null}, ${planId}) returning id`
+               values (${patientId}, ${rxId}, ${at}, ${tx.json([...merged.values()])}, ${addr?.id ?? null}, null) returning id`
       : [];
     if (unlisted.length)
       await openTask(tx, {

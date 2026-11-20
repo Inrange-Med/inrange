@@ -2,20 +2,33 @@
 
 /*
   Prescriptions (Arhaan's record panel): a draft (never visible to the patient) with Review and
-  sign, the signed version, and earlier versions folded away. Signing asks once more in place,
-  naming the doctor, because the patient and the pharmacy see it once signed.
+  sign, the current version, and earlier versions folded away. Signing asks once more in place,
+  naming the doctor, because the patient and the pharmacy see it once signed. Beside each one: which
+  doctor sent it (or edited and sent it) and when, for every doctor who treats the patient. Only the
+  current one opens as a PDF; replaced ones are read here (19 Nov 2026 call).
 */
 
 import { useState } from "react";
 import { ArrowRight, CheckCircle } from "@phosphor-icons/react";
+import FileOpenButton from "@/components/ui/FileOpenButton";
 import { useToast } from "@/components/ui/ToastProvider";
-import { shortDate } from "@/lib/format/dateTime";
+import { clockTime, shortDate } from "@/lib/format/dateTime";
 import { errorMessage } from "@/lib/http/apiClient";
+import { getFile } from "@/services/fileService";
 import { signPrescription } from "@/services/patientRecordService";
 import type { RecordPrescription } from "@/types/patientRecord";
 import PrescriptionItems from "./PrescriptionItems";
 import clinicStyles from "@/app/doctor-dashboard/styles/ClinicSurfaces.module.css";
 import styles from "./PrescriptionsPanel.module.css";
+
+/** "Sent by Dr. Ananya Iyer, 19 Nov, 7:30 pm" */
+const sentBy = (rx: RecordPrescription) =>
+  [
+    `${rx.edited ? "Edited and sent" : "Sent"}${rx.doctorName ? ` by ${rx.doctorName}` : ""}`,
+    rx.sentAt && `${shortDate(rx.sentAt)}, ${clockTime(new Date(rx.sentAt))}`,
+  ]
+    .filter(Boolean)
+    .join(", ");
 
 export default function PrescriptionsPanel({
   patientId,
@@ -115,8 +128,19 @@ export default function PrescriptionsPanel({
           <div className={styles.rxHead}>
             <strong>Version {signed.version}</strong>
             <span className={clinicStyles.pill} data-tone="ok">
-              Signed {shortDate(signed.date)}
+              Current
             </span>
+          </div>
+          <div className={styles.by}>
+            <span className="num">{sentBy(signed)}</span>
+            {signed.pdf && (
+              <FileOpenButton
+                load={() => getFile(signed.pdf!)}
+                className={clinicStyles.textBtn}
+              >
+                {(opening) => (opening ? "Opening" : "View PDF")}
+              </FileOpenButton>
+            )}
           </div>
           <PrescriptionItems prescription={signed} />
         </div>
@@ -130,10 +154,11 @@ export default function PrescriptionsPanel({
       )}
       {history.length > 0 && (
         <details className={clinicStyles.history}>
-          <summary>Earlier versions</summary>
+          <summary>Earlier versions, replaced</summary>
           {history.map((rx) => (
             <p key={rx.id}>
-              Version {rx.version}, {shortDate(rx.date)}:{" "}
+              <strong>Version {rx.version}</strong>.{" "}
+              <span className="num">{sentBy(rx)}</span>.{" "}
               {rx.items
                 .map((item) => `${item.name} ${item.strength}`)
                 .join(", ")}

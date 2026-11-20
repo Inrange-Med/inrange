@@ -16,7 +16,7 @@ export type RxPdfItem = {
 };
 export type RxPdf = {
   rxNumber: number; version: number; supersedes: string | null;
-  practice: { name: string; address: string; supportPhone: string; pharmacyLicence: string };
+  practice: { name: string; address: string; supportPhone: string };
   doctor: { name: string; qualification: string; registration: string; practiceAddress: string; contact: string };
   patient: { name: string; ageSex: string; patientId: string; mobile: string; city: string | null; vitals: string | null };
   consult: { mode: string; type: string; dateTime: string; signedAt: string };
@@ -259,7 +259,6 @@ export async function prescriptionPdf(rx: RxPdf): Promise<Uint8Array> {
   right(rx.doctor.name, W - M, sy + 19, 11, med);
   right(`${[rx.doctor.qualification, rx.doctor.registration.split("·")[0].trim()].filter(Boolean).join("  ·  ")}`, W - M, sy + 9, 7.8, reg, MUTED);
   right(`${rx.consult.signedAt}  ·  Signature ID ${rx.signature.reference}`, W - M, sy, 7.8, reg, MUTED);
-  text(rx.practice.pharmacyLicence, M, sy, 7.8, reg, MUTED);
 
   // ---- every page: the legal notes and the page count
   const notes =

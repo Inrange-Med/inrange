@@ -87,8 +87,6 @@ export type Prescription = {
   remarks: string;
   advice: string;
   medicines: MedicineLineView[];
-  /** the plan in this prescription, bought with the medicines in one payment */
-  planId: string | null;
   savedAt: string | null;
   /** the PDF on the page is current (null once an edit makes it stale) */
   pdfMadeAt: string | null;
@@ -99,7 +97,7 @@ export type Prescription = {
 
 export type PrescriptionDraft = Pick<
   Prescription,
-  "diagnosis" | "patientHistory" | "remarks" | "advice" | "planId"
+  "diagnosis" | "patientHistory" | "remarks" | "advice"
 > & { medicines: MedicineLine[] };
 
 export type ConsultationReport = {
@@ -111,8 +109,6 @@ export type ConsultationReport = {
 };
 
 export type ConsultationPage = {
-  /** the plans the doctor can add to the prescription; none while the patient has an active plan */
-  plans: { id: string; name: string; months: number }[];
   activePlan: { planName: string; endsAt: string } | null;
   /** callOpen: the call can be joined now (it stays true after a mid-call send, so Join stays) */
   consultation: ConsultationRow & {

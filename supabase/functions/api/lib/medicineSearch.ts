@@ -33,8 +33,19 @@ export function alike(a: string, b: string): number {
   return (2 * both) / (a.length - 1 + b.length - 1);
 }
 
-/** The name a line prints and a search shows: "Mounjaro KwikPen 2.5 mg". */
-export const displayName = (m: Pick<ListItem, "brand" | "strength">) => `${m.brand} ${m.strength}`.trim();
+/** "Inj.", "Tab.", "Cap." before a brand: required on a prescription (19 Nov 2026 call, compliance). */
+export const formPrefix = (form: string) =>
+  /inject|pen\b/i.test(form) ? "Inj." : /tablet/i.test(form) ? "Tab." : /capsule/i.test(form) ? "Cap." :
+  /syrup/i.test(form) ? "Syp." : "";
+
+/** A name with its form in front, once: a name that already starts with a form word is left as it is. */
+export const withForm = (form: string | null | undefined, name: string) => {
+  const prefix = formPrefix(form ?? "");
+  return prefix && !/^(inj|tab|cap|syp)/i.test(name.trim()) ? `${prefix} ${name}` : name;
+};
+
+/** The name a line prints and a search shows: "Inj. Mounjaro KwikPen 2.5 mg". */
+export const displayName = (m: Pick<ListItem, "brand" | "strength" | "form">) => withForm(m.form, `${m.brand} ${m.strength}`.trim());
 
 let cache: { at: number; rows: ListItem[] } | null = null;
 async function list(): Promise<ListItem[]> {
@@ -128,6 +139,10 @@ if (import.meta.main) {
   assert(matchList(rows, "rybelsis").didYouMean[0]?.id === 1, "did you mean a misspelling");
   assert(matchList(rows, "glycomett 500").didYouMean[0]?.id === 3, "did you mean with a strength");
   assert(!matchList(rows, "zzqx").didYouMean.length, "nothing alike");
+  assert(displayName(rows[3]) === "Inj. Mounjaro KwikPen 2.5 mg", "a pen is an injection");
+  assert(displayName(rows[2]) === "Tab. Glycomet 500 mg" && displayName(rows[6]) === "Cap. Vitamin D3 60000 IU", "tablet, capsule");
+  assert(displayName(rows[0]) === "Tablet Rybelsus 3 mg", "a form already in the name is not repeated");
+  assert(displayName(rows[7]) === "Ensure 400 g", "no prefix for a powder");
   assert(packsFor(30, 28) === 1 && packsFor(90, 28) === 3 && packsFor(7, 28) === 1 && packsFor(60, 30) === 2, "packs");
   assert(daysOf(3, "MONTHS") === 90 && daysOf(2, "WEEKS") === 14 && daysOf(30, "DAYS") === 30, "days");
   console.log("medicineSearch: ok");

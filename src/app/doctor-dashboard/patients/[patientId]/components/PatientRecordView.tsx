@@ -212,11 +212,7 @@ export default function PatientRecordView({
         )}
         {!fresh && <PlanPanel plan={data.plan} />}
         {!fresh && (
-          <ProgrammePlanPanel
-            patientId={patientId}
-            record={data}
-            onChanged={record.reload}
-          />
+          <ProgrammePlanPanel record={data} />
         )}
         {!fresh && (
           <LabsPanel

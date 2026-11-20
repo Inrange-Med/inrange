@@ -29,7 +29,6 @@ const EMPTY: PrescriptionDraft = {
   patientHistory: "",
   remarks: "",
   advice: "",
-  planId: null,
   medicines: [],
 };
 
@@ -41,7 +40,6 @@ export function draftOf(rx: Prescription | null): PrescriptionDraft {
     patientHistory: rx.patientHistory,
     remarks: rx.remarks,
     advice: rx.advice,
-    planId: rx.planId,
     medicines: linesOf(rx.medicines),
   };
 }
@@ -54,7 +52,6 @@ export function startFrom(last: ConsultationPage["lastPrescription"]): Prescript
     patientHistory: last.patientHistory,
     remarks: "",
     advice: last.advice,
-    planId: null,
     medicines: linesOf(last.medicines),
   };
 }

@@ -46,6 +46,12 @@ export type RecordPrescription = {
   date: string; // ISO
   items: RecordPrescriptionItem[];
   advice: string;
+  /** who sent it and when, shown beside it; `edited`: a new version of the same consultation's */
+  doctorName: string;
+  sentAt: string | null;
+  edited: boolean;
+  /** only the current prescription has a PDF to open */
+  pdf: string | null;
 };
 
 /** A past consultation. `noteId`: the signed call note it came from; `assessment` is never shown to the patient. */

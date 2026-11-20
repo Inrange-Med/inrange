@@ -30,3 +30,14 @@
 .rx > :global(.btn) {
   justify-self: start;
 }
+
+/* who sent it and when, with the current one's PDF beside it */
+.by {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 16px;
+  font-size: 0.875rem;
+  color: var(--ink-2);
+}

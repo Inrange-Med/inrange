@@ -28,8 +28,10 @@ Backend: `routes/consultations.ts`, `routes/home.ts`, `lib/prescriptions.ts`, `l
 - **The consultation page:** the patient and Join, every report on the account (any date), then the prescription. A
   follow-up's prescription starts as a copy of the last one (diagnosis, history, medicines, advice; remarks are the
   visit's own), saved with the first change or at Create PDF, so the doctor changes only what is different (19 Nov
-  2026). Age, sex, height, weight (with the change over the last month), BMI and allergies are filled in. Diagnosis is
-  the only required field; it and Advice offer the usual words as taps. It saves as the doctor types. A bar fixed at the
+  2026). Age, sex, height, weight (with the change over the last month), BMI, allergies and the plan are filled in.
+  Diagnosis is the only required field: "Choose from the list" opens the usual diagnoses as ticks (a dropdown, so the
+  list can grow without filling the page; 19 Nov 2026 call) and the box takes anything else. Advice offers its usual
+  words as taps. It saves as the doctor types. A bar fixed at the
   bottom holds the one next step: Create PDF, then Send to patient, then "Sent to patient, 7:42 pm" with Send again and
   Edit and send new version.
 - **Medicines:** a forgiving search of the master list (case, spaces and words like tab, tablet, cap and inj are
@@ -77,8 +79,8 @@ autosave (DRAFT, saved_at)  ->  Create PDF (pdf_made_at, pdf_path)  ->  Send (SI
   consultation without a plan carries one month), WhatsApp
   `RX_READY` goes (its button now opens `/patient-dashboard/prescriptions?rx=`), and the patient joins the doctor's
   care team.
-- **Only once the call opens, never for a cancelled consultation:** the doctor may write ahead, but Create PDF and
-  Send answer 409 before the call opens (10 minutes before the start).
+- **Any time, never for a cancelled consultation** (19 Nov 2026 call: a prescription does not depend on the call, for
+  example a month's refill when the doctor or the patient cannot make it): Create PDF and Send work before the call too.
 - **An older consultation never replaces a newer one:** Send answers 409 when a later consultation of the patient
   already issued the current prescription, and such an older consultation drops off "Do this now".
 - **The page keeps Join while the call is live** (`consultation.callOpen`), even after a mid-call Send, so a dropped
@@ -89,15 +91,20 @@ autosave (DRAFT, saved_at)  ->  Create PDF (pdf_made_at, pdf_path)  ->  Send (SI
   presses at once send once (the other is told it was sent) and an edit that lands mid-send is refused.
 - **A new version after the patient paid** does not bill again: the paid order moves to the new version (so refills
   follow it) and the new order carries only what is left to buy.
-- **The plan is part of the prescription** (19 Nov 2026: no friction, everything bought together): the doctor taps
-  No plan or 3, 6, 9, 12 months under the medicines. Send puts the plan in the same cart as the medicines, the cart
-  opens at once with full quantities, and one payment (`MEDICINE_ORDER`, the plan in its bill) buys everything and
-  starts the plan. A patient already on a plan sees it instead of the choice, and is never charged twice.
+- **The doctor never chooses the plan** (19 Nov 2026 client call, reversing the plan picker of the same morning): a
+  salesperson sells it on the same call, after the doctor, and admin records it. The page shows the patient's plan,
+  read only ("Plan: none yet, so this prescription is for one month"); a `planId` sent to autosave is ignored and new
+  carts never carry a plan. The record's "Recommend a plan" is gone for the same reason.
+- **Names carry the form:** "Inj." for a pen or injection, "Tab.", "Cap.", "Syp." before the brand (compliance;
+  `withForm` in `lib/medicineSearch.ts`), in the search, the lines, the record and the PDF. A name typed by hand prints
+  as written.
+- **Who sent it, beside it:** the record lists each version with the doctor and the time ("Edited and sent by" for a new
+  version of the same consultation's), for every doctor who treats the patient. Only the current one has a PDF to
+  open; replaced ones are read on the record. The PDF no longer carries the pharmacy licence (it goes on the invoice).
 - **Without a plan** (the nano plan) the prescription is for one month: the page says "One month at most" above the
   medicines and Create PDF asks for 1 month or less, so the PDF never prescribes more than the order carries.
 - Every Create PDF writes a new file (storage never overwrites), so the PDF can be made again after an edit.
-- A consultation still to come stays UPCOMING even if its prescription was written ahead; nothing is sent before the
-  call. Signing a call note for a consultation whose page already holds a draft is refused (finish it on the page).
+- A consultation still to come stays UPCOMING on Today even if its prescription was written ahead. Signing a call note for a consultation whose page already holds a draft is refused (finish it on the page).
 - A prescription may have no medicines (advice only): it sends with no cart.
 - The PDF prints diagnosis, history (when written), the medicines (dose and how often, "For 1 month", with food), advice
   and the doctor's remarks. Signing from a call note (`signRx`, back office) is unchanged.
@@ -147,7 +154,7 @@ starts that order's follow-up too.
 | Stage                                                                                                                                                      | Card                                                                     | Button                                                                                     |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
 | `CALL_OPEN`                                                                                                                                                | Your video call with Dr. X is open                                       | Join video call                                                                            |
-| `PAYMENT_DUE` (`payFor` MEDICINES; `withPlan` when the prescription carries a plan)                                                                        | Your plan and medicines, with the itemised bill                          | Pay ₹X (checkout; no address yet: the cart page)                                           |
+| `PAYMENT_DUE` (`payFor` MEDICINES; `withPlan` only for carts made before 19 Nov 2026 evening)                                                                        | Your plan and medicines, with the itemised bill                          | Pay ₹X (checkout; no address yet: the cart page)                                           |
 | `CALL_BOOKED`                                                                                                                                              | Video call with Dr. X, Tue 17 Nov, 7 pm. Join opens at 6:50 pm.          | none                                                                                       |
 | `AFTER_CALL`                                                                                                                                               | Your doctor is writing your prescription                                 | none                                                                                       |
 | `ON_THE_WAY`                                                                                                                                               | Your medicines are on the way. Arriving Thu 26 Nov.                      | Track delivery                                                                             |
@@ -156,8 +163,9 @@ starts that order's follow-up too.
 | before the first consultation: `LAB_UNPAID`, `TEST_BOOKED`, `WAITING_FOR_REPORT`, `UNDER_REVIEW`, `NOT_APPROVED`, `BOOK_CONSULTATION`, `BLOOD_TEST_NEEDED` | from the eligibility review, as before                                   | Pay / none / none / View report / Upload a newer report / Book video call / Book home test |
 | `IN_CARE`                                                                                                                                                  | You're all set                                                           | Book your review                                                                           |
 
-One bill, one payment: the plan the doctor prescribed is a line in the cart's bill. A plan recommended without a
-prescription (`plan_recommendations`, the older record page) is billed only when there is no cart.
+One bill, one payment for the prescription's medicines. The plan is sold by a salesperson, not prescribed; carts made
+before that change may still carry one as a line. A plan recommended earlier (`plan_recommendations`) is billed only
+when there is no cart.
 
 ## Endpoints
 
@@ -166,7 +174,7 @@ prescription (`plan_recommendations`, the older record page) is billed only when
 | `GET /api/doctor/consultations?date=YYYY-MM-DD`           | doctor                   | `{ date, day: Row[], waiting: Row[] }`                                                    |
 | `GET /api/doctor/consultations/history?from=&to=&q=`      | doctor                   | `{ from, to, consultations: Row[] }` (default: the last 30 days; 300 at most)             |
 | `GET /api/doctor/consultations/:id`                       | doctor                   | `{ consultation, patient, reports, lastPrescription, prescription }` (audited)            |
-| `PUT /api/doctor/consultations/:id/prescription`          | doctor                   | `{ diagnosis?, patientHistory?, remarks?, advice?, medicines?, planId? }` -> Prescription |
+| `PUT /api/doctor/consultations/:id/prescription`          | doctor                   | `{ diagnosis?, patientHistory?, remarks?, advice?, medicines? }` -> Prescription     |
 | `POST /api/doctor/consultations/:id/prescription/pdf`     | doctor                   | Prescription with `pdf`; 422 with the first gap ("Write the diagnosis first.")            |
 | `POST /api/doctor/consultations/:id/prescription/send`    | doctor                   | Prescription, `status: SENT`; 409 when the PDF is stale                                   |
 | `POST /api/doctor/consultations/:id/prescription/resend`  | doctor                   | Prescription with `resentAt`                                                              |
