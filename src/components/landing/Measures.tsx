@@ -67,7 +67,7 @@ export default function Measures() {
 
           <article className={`${s.cell} ${s.strength}`}>
             <figure className={s.photo} suppressHydrationWarning data-reveal="wipe">
-              <Image src="/img/strength-c.jpg" alt="A woman doing a dumbbell row on a low bench at home" fill sizes="(max-width: 1023px) 82vw, 30vw" />
+              <Image src="/img/strength-h1.jpg" alt="A woman in her thirties smiling through a dumbbell row on a low bench at home" fill sizes="(max-width: 1023px) 82vw, 30vw" />
             </figure>
             <div className={s.text}>
               <p className={s.meta}>
@@ -98,7 +98,7 @@ export default function Measures() {
 
           <article className={`${s.cell} ${s.scale}`}>
             <figure className={s.photo} suppressHydrationWarning data-reveal="wipe">
-              <Image src="/img/watch-c.jpg" alt="A man wearing a smartwatch tying his running shoes on a stone step at dawn" fill sizes="(max-width: 1023px) 82vw, 26vw" />
+              <Image src="/img/watch-h1.jpg" alt="A man in his forties wearing a smartwatch, tying his running shoes on a stone step at dawn" fill sizes="(max-width: 1023px) 82vw, 26vw" />
             </figure>
             <div className={s.text}>
               <p className={s.meta}>

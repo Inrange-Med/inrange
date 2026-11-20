@@ -3,6 +3,7 @@ import { ArrowRight } from "@phosphor-icons/react/dist/ssr";
 import { Cta, Mask } from "./ui";
 import { PROGRAMMES, programmeHref } from "./programme-data";
 import { SEAL } from "./Pharmacy";
+import HeroVideo from "./HeroVideo";
 import s from "./Hero.module.css";
 
 function Ruler() {
@@ -40,11 +41,11 @@ function index(cls: string, delay: string) {
 }
 
 export default function Hero() {
-  // the glass is the largest thing on the first screen: fetch it with the page, not after the CSS
-  preload("/img/glass-range-d.jpg", { as: "image", fetchPriority: "high" });
+  // the film's first frame is the largest thing on the first screen: fetch it with the page, not after the CSS
+  preload("/img/hero-v2-poster.jpg", { as: "image", fetchPriority: "high" });
   return (
     <section id="top" className={s.hero} aria-labelledby="hero-title">
-      {/* her call seen through fluted glass, under everything (decorative: the words carry the meaning) */}
+      {/* the plain side of the fluted glass, under the words (decorative: the words carry the meaning) */}
       <div className={s.glass} aria-hidden="true" />
       <div className={s.panel}>
         <div className={s.copy}>
@@ -75,6 +76,9 @@ export default function Hero() {
         <Ruler />
       </div>
       <figure className={s.media} suppressHydrationWarning data-reveal="wipe" style={{ "--d": "200ms" } as React.CSSProperties}>
+        {/* three everyday moments in one loop: how energy and ease feel, never a body (HeroVideo) */}
+        <HeroVideo className={s.video} />
+        <span className={s.flutes} aria-hidden="true" />
         {/* the authenticity promise, as the label on the pack: every medicine traceable to its source */}
         <a href="#pharmacy" className={s.seal} suppressHydrationWarning data-reveal="rise" style={{ "--d": "1400ms" } as React.CSSProperties}>
           <span className={s.sealWell} aria-hidden="true">

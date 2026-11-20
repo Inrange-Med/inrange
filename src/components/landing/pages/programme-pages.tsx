@@ -118,7 +118,7 @@ export const PAGES: Record<ProgrammeKey, ProgrammePage> = {
       { name: "The family's food", text: "Your plan starts from what is cooked at home, so nobody eats a separate meal." },
       { name: "Strength, twice a week", text: "A short routine at home or in the gym. Muscle matters as your weight changes." },
     ],
-    lifeImg: { src: "/img/life-mealprep-c.jpg", alt: "A man in his forties chopping vegetables in his kitchen on a Sunday morning, a bowl of chana beside him", focus: "50% 30%" },
+    lifeImg: { src: "/img/life-mealprep-h1.jpg", alt: "A man in his forties tossing a chana salad in his kitchen on a Sunday morning, smiling", focus: "50% 30%" },
     faq: [
       {
         q: "Is a BMI of 23 overweight for Indians?",
@@ -204,7 +204,7 @@ export const PAGES: Record<ProgrammeKey, ProgrammePage> = {
       { name: "Festivals and sweets", text: "Your coach plans Diwali and festival weeks ahead, so one big evening stays one evening." },
       { name: "Your diabetologist stays", text: "With your permission we share your plan and results with them." },
     ],
-    lifeImg: { src: "/img/life-walk-c.jpg", alt: "A woman in her sixties on a morning walk in a Delhi park with her son, both smiling", focus: "50% 32%" },
+    lifeImg: { src: "/img/life-walk-h1.jpg", alt: "A woman in her sixties on a morning walk in a Delhi park with her son, both laughing", focus: "50% 32%" },
     faq: [
       {
         q: "Can type 2 diabetes go into remission?",
@@ -292,7 +292,7 @@ export const PAGES: Record<ProgrammeKey, ProgrammePage> = {
       { name: "Food without a 'PCOS diet'", text: "The guideline names no single diet. Your coach starts from what you already eat, with enough protein." },
       { name: "PCOD or PCOS", text: "PCOD is the name most used in India. It is the same condition, with the same care." },
     ],
-    lifeImg: { src: "/img/life-pcos-c.jpg", alt: "A woman in her late twenties doing a squat on a yoga mat in her living room in the morning", focus: "50% 30%" },
+    lifeImg: { src: "/img/life-pcos-h1.jpg", alt: "A woman in her late twenties smiling through a squat in her living room in the morning", focus: "50% 30%" },
     faq: [
       {
         q: "PCOS kya hota hai?",
@@ -383,7 +383,7 @@ export const PAGES: Record<ProgrammeKey, ProgrammePage> = {
       { name: "Seen only by your care team", text: "Your record is encrypted. We never share health information with advertisers." },
       { name: "Plain words, your language", text: "Ask in English, Hindi or Hinglish and get a straight answer, without judgement." },
     ],
-    lifeImg: { src: "/img/life-private-c.jpg", alt: "A woman in her late thirties on a video call at her desk at home in the evening, wearing earphones", focus: "50% 36%" },
+    lifeImg: { src: "/img/life-private-h1.jpg", alt: "A woman in her late thirties smiling on a video call at her desk at home in the evening, wearing earphones", focus: "50% 36%" },
     faq: [
       {
         q: "Is erectile dysfunction related to heart disease?",
