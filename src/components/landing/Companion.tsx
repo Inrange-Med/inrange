@@ -92,7 +92,7 @@ export default function Companion() {
 
               <div className={`${s.msg} ${s.me} ${s.photo}`} style={{ "--n": 0 } as React.CSSProperties}>
                 <span className={s.thumb}>
-                  <Image src="/img/morning-scale-c.jpg" alt="" fill sizes="160px" style={{ objectPosition: "50% 72%" }} />
+                  <Image src="/img/morning-scale-h1.jpg" alt="" fill sizes="160px" style={{ objectPosition: "50% 72%" }} />
                 </span>
                 <p>Morning weight</p>
               </div>

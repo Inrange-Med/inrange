@@ -115,8 +115,8 @@ export default function Pharmacy() {
         <div className={s.specimen}>
           <figure className={s.photo} suppressHydrationWarning data-reveal="wipe">
             <Image
-              src="/img/pharmacy-pack-c.jpg"
-              alt="A sealed white pharmacy box with a coded seal, in a grey felt envelope"
+              src="/img/pharmacy-pack-h1.jpg"
+              alt="A sealed white pharmacy box with a coded seal on its lid, a phone held above it to scan the seal"
               fill
               sizes="(max-width: 1023px) 100vw, 46vw"
             />

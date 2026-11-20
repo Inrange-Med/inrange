@@ -92,8 +92,7 @@
   --field-line: 0.62 0.68 0.63;
   --field-signal: 0.77 0.93 0.7;
 
-  /* the hero: her call seen through fluted glass (In range, chosen Nov 2026) */
-  --glass: url("/img/glass-range-d.jpg");
+  /* the hero (v2, Nov 2026): fluted glass beside a film of everyday moments (Hero.module.css, HeroVideo) */
   --glass-ground: #0b0c0b;
   --glass-foot: 10 11 10;
 }
