@@ -78,6 +78,8 @@ export type NewLabBooking = {
   /** set when the booking is part of a care package (for example lab tests and consultation, bought at
    * the end of onboarding): the backend then charges the package price and marks the consultation paid */
   carePackageCode?: string;
+  /** the care package's optional tests the patient ticked (codes) */
+  addOns?: string[];
 };
 
 /**
@@ -116,6 +118,8 @@ export type LabBooking = {
     discount: number;
     collectionCharge: number;
     total: number;
+    /** add-ons in the total (a care package's cortisol test) */
+    addOns?: { code: string; name: string; price: number }[];
   };
   /** false when a paid lab plan covers it, so no checkout is needed */
   paymentRequired: boolean;

@@ -140,9 +140,7 @@ export default function MedicineLines({
               problem={problemKey === line.key}
               maxDays={maxDays}
               onChange={(change) => update(line.key, change)}
-              onRemove={() =>
-                onChange(lines.filter((l) => l.key !== line.key))
-              }
+              onRemove={() => onChange(lines.filter((l) => l.key !== line.key))}
             />
           ))}
         </ol>
@@ -189,8 +187,8 @@ function Line({
           {line.genericName && <span>{line.genericName}</span>}
           {line.unlisted && (
             <span className={styles.unlisted}>
-              Not on the list: it prints, and our team matches it before it
-              can be ordered
+              Not on the list: it prints, and our team matches it before it can
+              be ordered
             </span>
           )}
         </span>
@@ -212,7 +210,10 @@ function Line({
             <ChoiceChips
               label="Strength"
               value={line.medicineId ?? ""}
-              options={strengths.map((s) => ({ value: s.id, label: s.strength }))}
+              options={strengths.map((s) => ({
+                value: s.id,
+                label: s.strength,
+              }))}
               onChange={(id) => {
                 const s = strengths.find((x) => x.id === id);
                 if (s)

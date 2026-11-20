@@ -37,7 +37,9 @@ export type TaskKind =
   | "NO_REPLY" | "QUESTIONS" | "PLAN_CALL" | "PAYMENT_FAILED" | "DISPATCH_DUE" | "DELIVERY_LATE" | "DELIVERY_ISSUE"
   | "RENEWAL" | "REFILL_GAP" | "ADHERENCE" | "RECONCILE"
   // a medicine the doctor typed that is not on the master list (lib/prescriptions.ts): admin matches it
-  | "MATCH_MEDICINE";
+  | "MATCH_MEDICINE"
+  // a paid add-on test (cortisol) the team adds to the Redcliffe booking by hand (routes/labs.ts)
+  | "LAB_ADD_ON";
 
 export type TaskInput = {
   kind: TaskKind;

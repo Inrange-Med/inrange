@@ -14,7 +14,6 @@ import { ArrowRight, WarningCircle } from "@phosphor-icons/react";
 import { useApiResource } from "@/hooks/useApiResource";
 import { errorMessage } from "@/lib/http/apiClient";
 import { markerCount, withoutDuration } from "@/lib/format/carePackage";
-import { formatRupees } from "@/lib/format/money";
 import { listCarePackages } from "@/services/carePackageService";
 import { listLabPackages } from "@/services/labTestService";
 import type { CarePackage } from "@/types/carePackage";
@@ -22,6 +21,7 @@ import type { LabPackage } from "@/types/labTest";
 import ErrorNotice from "@/components/ui/ErrorNotice";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import formStyles from "@/components/ui/styles/FormControls.module.css";
+import WasNow from "./WasNow";
 import styles from "../LabBookingFlow.module.css";
 
 type Props = {
@@ -105,8 +105,8 @@ export default function CarePackageStep({
           <li key={care.code} className={styles.carePackage}>
             <div className={styles.packetHead}>
               <strong>{care.name}</strong>
-              <span className={`${styles.packetPrice} num`}>
-                {formatRupees(care.priceRupees)}
+              <span className={styles.packetPrice}>
+                <WasNow price={care.priceRupees} mrp={care.mrpRupees} showOff />
               </span>
             </div>
             {care.description && (

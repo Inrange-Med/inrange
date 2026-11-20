@@ -109,7 +109,9 @@ function PickMenu({
         onClick={() => setOpen((o) => !o)}
       >
         <span>
-          {chosen ? `Choose from the list (${chosen} chosen)` : "Choose from the list"}
+          {chosen
+            ? `Choose from the list (${chosen} chosen)`
+            : "Choose from the list"}
         </span>
         <CaretDown size={16} weight="bold" aria-hidden="true" />
       </button>

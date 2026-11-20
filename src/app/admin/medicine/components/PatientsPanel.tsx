@@ -65,9 +65,7 @@ export default function PatientsPanel({
         <LoadingSkeleton />
       ) : patients.data.length === 0 ? (
         <p className={adminStyles.empty}>
-          {q
-            ? "No patient matches that."
-            : "No patients yet."}
+          {q ? "No patient matches that." : "No patients yet."}
         </p>
       ) : (
         <ul className={s.rows}>
@@ -110,7 +108,10 @@ export default function PatientsPanel({
                       </span>
                     )}
                     <span className={adminStyles.muted}>
-                      {[p.salesperson && `Sales: ${p.salesperson}`, p.coachName ?? "No coach"]
+                      {[
+                        p.salesperson && `Sales: ${p.salesperson}`,
+                        p.coachName ?? "No coach",
+                      ]
                         .filter(Boolean)
                         .join(" · ")}
                     </span>

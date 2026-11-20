@@ -12,7 +12,7 @@ import { addressText } from "@/lib/format/address";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, WarningCircle } from "@phosphor-icons/react";
+import { ArrowRight, Check, WarningCircle } from "@phosphor-icons/react";
 import { useNow } from "@/hooks/useNow";
 import { errorMessage } from "@/lib/http/apiClient";
 import { clockTime, spokenDay, timeUntil } from "@/lib/format/dateTime";
@@ -23,6 +23,7 @@ import { useToast } from "@/components/ui/ToastProvider";
 import formStyles from "@/components/ui/styles/FormControls.module.css";
 import type { LabBookingState, LabBookingStep } from "../useLabBookingFlow";
 import PackageTestsDetails from "./PackageTestsDetails";
+import WasNow from "./WasNow";
 import styles from "../LabBookingFlow.module.css";
 import { fastingSentence, packageName } from "@/lib/format/labPackage";
 
@@ -61,6 +62,7 @@ export default function ReviewAndPayStep({
     patient,
     slot,
     held,
+    addOns,
   } = flow;
   if (!labPackage || !address || !patient || !slot) return null;
 
@@ -72,7 +74,13 @@ export default function ReviewAndPayStep({
   const covered = !carePackage && labPackage.coveredByPlan;
   // a care package is billed at its own price, which covers the tests and the consultation
   const billName = carePackage?.name ?? packageName(labPackage.name);
-  const listedPrice = carePackage?.priceRupees ?? labPackage.price;
+  // the add-ons the patient ticked (a care package's cortisol test) join the price before the hold is made
+  const ticked = (carePackage?.addOns ?? []).filter((a) =>
+    addOns.includes(a.code),
+  );
+  const listedPrice =
+    (carePackage?.priceRupees ?? labPackage.price) +
+    ticked.reduce((n, a) => n + a.priceRupees, 0);
   const markers = markerCount(labPackage.testCount);
 
   const hold = async () => {
@@ -157,13 +165,51 @@ export default function ReviewAndPayStep({
             </small>
           </dt>
           <dd className="num">
-            {covered
-              ? formatRupees(0)
-              : formatRupees(
-                  liveHold ? liveHold.price.packagePrice : listedPrice,
-                )}
+            {covered ? (
+              formatRupees(0)
+            ) : carePackage ? (
+              <WasNow
+                price={
+                  liveHold
+                    ? liveHold.price.packagePrice
+                    : carePackage.priceRupees
+                }
+                mrp={carePackage.mrpRupees}
+                showOff
+              />
+            ) : (
+              formatRupees(liveHold ? liveHold.price.packagePrice : listedPrice)
+            )}
           </dd>
         </div>
+        {carePackage?.addOns.map((addOn) => (
+          <div key={addOn.code}>
+            <dt>
+              <button
+                type="button"
+                role="checkbox"
+                aria-checked={addOns.includes(addOn.code)}
+                className={styles.addOn}
+                disabled={busy}
+                onClick={() => flow.toggleAddOn(addOn.code)}
+              >
+                <span className={styles.addOnBox} aria-hidden="true">
+                  {addOns.includes(addOn.code) && (
+                    <Check size={13} weight="bold" />
+                  )}
+                </span>
+                <span className={styles.addOnWords}>
+                  Add a{" "}
+                  {addOn.name.charAt(0).toLowerCase() + addOn.name.slice(1)}
+                  {addOn.description && <small>{addOn.description}</small>}
+                </span>
+              </button>
+            </dt>
+            <dd>
+              <WasNow price={addOn.priceRupees} mrp={addOn.mrpRupees} />
+            </dd>
+          </div>
+        ))}
         {liveHold && liveHold.price.discount > 0 && (
           <div>
             <dt>Discount</dt>

@@ -25,6 +25,8 @@ import * as rc from "../integrations/redcliffe.ts";
 import { env } from "../lib/env.ts";
 import * as notices from "../lib/notices.ts";
 import { sendNow } from "../lib/notify.ts";
+import { openTask } from "../lib/medicineFlow.ts";
+import { workingDue } from "../lib/hours.ts";
 
 export const labRoutes = new Hono();
 
@@ -174,6 +176,7 @@ labRoutes.post("/labs/bookings", async (c) => {
   const me = await requirePatient(c);
   const input = await body<{
     packageCode?: string; addressId?: number; collectionDate?: string; slotId?: string | number; carePackageCode?: string;
+    addOns?: string[];
     patient?: { name?: string; age?: number; gender?: string; mobile?: string; email?: string };
   }>(c);
   const packageCode = String(input.packageCode ?? "").trim();
@@ -193,6 +196,12 @@ labRoutes.post("/labs/bookings", async (c) => {
     if (!care || !care.includes_lab_tests) fail(400, "That care package does not include lab tests.");
     if (care!.lab_package_code !== packageCode) fail(400, "That test package is not part of this care package.");
   }
+  // optional tests ticked on the review (the cortisol test): only a care package's own, at today's price
+  const wanted = Array.isArray(input.addOns) ? input.addOns.map(String).slice(0, 5) : [];
+  const addOns = care && wanted.length
+    ? await sql`select code, name, price_rupees from care_addons where active and care_package_code = ${care.code} and code in ${sql(wanted)}`
+    : [];
+  if (addOns.length !== wanted.length) fail(400, "That add-on is not available.");
   const a = await ownedAddress(me.id, input.addressId);
   const pkg = await lab(rc.findPackage(packageCode));
   const slot = await findSlot(collectionDate, slotId, a);
@@ -226,8 +235,10 @@ labRoutes.post("/labs/bookings", async (c) => {
     throw e;
   }
 
+  const extra = addOns.reduce((n, a) => n + Number(a.price_rupees), 0);
   const price = care
-    ? { packagePrice: care.price_rupees, discount: 0, collectionCharge: 0, total: care.price_rupees }
+    ? { packagePrice: care.price_rupees, discount: 0, collectionCharge: 0, total: care.price_rupees + extra,
+        addOns: addOns.map((a) => ({ code: a.code, name: a.name, price: Number(a.price_rupees) })) }
     : {
       packagePrice: partner.packagePrice, collectionCharge: partner.collectionCharge, total: partner.total,
       discount: Math.max(0, partner.packagePrice + partner.collectionCharge - partner.total),
@@ -450,6 +461,16 @@ export async function fulfilLabBooking(tx: TransactionSql, bookingId: string, us
   if (row.care_package_code)
     await setEligibility(tx, userId, {
       path: "LAB_TEST", stage: "LAB_SCHEDULED", lab_booking_id: bookingId, consultation_paid: true,
+    });
+  // ponytail: an add-on (the cortisol test) is added to the lab booking by the team from Redcliffe's dashboard; send its
+  // code with the package in createBooking once Redcliffe's production catalogue gives one, and drop this task
+  const addOns = ((row.price?.addOns ?? []) as { name: string }[]).map((a) => a.name);
+  if (addOns.length)
+    await openTask(tx, {
+      kind: "LAB_ADD_ON", priority: "HIGH", patientId: userId,
+      title: `Add ${addOns.join(" and ")} to Redcliffe booking ${partnerId || bookingId}`,
+      detail: `Paid for with the home blood test, collection on ${isoDate(row.slot_date) ?? "the booked day"}. Add it from the Redcliffe dashboard before the collection.`,
+      dueAt: workingDue(new Date(), 2), dedupeKey: `lab-addon:${bookingId}`,
     });
 }
 

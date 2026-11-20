@@ -72,6 +72,8 @@ export function useLabBookingFlow(mode: LabBookingMode) {
   const [patient, setPatient] = useState<LabPatient | null>(null);
   const [slot, setSlot] = useState<PickableSlot | null>(null);
   const [held, setHeld] = useState<LabBooking | null>(null);
+  // the care package's optional tests the patient ticked on the review (never ticked for them)
+  const [addOns, setAddOns] = useState<string[]>([]);
   // the person came from the profile without the step being shown, so Back skips it too
   const [personSkipped, setPersonSkipped] = useState(false);
 
@@ -97,6 +99,7 @@ export function useLabBookingFlow(mode: LabBookingMode) {
       slotId: slot.id,
       patient,
       carePackageCode: carePackage?.code,
+      addOns: carePackage ? addOns : undefined,
     });
     setHeld(booking);
     return booking;
@@ -118,10 +121,24 @@ export function useLabBookingFlow(mode: LabBookingMode) {
     patient,
     slot,
     held,
+    addOns,
+    /** ticks an add-on in or out; a hold made before priced without it, so the next Continue holds again */
+    toggleAddOn: (code: string) => {
+      setAddOns((now) =>
+        now.includes(code) ? now.filter((c) => c !== code) : [...now, code],
+      );
+      setHeld(null);
+    },
     choosePackage: advance(setChosenPackage),
     /** Onboarding: the care package and the Redcliffe package it books. Always starts at the address:
         the card can be tapped again after Back from a later step. */
-    chooseCarePackage: ({ care, lab }: { care: CarePackage; lab: LabPackage }) => {
+    chooseCarePackage: ({
+      care,
+      lab,
+    }: {
+      care: CarePackage;
+      lab: LabPackage;
+    }) => {
       setCarePackage(care);
       setChosenPackage(lab);
       setHeld(null);

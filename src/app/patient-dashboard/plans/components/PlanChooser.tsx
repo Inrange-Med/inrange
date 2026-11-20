@@ -59,7 +59,9 @@ export default function PlanChooser({
                 </>
               ) : (
                 // put on by our team after the call (20 Nov 2026): no doctor's name on it
-                <span>Your plan: {recommendedPlan.name}, as agreed on your call</span>
+                <span>
+                  Your plan: {recommendedPlan.name}, as agreed on your call
+                </span>
               )}
             </p>
             {recommended.note && (

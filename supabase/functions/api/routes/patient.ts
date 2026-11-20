@@ -448,10 +448,18 @@ patientRoutes.get("/subscriptions/recommended", async (c) => {
 
 patientRoutes.get("/care-packages", async (c) => {
   await requirePatient(c);
-  const rows = await sql`select * from care_packages order by sort_order`;
+  const [rows, addOns] = await Promise.all([
+    sql`select * from care_packages order by sort_order`,
+    sql`select * from care_addons where active order by sort_order`,
+  ]);
   return ok(c, rows.map((p) => ({
     code: p.code, name: p.name, description: p.description, priceRupees: p.price_rupees,
+    // the real price of the parts bought separately, shown crossed out (20 Nov 2026)
+    mrpRupees: p.mrp_rupees ?? null,
     includesLabTests: p.includes_lab_tests, labPackageCode: p.lab_package_code, includes: p.includes ?? [],
+    addOns: addOns.filter((a) => a.care_package_code === p.code).map((a) => ({
+      code: a.code, name: a.name, description: a.description, priceRupees: a.price_rupees, mrpRupees: a.mrp_rupees ?? null,
+    })),
   })));
 });
 

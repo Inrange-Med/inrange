@@ -337,8 +337,8 @@ function PlanAssign({
           {assigned ? (
             <>
               {assigned.name},{" "}
-              <span className="num">{formatRupees(assigned.priceRupees)}</span>
-              : waiting for the patient to pay in the app
+              <span className="num">{formatRupees(assigned.priceRupees)}</span>:
+              waiting for the patient to pay in the app
             </>
           ) : (
             "No plan yet"

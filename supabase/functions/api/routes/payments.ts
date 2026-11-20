@@ -55,7 +55,11 @@ async function price(tx: TransactionSql, userId: number, purpose: Purpose, refer
     let lineItems: Priced["lineItems"];
     if (b.care_package_code) {
       const [care] = await tx`select name from care_packages where code = ${b.care_package_code}`;
-      lineItems = [{ label: care?.name ?? "Lab tests and consultation", amountPaise: rupees(p.total) }];
+      const addOns = (p.addOns ?? []) as { name: string; price: number }[];
+      lineItems = [
+        { label: care?.name ?? "Lab tests and consultation", amountPaise: rupees(p.packagePrice) },
+        ...addOns.map((a) => ({ label: a.name, amountPaise: rupees(a.price) })),
+      ];
     } else {
       lineItems = [{ label: b.package_name ?? "Home blood test", amountPaise: rupees(p.packagePrice) }];
       if (p.collectionCharge > 0) lineItems.push({ label: "Home collection", amountPaise: rupees(p.collectionCharge) });

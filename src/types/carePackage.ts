@@ -13,4 +13,16 @@ export type CarePackage = {
   /** short lines shown on the card, for example "Video consultation with a doctor". The app drops any
    *  stated length ("30-minute"): consultations show no duration (client call, 12 Nov 2026). */
   includes: string[];
+  /** the real price of the parts bought separately, shown crossed out; null shows the price alone */
+  mrpRupees: number | null;
+  /** optional tests ticked into the bill on the review (the cortisol test) */
+  addOns: CareAddOn[];
+};
+
+export type CareAddOn = {
+  code: string;
+  name: string;
+  description: string;
+  priceRupees: number;
+  mrpRupees: number | null;
 };

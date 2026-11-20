@@ -59,9 +59,8 @@ export default function ProgrammePlanPanel({
         </div>
       ) : (
         <p className={clinicStyles.empty}>
-          No plan yet. Our sales team takes the patient through the plans
-          after your consultation, so prescriptions are for one month until
-          then.
+          No plan yet. Our sales team takes the patient through the plans after
+          your consultation, so prescriptions are for one month until then.
         </p>
       )}
       {team.length > 0 && <p className={styles.team}>{team.join("  ·  ")}</p>}
