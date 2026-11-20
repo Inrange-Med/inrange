@@ -1,14 +1,16 @@
 "use client";
 
 /*
-  The hero's film: three everyday moments in one seamless loop (a morning walk in the garden, a grandfather
-  and granddaughter, a couple dancing in their kitchen), about how it feels to have energy and ease, never
-  about a body. Made with Higgsfield (stills: Nano Banana Pro; motion: Kling 4.0), joined by
-  scripts/media/hero-loop.sh (scripts/media/README.md; masters in art/, gitignored).
+  The hero's film (v3, 21 Nov 2026): one continuous shot, a father and his daughter flying a green kite on a Delhi
+  rooftop at golden hour. Lightness, energy and joy with family, never a body, a number or a product; holding the string
+  reads as being in control, in range. Chosen after reading Ro, Hims, Noom, Found, Elevate Now, Tata 1mg and Sugar.fit:
+  their craft, made unmistakably Indian (docs: scripts/media/README.md). Higgsfield: still with Nano Banana Pro, motion
+  with Kling 4.0, the clip ending on its opening frame so the loop is seamless with no crossfade
+  (scripts/media/hero-v3-*.{py,sh}; masters in art/, gitignored).
 
-  It never costs the first screen: the poster paints first (preloaded by Hero), the film is muted and
-  inline, phones get the 720 file, and it stays a still for anyone who asks for less motion or for data
-  saving. It pauses while off screen, so it never runs behind the page.
+  It never costs the first screen: the poster paints first (preloaded by Hero), the film is muted and inline, phones get
+  the 720 file (0.6 MB), laptops the 1080 file (1.5 MB), and it stays a still for anyone who asks for less motion or for
+  data saving. It pauses while off screen, so it never runs behind the page.
 */
 
 import { useEffect, useRef, useState } from "react";
@@ -51,9 +53,9 @@ export default function HeroVideo({
         () => (retry = 0),
         () => {
           // refused (Safari before the reveal ends, Low Power Mode): ask again shortly, a few times, and from the
-          // second refusal offer the tap that a browser always allows
+          // fifth (about 3 s: Safari usually starts it by then) offer the tap that a browser always allows
           if (retry++ < 8) timer = window.setTimeout(sync, 600);
-          if (retry >= 2) setRefused(true);
+          if (retry >= 5) setRefused(true);
         },
       );
     };
@@ -84,7 +86,7 @@ export default function HeroVideo({
       <video
         ref={ref}
         className={className}
-        poster="/img/hero-v2-poster.jpg"
+        poster="/img/hero-v3-poster.jpg"
         muted
         loop
         playsInline
@@ -93,8 +95,8 @@ export default function HeroVideo({
         tabIndex={-1}
         disablePictureInPicture
       >
-        <source src="/video/hero-v2-720.mp4" type="video/mp4" media="(max-width: 1023px)" />
-        <source src="/video/hero-v2-1080.mp4" type="video/mp4" />
+        <source src="/video/hero-v3-720.mp4" type="video/mp4" media="(max-width: 1023px)" />
+        <source src="/video/hero-v3-1080.mp4" type="video/mp4" />
       </video>
       {refused && (
         <button

@@ -399,8 +399,8 @@
 }
 
 /* ------------------------------------------------------------------
-   The hero (Nov 2026, v2): the words on a sheet of dark fluted glass, and
-   beside them a film of three everyday moments (HeroVideo). The glass is
+   The hero (Nov 2026): the words on a sheet of dark fluted glass, and
+   beside them a film (HeroVideo: v3, one continuous shot of a kite). The glass is
    the In range signature; the film is the feeling (energy, ease, joy), so
    it plays clear, and the glass only reaches over its inner edge, the way
    a reeded pane ends over a bright window. :root lifts these above the base
@@ -441,7 +441,7 @@
   --on-dark-2: rgb(247 246 243 / 0.8);
   --signal: #f7f6f3;
   --wipe: var(--glass-ground);
-  background: var(--glass-ground) url("/img/hero-v2-poster.jpg") 50% 34% / cover no-repeat;
+  background: var(--glass-ground) url("/img/hero-v3-poster.jpg") 50% 0% / cover no-repeat;
 }
 :global(:root) .media::before {
   background: linear-gradient(
@@ -452,7 +452,8 @@
   );
 }
 
-/* the film: fills the frame, faces kept in its upper middle at every crop (masters are 4:5) */
+/* the film (a 4:5 master): on a phone the frame is wide, so it keeps the top (the kite and both faces); on a laptop
+   the column is tall and shows the whole height */
 .video {
   position: absolute;
   inset: 0;
@@ -460,7 +461,35 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: 50% 34%;
+  object-position: 50% 0%;
+}
+/* the frame takes the film's own shape on phones (4:5), so the kite and both faces stay in view all through the
+   camera's slow push-in; tablets get a square centred on the faces */
+@media (max-width: 639px) {
+  .media {
+    aspect-ratio: 4 / 5;
+  }
+}
+@media (min-width: 640px) and (max-width: 1023px) {
+  .media {
+    aspect-ratio: 1 / 1;
+  }
+  .video {
+    object-position: 50% 30%;
+  }
+}
+/* laptops: the film starts just below the floating nav, so the kite never flies behind it; the glass shows above it */
+@media (min-width: 1024px) {
+  .video {
+    top: calc(var(--nav-h) + 28px);
+    height: auto;
+    bottom: 0;
+    object-position: 50% 50%;
+    border-top-left-radius: var(--r-media);
+  }
+  :global(:root) .media {
+    background: none;
+  }
 }
 /* it settles from a slight zoom as the cover retracts, as the photos do */
 :global(.js) .media .video {
@@ -472,13 +501,13 @@
   transform: none;
 }
 
-/* "Play the film": only when the browser refused to start it (Low Power Mode). A quiet frosted pill in the frame's
-   top corner, clear of the seal at its foot and of the floating nav on laptops */
+/* "Play the film": only when the browser refused to start it (Low Power Mode). A quiet frosted pill: top left on
+   phones and tablets (the empty sky over the glass edge, clear of the kite and the seal), opposite the seal on laptops */
 .play {
   position: absolute;
   z-index: 3;
   top: 12px;
-  right: 12px;
+  left: 12px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -510,6 +539,7 @@
 @media (min-width: 1024px) {
   .play {
     top: auto;
+    left: auto;
     right: 24px;
     bottom: clamp(48px, 7vh, 80px);
   }
@@ -535,6 +565,11 @@
 @media (max-width: 1023px) {
   .flutes {
     width: 22%;
+  }
+}
+@media (min-width: 1024px) {
+  .flutes {
+    top: calc(var(--nav-h) + 28px);
   }
 }
 
