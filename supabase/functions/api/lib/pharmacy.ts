@@ -48,9 +48,10 @@ export function unitPrice(mrpPaise: number, percent: number, costPaise: number |
 }
 
 /**
- * Prices a cart from the live catalogue: its medicines (a withdrawn item comes back unavailable) and the plan its
- * prescription carries, so the plan and the medicines are one bill and one payment (19 Nov 2026). The plan is never
- * charged to someone already on a plan.
+ * Prices a cart from the live catalogue: its medicines (a withdrawn item comes back unavailable) and the plan admin
+ * assigned and the patient has not paid for (or the cart's own `plan_id`, from before 20 Nov 2026), so the plan and
+ * the medicines are one bill and one payment whichever way the cart was made. Home, checkout and the payment all
+ * price through here, so they always agree. The plan is never charged to someone already on a plan.
  */
 export async function priceCart(tx: Tx, cart: { lines: CartLine[]; months: number; plan_id?: number | null; patient_id?: number }) {
   const { lines, months } = cart;
@@ -74,11 +75,13 @@ export async function priceCart(tx: Tx, cart: { lines: CartLine[]; months: numbe
   });
   const mrpTotalPaise = priced.reduce((n, l) => n + l.mrpPaise * l.quantity, 0);
   const medicinesPaise = priced.reduce((n, l) => n + l.pricePaise * l.quantity, 0);
-  const [p] = cart.plan_id
-    ? await tx`select id, name, price_rupees from plans where id = ${cart.plan_id} and active and price_rupees > 0
+  const planId = cart.plan_id ?? (cart.patient_id ? (await pendingPlan(tx, cart.patient_id))?.plan_id ?? null : null);
+  const [p] = planId
+    ? await tx`select id, name, price_rupees, mrp_rupees from plans where id = ${planId} and active and price_rupees > 0
                and not exists (select 1 from subscriptions s where s.user_id = ${cart.patient_id ?? 0} and s.status = 'Active' and s.ends_at > now())`
     : [];
-  const plan = p ? { id: String(p.id), name: String(p.name), pricePaise: Math.round(Number(p.price_rupees) * 100) } : null;
+  const plan = p ? { id: String(p.id), name: String(p.name), pricePaise: Math.round(Number(p.price_rupees) * 100),
+    mrpPaise: p.mrp_rupees ? Math.round(Number(p.mrp_rupees) * 100) : null } : null;
   return {
     lines: priced, discountPercent: percent, mrpTotalPaise, discountPaise: mrpTotalPaise - medicinesPaise, plan,
     totalPaise: medicinesPaise + (plan?.pricePaise ?? 0),
@@ -89,6 +92,20 @@ export async function priceCart(tx: Tx, cart: { lines: CartLine[]; months: numbe
 export async function onPlan(tx: Tx, patientId: number) {
   const [plan] = await tx`select 1 from subscriptions where user_id = ${patientId} and status = 'Active' and ends_at > now()`;
   return Boolean(plan);
+}
+
+/**
+ * The plan admin put the patient on that they have not paid for yet: the latest assignment (or older doctor
+ * suggestion) made after their last plan was bought, so a lapsed plan never brings an old one back.
+ */
+export async function pendingPlan(tx: Tx, patientId: number) {
+  const [r] = await tx`
+    select r.plan_id, r.salesperson, r.created_at, p.name, p.price_rupees, p.mrp_rupees, p.duration_months
+    from plan_recommendations r join plans p on p.id = r.plan_id
+    where r.patient_id = ${patientId} and p.active
+      and r.created_at > coalesce((select max(s.created_at) from subscriptions s where s.user_id = ${patientId}), '-infinity')
+    order by r.created_at desc limit 1`;
+  return r ?? null;
 }
 
 if (import.meta.main) {

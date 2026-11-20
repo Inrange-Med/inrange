@@ -110,6 +110,8 @@ export type ConsultationReport = {
 
 export type ConsultationPage = {
   activePlan: { planName: string; endsAt: string } | null;
+  /** sold and assigned by admin, not paid yet */
+  assignedPlan: { planName: string } | null;
   /** callOpen: the call can be joined now (it stays true after a mid-call send, so Join stays) */
   consultation: ConsultationRow & {
     endsAt: string | null;
@@ -129,6 +131,9 @@ export type ConsultationPage = {
     allergies: string | null;
     conditions: string[];
     onPlan: boolean;
+    /** who sells to the patient, and their health coach (19 Nov 2026 call) */
+    salesperson: string | null;
+    coachName: string | null;
   };
   reports: ConsultationReport[];
   lastPrescription: {

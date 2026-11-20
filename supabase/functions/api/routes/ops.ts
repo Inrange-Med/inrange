@@ -9,9 +9,12 @@
 //   POST  /admin/medicine/tasks/:taskId/send-link      the app link to the patient on WhatsApp, after a call
 //   GET   /admin/medicine/tasks/:taskId/unmatched      a MATCH_MEDICINE task's hand-typed lines (admin)
 //   POST  /admin/medicine/tasks/:taskId/match          { line, medicineId } matches one to the master list (admin)
-//   GET   /admin/medicine/patients?q=                  patients with medicine activity
-//   GET   /admin/medicine/patients/:patientId          everything about one patient's medicines
+//   GET   /admin/medicine/patients?q=                  admin: every patient; a coach: their own
+//   GET   /admin/medicine/patients/:patientId          everything about one patient's medicines, plan and sales
 //   PATCH /admin/medicine/patients/:patientId/coach    { coachId | null } (admin)
+//   PATCH /admin/medicine/patients/:patientId/salesperson  { name | "" } who sells to them (admin)
+//   PUT   /admin/medicine/patients/:patientId/plan     { planId | null, salesperson? } puts them on a plan to pay for
+//                                                     in the app, or withdraws it (admin; 20 Nov 2026)
 //   GET   /admin/medicine/orders?status=               deliveries (admin)
 //   POST  /admin/medicine/orders/:orderId/move         { to, courier?, trackingNo?, trackingUrl?, expectedAt?, note? } (admin)
 //   POST  /admin/medicine/orders/:orderId/delay        { expectedAt } (admin)
@@ -36,9 +39,9 @@ import { refundPayment } from "../integrations/razorpay.ts";
 import { syncTemplates, whatsappLive } from "../integrations/whatsapp.ts";
 import { env } from "../lib/env.ts";
 import { TEMPLATES, type Template } from "../lib/messages.ts";
-import { lineOf, lineView } from "../lib/prescriptions.ts";
+import { ist, lineOf, lineView } from "../lib/prescriptions.ts";
 import { packsFor } from "../lib/medicineSearch.ts";
-import { onPlan as hasPlan } from "../lib/pharmacy.ts";
+import { onPlan as hasPlan, pendingPlan } from "../lib/pharmacy.ts";
 
 export const opsRoutes = new Hono();
 
@@ -280,6 +283,8 @@ opsRoutes.get("/admin/medicine/patients", async (c) => {
   const q = (c.req.query("q") ?? "").trim().toLowerCase().slice(0, 40);
   const rows = await sql`
     select pu.id::text as id, ${name} as name, pu.mobile, pp.coach_id::text as "coachId", cu.full_name as "coachName",
+      pp.salesperson, (select pl.name from subscriptions sb join plans pl on pl.id = sb.plan_id
+        where sb.user_id = pu.id and sb.status = 'Active' and sb.ends_at > now() order by sb.ends_at desc limit 1) as "planName",
       lo.status as "lastOrderStatus", ${iso("lo.placed_at")} as "lastOrderAt",
       case when lo.supply_days is not null and lo.delivered_at is not null
         then to_char((lo.delivered_at + make_interval(days => lo.supply_days)) at time zone 'Asia/Kolkata', 'YYYY-MM-DD') end as "runOutOn",
@@ -293,8 +298,6 @@ opsRoutes.get("/admin/medicine/patients", async (c) => {
     left join lateral (select count(*) filter (where status <> 'DUE') as resolved, count(*) filter (where status in ('TAKEN', 'TAKEN_LATE')) as taken
                        from dose_events e where e.patient_id = pu.id and e.due_at > now() - interval '28 days') ad on true
     where pu.role = 'PATIENT' ${scope(me)}
-      and (exists (select 1 from prescriptions rx where rx.patient_id = pu.id and rx.status = 'SIGNED')
-           or exists (select 1 from medicine_orders o where o.patient_id = pu.id))
       ${q ? sql`and (lower(${name}) like ${`%${q}%`} or pu.mobile like ${`%${q}%`})` : sql``}
     order by coalesce(lo.placed_at, pu.created_at) desc limit 200`;
   return ok(c, rows);
@@ -304,7 +307,7 @@ opsRoutes.get("/admin/medicine/patients/:patientId", async (c) => {
   const me = await staff(c);
   const p = await patientFor(me, intParam(c.req.param("patientId"), "patient"));
   await sql`insert into audit_log (patient_id, actor_id, action) values (${p.id}, ${me.id}, ${`Viewed medicines (${me.role === "COACH" ? "coach" : "care team"})`})`;
-  const [[rx], carts, followups, orders, messages, replies, tasks, schedules, events, [plan], [coach], [consent]] = await Promise.all([
+  const [[rx], carts, followups, orders, messages, replies, tasks, schedules, events, [plan], [coach], [consent], [profile], assigned] = await Promise.all([
     sql`select p.id, p.items, p.months, ${iso("p.signed_at")} as signed, ${iso("p.valid_until")} as valid, d.full_name as doctor
         from prescriptions p join doctors d on d.id = p.doctor_id where p.patient_id = ${p.id} and p.status = 'SIGNED' order by p.signed_at desc limit 1`,
     sql`select k.*, rx.months from medicine_carts k join prescriptions rx on rx.id = k.prescription_id
@@ -323,14 +326,21 @@ opsRoutes.get("/admin/medicine/patients/:patientId", async (c) => {
         from dose_schedules where patient_id = ${p.id} order by id desc limit 10`,
     sql`select e.id, s.medicine, e.status, e.skip_reason, ${iso("e.due_at")} as due from dose_events e join dose_schedules s on s.id = e.schedule_id
         where e.patient_id = ${p.id} and e.due_at < now() + interval '3 days' order by e.due_at desc limit 30`,
-    sql`select pl.name from subscriptions s join plans pl on pl.id = s.plan_id where s.user_id = ${p.id} and s.status = 'Active' and s.ends_at > now() limit 1`,
+    sql`select pl.name, ${iso("s.ends_at")} as ends from subscriptions s join plans pl on pl.id = s.plan_id
+        where s.user_id = ${p.id} and s.status = 'Active' and s.ends_at > now() order by s.ends_at desc limit 1`,
     p.coach_id ? sql`select id, full_name from users where id = ${p.coach_id}` : Promise.resolve([]),
     sql`select ${iso("accepted_at")} as at from consents where user_id = ${p.id} and consent_type = 'WHATSAPP' and revoked_at is null limit 1`,
+    sql`select salesperson from patient_profiles where user_id = ${p.id}`,
+    pendingPlan(sql, p.id),
   ]);
   const priced = await Promise.all(carts.map((k) => priceCart(sql, k as never)));
   return ok(c, {
-    patient: { id: String(p.id), name: p.name, mobile: p.mobile, plan: plan?.name ?? null, whatsappSince: consent?.at ?? null,
-      coach: coach ? { id: String(coach.id), name: coach.full_name } : null },
+    patient: { id: String(p.id), name: p.name, mobile: p.mobile, plan: plan?.name ?? null, planEndsAt: plan?.ends ?? null,
+      whatsappSince: consent?.at ?? null, coach: coach ? { id: String(coach.id), name: coach.full_name } : null,
+      salesperson: profile?.salesperson ?? null,
+      // the plan admin put them on that they have not paid for yet (it waits in the app, with any medicines)
+      assignedPlan: assigned ? { planId: String(assigned.plan_id), name: assigned.name, priceRupees: assigned.price_rupees,
+        assignedAt: ist(assigned.created_at), salesperson: assigned.salesperson ?? null } : null },
     prescription: rx ? { id: String(rx.id), doctor: rx.doctor, signedAt: rx.signed, validUntil: rx.valid, months: rx.months,
       items: (rx.items ?? []).map((i: Record<string, unknown>) => ({ name: `${i.medicineName ?? ""} ${i.strength ?? ""}`.trim(), frequency: i.frequency ?? "", stocked: Boolean(i.medicineId) })) } : null,
     carts: carts.map((k, i) => ({ id: String(k.id), kind: k.kind, status: k.status, boughtElsewhere: Boolean(k.elsewhere_at),
@@ -370,6 +380,49 @@ opsRoutes.patch("/admin/medicine/patients/:patientId/coach", async (c) => {
     await tx`insert into audit_log (patient_id, actor_id, action) values (${p.id}, ${me.id}, ${coachId ? "Assigned a health coach" : "Removed the health coach"})`;
   });
   return ok(c, { coachId: coachId ? String(coachId) : null }, coachId ? "Coach assigned" : "Coach removed");
+});
+
+opsRoutes.patch("/admin/medicine/patients/:patientId/salesperson", async (c) => {
+  const me = await admin(c);
+  const p = await patientFor(me, intParam(c.req.param("patientId"), "patient"));
+  const b = await body<{ name?: unknown }>(c);
+  const name = String(b.name ?? "").trim().replace(/\s+/g, " ").slice(0, 80) || null;
+  await sql.begin(async (tx) => {
+    await tx`insert into patient_profiles (user_id, salesperson) values (${p.id}, ${name})
+             on conflict (user_id) do update set salesperson = excluded.salesperson`;
+    await tx`insert into audit_log (patient_id, actor_id, action) values (${p.id}, ${me.id}, ${name ? `Salesperson set: ${name}` : "Salesperson removed"})`;
+  });
+  return ok(c, { salesperson: name }, name ? "Salesperson saved" : "Salesperson removed");
+});
+
+/**
+ * Puts the patient on a plan (20 Nov 2026): the salesperson sold it on the call and told admin. From now the app asks
+ * the patient to pay for it, with any medicines waiting in the same payment (lib/pharmacy.ts priceCart). A plan
+ * assigned again replaces the one not yet paid for; `planId: null` withdraws it. Never for someone already on a plan.
+ */
+opsRoutes.put("/admin/medicine/patients/:patientId/plan", async (c) => {
+  const me = await admin(c);
+  const p = await patientFor(me, intParam(c.req.param("patientId"), "patient"));
+  const b = await body<{ planId?: unknown; salesperson?: unknown }>(c);
+  const planId = b.planId == null || b.planId === "" ? null : Number(b.planId);
+  const salesperson = String(b.salesperson ?? "").trim().replace(/\s+/g, " ").slice(0, 80) || null;
+  const [plan] = planId ? await sql`select id, name from plans where id = ${planId} and active and price_rupees > 0` : [];
+  if (planId !== null && !plan) fail(400, "That plan is not available.");
+  if (plan && await hasPlan(sql, p.id)) fail(409, "This patient is already on a plan.");
+  await sql.begin(async (tx) => {
+    // the plan not yet paid for (an earlier assignment, or a doctor's old suggestion) gives way to this one
+    await tx`delete from plan_recommendations where patient_id = ${p.id}
+             and created_at > coalesce((select max(s.created_at) from subscriptions s where s.user_id = ${p.id}), '-infinity')`;
+    if (plan)
+      await tx`insert into plan_recommendations (patient_id, plan_id, assigned_by, salesperson)
+               values (${p.id}, ${plan.id}, ${me.id}, ${salesperson})`;
+    if (salesperson)
+      await tx`insert into patient_profiles (user_id, salesperson) values (${p.id}, ${salesperson})
+               on conflict (user_id) do update set salesperson = excluded.salesperson`;
+    await tx`insert into audit_log (patient_id, actor_id, action)
+             values (${p.id}, ${me.id}, ${plan ? `Put on ${plan.name}${salesperson ? `, sold by ${salesperson}` : ""}` : "Plan withdrawn before payment"})`;
+  });
+  return ok(c, { planId: plan ? String(plan.id) : null }, plan ? `${plan.name}: waiting for the patient to pay in the app` : "Plan withdrawn");
 });
 
 // ---------------------------------------------------------------- deliveries (the pharmacy)

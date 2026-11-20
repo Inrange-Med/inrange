@@ -520,3 +520,13 @@ fieldset.section > legend {
     background: var(--bg);
   }
 }
+
+/* putting a patient on a plan: the length, the price, who sold it, then the button */
+.planForm {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+}
+.planForm > .input {
+  max-width: 320px;
+}

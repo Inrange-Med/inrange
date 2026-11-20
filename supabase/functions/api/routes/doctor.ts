@@ -15,8 +15,6 @@
 //   POST   /doctor/patients/:patientId/prescriptions/:prescriptionId/sign      { months? }
 //   GET    /pharmacy/inventory?query=                                        what the warehouse stocks
 //   POST   /doctor/patients/:patientId/private-notes                         { text }
-//   POST   /doctor/patients/:patientId/plan-recommendation                   { planId, note? }
-//   DELETE /doctor/patients/:patientId/plan-recommendation
 //   GET    /doctor/notes
 //   GET    /doctor/notes/:noteId
 //   PUT    /doctor/notes/:noteId                                             ClinicalNoteChanges
@@ -34,11 +32,9 @@ import { sql } from "../lib/db.ts";
 import { body, fail, intParam, ok } from "../lib/http.ts";
 import { requireDoctor } from "../lib/auth.ts";
 import { signedUrl } from "../lib/storage.ts";
-import { medicineColumns, searchInventory } from "../lib/pharmacy.ts";
+import { medicineColumns, pendingPlan, searchInventory } from "../lib/pharmacy.ts";
 import { rxItem, signRx } from "../lib/prescriptions.ts";
 import { withForm } from "../lib/medicineSearch.ts";
-import * as notices from "../lib/notices.ts";
-import { sendNow } from "../lib/notify.ts";
 
 export const doctorRoutes = new Hono();
 
@@ -456,15 +452,19 @@ doctorRoutes.get("/doctor/patients/:patientId/record", async (c) => {
       sql`select city from addresses where user_id = ${patientId} order by is_default desc, id desc limit 1`,
     ]);
   const weightSource = (s: string) => (s === "ONBOARDING" ? "At sign-up" : s === "DOCTOR" ? "Doctor recorded" : "Patient logged");
-  const [[rec], [sub]] = await Promise.all([
-    sql`select r.plan_id, r.note, r.created_at, pl.name from plan_recommendations r join plans pl on pl.id = r.plan_id
-        where r.patient_id = ${patientId} order by r.created_at desc limit 1`,
+  const [rec, [sub], [team]] = await Promise.all([
+    // the plan admin assigned that is not paid for yet (20 Nov 2026)
+    pendingPlan(sql, patientId),
     sql`select pl.name, s.ends_at from subscriptions s join plans pl on pl.id = s.plan_id
         where s.user_id = ${patientId} and s.status = 'Active' and s.ends_at > now() order by s.ends_at desc limit 1`,
+    sql`select pp.salesperson, u.full_name as coach from patient_profiles pp left join users u on u.id = pp.coach_id
+        where pp.user_id = ${patientId}`,
   ]);
   return ok(c, {
-    planRecommendation: rec ? { planId: rec.plan_id, planName: rec.name, note: rec.note ?? "", recommendedAt: ist(rec.created_at) } : null,
+    planRecommendation: rec ? { planId: rec.plan_id, planName: rec.name, note: "", recommendedAt: ist(rec.created_at) } : null,
     activePlan: sub ? { planName: sub.name, endsAt: ist(sub.ends_at) } : null,
+    // who looks after them besides the doctor (19 Nov 2026 call)
+    salesperson: team?.salesperson ?? null, coachName: team?.coach ?? null,
     programme: programmeOf(p?.conditions),
     city: city?.city ?? "",
     careStartedAt: ist(first?.at),
@@ -592,31 +592,8 @@ doctorRoutes.post("/doctor/patients/:patientId/private-notes", async (c) => {
   return ok(c, { id: String(n.id), at: ist(n.at), text, by: doctor.name }, "Saved");
 });
 
-doctorRoutes.post("/doctor/patients/:patientId/plan-recommendation", async (c) => {
-  const { doctor, patientId } = await forPatient(c);
-  const input = await body<Row>(c);
-  const planId = intParam(String(input.planId ?? ""), "plan");
-  const note = String(input.note ?? "").trim();
-  if (note.length > 500) fail(400, "Keep the note under 500 characters.");
-  const [plan] = await sql`select id, name from plans where id = ${planId} and active`;
-  if (!plan) fail(400, "That plan is not available.");
-  // newest wins for the patient's Plans screen; this doctor's earlier suggestion is replaced
-  await sql.begin(async (tx) => {
-    await tx`delete from plan_recommendations where patient_id = ${patientId} and doctor_id = ${doctor.id}`;
-    await tx`insert into plan_recommendations (patient_id, doctor_id, plan_id, note) values (${patientId}, ${doctor.id}, ${planId}, ${note || null})`;
-  });
-  await audit(patientId, doctor, `Recommended ${plan.name}`);
-  // the patient hears the next steps are written up (the plan itself is in the app)
-  await notices.carePlanWritten(patientId, doctor.name, planId).then(sendNow).catch((e) => console.error("plan notice", (e as Error).message));
-  return ok(c, null, "Plan recommended");
-});
-
-doctorRoutes.delete("/doctor/patients/:patientId/plan-recommendation", async (c) => {
-  const { doctor, patientId } = await forPatient(c);
-  await sql`delete from plan_recommendations where patient_id = ${patientId} and doctor_id = ${doctor.id}`;
-  await audit(patientId, doctor, "Withdrew the plan recommendation");
-  return ok(c, null, "Recommendation withdrawn");
-});
+// No plan recommendation from the doctor (19 Nov 2026 client call): a salesperson sells the plan and admin
+// assigns it (routes/ops.ts PUT /admin/medicine/patients/:patientId/plan).
 
 doctorRoutes.post("/doctor/patients/:patientId/prescriptions/:prescriptionId/sign", async (c) => {
   const { doctor, patientId } = await forPatient(c);

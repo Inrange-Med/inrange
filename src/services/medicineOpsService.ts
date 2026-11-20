@@ -7,9 +7,11 @@
  *   POST  /api/admin/medicine/tasks/:id/send-link          the order link on WhatsApp
  *   GET   /api/admin/medicine/tasks/:id/unmatched          a "Match a medicine" task's hand-typed lines (doctor-portal-v2.md)
  *   POST  /api/admin/medicine/tasks/:id/match              { line, medicineId } (admin)
- *   GET   /api/admin/medicine/patients?q=                  patients with medicine activity
- *   GET   /api/admin/medicine/patients/:id                 one patient's medicines, messages, tasks and doses
+ *   GET   /api/admin/medicine/patients?q=                  admin: every patient; a coach: their own
+ *   GET   /api/admin/medicine/patients/:id                 one patient's plan, medicines, messages, tasks and doses
  *   PATCH /api/admin/medicine/patients/:id/coach           { coachId | null } (admin)
+ *   PATCH /api/admin/medicine/patients/:id/salesperson     { name } (admin)
+ *   PUT   /api/admin/medicine/patients/:id/plan            { planId | null, salesperson }: the plan to pay for in the app (admin)
  *   GET   /api/admin/medicine/orders                       deliveries (admin)
  *   POST  /api/admin/medicine/orders/:id/move              { to, courier?, trackingNo?, trackingUrl?, expectedAt?, note? } (admin)
  *   POST  /api/admin/medicine/orders/:id/delay             { expectedAt } (admin)
@@ -115,6 +117,26 @@ export async function setCoach(patientId: string, coachId: string | null) {
     method: "PATCH",
     body: { coachId },
   });
+}
+
+export async function setSalesperson(patientId: string, name: string) {
+  await apiRequest(`${base}/patients/${patientId}/salesperson`, {
+    method: "PATCH",
+    body: { name },
+  });
+}
+
+/** Puts the patient on a plan to pay for in the app (`planId: null` withdraws it); returns the server's words. */
+export async function assignPlan(
+  patientId: string,
+  planId: string | null,
+  salesperson: string,
+): Promise<string> {
+  const body = await apiRequest<{ message?: string }>(
+    `${base}/patients/${patientId}/plan`,
+    { method: "PUT", body: { planId, salesperson } },
+  );
+  return body?.message ?? (planId ? "Plan assigned" : "Plan withdrawn");
 }
 
 export async function listOrders(): Promise<OpsOrder[]> {

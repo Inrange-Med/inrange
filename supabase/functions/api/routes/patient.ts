@@ -440,9 +440,10 @@ patientRoutes.get("/subscriptions/status", async (c) => {
 
 patientRoutes.get("/subscriptions/recommended", async (c) => {
   const me = await requirePatient(c);
-  const [r] = await sql`select r.plan_id, r.note, d.full_name from plan_recommendations r join doctors d on d.id = r.doctor_id
+  // admin's assignments have no doctor (20 Nov 2026): the plan still shows first
+  const [r] = await sql`select r.plan_id, r.note, d.full_name from plan_recommendations r left join doctors d on d.id = r.doctor_id
                         where r.patient_id = ${me.id} order by r.created_at desc limit 1`;
-  return ok(c, r ? { planId: r.plan_id, doctorName: r.full_name, note: r.note ?? "" } : null);
+  return ok(c, r ? { planId: r.plan_id, doctorName: r.full_name ?? null, note: r.note ?? "" } : null);
 });
 
 patientRoutes.get("/care-packages", async (c) => {

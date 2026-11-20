@@ -110,6 +110,9 @@ export type OpsPatientRow = {
   mobile: string;
   coachId: string | null;
   coachName: string | null;
+  salesperson: string | null;
+  /** the active plan's name, if any */
+  planName: string | null;
   lastOrderStatus: OpsOrder["status"] | null;
   lastOrderAt: string | null;
   runOutOn: string | null;
@@ -166,8 +169,18 @@ export type OpsPatient = {
     name: string;
     mobile: string;
     plan: string | null;
+    planEndsAt: string | null;
     whatsappSince: string | null;
     coach: { id: string; name: string } | null;
+    salesperson: string | null;
+    /** the plan admin put them on, waiting for them to pay in the app */
+    assignedPlan: {
+      planId: string;
+      name: string;
+      priceRupees: number;
+      assignedAt: string;
+      salesperson: string | null;
+    } | null;
   };
   prescription: {
     id: string;

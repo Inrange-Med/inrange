@@ -92,9 +92,18 @@ autosave (DRAFT, saved_at)  ->  Create PDF (pdf_made_at, pdf_path)  ->  Send (SI
 - **A new version after the patient paid** does not bill again: the paid order moves to the new version (so refills
   follow it) and the new order carries only what is left to buy.
 - **The doctor never chooses the plan** (19 Nov 2026 client call, reversing the plan picker of the same morning): a
-  salesperson sells it on the same call, after the doctor, and admin records it. The page shows the patient's plan,
-  read only ("Plan: none yet, so this prescription is for one month"); a `planId` sent to autosave is ignored and new
-  carts never carry a plan. The record's "Recommend a plan" is gone for the same reason.
+  salesperson sells it on the same call, after the doctor, and tells admin. The page shows the patient's plan, read
+  only ("Plan: none yet, so this prescription is for one month"); a `planId` sent to autosave is ignored. The record's
+  "Recommend a plan" and the doctor's plan-recommendation routes are gone for the same reason.
+- **Admin puts the patient on the plan** (20 Nov 2026): Admin, Medicine, Patients, the patient, Plan: the length, the
+  price, who sold it, "Put on this plan" (`PUT /api/admin/medicine/patients/:id/plan`; `planId: null` withdraws it,
+  and a patient already on a plan is refused). It is a `plan_recommendations` row with no doctor; the patient's
+  salesperson is on `patient_profiles.salesperson` (also set alone, before the consultation). From that moment the
+  patient's Home asks for the payment: with the medicines waiting, the plan is a line in the same bill (one payment;
+  `priceCart` adds the unpaid assignment to any open cart, so Home, checkout and the payment agree); with nothing
+  else to pay, the plan alone. Paying starts the plan. The doctor sees the plan ("not paid yet" until then), the
+  salesperson and the health coach on the consultation page and the record. WhatsApp for it comes with the final
+  WhatsApp integration.
 - **Names carry the form:** "Inj." for a pen or injection, "Tab.", "Cap.", "Syp." before the brand (compliance;
   `withForm` in `lib/medicineSearch.ts`), in the search, the lines, the record and the PDF. A name typed by hand prints
   as written.

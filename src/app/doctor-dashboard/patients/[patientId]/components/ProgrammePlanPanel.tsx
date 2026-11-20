@@ -1,5 +1,6 @@
-/* The patient's programme plan on the record, for the doctor to see. The doctor never chooses or suggests
-   one: a salesperson sells it on the call, after the doctor (19 Nov 2026 call). */
+/* The patient's programme plan on the record, for the doctor to see: active, or put on by admin and not paid
+   yet, and who sells to the patient and coaches them. The doctor never chooses or suggests a plan: a
+   salesperson sells it on the call, after the doctor (19 Nov 2026 call). */
 
 import { inIndiaTime, shortDate } from "@/lib/format/dateTime";
 import type { PatientRecord } from "@/types/patientRecord";
@@ -18,8 +19,15 @@ function dayMonth(iso: string) {
 export default function ProgrammePlanPanel({
   record,
 }: {
-  record: Pick<PatientRecord, "activePlan">;
+  record: Pick<
+    PatientRecord,
+    "activePlan" | "planRecommendation" | "salesperson" | "coachName"
+  >;
 }) {
+  const team = [
+    record.salesperson && `Salesperson: ${record.salesperson}`,
+    record.coachName && `Health coach: ${record.coachName}`,
+  ].filter(Boolean);
   return (
     <section
       id="programme"
@@ -40,6 +48,15 @@ export default function ProgrammePlanPanel({
             </span>
           </div>
         </div>
+      ) : record.planRecommendation ? (
+        <div className={styles.plan}>
+          <div className={styles.rxHead}>
+            <strong>{record.planRecommendation.planName}</strong>
+            <span className={clinicStyles.pill} data-tone="warn">
+              Not paid yet
+            </span>
+          </div>
+        </div>
       ) : (
         <p className={clinicStyles.empty}>
           No plan yet. Our sales team takes the patient through the plans
@@ -47,6 +64,7 @@ export default function ProgrammePlanPanel({
           then.
         </p>
       )}
+      {team.length > 0 && <p className={styles.team}>{team.join("  ·  ")}</p>}
     </section>
   );
 }

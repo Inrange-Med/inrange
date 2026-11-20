@@ -13,8 +13,11 @@ Walks:
            version and when, with a PDF only for the current one -> History finds it -> the hour-later reminder
            is dropped -> a follow-up's prescription can be made and sent before its call
   admin    matches the hand-typed medicine to the list: the line joins the order, the task closes
-  patient  one bill for the medicines at once (the plan is sold by a salesperson, never prescribed) -> the
-           prescriptions list and the PDF -> one payment -> medicines on the way
+  patient  one bill for the medicines at once (the plan is sold by a salesperson, never prescribed)
+  admin    puts the patient on the plan the salesperson sold (the doctor sees it, not paid yet, and who sold it;
+           the doctor's own recommend route is gone) -> withdrawn and put back
+  patient  the plan joins the medicines in one bill -> the prescriptions list and the PDF -> one payment -> the plan
+           active, medicines on the way -> a second plan is refused
 """
 import os, sys, time, uuid
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -232,6 +235,33 @@ def main():
          and b["data"]["payFor"] == "MEDICINES" and not b["data"].get("withPlan") and "plan" not in [l["key"] for l in bill.get("lines", [])]
          and len(bill["lines"]) == 2 and bill["totalPaise"] == sum(l["amountPaise"] for l in bill["lines"]), b)
     cart_ref = b["data"]["referenceId"]
+
+    # ---------------------------------------------------------------- the salesperson sold a plan: admin puts them on it
+    plan_id = one("select id from plans where active and price_rupees > 0 order by duration_months limit 1")
+    s, b = call("POST", f"/api/doctor/patients/{pid}/plan-recommendation", doctor, {"planId": plan_id})
+    step("the doctor cannot recommend a plan any more", s == 404, b)
+    s, b = call("PUT", f"/api/admin/medicine/patients/{pid}/plan", admin, {"planId": plan_id, "salesperson": "Saisa Test"})
+    step("admin puts the patient on the plan the salesperson sold", s == 200, b)
+    s, b = call("GET", f"/api/admin/medicine/patients/{pid}", admin)
+    pa = b["data"]["patient"]
+    step("admin: the plan waits for payment, with who sold it", s == 200 and (pa.get("assignedPlan") or {}).get("planId") == plan_id
+         and pa["salesperson"] == "Saisa Test" and pa["plan"] is None, pa)
+    s, b = call("GET", f"/api/admin/medicine/patients?q={PATIENT}", admin)
+    step("admin: the list shows who sells to them", s == 200 and any(r["id"] == str(pid) and r["salesperson"] == "Saisa Test" for r in b["data"]), b)
+    s, b = call("GET", f"/api/doctor/consultations/{appt}", doctor)
+    step("the doctor sees the plan, not paid yet, and the salesperson", s == 200 and b["data"]["assignedPlan"]
+         and b["data"]["patient"]["salesperson"] == "Saisa Test" and b["data"]["activePlan"] is None, b["data"].get("assignedPlan"))
+    s, b = call("GET", f"/api/doctor/patients/{pid}/record", doctor)
+    step("the record too", s == 200 and b["data"]["planRecommendation"] and b["data"]["salesperson"] == "Saisa Test", b["data"].get("planRecommendation"))
+    s, b = call("PUT", f"/api/admin/medicine/patients/{pid}/plan", admin, {"planId": None})
+    s2, b2 = call("GET", "/api/patient/next-step", patient)
+    step("withdrawn: the bill is the medicines again", s == 200 and not b2["data"].get("withPlan"), b2)
+    call("PUT", f"/api/admin/medicine/patients/{pid}/plan", admin, {"planId": plan_id, "salesperson": "Saisa Test"})
+    s, b = call("GET", "/api/patient/next-step", patient)
+    bill = b["data"].get("bill", {})
+    step("patient: the plan joins the medicines, one bill", b["data"]["stage"] == "PAYMENT_DUE" and b["data"].get("withPlan")
+         and [l["key"] for l in bill.get("lines", [])][:1] == ["plan"] and len(bill["lines"]) == 3
+         and bill["totalPaise"] == sum(l["amountPaise"] for l in bill["lines"]), b)
     s, b = call("GET", "/api/care/prescriptions", patient)
     ps = b["data"]["prescriptions"]
     step("patient: both versions listed, the current first", s == 200 and [p["version"] for p in ps] == [2, 1] and ps[0]["current"] and not ps[1]["current"], ps)
@@ -245,6 +275,9 @@ def main():
     else:
         s, v = call("POST", "/api/payments/verify", patient, {"orderId": o["data"].get("orderId") or o["data"]["id"], "razorpayPaymentId": "pay_mock_" + uuid.uuid4().hex[:10]})
         step("patient: paid (mock)", s == 200, v)
+        step("the one payment started the plan", one(f"select count(*) from subscriptions where user_id = {pid} and status = 'Active'") == "1")
+        s, b = call("PUT", f"/api/admin/medicine/patients/{pid}/plan", admin, {"planId": plan_id})
+        step("a patient on a plan cannot be put on another", s == 409, b)
         s, b = call("GET", "/api/patient/next-step", patient)
         step("patient: medicines on the way", b["data"]["stage"] == "ON_THE_WAY", b)
 

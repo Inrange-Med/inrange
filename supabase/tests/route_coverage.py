@@ -166,9 +166,7 @@ call("POST", f"/api/doctor/patients/{pid}/private-notes", dt, {"text": "Route ch
 call("POST", f"/api/doctor/patients/{pid}/symptoms/999999/acknowledgement", dt, {})
 call("DELETE", f"/api/doctor/patients/{pid}/symptoms/999999/acknowledgement", dt)
 plans = call("GET", "/api/subscriptions/plans")[1]
-call("POST", f"/api/doctor/patients/{pid}/plan-recommendation", dt, {"planId": plans[1]["PlanId"], "note": "Route check."})
 call("GET", "/api/subscriptions/recommended", pt)
-call("DELETE", f"/api/doctor/patients/{pid}/plan-recommendation", dt)
 call("GET", f"/api/video/appointments/{aid}/join", dt); call("GET", f"/api/video/appointments/{aid}/join", pt)
 sid = call("POST", "/api/chat/init", pt, {"doctorId": did})[2]["sessionId"]
 call("POST", f"/api/chat/sessions/{sid}/messages", pt, {"messageText": "Route check message"})

@@ -340,10 +340,16 @@ function Loaded({
       : null,
     p.bmi ? `BMI ${p.bmi}` : null,
   ].filter(Boolean);
-  // the plan the salesperson sold, for the doctor to see (never to choose)
+  // the plan the salesperson sold, for the doctor to see (never to choose), and who looks after the patient
   const planWords = data.activePlan
     ? `Plan: ${data.activePlan.planName}, until ${shortDate(data.activePlan.endsAt)}`
-    : "Plan: none yet, so this prescription is for one month";
+    : data.assignedPlan
+      ? `Plan: ${data.assignedPlan.planName}, not paid yet, so this prescription is for one month`
+      : "Plan: none yet, so this prescription is for one month";
+  const team = [
+    p.salesperson && `Salesperson: ${p.salesperson}`,
+    p.coachName && `Health coach: ${p.coachName}`,
+  ].filter(Boolean);
 
   const field = (
     key: "diagnosis" | "patientHistory" | "remarks" | "advice",
@@ -497,6 +503,7 @@ function Loaded({
               )}
             </p>
             <p className="num">{planWords}</p>
+            {team.length > 0 && <p>{team.join("  ·  ")}</p>}
           </div>
           {field("diagnosis", "Diagnosis", "Needed for the PDF", {
             options: DIAGNOSES,

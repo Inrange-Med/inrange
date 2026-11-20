@@ -18,9 +18,12 @@ export type SubscriptionStatus = {
   planId: number | null;
 };
 
-/** The plan the doctor suggested in the consultation, with their note (GET /api/subscriptions/recommended). */
+/**
+ * The plan the patient is to pay for (GET /api/subscriptions/recommended): since 20 Nov 2026 admin assigns it after
+ * the salesperson's call (no doctor); older ones were a doctor's suggestion, with their note.
+ */
 export type RecommendedPlan = {
   planId: number;
-  doctorName: string;
+  doctorName: string | null;
   note: string;
 };

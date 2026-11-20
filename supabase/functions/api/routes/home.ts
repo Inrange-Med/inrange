@@ -5,7 +5,7 @@
 //   GET /care/prescriptions      every prescription the patient was sent, newest first (the PDF opens from each)
 // Stages, checked in this order (the first that applies wins):
 //   CALL_OPEN          a consultation opens within 10 minutes, or is on        appointment
-//   PAYMENT_DUE        a plan the care team recommended, then the medicines    bill (plan first, one at a time)
+//   PAYMENT_DUE        the plan admin assigned and the medicines, one bill     bill (one payment when both wait)
 //   CALL_BOOKED        the next consultation (first or follow-up)              appointment
 //   AFTER_CALL         the call happened, the prescription is not sent yet     appointment
 //   ON_THE_WAY         medicines paid and moving                               order
@@ -17,7 +17,7 @@ import { Hono } from "hono";
 import { sql } from "../lib/db.ts";
 import { ok } from "../lib/http.ts";
 import { requirePatient } from "../lib/auth.ts";
-import { priceCart } from "../lib/pharmacy.ts";
+import { pendingPlan, priceCart } from "../lib/pharmacy.ts";
 import { ist, lineView } from "../lib/prescriptions.ts";
 
 export const homeRoutes = new Hono();
@@ -34,7 +34,7 @@ const appointmentView = (a: Row) => ({
 
 export async function nextStep(patientId: number, now = new Date()) {
   const t = now.getTime();
-  const [appointments, [e], [plan], [rec], [rx], [cart], [order], [delivered]] = await Promise.all([
+  const [appointments, [e], [plan], rec, [rx], [cart], [order], [delivered]] = await Promise.all([
     sql`select a.id, a.status, a.visit_type, a.started_at, a.ended_at, d.full_name as doctor,
           (s.slot_date + s.start_time) at time zone 'Asia/Kolkata' as starts_at,
           (s.slot_date + s.end_time) at time zone 'Asia/Kolkata' as ends_at
@@ -43,11 +43,7 @@ export async function nextStep(patientId: number, now = new Date()) {
     sql`select e.*, b.status as lab_status, to_char(b.slot_date, 'YYYY-MM-DD') as slot_date, b.slot_start, b.slot_end, b.collector, b.price, b.package_name, b.amount_paise
         from eligibility e left join lab_bookings b on b.id = e.lab_booking_id where e.user_id = ${patientId}`,
     sql`select 1 from subscriptions where user_id = ${patientId} and status = 'Active' and ends_at > now()`,
-    // a recommendation counts until a plan is bought after it (a lapsed plan does not bring an old one back)
-    sql`select r.plan_id, p.name, p.price_rupees, p.mrp_rupees, p.duration_months from plan_recommendations r
-        join plans p on p.id = r.plan_id where r.patient_id = ${patientId}
-          and r.created_at > coalesce((select max(s.created_at) from subscriptions s where s.user_id = ${patientId}), '-infinity')
-        order by r.created_at desc limit 1`,
+    pendingPlan(sql, patientId),
     sql`select x.id, x.appointment_id, coalesce(x.sent_at, x.signed_at) as sent_at, x.items, d.full_name as doctor
         from prescriptions x join doctors d on d.id = x.doctor_id
         where x.patient_id = ${patientId} and x.status = 'SIGNED' order by x.signed_at desc limit 1`,
@@ -64,9 +60,9 @@ export async function nextStep(patientId: number, now = new Date()) {
   const open = live.find((a) => new Date(a.starts_at).getTime() - 10 * MIN <= t);
   if (open) return { stage: "CALL_OPEN", appointment: appointmentView(open) };
 
-  // money: one bill. The plan the doctor prescribed rides in the prescription's cart with the medicines (19 Nov
-  // 2026); a plan recommended without a prescription (the older record page) is billed only when there is no cart.
-  if (rec && !plan && !cart) {
+  // money: one bill. The plan admin assigned rides in the open cart with the medicines (one payment); with no cart
+  // to pay (none, or its medicines bought elsewhere) the plan is billed on its own, at once (20 Nov 2026).
+  if (rec && !plan && !(cart && !cart.elsewhere_at)) {
     return {
       stage: "PAYMENT_DUE", payFor: "PLAN", referenceId: String(rec.plan_id),
       bill: { lines: [{ key: "plan", label: rec.name, mrpPaise: rec.mrp_rupees ? rec.mrp_rupees * 100 : null, amountPaise: rec.price_rupees * 100 }],
@@ -83,7 +79,7 @@ export async function nextStep(patientId: number, now = new Date()) {
         stage: "PAYMENT_DUE", payFor: "MEDICINES", referenceId: String(cart.id), withPlan: Boolean(priced.plan),
         bill: {
           lines: [
-            ...(priced.plan ? [{ key: "plan", label: priced.plan.name, amountPaise: priced.plan.pricePaise }] : []),
+            ...(priced.plan ? [{ key: "plan", label: priced.plan.name, mrpPaise: priced.plan.mrpPaise, amountPaise: priced.plan.pricePaise }] : []),
             ...lines.map((l) => ({ key: l.medicineId, label: `${l.brand} ${l.strength}`.trim(), quantity: l.quantity,
               mrpPaise: l.mrpPaise * l.quantity, amountPaise: l.pricePaise * l.quantity })),
           ],

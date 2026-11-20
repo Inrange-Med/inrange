@@ -1,9 +1,10 @@
 "use client";
 
 /*
-  Everyone with a prescription or an order, newest activity first, found by name or number. A row says
-  the last order's step, when the medicines run out, how doses are going and who coaches them. Admins
-  manage the coaches from here.
+  Every patient (a coach: their own), newest activity first, found by name or number, so admin can set the
+  salesperson and put someone on a plan before they have a prescription. A row says the plan, the last
+  order's step, when the medicines run out, how doses are going, who sells to them and who coaches them.
+  Admins manage the coaches from here.
 */
 
 import { useDeferredValue, useState } from "react";
@@ -66,7 +67,7 @@ export default function PatientsPanel({
         <p className={adminStyles.empty}>
           {q
             ? "No patient matches that."
-            : "No one has a prescription yet. Patients appear here once a doctor signs one."}
+            : "No patients yet."}
         </p>
       ) : (
         <ul className={s.rows}>
@@ -85,6 +86,7 @@ export default function PatientsPanel({
                   >
                     <span className={s.what}>{p.name}</span>
                     <span className={s.sub}>
+                      {p.planName && <span>{p.planName}</span>}
                       <span>
                         {p.lastOrderStatus
                           ? `Last order: ${ORDER_WORDS[p.lastOrderStatus].toLowerCase()}`
@@ -108,7 +110,9 @@ export default function PatientsPanel({
                       </span>
                     )}
                     <span className={adminStyles.muted}>
-                      {p.coachName ?? "No coach"}
+                      {[p.salesperson && `Sales: ${p.salesperson}`, p.coachName ?? "No coach"]
+                        .filter(Boolean)
+                        .join(" · ")}
                     </span>
                   </span>
                 </div>

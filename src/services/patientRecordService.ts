@@ -88,6 +88,8 @@ function toPatientRecord(
     patientId,
     planRecommendation: raw.planRecommendation ?? null,
     activePlan: raw.activePlan ?? null,
+    salesperson: raw.salesperson ?? null,
+    coachName: raw.coachName ?? null,
     programme: raw.programme ?? "",
     city: raw.city ?? "",
     careStartedAt: raw.careStartedAt ?? null,
@@ -255,24 +257,5 @@ export async function addPrivateNote(
   await apiRequest(`/api/doctor/patients/${patientId}/private-notes`, {
     method: "POST",
     body: { text },
-  });
-}
-
-export async function recommendPlan(
-  patientId: string,
-  planId: number,
-  note: string,
-): Promise<void> {
-  await apiRequest(`/api/doctor/patients/${patientId}/plan-recommendation`, {
-    method: "POST",
-    body: { planId, note },
-  });
-}
-
-export async function withdrawPlanRecommendation(
-  patientId: string,
-): Promise<void> {
-  await apiRequest(`/api/doctor/patients/${patientId}/plan-recommendation`, {
-    method: "DELETE",
   });
 }

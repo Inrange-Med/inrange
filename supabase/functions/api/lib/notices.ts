@@ -6,7 +6,7 @@
 // never gets the old reminder. docs/backend/whatsapp.md.
 import type { TransactionSql } from "postgres";
 import { sql } from "./db.ts";
-import { atIst, clockWords, ist, spokenSlot } from "./hours.ts";
+import { atIst, clockWords, spokenSlot } from "./hours.ts";
 import { queueMessage } from "./notify.ts";
 
 type Tx = TransactionSql | typeof sql;
@@ -150,14 +150,6 @@ export async function reviewDecided(tx: Tx, patientId: number, decision: "APPROV
   return [await queueMessage(tx, {
     patientId, kind: decision === "APPROVED" ? "REVIEW_APPROVED" : "REVIEW_NOTE", values: [name],
     dedupeKey: `review:${patientId}:${decision}:${new Date().toISOString().slice(0, 16)}`,
-  })];
-}
-
-/** The doctor wrote up the next steps (a plan recommendation). */
-export async function carePlanWritten(patientId: number, doctorName: string, planId: number): Promise<Id[]> {
-  return [await queueMessage(sql, {
-    patientId, kind: "CARE_PLAN", values: [await firstName(sql, patientId), doctorName],
-    dedupeKey: `plan:${patientId}:${planId}:${ist(new Date()).date}`,
   })];
 }
 

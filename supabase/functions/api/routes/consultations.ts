@@ -28,6 +28,7 @@ import { requireDoctor } from "../lib/auth.ts";
 import { deliver, queueMessage } from "../lib/notify.ts";
 import { firstName } from "../lib/notices.ts";
 import { searchList, toListItem } from "../lib/medicineSearch.ts";
+import { pendingPlan } from "../lib/pharmacy.ts";
 import {
   type Doctor, issueMonths, issueRx, ist, lineOf, lineView, monthsOf, renderRx,
 } from "../lib/prescriptions.ts";
@@ -185,7 +186,7 @@ consultationRoutes.get("/doctor/consultations/:id", async (c) => {
   const id = intParam(c.req.param("id"), "consultation");
   const r = await consultationOf(doctor.id, id);
   const patientId = r.patient_id;
-  const [[p], [clinical], weights, reports, [last], rx, [plan]] = await Promise.all([
+  const [[p], [clinical], weights, reports, [last], rx, [plan], assigned, [coach]] = await Promise.all([
     sql`select * from patient_profiles where user_id = ${patientId}`,
     sql`select allergies, outside_medicines from patient_clinical where patient_id = ${patientId}`,
     sql`select weight_kg, logged_at from weight_logs where user_id = ${patientId} order by logged_at desc limit 40`,
@@ -198,6 +199,8 @@ consultationRoutes.get("/doctor/consultations/:id", async (c) => {
     prescriptionOf(id),
     sql`select pl.name, s.ends_at from subscriptions s join plans pl on pl.id = s.plan_id
         where s.user_id = ${patientId} and s.status = 'Active' and s.ends_at > now() order by s.ends_at desc limit 1`,
+    pendingPlan(sql, patientId),
+    sql`select u.full_name from patient_profiles pp join users u on u.id = pp.coach_id where pp.user_id = ${patientId}`,
   ]);
   await sql`insert into audit_log (patient_id, actor_id, action) values (${patientId}, ${doctor.id}, ${`Opened the consultation, ${doctor.name}`})`;
   const kg = weights[0]?.weight_kg ?? p?.weight_kg ?? null;
@@ -213,6 +216,8 @@ consultationRoutes.get("/doctor/consultations/:id", async (c) => {
       // weight change over the last month (the call: "how much weight went up in the last month")
       monthChangeKg: kg && monthAgo ? Math.round((kg - monthAgo.weight_kg) * 10) / 10 : null,
       allergies: clinical?.allergies ?? null, conditions, onPlan: Boolean(plan),
+      // who looks after them besides the doctor (19 Nov 2026 call): the salesperson, and the coach once enrolled
+      salesperson: p?.salesperson ?? null, coachName: coach?.full_name ?? null,
     },
     reports: reports.map((x) => ({
       id: String(x.id), title: x.title || (x.source === "LAB" ? "Blood test" : x.file_name || "Report"),
@@ -225,6 +230,8 @@ consultationRoutes.get("/doctor/consultations/:id", async (c) => {
     } : null,
     prescription: prescriptionView(rx),
     activePlan: plan ? { planName: plan.name, endsAt: ist(plan.ends_at) } : null,
+    // sold and assigned, not paid yet: prescriptions stay one month until it is
+    assignedPlan: !plan && assigned ? { planName: assigned.name } : null,
   });
 });
 

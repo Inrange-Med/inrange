@@ -2,12 +2,15 @@
 
 /*
   One patient's medicines, for the care team and their coach: the plan, WhatsApp, the coach, the
-  prescription, then one timeline (messages and the patient's replies, order steps, tasks) newest
+  salesperson, the prescription, then one timeline (messages and the patient's replies, order steps, tasks) newest
   first, and the doses. While WhatsApp is in test mode an admin can play the patient's reply on a
   message, exactly as a tap on the phone would act. Opening it is logged (audit_log).
+  The plan is sold, not prescribed (20 Nov 2026): the salesperson tells admin, admin puts the patient on
+  it here, and the patient pays for it in the app (with any medicines waiting, in one payment).
 */
 
 import { useState } from "react";
+import SegmentedControl from "@/components/ui/SegmentedControl";
 import Sheet from "@/components/ui/Sheet";
 import ErrorNotice from "@/components/ui/ErrorNotice";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
@@ -18,11 +21,14 @@ import { formatRupees } from "@/lib/format/money";
 import { spacedMobile } from "@/lib/format/phone";
 import { errorMessage } from "@/lib/http/apiClient";
 import {
+  assignPlan,
   getPatient,
   listCoaches,
   playReply,
   setCoach,
+  setSalesperson,
 } from "@/services/medicineOpsService";
+import { listPlans } from "@/services/subscriptionService";
 import type { OpsMessage, OpsPatient } from "@/types/medicineOps";
 import {
   ACTION_WORDS,
@@ -245,6 +251,182 @@ function CoachPicker({
   );
 }
 
+/** Who sells to the patient: saved when the field is left (or Enter). */
+function SalespersonField({
+  data,
+  onSaved,
+}: {
+  data: OpsPatient;
+  onSaved: () => void;
+}) {
+  const toast = useToast();
+  const saved = data.patient.salesperson ?? "";
+  const [name, setName] = useState(saved);
+  const save = async () => {
+    if (name.trim() === saved) return;
+    try {
+      await setSalesperson(data.patient.id, name.trim());
+      toast(name.trim() ? "Salesperson saved" : "Salesperson removed");
+      onSaved();
+    } catch (caught) {
+      toast(errorMessage(caught, "The salesperson could not be saved."));
+    }
+  };
+  return (
+    <input
+      className={s.input}
+      value={name}
+      maxLength={80}
+      placeholder="Who is selling to them"
+      aria-label="Salesperson"
+      onChange={(e) => setName(e.target.value)}
+      onBlur={save}
+      onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+    />
+  );
+}
+
+/**
+ * The plan: active (read only), assigned and waiting for payment (change or withdraw), or none (put them on one:
+ * the length, the price, who sold it).
+ */
+function PlanAssign({
+  data,
+  onSaved,
+}: {
+  data: OpsPatient;
+  onSaved: () => void;
+}) {
+  const toast = useToast();
+  const plans = useApiResource("plans-for-assigning", listPlans);
+  const assigned = data.patient.assignedPlan;
+  const [choosing, setChoosing] = useState(false);
+  const [planId, setPlanId] = useState(assigned?.planId ?? "");
+  const [seller, setSeller] = useState(
+    assigned?.salesperson ?? data.patient.salesperson ?? "",
+  );
+  const [busy, setBusy] = useState(false);
+
+  if (data.patient.plan)
+    return (
+      <>
+        {data.patient.plan}
+        {data.patient.planEndsAt
+          ? `, until ${shortDate(data.patient.planEndsAt)}`
+          : ""}
+      </>
+    );
+
+  const save = async (id: string | null) => {
+    setBusy(true);
+    try {
+      toast(await assignPlan(data.patient.id, id, seller.trim()));
+      setChoosing(false);
+      onSaved();
+    } catch (caught) {
+      toast(errorMessage(caught, "The plan could not be changed."));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!choosing)
+    return (
+      <>
+        <span className={s.lineItem}>
+          {assigned ? (
+            <>
+              {assigned.name},{" "}
+              <span className="num">{formatRupees(assigned.priceRupees)}</span>
+              : waiting for the patient to pay in the app
+            </>
+          ) : (
+            "No plan yet"
+          )}
+        </span>
+        {assigned && (
+          <span className={`${s.lineItem} ${adminStyles.muted}`}>
+            Put on it {shortDate(assigned.assignedAt)}
+            {assigned.salesperson ? `, sold by ${assigned.salesperson}` : ""}
+          </span>
+        )}
+        <span className={s.chips}>
+          <button
+            type="button"
+            className={s.chip}
+            disabled={busy}
+            onClick={() => setChoosing(true)}
+          >
+            {assigned ? "Change the plan" : "Put on a plan"}
+          </button>
+          {assigned && (
+            <button
+              type="button"
+              className={s.chip}
+              disabled={busy}
+              onClick={() => save(null)}
+            >
+              Withdraw it
+            </button>
+          )}
+        </span>
+      </>
+    );
+
+  const offered = (plans.data ?? []).filter(
+    (plan) => plan.isActive && plan.priceRupees,
+  );
+  const chosen = offered.find((plan) => String(plan.id) === planId);
+  return (
+    <div className={s.planForm}>
+      {plans.error && !plans.data ? (
+        <span className={adminStyles.muted}>The plans could not load.</span>
+      ) : (
+        <SegmentedControl
+          label="Plan length"
+          value={planId}
+          options={offered.map((plan) => ({
+            value: String(plan.id),
+            label: `${plan.durationMonths} months`,
+          }))}
+          onChange={setPlanId}
+        />
+      )}
+      {chosen && (
+        <span className="num">
+          {chosen.name}, {formatRupees(chosen.priceRupees!)}
+        </span>
+      )}
+      <input
+        className={s.input}
+        value={seller}
+        maxLength={80}
+        placeholder="Sold by (the salesperson)"
+        aria-label="Sold by"
+        onChange={(e) => setSeller(e.target.value)}
+      />
+      <span className={s.chips}>
+        <button
+          type="button"
+          className={s.chip}
+          disabled={!chosen || busy}
+          onClick={() => save(planId)}
+        >
+          {busy ? "Saving" : "Put on this plan"}
+        </button>
+        <button
+          type="button"
+          className={s.chip}
+          disabled={busy}
+          onClick={() => setChoosing(false)}
+        >
+          Cancel
+        </button>
+      </span>
+    </div>
+  );
+}
+
 export default function PatientSheet({
   patientId,
   isAdmin,
@@ -298,7 +480,34 @@ export default function PatientSheet({
             </div>
             <div>
               <dt>Plan</dt>
-              <dd>{data.patient.plan ?? "First consultation, no plan"}</dd>
+              <dd>
+                {isAdmin ? (
+                  <PlanAssign
+                    key={data.patient.id}
+                    data={data}
+                    onSaved={refresh}
+                  />
+                ) : (
+                  (data.patient.plan ??
+                  (data.patient.assignedPlan
+                    ? `${data.patient.assignedPlan.name}, not paid yet`
+                    : "No plan yet"))
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt>Salesperson</dt>
+              <dd>
+                {isAdmin ? (
+                  <SalespersonField
+                    key={data.patient.id}
+                    data={data}
+                    onSaved={refresh}
+                  />
+                ) : (
+                  (data.patient.salesperson ?? "Not set")
+                )}
+              </dd>
             </div>
             <div>
               <dt>WhatsApp</dt>

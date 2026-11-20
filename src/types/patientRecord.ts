@@ -118,7 +118,7 @@ export type SinceLastVisit = {
 };
 
 /** GET /api/doctor/patients/:patientId/record */
-/** The plan the doctor suggested, shown first on the patient's Plans screen. */
+/** The plan admin put the patient on that they have not paid for yet (20 Nov 2026; older ones were a doctor's suggestion). */
 export type PlanRecommendation = {
   planId: number;
   planName: string;
@@ -130,6 +130,9 @@ export type PatientRecord = {
   patientId: string;
   planRecommendation: PlanRecommendation | null;
   activePlan: { planName: string; endsAt: string } | null;
+  /** who sells to the patient, and their health coach (19 Nov 2026 call) */
+  salesperson: string | null;
+  coachName: string | null;
   programme: string;
   city: string;
   careStartedAt: string | null;

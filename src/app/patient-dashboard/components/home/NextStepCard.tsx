@@ -81,9 +81,9 @@ function wordsFor(step: NextStep): Words {
             ? "Your plan and medicines"
             : "Your medicines",
         text: plan
-          ? "The plan your care team recommended."
+          ? "The plan you chose on your call with our team."
           : step.withPlan
-            ? "As your doctor prescribed, in one payment. Medicines delivered to your door."
+            ? "The plan you chose and the medicines your doctor prescribed, in one payment. Medicines delivered to your door."
             : "As your doctor prescribed. Delivered to your door.",
         bill: step.bill,
         action: {

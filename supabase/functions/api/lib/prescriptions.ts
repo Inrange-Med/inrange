@@ -6,7 +6,8 @@
 //   step (signRx), the clinical words taken from the note's sections.
 // Issuing: the previous prescription is superseded, the patient's unpaid cart closes with its follow-ups,
 // a new cart holds every line the pharmacy sells, open at once (without a plan: one month; the doctor never
-// chooses the plan, a salesperson sells it: 19 Nov 2026 call), a medicine typed
+// chooses the plan: a salesperson sells it and admin assigns it, and the cart's bill adds it, lib/pharmacy.ts
+// priceCart), a medicine typed
 // by hand opens a MATCH_MEDICINE task for admin, and the patient gets the prescription on WhatsApp and in the
 // app. docs/backend/doctor-portal-v2.md.
 import { sql } from "./db.ts";

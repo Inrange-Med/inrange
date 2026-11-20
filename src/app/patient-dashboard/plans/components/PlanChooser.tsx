@@ -48,16 +48,19 @@ export default function PlanChooser({
         {recommended && recommendedPlan && (
           <div className={styles.recommended}>
             <p className={styles.by}>
-              <span aria-hidden="true">
-                <Avatar
-                  name={recommended.doctorName || "Your doctor"}
-                  size={28}
-                />
-              </span>
-              <span>
-                {recommended.doctorName || "Your doctor"} recommends{" "}
-                {recommendedPlan.name}
-              </span>
+              {recommended.doctorName ? (
+                <>
+                  <span aria-hidden="true">
+                    <Avatar name={recommended.doctorName} size={28} />
+                  </span>
+                  <span>
+                    {recommended.doctorName} recommends {recommendedPlan.name}
+                  </span>
+                </>
+              ) : (
+                // put on by our team after the call (20 Nov 2026): no doctor's name on it
+                <span>Your plan: {recommendedPlan.name}, as agreed on your call</span>
+              )}
             </p>
             {recommended.note && (
               <blockquote className={styles.note}>
