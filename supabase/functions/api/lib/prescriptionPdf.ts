@@ -8,6 +8,7 @@
 import { PDFDocument, type PDFFont, type PDFPage, rgb } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import { JOST_MEDIUM, JOST_REGULAR } from "./fonts.ts";
+import { SIGNATURE_FONT } from "./signatureFont.ts";
 import { LOGO_BODY_PATH, LOGO_DOT_PATH, LOGO_H, LOGO_PLUS_PATH } from "./wordmarkPaths.ts";
 
 export type RxPdfItem = {
@@ -38,8 +39,11 @@ const GREEN_WASH = rgb(0.925, 0.976, 0.937);
 const W = 595.28, H = 841.89, M = 44, CW = W - 2 * M;
 
 const bytes = (b64: string) => Uint8Array.from(atob(b64), (ch) => ch.charCodeAt(0));
-let fonts: [Uint8Array, Uint8Array] | null = null;
-const loadFonts = () => (fonts ??= [bytes(JOST_REGULAR), bytes(JOST_MEDIUM)]);
+let fonts: [Uint8Array, Uint8Array, Uint8Array] | null = null;
+const loadFonts = () => (fonts ??= [bytes(JOST_REGULAR), bytes(JOST_MEDIUM), bytes(SIGNATURE_FONT)]);
+
+/** The name a doctor signs with: their name on file without the title ("Dr. Ananya Iyer" signs "Ananya Iyer"). */
+export const signatureOf = (name: string) => clean(name).replace(/^(dr|doctor)\.?\s+/i, "");
 
 /** Plain text a font can draw: no control characters, dashes as hyphens. */
 const clean = (s: unknown) => String(s ?? "").replace(/[–—]/g, "-").replace(/[^\S ]+/g, " ").replace(/[\u0000-\u001f]/g, "").trim();
@@ -77,9 +81,10 @@ const roundRect = (w: number, h: number, r: number) => {
 export async function prescriptionPdf(rx: RxPdf): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   doc.registerFontkit(fontkit);
-  const [regBytes, medBytes] = loadFonts();
+  const [regBytes, medBytes, sigBytes] = loadFonts();
   const reg = await doc.embedFont(regBytes, { subset: true });
   const med = await doc.embedFont(medBytes, { subset: true });
+  const sig = await doc.embedFont(sigBytes, { subset: true });
   doc.setTitle(`Prescription ${rx.rxNumber} v${rx.version}`);
   doc.setAuthor(rx.doctor.name);
   doc.setCreator("inrange");
@@ -212,7 +217,9 @@ export async function prescriptionPdf(rx: RxPdf): Promise<Uint8Array> {
     };
     const heightOf = (parts: Part[]) => parts.reduce((n, p) => n + (p.chip ? 15 : p.lines.length * (p.size + 3)), 0);
     const instr = item.instructions ? wrap(item.instructions, reg, 8.2, CW - 20) : [];
-    const rowH = Math.max(...Object.values(cells).map(heightOf)) + (instr.length ? instr.length * 11 + 4 : 0) + 12;
+    // a cell's first line sits 14pt under the row's top; the instructions start under the tallest cell's last line
+    const tallest = Math.max(...Object.values(cells).map(heightOf));
+    const rowH = instr.length ? 14 + tallest + 1 + (instr.length - 1) * 11 + 9 : tallest + 12;
     if (y - rowH < FOOT) { newPage(); head(); }
     let x = M;
     for (const c of cols) {
@@ -231,7 +238,7 @@ export async function prescriptionPdf(rx: RxPdf): Promise<Uint8Array> {
       x += c.w;
     }
     if (instr.length) {
-      let yy = y - rowH + 8 + instr.length * 11;
+      let yy = y - 14 - tallest - 1;
       for (const line of instr) { text(line, M + 12, yy, 8.2, reg, MUTED); yy -= 11; }
     }
     y -= rowH;
@@ -252,10 +259,18 @@ export async function prescriptionPdf(rx: RxPdf): Promise<Uint8Array> {
 
   fullCard("Advice and follow-up", rx.advice);
 
-  // ---- the signature, on the last page, above the notes (a page of its own only if the last one is full)
-  if (y < 126) newPage();
+  // ---- the signature, on the last page, above the notes (a page of its own only if the last one is full). The
+  // doctor's name on file set in a signature script on a line, as e-signing platforms set a typed signature; the
+  // doctor adds nothing (20 Nov 2026). It is applied by Send to patient, after the doctor has seen this PDF.
+  // the script's loops rise about 0.77 em above its baseline: at 24pt the block tops out near sy + 68
+  if (y < 148) newPage();
   const sy = 84;
-  right(`Digitally signed (${rx.signature.method})`, W - M, sy + 31, 7.8, reg, MUTED);
+  const signed = signatureOf(rx.doctor.name);
+  const line = 180;
+  const sigSize = Math.min(24, (24 * line) / Math.max(1, sig.widthOfTextAtSize(signed, 24)));
+  page.drawLine({ start: { x: W - M - line, y: sy + 44 }, end: { x: W - M, y: sy + 44 }, thickness: 0.5, color: RULE });
+  right(signed, W - M - 4, sy + 49, sigSize, sig, INK);
+  right(rx.signature.method ? `Digitally signed (${rx.signature.method})` : "Signed electronically", W - M, sy + 31, 7.8, reg, MUTED);
   right(rx.doctor.name, W - M, sy + 19, 11, med);
   right(`${[rx.doctor.qualification, rx.doctor.registration.split("·")[0].trim()].filter(Boolean).join("  ·  ")}`, W - M, sy + 9, 7.8, reg, MUTED);
   right(`${rx.consult.signedAt}  ·  Signature ID ${rx.signature.reference}`, W - M, sy, 7.8, reg, MUTED);

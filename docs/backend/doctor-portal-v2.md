@@ -110,6 +110,13 @@ autosave (DRAFT, saved_at)  ->  Create PDF (pdf_made_at, pdf_path)  ->  Send (SI
 - **Who sent it, beside it:** the record lists each version with the doctor and the time ("Edited and sent by" for a new
   version of the same consultation's), for every doctor who treats the patient. Only the current one has a PDF to
   open; replaced ones are read on the record. The PDF no longer carries the pharmacy licence (it goes on the invoice).
+- **The signature is typed, from the doctor's name** (20 Nov 2026): the PDF's signature block sets the name on file,
+  without "Dr.", in a signature script (Mrs Saint Delafield, SIL Open Font License, `lib/signatureFont.ts`) on a line
+  above the printed name, with "Signed electronically", the signing time and a Signature ID (a fingerprint of the
+  prescription, version, doctor and time). The doctor adds nothing: they see it on the PDF before Send. Only the
+  prescription carries it. Setting `ESIGN_METHOD` (Aadhaar eSign or DSC, once in place) changes the line to
+  "Digitally signed (method)". CONFIRM with counsel that a typed electronic signature is enough for pharmacies to
+  dispense Schedule H medicines, or whether Aadhaar eSign is needed.
 - **Without a plan** (the nano plan) the prescription is for one month: the page says "One month at most" above the
   medicines and Create PDF asks for 1 month or less, so the PDF never prescribes more than the order carries.
 - Every Create PDF writes a new file (storage never overwrites), so the PDF can be made again after an edit.

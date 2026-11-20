@@ -90,6 +90,10 @@ export function lineOf(input: Row, listed: Row | undefined, index: number): Row 
   };
 }
 
+/** How often, in today's words: a tapped choice reads from FREQUENCIES, so a line saved before the words changed (a
+    new version copies the sent one) never prints an old "(1-0-1)"; a choice typed by hand reads as typed. */
+const wordsOf = (i: Row) => String(FREQUENCIES[i.frequencyCode] ?? i.frequency ?? "");
+
 /** The months a prescription covers: its longest line, 1 to 12. */
 export const monthsOf = (items: Row[]) =>
   Math.min(12, Math.max(1, ...items.map((i) => Math.ceil((Number(i.durationDays) || 30) / 30))));
@@ -101,7 +105,7 @@ export const lineView = (i: Row) => ({
   name: i.unlisted ? i.name ?? i.medicineName ?? "" : withForm(i.form, i.name ?? ([i.medicineName, i.strength].filter(Boolean).join(" ") || "")),
   genericName: i.genericName ?? null, brand: i.unlisted ? null : i.medicineName ?? null, form: i.form ?? "",
   dose: i.dose ?? "", frequency: i.frequencyCode ?? "", frequencyOther: i.frequencyOther ?? "",
-  frequencyWords: i.frequency ?? "", durationValue: i.durationValue ?? null, durationUnit: i.durationUnit ?? null,
+  frequencyWords: wordsOf(i), durationValue: i.durationValue ?? null, durationUnit: i.durationUnit ?? null,
   duration: i.duration ?? "", intake: i.intake ?? "", intakeWords: i.instructions ?? "", unlisted: Boolean(i.unlisted),
 });
 
@@ -125,6 +129,13 @@ export function rxItem(m: Row, stocked: Row | undefined): Row {
 }
 
 // ---------------------------------------------------------------- the PDF
+
+/** "A1B2-C3D4-E5F6": a short fingerprint of who signed which prescription version, and when. */
+async function signatureId(rxId: number, version: number, doctorId: number, signedAt: Date) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${rxId}:${version}:${doctorId}:${signedAt.toISOString()}`));
+  const hex = [...new Uint8Array(digest).slice(0, 6)].map((b) => b.toString(16).padStart(2, "0")).join("").toUpperCase();
+  return `${hex.slice(0, 4)}-${hex.slice(4, 8)}-${hex.slice(8, 12)}`;
+}
 
 /** Renders and stores the PDF for a prescription row; returns its storage path. */
 export async function renderRx(doctor: Doctor, patientId: number, rx: Row, signedAt: Date, months: number): Promise<string> {
@@ -190,10 +201,10 @@ export async function renderRx(doctor: Doctor, patientId: number, rx: Row, signe
   for (const l of lines) if (l.m && !firstAt.has(l.m.molecule)) firstAt.set(l.m.molecule, l.at);
   lines.sort((a, b) => (a.m ? firstAt.get(a.m.molecule)! : a.at) - (b.m ? firstAt.get(b.m.molecule)! : b.at) ||
     (steps.get(a.at)?.step ?? 0) - (steps.get(b.at)?.step ?? 0));
-  // v2: "1 tablet, Once a day, in the morning (1-0-0)" and the doctor's own duration
+  // v2: "1 tablet, once a day, in the morning" and the doctor's own duration
   const how = (i: Row) => {
     if (!v2) return i.frequency ?? "";
-    const f = String(i.frequency ?? "");
+    const f = wordsOf(i);
     // "1 tablet, once a day, in the morning (1-0-0)": one sentence, so the frequency starts lower case after a dose
     return [i.dose, i.dose && /^[A-Z][a-z]/.test(f) ? f.charAt(0).toLowerCase() + f.slice(1) : f].filter(Boolean).join(", ");
   };
@@ -250,7 +261,9 @@ export async function renderRx(doctor: Doctor, patientId: number, rx: Row, signe
       ["Follow-up", "Review with your doctor in 1 month"],
       ["Valid until", dayOf(validUntil)],
     ],
-    signature: { method: env("ESIGN_METHOD") || "Aadhaar eSign or DSC, to be confirmed", reference: "to be confirmed" },
+    // the typed signature is drawn from the doctor's name; "Digitally signed (method)" once ESIGN_METHOD is set (Aadhaar
+    // eSign or DSC). The ID ties the signature to this prescription, version, doctor and signing time.
+    signature: { method: env("ESIGN_METHOD"), reference: await signatureId(rx.id, rx.version, doctor.id, signedAt) },
   });
   // one file per render: storage never overwrites, and "Create PDF" may run again after an edit
   const path = `${patientId}/rx-${rx.id}-v${rx.version}-${signedAt.getTime()}.pdf`;
