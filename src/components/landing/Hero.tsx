@@ -77,7 +77,7 @@ export default function Hero() {
       </div>
       <figure className={s.media} suppressHydrationWarning data-reveal="wipe" style={{ "--d": "200ms" } as React.CSSProperties}>
         {/* three everyday moments in one loop: how energy and ease feel, never a body (HeroVideo) */}
-        <HeroVideo className={s.video} />
+        <HeroVideo className={s.video} playClassName={s.play} />
         <span className={s.flutes} aria-hidden="true" />
         {/* the authenticity promise, as the label on the pack: every medicine traceable to its source */}
         <a href="#pharmacy" className={s.seal} suppressHydrationWarning data-reveal="rise" style={{ "--d": "1400ms" } as React.CSSProperties}>
