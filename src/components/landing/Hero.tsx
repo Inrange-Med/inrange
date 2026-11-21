@@ -42,7 +42,7 @@ function index(cls: string, delay: string) {
 
 export default function Hero() {
   // the film's first frame is the largest thing on the first screen: fetch it with the page, not after the CSS
-  preload("/img/hero-v3-poster.jpg", { as: "image", fetchPriority: "high" });
+  preload("/img/hero-v4-poster.jpg", { as: "image", fetchPriority: "high" });
   return (
     <section id="top" className={s.hero} aria-labelledby="hero-title">
       {/* the plain side of the fluted glass, under the words (decorative: the words carry the meaning) */}

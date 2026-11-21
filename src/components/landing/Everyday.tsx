@@ -31,8 +31,8 @@ const OCCASIONS: Occasion[] = [
     key: "evening",
     tab: "Weekday",
     title: "An ordinary weekday",
-    img: "/img/life-day-h1.jpg",
-    alt: "A husband and wife in their fifties on an evening walk down their leafy lane at golden hour, laughing",
+    img: "/img/life-day-p1.jpg",
+    alt: "A husband and wife in their fifties on an evening walk down their tree-lined lane at golden hour, laughing",
     focus: "50% 40%",
     marks: [
       { at: 8, kind: "meal", time: "8:00 am", what: "Besan chilla with curd" },
@@ -47,8 +47,8 @@ const OCCASIONS: Occasion[] = [
     key: "fast",
     tab: "Fasting",
     title: "A fasting day",
-    img: "/img/life-fast-h1.jpg",
-    alt: "A woman in her forties on her sunlit balcony with a diya and marigolds, smiling at her phone",
+    img: "/img/life-fast-p1.jpg",
+    alt: "A woman in her forties on her sunlit verandah with a lit diya and marigolds, smiling at her phone",
     focus: "50% 36%",
     marks: [
       { kind: "check", time: "Before", what: "Your doctor checks your readings and anything you take, and says what changes" },
@@ -63,8 +63,8 @@ const OCCASIONS: Occasion[] = [
     key: "late",
     tab: "Late shift",
     title: "A late shift",
-    img: "/img/life-late-h1.jpg",
-    alt: "A man in his thirties laughing on a call at his desk at home in the evening, a tiffin and a glass of water beside his laptop",
+    img: "/img/life-late-p1.jpg",
+    alt: "A man in his thirties laughing on a call at his desk at home in the evening, the city lights behind him",
     focus: "50% 38%",
     marks: [
       { at: 12, kind: "meal", time: "Noon", what: "Your first meal, planned as breakfast" },

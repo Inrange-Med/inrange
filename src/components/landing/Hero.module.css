@@ -441,7 +441,7 @@
   --on-dark-2: rgb(247 246 243 / 0.8);
   --signal: #f7f6f3;
   --wipe: var(--glass-ground);
-  background: var(--glass-ground) url("/img/hero-v3-poster.jpg") 50% 0% / cover no-repeat;
+  background: var(--glass-ground) url("/img/hero-v4-poster.jpg") 50% 0% / cover no-repeat;
 }
 :global(:root) .media::before {
   background: linear-gradient(
@@ -493,12 +493,13 @@
 }
 
 /* where the glass reaches over the film: the flutes soften what is behind them, strongest at the
-   inner edge and gone by a third of the way across, so the faces always play clear */
+   inner edge and gone by a sixth of the way across: the film's people stand in its middle, so the faces always play
+   clear (film v4, 22 Nov 2026) */
 .flutes {
   position: absolute;
   inset: 0 auto 0 0;
   z-index: 1;
-  width: 34%;
+  width: 18%;
   pointer-events: none;
   background:
     linear-gradient(90deg, rgb(var(--glass-foot) / 0.55), rgb(var(--glass-foot) / 0) 70%),
@@ -511,7 +512,7 @@
 /* phones: the frame is short and wide, so the glass keeps to a narrow inner strip */
 @media (max-width: 1023px) {
   .flutes {
-    width: 22%;
+    width: 12%;
   }
 }
 @media (min-width: 1024px) {

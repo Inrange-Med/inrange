@@ -1,12 +1,13 @@
 "use client";
 
 /*
-  The hero's film (v3, 21 Nov 2026): one continuous shot, a father and his daughter flying a green kite on a Delhi
-  rooftop at golden hour. Lightness, energy and joy with family, never a body, a number or a product; holding the string
-  reads as being in control, in range. Chosen after reading Ro, Hims, Noom, Found, Elevate Now, Tata 1mg and Sugar.fit:
-  their craft, made unmistakably Indian (docs: scripts/media/README.md). Higgsfield: still with Nano Banana Pro, motion
-  with Kling 4.0, the clip ending on its opening frame so the loop is seamless with no crossfade
-  (scripts/media/hero-v3-*.{py,sh}; masters in art/, gitignored).
+  The hero's film (v4, 22 Nov 2026): four everyday moments of India's well-off, 3 s each with hard cuts: two friends
+  walking off a padel court in Gurugram, a couple laughing on the verandah of a sea-facing Alibaug home, a father and son
+  on a Delhi golf fairway, a mother and daughter dancing barefoot in a Mumbai penthouse. Lightness and joy, never a body,
+  a number or a product. Arhaan: the v3 push-in "looks very AI slop"; it must look real, premium and upper-class Indian.
+  So every shot is locked off (no pan, zoom or drift), short, real-time, and carries one grade and film grain, the way a
+  real shoot looks (research: scripts/media/README.md). Stills with Nano Banana Pro, motion with Kling 4.0
+  (scripts/media/hero-v4*.{py,sh}; masters in art/, gitignored). It loops by cutting back to the first shot.
 
   It plays by itself, silently, every time (Arhaan, 21 Nov 2026: "no matter what the mode or browser"):
   1. the browser's own muted autoplay (Chrome, Firefox, Safari normally);
@@ -16,7 +17,7 @@
      cheap.
   The one exception is a visitor who asked their device for less motion (an accessibility setting): they see the still.
   It pauses while off screen or in a background tab. The poster paints first (preloaded by Hero); phones get the 720
-  file (0.95 MB), laptops the 1080 file (2.2 MB).
+  file, laptops the 1080 file.
 */
 
 import { useEffect, useRef } from "react";
@@ -41,7 +42,7 @@ export default function HeroVideo({ className }: { className?: string }) {
     const step = (now: number) => {
       frame = 0;
       if (!stepping || !running()) return;
-      if (last) clock = (clock + (now - last) / 1000) % (video.duration || 10);
+      if (last) clock = (clock + (now - last) / 1000) % (video.duration || 12);
       last = now;
       if (!video.seeking && video.readyState >= 1) video.currentTime = clock;
       frame = requestAnimationFrame(step);
@@ -97,7 +98,7 @@ export default function HeroVideo({ className }: { className?: string }) {
     <video
       ref={ref}
       className={className}
-      poster="/img/hero-v3-poster.jpg"
+      poster="/img/hero-v4-poster.jpg"
       muted
       loop
       playsInline
@@ -106,8 +107,8 @@ export default function HeroVideo({ className }: { className?: string }) {
       tabIndex={-1}
       disablePictureInPicture
     >
-      <source src="/video/hero-v3-720.mp4" type="video/mp4" media="(max-width: 1023px)" />
-      <source src="/video/hero-v3-1080.mp4" type="video/mp4" />
+      <source src="/video/hero-v4-720.mp4" type="video/mp4" media="(max-width: 1023px)" />
+      <source src="/video/hero-v4-1080.mp4" type="video/mp4" />
     </video>
   );
 }

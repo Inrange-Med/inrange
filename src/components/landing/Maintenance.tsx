@@ -24,8 +24,8 @@ export default function Maintenance() {
     <section className={s.maint} aria-labelledby="maint-title">
       <figure className={s.photo} suppressHydrationWarning data-reveal="wipe">
         <Image
-          src="/img/lodhi-morning-h1.jpg"
-          alt="Two friends walking towards a Mughal tomb in Lodhi Garden, New Delhi, at sunrise"
+          src="/img/lodhi-morning-p1.jpg"
+          alt="A couple walking towards a Mughal tomb in Lodhi Garden, New Delhi, at sunrise"
           fill
           sizes="100vw"
         />
