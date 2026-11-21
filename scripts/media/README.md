@@ -9,7 +9,7 @@ Needs the Higgsfield CLI signed in (`npm i -g @higgsfield/cli`, `higgsfield auth
 | `hero-stills.py [name]`                    | two stills per hero moment (morning, afternoon, evening), Nano Banana Pro 2k 4:5                             |
 | `hero-clips.py [name]`                     | the chosen stills animated, Kling 4.0 image-to-video, 5 s 1080p                                              |
 | `hero-v3-stills.py [name]`                 | v3, the live hero: candidates for one continuous shot (the kite on a Delhi rooftop), Nano Banana Pro 2k 4:5  |
-| `hero-v3-clip.py still.png [takes] [loop]` | the chosen still as a 10 s Kling 4.0 shot; `loop` ends it on its opening frame so it loops with no crossfade |
+| `hero-v3-clip.py still.png [takes] [loop]` | the chosen still as a 10 s Kling 4.0 shot, camera locked off (no zoom); `loop` ends it on its opening frame so it loops with no crossfade |
 | `hero-v3-encode.sh [take.mp4]`             | the chosen looping take to `public/video/hero-v3-{1080,720}.mp4` and `public/img/hero-v3-poster.jpg`         |
 | `hero-loop.sh`                             | v2 (replaced): the three clips joined with 0.8 s crossfades                                                  |
 | `site-shots.py [name]`                     | one still per site photo, same look and rules (see its docstring)                                            |

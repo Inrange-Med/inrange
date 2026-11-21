@@ -6,13 +6,15 @@ HERE = pathlib.Path(__file__).resolve().parents[2] / "art" / "hero-v3"
 still = HERE / sys.argv[1]
 takes = int(sys.argv[2]) if len(sys.argv) > 2 else 2
 loop = len(sys.argv) > 3 and sys.argv[3] == "loop"
-MOTION = ("One continuous shot, no cuts. The father and his daughter fly the green kite together on the rooftop at golden "
-          "hour: she lets out a little string from the spool, he guides it over her shoulder, the kite sways and climbs gently "
-          "against the warm sky, the string stays one thin taut line from her hands to the kite. They look up, laugh and "
-          "glance at each other. A light breeze moves her hair and his kurta. The camera drifts slowly in with a soft handheld "
-          "feel" + (", then eases back, and the moment settles back exactly into the opening pose and framing for the last "
-          "second." if loop else ".") + " Natural, believable motion of real people; faces, hands, clothes and the kite keep their exact look; no "
-          "morphing, no extra people, no text. Calm, cinematic, 24 fps.")
+MOTION = ("One continuous shot from a camera locked off on a tripod: no zoom, no push-in, no pan, no camera movement at "
+          "all; only the people, the kite and the air move. The father and his daughter fly the green kite together on the "
+          "rooftop at golden hour: she lets out a little string from the spool, he steadies it over her shoulder, the kite "
+          "sways gently against the warm sky and the thin string stays one taut line from her hands to the kite. Natural, "
+          "relaxed and unhurried, like real home footage: they look up at the kite, she says something, he smiles and laughs "
+          "softly, she grins up at him; small, believable expressions, nothing exaggerated, no posing for the camera. A "
+          "light breeze moves her hair and his kurta, and other kites drift far off in the sky" + (". In the last second "
+          "they settle back into exactly the opening pose." if loop else ".") + " Faces, hands, clothes and the kite keep "
+          "their exact look; no morphing, no extra people, no text. 24 fps, true to life.")
 
 def take(i):
     out = subprocess.run(["higgsfield", "generate", "create", "kling4_0", "--mode", "image-to-video", "--start-image", str(still),
