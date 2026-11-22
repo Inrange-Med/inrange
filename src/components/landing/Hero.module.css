@@ -441,7 +441,7 @@
   --on-dark-2: rgb(247 246 243 / 0.8);
   --signal: #f7f6f3;
   --wipe: var(--glass-ground);
-  background: var(--glass-ground) url("/img/hero-v3-poster.jpg") 50% 0% / cover no-repeat;
+  background: var(--glass-ground) url("/img/hero-v4-poster.jpg") 50% 0% / cover no-repeat;
 }
 :global(:root) .media::before {
   background: linear-gradient(
@@ -491,67 +491,15 @@
     background: none;
   }
 }
-/* it settles from a slight zoom as the cover retracts, as the photos do */
-:global(.js) .media .video {
-  transform: scale(1.06);
-  transition: transform 1900ms var(--ease-soft);
-  transition-delay: var(--d, 0ms);
-}
-:global(.js) :global(.in) > .video {
-  transform: none;
-}
-
-/* "Play the film": only when the browser refused to start it (Low Power Mode). A quiet frosted pill: top left on
-   phones and tablets (the empty sky over the glass edge, clear of the kite and the seal), opposite the seal on laptops */
-.play {
-  position: absolute;
-  z-index: 3;
-  top: 12px;
-  left: 12px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 44px;
-  padding: 0 16px 0 14px;
-  border: 0;
-  border-radius: 999px;
-  background: rgb(10 11 10 / 0.42);
-  -webkit-backdrop-filter: blur(12px) saturate(1.2);
-  backdrop-filter: blur(12px) saturate(1.2);
-  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.18);
-  color: #f7f6f3;
-  font: inherit;
-  font-size: 0.875rem;
-  font-weight: 560;
-  cursor: pointer;
-  transition:
-    background-color 200ms var(--ease-out),
-    transform 160ms var(--ease-out);
-}
-.play:active {
-  transform: scale(0.97);
-}
-@media (hover: hover) and (pointer: fine) {
-  .play:hover {
-    background: rgb(10 11 10 / 0.6);
-  }
-}
-@media (min-width: 1024px) {
-  .play {
-    top: auto;
-    left: auto;
-    right: 24px;
-    bottom: clamp(48px, 7vh, 80px);
-  }
-}
 
 /* where the glass reaches over the film: the flutes soften what is behind them, strongest at the
-   inner edge and gone by a third of the way across, so the faces always play clear */
+   inner edge and gone by a sixth of the way across: the film's people stand in its middle, so the faces always play
+   clear (film v4, 22 Nov 2026) */
 .flutes {
   position: absolute;
   inset: 0 auto 0 0;
   z-index: 1;
-  width: 34%;
+  width: 18%;
   pointer-events: none;
   background:
     linear-gradient(90deg, rgb(var(--glass-foot) / 0.55), rgb(var(--glass-foot) / 0) 70%),
@@ -564,7 +512,7 @@
 /* phones: the frame is short and wide, so the glass keeps to a narrow inner strip */
 @media (max-width: 1023px) {
   .flutes {
-    width: 22%;
+    width: 12%;
   }
 }
 @media (min-width: 1024px) {
@@ -573,9 +521,3 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  :global(.js) .media .video {
-    transform: none;
-    transition: none;
-  }
-}

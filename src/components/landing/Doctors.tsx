@@ -63,7 +63,7 @@ export default function Doctors() {
       <div className={`wrap ${s.grid}`}>
         <figure className={s.consult} suppressHydrationWarning data-reveal="wipe">
           <Image
-            src="/img/consult-call-h1.jpg"
+            src="/img/consult-call-p1.jpg"
             alt="A woman in her late forties smiling on a video call at her dining table at home, a notebook and a cup of tea beside her"
             fill
             sizes="(max-width: 1023px) 100vw, 60vw"

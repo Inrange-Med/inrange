@@ -42,7 +42,7 @@ function index(cls: string, delay: string) {
 
 export default function Hero() {
   // the film's first frame is the largest thing on the first screen: fetch it with the page, not after the CSS
-  preload("/img/hero-v3-poster.jpg", { as: "image", fetchPriority: "high" });
+  preload("/img/hero-v4-poster.jpg", { as: "image", fetchPriority: "high" });
   return (
     <section id="top" className={s.hero} aria-labelledby="hero-title">
       {/* the plain side of the fluted glass, under the words (decorative: the words carry the meaning) */}
@@ -75,9 +75,10 @@ export default function Hero() {
         </div>
         <Ruler />
       </div>
-      <figure className={s.media} suppressHydrationWarning data-reveal="wipe" style={{ "--d": "200ms" } as React.CSSProperties}>
+      {/* no reveal cover on the film: it is there and moving from the first frame (Arhaan, 21 Nov 2026: "too slow") */}
+      <figure className={s.media}>
         {/* a father and daughter flying a kite on a Delhi rooftop: how lightness feels, never a body (HeroVideo) */}
-        <HeroVideo className={s.video} playClassName={s.play} />
+        <HeroVideo className={s.video} />
         <span className={s.flutes} aria-hidden="true" />
         {/* the authenticity promise, as the label on the pack: every medicine traceable to its source */}
         <a href="#pharmacy" className={s.seal} suppressHydrationWarning data-reveal="rise" style={{ "--d": "1400ms" } as React.CSSProperties}>

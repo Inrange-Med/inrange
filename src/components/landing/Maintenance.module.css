@@ -14,7 +14,7 @@
 }
 .photo img {
   object-fit: cover;
-  object-position: 50% 55%;
+  object-position: 74% 55%; /* the couple walks on the right of the photo */
 }
 .photo::before {
   content: "";
