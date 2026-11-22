@@ -15,7 +15,6 @@ const LINKS = [
   { href: "#how", label: "How it works" },
   { href: "#measures", label: "What we measure" },
   { href: "/doctors", label: "Doctors" },
-  { href: "#pricing", label: "Plans" },
 ];
 const hrefOf = (h: string, base: string) => (h.startsWith("#") ? base + h : h);
 
@@ -129,7 +128,7 @@ export default function Nav({ home = true }: { home?: boolean }) {
     if (document.querySelector("[data-no-dock]")) return;
     // the homepage hero, or on inner pages the page's own head band
     const hero = document.getElementById("top") ?? document.querySelector("main > :first-child");
-    const hides = document.querySelectorAll("#check, #pricing, #foot, [data-dock-hide]");
+    const hides = document.querySelectorAll("#check, #foot, [data-dock-hide]");
     const state = { past: false, hide: new Set<Element>() };
     const sync = () => setDock(state.past && state.hide.size === 0);
     const heroIo = new IntersectionObserver(([e]) => {
@@ -298,10 +297,6 @@ export default function Nav({ home = true }: { home?: boolean }) {
                     <div className={s.panelFoot}>
                       <a href="/programmes" onClick={() => setProg(false)}>
                         All programmes
-                        <ArrowRight size={14} aria-hidden="true" />
-                      </a>
-                      <a href={hrefOf("#pricing", base)} onClick={() => setProg(false)}>
-                        Plans
                         <ArrowRight size={14} aria-hidden="true" />
                       </a>
                     </div>

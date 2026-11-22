@@ -1,6 +1,18 @@
 .pharmacy {
   background: var(--bg);
 }
+/* the doctors sit straight above on the same ground (the plans section between them was removed, 23 Nov 2026): a
+   hairline across the column marks the change of subject, and the two section paddings close up a little */
+:global(#doctors):has(+ .pharmacy) {
+  padding-bottom: calc(var(--section) * 0.8);
+}
+:global(#doctors) + .pharmacy {
+  padding-top: 0;
+}
+:global(#doctors) + .pharmacy > :global(.wrap) {
+  border-top: 1px solid var(--hair);
+  padding-top: calc(var(--section) * 0.8);
+}
 
 .head {
   display: grid;

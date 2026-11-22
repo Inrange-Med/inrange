@@ -7,7 +7,7 @@ import s from "./Footer.module.css";
 const COLS = [
   {
     title: "Programmes",
-    links: [...PROGRAMMES.map((p) => [p.short, programmeHref(p)]), ["Plans", "/#pricing"]],
+    links: PROGRAMMES.map((p) => [p.short, programmeHref(p)]),
   },
   {
     title: "inrange",

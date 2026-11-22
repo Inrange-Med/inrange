@@ -11,8 +11,6 @@ import WaitlistButton from "../Waitlist";
 import DoctorBench from "../DoctorBench";
 import { LISTED_DOCTORS } from "../doctor-data";
 import { Art, Cta, Mask, Tag } from "../ui";
-import { INCLUDED } from "../plans";
-import { Planner } from "../Pricing";
 import { PROGRAMMES, programmeHref, type Programme } from "../programme-data";
 import { SITE, find } from "../tools/catalog";
 import { PAGES, SUGAR_LINES } from "./programme-pages";
@@ -107,8 +105,8 @@ export default function ProgrammeView({ programme }: { programme: Programme }) {
               {live ? (
                 <>
                   <Cta variant="light" />
-                  <Link href="/#pricing" className={p.quiet}>
-                    See the plans
+                  <Link href="/doctors" className={p.quiet}>
+                    Meet the doctors
                     <ArrowRight size={15} aria-hidden="true" />
                   </Link>
                 </>
@@ -127,7 +125,7 @@ export default function ProgrammeView({ programme }: { programme: Programme }) {
               {(live
                 ? [
                     ["Consultations", "By video"],
-                    ["Plans", "3 to 12 months"],
+                    ["Pharmacy", "Our own, licensed"],
                     ["Your doctor", "Every month"],
                     ["Blood tests", "At home"],
                   ]
@@ -336,41 +334,6 @@ export default function ProgrammeView({ programme }: { programme: Programme }) {
             </div>
           </section>
         )}
-
-        <section id={live ? "pricing" : undefined} className={`${p.sec} ${live && LISTED_DOCTORS.length > 0 ? "" : p.secPaper}`} aria-labelledby="cost-title">
-          <div className="wrap">
-            <div className={`${p.secHead} ${p.secHeadSplit}`}>
-              <Tag>What it costs</Tag>
-              {live ? (
-                <Mask id="cost-title" className="h2" lines={["One package,", "four lengths."]} soft={1} />
-              ) : (
-                <Mask id="cost-title" className="h2" lines={["What it", "will hold."]} soft={1} />
-              )}
-              <p className="lede" suppressHydrationWarning data-reveal="rise" style={{ "--d": "160ms" } as React.CSSProperties}>
-                {live
-                  ? "Choose a length to see what it covers. Your plan is priced after your doctor's review, and you pay only then."
-                  : "You see the itemised price before you pay for anything. The waitlist is free."}
-              </p>
-            </div>
-            {live ? (
-              <>
-                <Planner />
-              </>
-            ) : (
-              <ul className={`${v.inc} ${v.incSoon}`}>
-                {/* what the package will hold, with no figure until it is priced */}
-                {INCLUDED.slice(1).map(([a, b]) => (
-                  <li key={a}>
-                    <span>{a}</span>
-                    <span className={v.incVal} data-kind={b}>
-                      {b === "Included" ? "Planned" : b}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </section>
 
         <Faq items={d.faq} id="programme-questions" tag="Questions" title={d.heads.faq} />
 
