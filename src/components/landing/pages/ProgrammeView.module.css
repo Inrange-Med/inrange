@@ -358,42 +358,6 @@
 }
 
 
-/* the package, compact */
-.inc {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  border-top: 1px solid var(--hair-2);
-}
-.inc li {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 20px;
-  padding: 15px 0;
-  border-bottom: 1px solid var(--hair);
-  font-size: 1rem;
-  line-height: 1.45;
-}
-/* a short list reads as two calm columns instead of one line stretched across the page */
-@media (min-width: 1024px) {
-  .incSoon {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    column-gap: 64px;
-  }
-}
-.incVal {
-  flex: none;
-  font-size: 0.875rem;
-  font-weight: 560;
-  color: var(--ink-2);
-  font-variant-numeric: tabular-nums lining-nums;
-}
-.incVal[data-kind="Included"] {
-  color: var(--signal-ink);
-}
-
 /* sources and related pages */
 .ref {
   background: var(--bg);

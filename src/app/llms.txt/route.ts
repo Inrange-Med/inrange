@@ -21,7 +21,6 @@ inrange's free tools and guides use the thresholds set for Asian Indians: a BMI 
 ## Programmes
 ${PROGRAMMES.map((x) => `- [${x.name}](${SITE}${programmeHref(x)})${x.live ? "" : " (opening soon)"}: ${x.line}`).join("\n")}
 - [Doctors](${SITE}/doctors): the registered doctors on the care team, how they work and what the first consultation covers.
-- [Plans](${SITE}/#pricing): a free check, the first step (blood tests and a doctor consultation, with its fee shown before you pay), then one plan for 3, 6, 9 or 12 months, priced after the doctor's review; medicine, only if prescribed, billed separately.
 - [Free check](${SITE}/assessment): height, weight, age and health questions, your BMI on the Indian scale and what it means, then booking.
 
 ## Free tools

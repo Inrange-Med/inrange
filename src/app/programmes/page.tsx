@@ -139,8 +139,8 @@ export default function ProgrammesPage() {
               </p>
               <div className={p.actions}>
                 <Cta variant="light" />
-                <Link href="/#pricing" className={p.quiet}>
-                  See pricing
+                <Link href="/doctors" className={p.quiet}>
+                  Meet the doctors
                   <ArrowRight size={15} aria-hidden="true" />
                 </Link>
               </div>
@@ -291,8 +291,8 @@ export default function ProgrammesPage() {
             </ul>
             <div className={p.actions} style={{ marginTop: 32 }}>
               <Cta />
-              <Link href="/#pricing" className={p.quiet}>
-                See pricing
+              <Link href="/doctors" className={p.quiet}>
+                Meet the doctors
                 <ArrowRight size={15} aria-hidden="true" />
               </Link>
             </div>

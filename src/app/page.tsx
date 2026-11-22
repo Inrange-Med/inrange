@@ -12,7 +12,6 @@ import Companion from "@/components/landing/Companion";
 import Doctors from "@/components/landing/Doctors";
 import Pharmacy from "@/components/landing/Pharmacy";
 import Maintenance from "@/components/landing/Maintenance";
-import Pricing from "@/components/landing/Pricing";
 import Resources from "@/components/landing/Resources";
 import Faq from "@/components/landing/Faq";
 import Footer from "@/components/landing/Footer";
@@ -84,7 +83,6 @@ export default function Home() {
         <Measures />
         <Companion />
         <Doctors />
-        <Pricing />
         <Pharmacy />
         <Maintenance />
         <Resources />
