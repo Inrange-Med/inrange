@@ -31,7 +31,7 @@ const COLS = [
   {
     title: "Contact and legal",
     links: [
-      [COMPANY.email, `mailto:${COMPANY.email}`],
+      ...(COMPANY.email ? [[COMPANY.email, `mailto:${COMPANY.email}`]] : []),
       ["Privacy policy", "/privacy"],
       ["Terms of service", "/terms"],
       ["Cancellation and refunds", "/refund"],
@@ -112,9 +112,11 @@ export default function Footer({
           <address className={s.copy}>
             <span>© 2026 {COMPANY.legalName}.</span>
             {COMPANY.registeredOffice && <span>Registered office: {COMPANY.registeredOffice}.</span>}
-            <span>
-              Email: <a href={`mailto:${COMPANY.email}`}>{COMPANY.email}</a>
-            </span>
+            {COMPANY.email && (
+              <span>
+                Email: <a href={`mailto:${COMPANY.email}`}>{COMPANY.email}</a>
+              </span>
+            )}
             {COMPANY.drugLicence && (
               <span>
                 Pharmacy: {COMPANY.drugLicence.holder}, drug licence {COMPANY.drugLicence.numbers}.

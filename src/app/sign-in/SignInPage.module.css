@@ -246,33 +246,6 @@
   color: var(--on-dark-2);
 }
 
-/* ---------- under the plate: the footer ---------- */
-.below {
-  width: 100%;
-  max-width: 460px;
-}
-.foot {
-  display: grid;
-  justify-items: center;
-  gap: 4px;
-  text-align: center;
-}
-.footLinks {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 2px 16px;
-}
-.foot a {
-  color: var(--ink-2);
-}
-/* short phones drop the help links, which also live in the site footer */
-@media (max-height: 640px) {
-  .footLinks {
-    display: none;
-  }
-}
-
 /* very short screens: the gaps close up before anything is hidden */
 @media (max-height: 600px) {
   .sub {
@@ -289,15 +262,6 @@
   }
 }
 
-/* small links inside sentences keep their size but take a 44px tap target */
-.foot a {
-  position: relative;
-}
-.foot a::after {
-  content: "";
-  position: absolute;
-  inset: -14px -6px;
-}
 .switch .link {
   gap: 4px;
 }

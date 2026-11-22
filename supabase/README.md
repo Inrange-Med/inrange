@@ -30,11 +30,10 @@ supabase secrets set --project-ref wcsglsrjixfrobujchen NAME=value ...
 | 100ms video | `HMS_ACCESS_KEY`, `HMS_SECRET`, `HMS_TEMPLATE_ID`, `HMS_SUBDOMAIN` (the template's Prebuilt subdomain, from the 100ms dashboard; no API returns it) | The call opens `pilot-video-room.html` (camera preview, "live video connects once the key is added") |
 | WhatsApp (Meta Cloud API) | `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_APP_SECRET` (live), `WHATSAPP_BUSINESS_ACCOUNT_ID` (template sync), `WHATSAPP_VERIFY_TOKEN` (webhook); the tick needs `JOBS_SECRET` and its two Vault secrets | Every message is recorded as sent (`mock-` ids), nothing leaves; an admin plays replies from Medicine > Messages. [docs/backend/whatsapp.md](../docs/backend/whatsapp.md) |
 
-Pilot vendor accounts (PDPL's; test keys until go-live):
-- Razorpay: test mode. Each order sets auto-capture itself; `/payments/verify` fulfils only after Razorpay
-  reports the payment captured for that order's exact amount. Test card `4100 2800 0000 1007`, any future
-  expiry, any CVV, OTP of 4 or more digits.
-- 100ms: template `medistry.vc` (`6aba17dc8485531b71b6f024`), region `in` (media servers in India), roles
+Vendor accounts (PDPL's; live keys since 22 Nov 2026):
+- Razorpay: live mode (approved site inrangemed.com). Each order sets auto-capture itself; `/payments/verify`
+  fulfils only after Razorpay reports the payment captured for that order's exact amount.
+- 100ms: template `6aba17dc8485531b71b6f024`, region `in` (media servers in India), roles
   `doctor` (can end the room and remove others) and `patient`, recording, streaming and transcription off.
   Rooms are created in `in`; ending a consultation ends the session and locks the room, so its links die.
 

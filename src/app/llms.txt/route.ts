@@ -36,7 +36,7 @@ ${list(GUIDES)}
 
 - [Editorial standards](${SITE}/editorial-standards): sources, what we never do, privacy, medical review, updates and corrections.
 - [Home](${SITE}/): a weight loss calculator (for a given weight and height, what a study of doctor-led care reports, about 15% of body weight over about 16 months (14.9%, the average in a large trial where medication was prescribed), with its sources; an estimate, not a prediction), how the programme works, what is measured, the plans and questions.
-- Contact: care@inrangemed.com. Not for emergencies: in India, call 112.
+- Not for emergencies: in India, call 112.
 `;
   return new Response(body, {
     headers: { "content-type": "text/plain; charset=utf-8" },

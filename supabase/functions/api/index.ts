@@ -1,10 +1,10 @@
-// InRange pilot API: one edge function serving every /api/... route the web app calls.
+// inrange pilot API: one edge function serving every /api/... route the web app calls.
 // Base URL for the app: https://<ref>.supabase.co/functions/v1  (the function is named "api",
 // so a request to /functions/v1/api/auth/me reaches this router as /api/auth/me).
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { HttpError } from "./lib/http.ts";
-import { withDb } from "./lib/db.ts";
+import { body, fail, HttpError, ok } from "./lib/http.ts";
+import { sql, withDb } from "./lib/db.ts";
 import { live } from "./lib/env.ts";
 import { auth } from "./routes/auth.ts";
 import { patientRoutes } from "./routes/patient.ts";
@@ -40,6 +40,21 @@ app.use("*", cors({ origin: (o) => o ?? "*", allowHeaders: ["Authorization", "Co
 
 // every request gets its own database client, closed when the response is ready
 app.use("/api/*", (_c, next) => withDb(() => next()));
+
+// the coming-soon programmes' waitlist (src/components/landing/Waitlist.tsx): public, the form's fields only
+app.post("/api/waitlist", async (c) => {
+  const w = await body<{ programme?: string; name?: string; mobile?: string; city?: string; consent?: boolean }>(c);
+  const name = String(w.name ?? "").trim().slice(0, 80);
+  const city = String(w.city ?? "").trim().slice(0, 80);
+  const mobile = String(w.mobile ?? "").replace(/\D/g, "").replace(/^(91|0)(?=\d{10}$)/, "");
+  if (w.programme !== "pcos" && w.programme !== "sexual") fail(400, "That programme has no waitlist.");
+  if (name.length < 2 || city.length < 2) fail(400, "Add your name and city.");
+  if (!/^[6-9]\d{9}$/.test(mobile)) fail(400, "Enter a 10-digit mobile number.");
+  if (w.consent !== true) fail(400, "Tick the consent box to join.");
+  await sql`insert into waitlist (programme, name, mobile, city, consented_at)
+            values (${w.programme!}, ${name}, ${mobile}, ${city}, now()) on conflict (programme, mobile) do nothing`;
+  return ok(c, null, "You are on the waitlist");
+});
 
 app.get("/api/health", (c) => c.json({
   success: true,

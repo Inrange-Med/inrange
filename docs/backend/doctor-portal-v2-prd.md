@@ -191,7 +191,7 @@ The weight card and logging, the programme card, the care team cards, the doses 
 - A patient always sees exactly one next step on Home, from blood test to delivery, with one button.
 - Every screen works at 390px, with buttons at least 48px tall and no icon-only controls.
 
-# Where it lives in the code (`Medistry/src/app/`)
+# Where it lives in the code (`inrange/src/app/`)
 
 | Change | Files |
 |---|---|

@@ -100,12 +100,7 @@ const SECTIONS: { q: string; body: React.ReactNode }[] = [
     q: "Corrections",
     body: (
       <p>
-        If you find an error, write to{" "}
-        <a href="mailto:care@inrangemed.com?subject=Correction">
-          care@inrangemed.com
-        </a>{" "}
-        with &ldquo;Correction&rdquo; in the subject. We check every report, fix
-        confirmed errors and note the change on the page.
+        We fix confirmed errors and note the change on the page.
       </p>
     ),
   },

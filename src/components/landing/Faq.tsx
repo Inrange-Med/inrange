@@ -29,11 +29,7 @@ export default function Faq({
           <Tag>{tag}</Tag>
           <Mask id={`${id}-title`} className="h2" lines={title} soft={1} />
           <p className="body" suppressHydrationWarning data-reveal="rise" style={{ "--d": "140ms" } as React.CSSProperties}>
-            Plain answers to what people ask before booking. For anything else, write to{" "}
-            <a href="mailto:care@inrangemed.com" className={s.mail}>
-              care@inrangemed.com
-            </a>{" "}
-            and a member of the care team will reply.
+            Plain answers to what people ask before booking.
           </p>
         </div>
 

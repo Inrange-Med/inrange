@@ -5,6 +5,8 @@
   sexual health copy never uses performance, stamina, pleasure or "better sex" language (DMR Act s.3).
 */
 
+import { API_BASE_URL } from "@/config/env";
+
 export type ProgrammeKey = "weight" | "diabetes" | "pcos" | "sexual";
 
 export type Programme = {
@@ -77,6 +79,5 @@ export const PROGRAMMES: Programme[] = [
 
 export const programmeHref = (p: Programme) => `/programmes/${p.slug}`;
 
-/** Where waitlist sign-ups go, once the product team has an endpoint. Until then the form drafts an email. */
-export const WAITLIST_URL = process.env.NEXT_PUBLIC_WAITLIST_URL || "";
-export const CONTACT_EMAIL = "care@inrangemed.com";
+/** Where waitlist sign-ups go: our API keeps them (POST /api/waitlist, table waitlist). */
+export const WAITLIST_URL = `${API_BASE_URL}/api/waitlist`;

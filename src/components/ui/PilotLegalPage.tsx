@@ -43,10 +43,6 @@ export default function PilotLegalPage({
               </div>
             </section>
           ))}
-          <p className={styles.contact}>
-            Questions:{" "}
-            <a href="mailto:care@inrangemed.com">care@inrangemed.com</a>
-          </p>
         </div>
       </main>
     </AppTheme>

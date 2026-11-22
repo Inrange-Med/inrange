@@ -2,17 +2,16 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { ArrowRight, Check, X } from "@phosphor-icons/react";
-import { CONTACT_EMAIL, WAITLIST_URL, type ProgrammeKey } from "./programme-data";
+import { WAITLIST_URL, type ProgrammeKey } from "./programme-data";
 import s from "./Waitlist.module.css";
 
-type State = "idle" | "sending" | "done" | "drafted" | "error";
+type State = "idle" | "sending" | "done" | "error";
 
 /*
   A waitlist for a programme that is not open yet. Joining one says something about a person's health,
   so it asks for the least it can (name, mobile, city), never a symptom, and the consent box starts unticked
   (SPDI Rules 2011 r.5, DPDP Act 2023). The details are used once, to say the programme has opened.
-  With no endpoint yet (NEXT_PUBLIC_WAITLIST_URL), the form drafts an email to the team instead of
-  pretending to have saved anything.
+  Sign-ups go to our API (POST /api/waitlist), and the form says it is done only when the API has saved one.
 */
 export default function WaitlistButton({
   programme,
@@ -47,12 +46,6 @@ export default function WaitlistButton({
       consent: f.get("consent") === "on",
       consented_at: new Date().toISOString(),
     };
-    if (!WAITLIST_URL) {
-      const body = `Please add me to the ${name} waitlist.\n\nName: ${entry.name}\nMobile: +91 ${entry.mobile}\nCity: ${entry.city}\n\nI agree inrange may use these details only to tell me when ${name} opens. I am 18 or older.`;
-      window.location.href = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`${name} waitlist`)}&body=${encodeURIComponent(body)}`;
-      setState("drafted");
-      return;
-    }
     setState("sending");
     try {
       const r = await fetch(WAITLIST_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(entry) });
@@ -62,7 +55,7 @@ export default function WaitlistButton({
     }
   }
 
-  const finished = state === "done" || state === "drafted";
+  const finished = state === "done";
   // the form unmounts on success; keep keyboard focus inside the sheet, on its one action
   useEffect(() => {
     if (finished) doneRef.current?.focus();
@@ -171,7 +164,7 @@ export default function WaitlistButton({
 
               {state === "error" && (
                 <p className={s.error} role="alert">
-                  That did not go through. Try again, or write to <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
+                  That did not go through. Try again.
                 </p>
               )}
 

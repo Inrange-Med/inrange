@@ -78,17 +78,3 @@
 .prose p {
   max-width: 38em;
 }
-
-.contact {
-  font-size: 1.0625rem;
-  line-height: 1.6;
-  color: var(--ink-3);
-}
-
-.contact a {
-  color: var(--signal-ink);
-  font-weight: 560;
-  text-decoration: underline;
-  text-decoration-color: color-mix(in srgb, var(--signal-ink) 35%, transparent);
-  text-underline-offset: 3px;
-}

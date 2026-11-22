@@ -24,20 +24,6 @@
 .intro p {
   max-width: 30em;
 }
-.mail {
-  display: inline-block;
-  padding-block: 12px;
-  margin-block: -12px;
-  color: var(--ink);
-  text-decoration-color: var(--hair-2);
-  transition: text-decoration-color 200ms ease;
-}
-@media (hover: hover) and (pointer: fine) {
-  .mail:hover {
-    text-decoration-color: var(--signal-ink);
-  }
-}
-
 .list {
   border-top: 1px solid var(--hair);
 }

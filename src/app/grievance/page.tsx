@@ -13,13 +13,13 @@ export default function GrievancePage() {
         {
           heading: "How to raise a complaint",
           body: [
-            "Write to care@inrangemed.com with your registered mobile number, what happened and when. You can also message your care team in the app.",
+            "Message your care team in the app with your registered mobile number, what happened and when.",
           ],
         },
         {
           heading: "Grievance officer",
           body: [
-            "The grievance officer's name and address are published here before public launch. During the pilot, complaints sent to care@inrangemed.com reach the team directly.",
+            "The grievance officer's name and address are published here before public launch.",
           ],
         },
       ]}

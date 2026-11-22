@@ -44,12 +44,6 @@ const jsonLd = {
         "HbA1c",
       ],
       publishingPrinciples: `${SITE}/editorial-standards`,
-      contactPoint: {
-        "@type": "ContactPoint",
-        contactType: "customer support",
-        email: "care@inrangemed.com",
-        areaServed: "IN",
-      },
     },
     {
       "@type": "WebSite",

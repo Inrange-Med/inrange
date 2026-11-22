@@ -9,7 +9,7 @@
 */
 export const COMPANY = {
   legalName: "Novaxis Lifesciences Pvt Ltd",
-  email: "care@inrangemed.com",
+  email: null as string | null, // 22 Nov 2026: no mailbox on the domain yet
   registeredOffice: null as string | null,
   drugLicence: null as { holder: string; numbers: string } | null,
 };
