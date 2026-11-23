@@ -364,7 +364,7 @@ opsRoutes.get("/admin/medicine/patients/:patientId", async (c) => {
     // every prescription issued, newest first, with who sent it and when (19 Nov 2026 call: admin and the coach
     // team read old ones too; nobody downloads them)
     sql`select x.id, x.version, x.status, x.items, x.diagnosis, x.revises_id, x.appointment_id, d.full_name as doctor,
-          ${iso("coalesce(x.sent_at, x.signed_at)")} as sent
+          to_char(coalesce(x.sent_at, x.signed_at) at time zone 'Asia/Kolkata', 'YYYY-MM-DD"T"HH24:MI:SS"+05:30"') as sent
         from prescriptions x left join doctors d on d.id = x.doctor_id
         where x.patient_id = ${p.id} and x.status in ('SIGNED', 'SUPERSEDED')
         order by (x.status = 'SIGNED') desc, coalesce(x.sent_at, x.signed_at) desc, x.version desc limit 30`,
