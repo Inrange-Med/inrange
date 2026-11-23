@@ -167,7 +167,7 @@ export async function renderRx(doctor: Doctor, patientId: number, rx: Row, signe
     sql`select min(id) as n from prescriptions where patient_id = ${patientId}`,
     sql`select version, signed_at from prescriptions where patient_id = ${patientId} and status = 'SIGNED' and id <> ${rx.id}
         order by version desc limit 1`,
-    ids.length ? sql`select id, molecule, brand, form, strength, pack, pack_days, route, storage, seek_help from medicines where id in ${sql(ids)}` : [],
+    ids.length ? sql`select id, molecule, brand, form, strength, pack, pack_days, route, storage, seek_help, mrp_paise from medicines where id in ${sql(ids)}` : [],
   ]);
   const stock = new Map(stockRows.map((m: Row) => [m.id, m]));
   const sections = (note?.sections ?? []) as Row[];
@@ -218,7 +218,10 @@ export async function renderRx(doctor: Doctor, patientId: number, rx: Row, signe
   const pdfItems: RxPdfItem[] = lines.map(({ i, at, m, q }) => m
     ? { generic: m.molecule, brand: withForm(m.form, m.brand), form: packOf(m).holds ? `${m.form}, ${packOf(m).holds} per ${packOf(m).unit}` : m.form,
         strength: m.strength, how: how(i), route: m.route ?? "", step: steps.get(at)?.step ?? null,
-        when: steps.get(at)?.when ?? (v2 && i.duration ? `For ${i.duration}` : daysWord(q * m.pack_days)), quantity: qtyOf(m, q),
+        when: steps.get(at)?.when ?? (v2 && i.duration ? `For ${i.duration}` : daysWord(q * m.pack_days)),
+        // a count of packs only for what our pharmacy sells: an item on the list without a price is bought anywhere,
+        // and its pack count would be a guess (the master list of 23 Nov 2026 has many such)
+        quantity: m.mrp_paise != null ? qtyOf(m, q) : "",
         instructions: i.instructions ?? "" }
     : { generic: i.medicineName ?? "", brand: null, form: i.form ?? "", strength: i.strength ?? "", how: how(i),
         route: i.route ?? "", step: null, when: v2 && i.duration ? `For ${i.duration}` : monthsWord(months), quantity: "",
