@@ -20,8 +20,8 @@ import {
 import { errorMessage } from "@/lib/http/apiClient";
 import { addCoach, listCoaches } from "@/services/medicineOpsService";
 import formStyles from "@/components/ui/styles/FormControls.module.css";
-import adminStyles from "@/app/admin/styles/AdminSurfaces.module.css";
-import s from "./Medicine.module.css";
+import adminStyles from "@/components/ui/styles/StaffSurfaces.module.css";
+import s from "@/components/ui/styles/StaffPanels.module.css";
 
 export default function CoachesSheet({
   open,

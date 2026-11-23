@@ -16,9 +16,9 @@ import { errorMessage } from "@/lib/http/apiClient";
 import { listOrders, moveOrder } from "@/services/medicineOpsService";
 import type { OpsOrder } from "@/types/medicineOps";
 import OrderSheet, { type OrderSheetStart } from "./OrderSheet";
-import { dueWords, NEXT_STEP, when } from "./words";
-import adminStyles from "@/app/admin/styles/AdminSurfaces.module.css";
-import s from "./Medicine.module.css";
+import { dueWords, NEXT_STEP, when } from "@/features/medicine-queue/words";
+import adminStyles from "@/components/ui/styles/StaffSurfaces.module.css";
+import s from "@/components/ui/styles/StaffPanels.module.css";
 
 const GROUPS: {
   title: string;

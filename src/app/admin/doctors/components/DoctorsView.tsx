@@ -15,7 +15,7 @@ import { listDoctors } from "@/services/adminService";
 import type { AdminDoctor } from "@/types/admin";
 import DoctorForm from "./DoctorForm";
 import DoctorRow from "./DoctorRow";
-import adminStyles from "@/app/admin/styles/AdminSurfaces.module.css";
+import adminStyles from "@/components/ui/styles/StaffSurfaces.module.css";
 
 const rosterOrder = (a: AdminDoctor, b: AdminDoctor) =>
   Number(b.active) - Number(a.active) || a.fullName.localeCompare(b.fullName);

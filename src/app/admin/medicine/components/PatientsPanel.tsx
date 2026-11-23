@@ -14,10 +14,11 @@ import { useApiResource } from "@/hooks/useApiResource";
 import { shortDate } from "@/lib/format/dateTime";
 import { listPatients } from "@/services/medicineOpsService";
 import CoachesSheet from "./CoachesSheet";
+import PlansSheet from "./PlansSheet";
 import SalesTeamSheet from "./SalesTeamSheet";
-import { ORDER_WORDS } from "./words";
-import adminStyles from "@/app/admin/styles/AdminSurfaces.module.css";
-import s from "./Medicine.module.css";
+import { ORDER_WORDS } from "@/features/medicine-queue/words";
+import adminStyles from "@/components/ui/styles/StaffSurfaces.module.css";
+import s from "@/components/ui/styles/StaffPanels.module.css";
 
 export default function PatientsPanel({
   isAdmin,
@@ -39,6 +40,7 @@ export default function PatientsPanel({
   );
   const [coaches, setCoaches] = useState(false);
   const [sales, setSales] = useState(false);
+  const [plans, setPlans] = useState(false);
 
   return (
     <section className={adminStyles.panel} aria-labelledby="patients-h">
@@ -51,6 +53,13 @@ export default function PatientsPanel({
             <button
               type="button"
               className={adminStyles.textBtn}
+              onClick={() => setPlans(true)}
+            >
+              Plans
+            </button>
+            <button
+              type="button"
+              className={adminStyles.textBtn}
               onClick={() => setSales(true)}
             >
               Sales team
@@ -60,7 +69,7 @@ export default function PatientsPanel({
               className={adminStyles.textBtn}
               onClick={() => setCoaches(true)}
             >
-              Health coaches
+              Coaches
             </button>
           </span>
         )}
@@ -140,6 +149,7 @@ export default function PatientsPanel({
       {isAdmin && (
         <>
           <CoachesSheet open={coaches} onClose={() => setCoaches(false)} />
+          <PlansSheet open={plans} onClose={() => setPlans(false)} />
           <SalesTeamSheet
             open={sales}
             onClose={() => setSales(false)}

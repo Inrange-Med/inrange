@@ -88,21 +88,23 @@ function wordsFor(step: NextStep): Words {
         bill: step.bill,
         action: {
           label: `Pay ${total}`,
-          href: plan
-            ? checkoutHref({
-                purpose: "PLAN",
-                referenceId: step.referenceId,
-                returnTo: HOME,
-                payNow: true,
-              })
-            : step.hasAddress
+          href: step.payUrl
+            ? step.payUrl
+            : plan
               ? checkoutHref({
-                  purpose: "MEDICINE_ORDER",
+                  purpose: "PLAN",
                   referenceId: step.referenceId,
                   returnTo: HOME,
                   payNow: true,
                 })
-              : `${HOME}/care/cart`,
+              : step.hasAddress
+                ? checkoutHref({
+                    purpose: "MEDICINE_ORDER",
+                    referenceId: step.referenceId,
+                    returnTo: HOME,
+                    payNow: true,
+                  })
+                : `${HOME}/care/cart`,
         },
         quiet: plan
           ? undefined

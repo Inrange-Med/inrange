@@ -30,7 +30,7 @@ import type {
   ReviewReport,
 } from "@/types/admin";
 import { reportChecks } from "./reportChecks";
-import adminStyles from "@/app/admin/styles/AdminSurfaces.module.css";
+import adminStyles from "@/components/ui/styles/StaffSurfaces.module.css";
 
 const PATH_LABEL = { OWN_REPORT: "Own report", LAB_TEST: "Home lab test" };
 

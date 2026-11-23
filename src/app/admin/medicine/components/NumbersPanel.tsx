@@ -12,8 +12,8 @@ import SegmentedControl from "@/components/ui/SegmentedControl";
 import { useApiResource } from "@/hooks/useApiResource";
 import { getNumbers } from "@/services/medicineOpsService";
 import type { OpsMeasure } from "@/types/medicineOps";
-import adminStyles from "@/app/admin/styles/AdminSurfaces.module.css";
-import s from "./Medicine.module.css";
+import adminStyles from "@/components/ui/styles/StaffSurfaces.module.css";
+import s from "@/components/ui/styles/StaffPanels.module.css";
 
 function below(m: OpsMeasure) {
   if (m.value === null || m.target === undefined) return false;

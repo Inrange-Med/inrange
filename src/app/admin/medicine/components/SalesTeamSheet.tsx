@@ -29,8 +29,8 @@ import {
 } from "@/services/medicineOpsService";
 import type { Salesperson } from "@/types/medicineOps";
 import formStyles from "@/components/ui/styles/FormControls.module.css";
-import adminStyles from "@/app/admin/styles/AdminSurfaces.module.css";
-import s from "./Medicine.module.css";
+import adminStyles from "@/components/ui/styles/StaffSurfaces.module.css";
+import s from "@/components/ui/styles/StaffPanels.module.css";
 
 const count = (n: number, one: string, many: string) =>
   `${n} ${n === 1 ? one : many}`;
@@ -127,6 +127,13 @@ export default function SalesTeamSheet({
                   </span>
                   <span className={`${s.sub} num`}>
                     {p.mobile && <span>{spacedMobile(p.mobile)}</span>}
+                    {p.active && (
+                      <span>
+                        {p.canSignIn
+                          ? "Signs in to the sales panel"
+                          : "No sign-in: add a mobile number"}
+                      </span>
+                    )}
                     <span>{count(p.patients, "patient", "patients")}</span>
                     <span>{count(p.plansSold, "plan sold", "plans sold")}</span>
                     {p.plansWaiting > 0 && (
@@ -214,7 +221,7 @@ export default function SalesTeamSheet({
             />
           </label>
           <label className={formStyles.field}>
-            <span className={formStyles.label}>Mobile, if you have it</span>
+            <span className={formStyles.label}>Mobile, to sign in with</span>
             <input
               className={s.input}
               type="tel"
@@ -255,7 +262,9 @@ export default function SalesTeamSheet({
           </button>
         )}
         <p className={formStyles.hint}>
-          New people join at the bottom. Number 1 is your best salesperson.
+          New people join at the bottom. Number 1 is your best salesperson. Each
+          one signs in with their mobile number and sees only the patients
+          assigned to them.
         </p>
       </div>
     </Sheet>

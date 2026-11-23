@@ -95,7 +95,6 @@ export default function PrescriptionWriter({
   target,
   initial,
   last,
-  onPlan,
   onClose,
   onSent,
   onDropped,
@@ -106,7 +105,6 @@ export default function PrescriptionWriter({
   /** the patient's latest prescription: a new one starts from it */
   last: PrescriptionEntry | null;
   /** without a plan a prescription is for one month */
-  onPlan: boolean;
   /** back to the patient's prescriptions; what was written stays saved */
   onClose: () => void;
   onSent: (sent: Prescription) => void;
@@ -161,10 +159,10 @@ export default function PrescriptionWriter({
         return { text: `Choose how often for ${which}.`, line: line.key };
       if (!line.durationValue)
         return { text: `Write for how long for ${which}.`, line: line.key };
-      // without a plan (the nano plan) the prescription is for one month: said here, as the server does
-      if (!onPlan && daysOf(line.durationValue, line.durationUnit) > 31)
+      // every prescription is for one month, plan or not (23 Nov 2026 call): said here, as the server does
+      if (daysOf(line.durationValue, line.durationUnit) > 31)
         return {
-          text: `This patient is not on a plan yet, so the prescription is for one month. Set ${which} to 1 month or less.`,
+          text: `Every prescription is for one month. Set ${which} to 1 month or less.`,
           line: line.key,
         };
     }
@@ -326,16 +324,12 @@ export default function PrescriptionWriter({
         <div className={styles.field}>
           <span className={styles.fieldLabel}>
             Medicines
-            {!onPlan && (
-              // the nano plan (12 Nov 2026 call): said before the doctor writes, not found out at Create PDF
-              <span className={styles.fieldHint}>
-                One month at most: this patient is not on a plan yet
-              </span>
-            )}
+            {/* said before the doctor writes, not found out at Create PDF */}
+            <span className={styles.fieldHint}>One month at most</span>
           </span>
           <MedicineLines
             lines={draft.medicines}
-            maxDays={!onPlan ? 31 : undefined}
+            maxDays={31}
             problemKey={problem?.line ?? null}
             onChange={(medicines) => {
               change({ medicines });

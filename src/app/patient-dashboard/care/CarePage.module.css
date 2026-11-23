@@ -364,3 +364,35 @@
     font-size: 1rem;
   }
 }
+
+/* "From your coach": a diet chart or an exercise plan, as the coach typed it */
+.coachPlan {
+  border-top: 1px solid var(--hair-2);
+  padding: 14px 0 4px;
+}
+.coachPlan:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+.coachPlan summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+  cursor: pointer;
+  list-style: none;
+}
+.coachPlan summary::-webkit-details-marker {
+  display: none;
+}
+.coachPlan summary span {
+  color: var(--ink-3);
+  font-size: 14px;
+}
+.coachPlan p {
+  margin: 10px 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.55;
+}

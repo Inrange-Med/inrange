@@ -2,6 +2,9 @@
  * The medicine queue in the admin area (admin and health coach). Doc: docs/backend/medicine-flow.md.
  */
 
+import type { CoachCall, CoachPlan } from "@/types/coach";
+import type { PaymentLink } from "@/types/sales";
+
 export type TaskKind =
   | "NO_REPLY"
   | "QUESTIONS"
@@ -186,7 +189,7 @@ export type OpsPatient = {
       note: string | null;
       /** in the app (its payment ID), or outside it (what admin typed); null when unknown */
       paid: {
-        where: "APP" | "OUTSIDE";
+        where: "APP" | "LINK" | "OUTSIDE";
         ref: string;
         at: string | null;
         amountRupees: number | null;
@@ -208,6 +211,23 @@ export type OpsPatient = {
       note: string | null;
     } | null;
   };
+  /** what the plan they are on includes, against what has happened since it started; null with no plan */
+  included: {
+    doctorConsults: number | null;
+    coachCalls: number | null;
+    fitnessCalls: number | null;
+    consultsDone: number;
+    coachCallsMade: number;
+    fitnessCallsMade: number;
+  } | null;
+  /** the coach's side: the diet chart, the exercise plan and the calls made */
+  coaching: {
+    diet: CoachPlan | null;
+    fitness: CoachPlan | null;
+    calls: CoachCall[];
+  };
+  /** their payment links, newest first (admin) */
+  links: PaymentLink[];
   /** how the month went, written by the coach for the doctor */
   remarks: { id: string; at: string; by: string; text: string }[];
   /** every prescription issued, the current one first, with who sent it and when (no PDFs here) */
@@ -321,6 +341,8 @@ export type Salesperson = {
   rank: number | null;
   /** patients they are the salesperson of */
   patients: number;
+  /** they have a sign-in to the sales panel (a mobile number nobody else uses, and on the team) */
+  canSignIn: boolean;
   /** plans they sold that the patient has paid for, and those still waiting for payment */
   plansSold: number;
   plansWaiting: number;
@@ -348,6 +370,57 @@ export type SalesForm = {
   note: string;
   /** the money was taken outside the app: the plan starts at once */
   paidOutside: { amountRupees: number; paymentRef: string } | null;
+};
+
+/** Admin's Payments view: every payment link, and money that matched no order or link of ours. */
+export type OpsPayments = {
+  links: PaymentLink[];
+  received: {
+    id: string;
+    amountRupees: number;
+    mobile: string | null;
+    method: string | null;
+    description: string | null;
+    capturedAt: string;
+    /** the patient whose number paid it, when there is one */
+    patientId: string | null;
+    patientName: string | null;
+  }[];
+};
+
+/** Admin's Calls view: consultations coming up, and who is due a follow-up. */
+export type OpsCalls = {
+  upcoming: {
+    id: string;
+    startsAt: string;
+    status: "Booked" | "InProgress";
+    visitType: "FIRST" | "FOLLOW_UP";
+    patientId: string;
+    patientName: string;
+    patientMobile: string;
+    doctorName: string;
+    salesperson: string | null;
+  }[];
+  followUpsDue: {
+    patientId: string;
+    patientName: string;
+    patientMobile: string;
+    salesperson: string | null;
+    lastOn: string;
+    daysSince: number;
+    doctorName: string | null;
+    planName: string | null;
+    consultsIncluded: number | null;
+    consultsDone: number;
+  }[];
+};
+
+/** A consultation's video links, to share by any means. */
+export type CallLinks = {
+  patient: string;
+  doctor: string;
+  sales: string | null;
+  salesName: string | null;
 };
 
 /** A doctor's time on a day, for admin's booking. */

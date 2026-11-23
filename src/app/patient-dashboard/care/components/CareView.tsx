@@ -25,6 +25,7 @@ import { isUpcomingConsultation } from "@/lib/consultations/consultationTime";
 import { getSessionUser } from "@/lib/session/authSession";
 import { listMyAppointments } from "@/services/appointmentService";
 import {
+  getCoachPlans,
   getDoses,
   loadCarePlan,
   logDose,
@@ -41,6 +42,7 @@ import PageGhosts from "@/app/patient-dashboard/components/PageGhosts";
 import AppointmentsCard from "./AppointmentsCard";
 import BloodTestsCard from "./BloodTestsCard";
 import CareTeamCard from "./CareTeamCard";
+import CoachPlanCard from "./CoachPlanCard";
 import DeliverySheet from "./DeliverySheet";
 import DosesCard from "./DosesCard";
 import { isMoving } from "./deliveryStatus";
@@ -73,6 +75,7 @@ export default function CareView() {
   const team = useApiResource("care-team", loadCareTeamDoctors);
   const eligibility = useApiResource("eligibility", getMyEligibility);
   const doses = useApiResource("care-doses", getDoses);
+  const coachPlans = useApiResource("care-coach-plans", getCoachPlans);
   const [doctor, setDoctor] = useState<CareTeamDoctor | null>(null);
   const [sheet, setSheet] = useState<SheetName>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
@@ -187,6 +190,7 @@ export default function CareView() {
               }}
             />
           )}
+          {coachPlans.data && <CoachPlanCard plans={coachPlans.data} />}
           <BloodTestsCard
             hasTeam={hasTeam}
             hasTestsOrReport={Boolean(eligibility.data?.path)}

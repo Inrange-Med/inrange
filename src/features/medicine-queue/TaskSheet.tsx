@@ -31,9 +31,9 @@ import {
   when,
 } from "./words";
 import formStyles from "@/components/ui/styles/FormControls.module.css";
-import adminStyles from "@/app/admin/styles/AdminSurfaces.module.css";
+import adminStyles from "@/components/ui/styles/StaffSurfaces.module.css";
 import MatchMedicines from "./MatchMedicines";
-import s from "./Medicine.module.css";
+import s from "@/components/ui/styles/StaffPanels.module.css";
 
 /** "2026-11-18T10:00" for a datetime-local input, in India time. */
 const localInput = (d: Date) => inIndiaTime(d).toISOString().slice(0, 16);

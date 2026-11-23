@@ -5,12 +5,13 @@
     Queue     tasks the follow-up, deliveries and doses open, soonest due first; each opens with its
               patient, what happened, and the outcome to record
     Orders    the pharmacy's deliveries by step, one next step per row (admin)
-    Patients  everyone with a prescription or an order: last order, run-out, doses, coach
+    Patients  everyone: last order, run-out, doses, coach; the plans, the sales team and the coaches
+    Calls     the consultations coming up with their video links, and who is due a follow-up
+    Payments  every payment link and who paid, and payments that matched no link
     Messages  every WhatsApp message, sent or not, and why (admin)
     Numbers   the PRD's measures against their targets (admin)
-  A health coach sees Queue and Patients, for their own patients only (the API scopes it). The tabs
-  follow the signed-in role (AdminShell lets only an admin or a coach in), so a coach's link to an
-  admin tab never opens it. The tab is in the address (?tab=), so a link and Back land on the same view.
+  Admins only (AdminShell): a coach has their own panel at /coach. The tab is in the address (?tab=), so a
+  link and Back land on the same view.
 */
 
 import { useCallback, useEffect, useState } from "react";
@@ -23,24 +24,34 @@ import { useNow } from "@/hooks/useNow";
 import { useSessionUser } from "@/hooks/useSessionUser";
 import { timeAgo } from "@/lib/format/dateTime";
 import { getSummary } from "@/services/medicineOpsService";
+import CallsPanel from "./CallsPanel";
 import MessagesPanel from "./MessagesPanel";
+import PaymentsPanel from "./PaymentsPanel";
 import NumbersPanel from "./NumbersPanel";
 import OrdersPanel from "./OrdersPanel";
 import PatientSheet from "./PatientSheet";
 import PatientsPanel from "./PatientsPanel";
-import TasksPanel from "./TasksPanel";
-import adminStyles from "@/app/admin/styles/AdminSurfaces.module.css";
-import s from "./Medicine.module.css";
+import TasksPanel from "@/features/medicine-queue/TasksPanel";
+import adminStyles from "@/components/ui/styles/StaffSurfaces.module.css";
+import s from "@/components/ui/styles/StaffPanels.module.css";
 
-type Tab = "queue" | "orders" | "patients" | "messages" | "numbers";
-const ADMIN_TABS: Tab[] = [
+type Tab =
+  | "queue"
+  | "orders"
+  | "patients"
+  | "calls"
+  | "payments"
+  | "messages"
+  | "numbers";
+const TABS: Tab[] = [
   "queue",
   "orders",
   "patients",
+  "calls",
+  "payments",
   "messages",
   "numbers",
 ];
-const COACH_TABS: Tab[] = ["queue", "patients"];
 
 export default function MedicineView() {
   const router = useRouter();
@@ -52,9 +63,10 @@ export default function MedicineView() {
   // bumped by any change in a sheet, so every panel's list reloads with the counts
   const [version, setVersion] = useState(0);
 
+  // AdminShell lets only an admin in; a coach works in /coach and a salesperson in /sales
   const { status } = useSessionUser();
-  const role = status === "COACH" || status === "ADMIN" ? status : null;
-  const tabs = role === "COACH" ? COACH_TABS : ADMIN_TABS;
+  const role = status === "ADMIN" ? status : null;
+  const tabs = TABS;
   const asked = params.get("tab") as Tab | null;
   const tab: Tab = asked && tabs.includes(asked) ? asked : "queue";
 
@@ -89,6 +101,8 @@ export default function MedicineView() {
     queue: label("Queue", t?.open),
     orders: label("Orders", o?.toDispatch),
     patients: "Patients",
+    calls: "Calls",
+    payments: "Payments",
     messages: "Messages",
     numbers: "Numbers",
   };
@@ -98,11 +112,7 @@ export default function MedicineView() {
       <PageHead
         className={adminStyles.pageHead}
         title="Medicine"
-        sub={
-          role === "COACH"
-            ? "Your patients' medicines: who needs a call, how their doses are going, and when their supply runs out."
-            : "Everything after a prescription: who needs a call, what to pack and dispatch, and what patients were told."
-        }
+        sub="Everything around a patient: who needs a call, what to pack and dispatch, the consultations coming up, who has paid, and what patients were told."
       />
       <div className={s.bar}>
         {role && (
@@ -153,6 +163,16 @@ export default function MedicineView() {
       {role && tab === "patients" && (
         <PatientsPanel
           isAdmin={role === "ADMIN"}
+          version={version}
+          onOpenPatient={setPatientId}
+          onChanged={changed}
+        />
+      )}
+      {role === "ADMIN" && tab === "calls" && (
+        <CallsPanel version={version} onOpenPatient={setPatientId} />
+      )}
+      {role === "ADMIN" && tab === "payments" && (
+        <PaymentsPanel
           version={version}
           onOpenPatient={setPatientId}
           onChanged={changed}

@@ -16,7 +16,7 @@ import { isValidMobile, mobileDigitsFrom } from "@/lib/format/phone";
 import { errorMessage } from "@/lib/http/apiClient";
 import { addDoctor, updateDoctor } from "@/services/adminService";
 import type { AdminDoctor, DoctorDetails } from "@/types/admin";
-import adminStyles from "@/app/admin/styles/AdminSurfaces.module.css";
+import adminStyles from "@/components/ui/styles/StaffSurfaces.module.css";
 
 type Values = {
   mobile: string;

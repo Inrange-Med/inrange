@@ -10,6 +10,7 @@
  *   GET   /api/care/doses                  Dose reminders and the recent doses -> { schedules, events }
  *   PATCH /api/care/doses/:scheduleId      { weekday?, time?, paused? }
  *   POST  /api/care/doses/events/:id       { status: TAKEN | SKIPPED, reason? } -> { callBy }
+ *   GET   /api/care/coach-plans            The newest diet chart and exercise plan from the coaches -> { diet, fitness }
  * Paying for the cart is the shared checkout: purpose MEDICINE_ORDER, referenceId the cart id.
  * Doc for the rest: docs/backend/medicine-flow.md
  * loadCarePlan() asks for the first three at once; until they exist (404) the Care tab says so.
@@ -17,6 +18,7 @@
 
 import { ApiError, apiRequest, listFrom } from "@/lib/http/apiClient";
 import type {
+  CoachPlans,
   Doses,
   DoseSchedule,
   CarePlan,
@@ -27,6 +29,11 @@ import type {
 } from "@/types/carePlan";
 
 const NO_CART: CartState = { cart: null };
+
+export async function getCoachPlans(): Promise<CoachPlans> {
+  const body = await apiRequest<{ data?: CoachPlans }>("/api/care/coach-plans");
+  return body.data ?? { diet: null, fitness: null };
+}
 
 export async function loadCarePlan(): Promise<CarePlan> {
   try {

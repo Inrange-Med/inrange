@@ -15,8 +15,8 @@ import { listTasks } from "@/services/medicineOpsService";
 import type { OpsTask } from "@/types/medicineOps";
 import TaskSheet from "./TaskSheet";
 import { dueWords, KIND_WORDS, OUTCOME_WORDS, when } from "./words";
-import adminStyles from "@/app/admin/styles/AdminSurfaces.module.css";
-import s from "./Medicine.module.css";
+import adminStyles from "@/components/ui/styles/StaffSurfaces.module.css";
+import s from "@/components/ui/styles/StaffPanels.module.css";
 
 function TaskRow({
   task,

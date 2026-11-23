@@ -5,9 +5,9 @@
 */
 
 import type { OpsPatient } from "@/types/medicineOps";
-import adminStyles from "@/app/admin/styles/AdminSurfaces.module.css";
-import s from "./Medicine.module.css";
-import { when } from "./words";
+import adminStyles from "@/components/ui/styles/StaffSurfaces.module.css";
+import s from "@/components/ui/styles/StaffPanels.module.css";
+import { when } from "@/features/medicine-queue/words";
 
 export default function PatientPrescriptions({
   prescriptions,

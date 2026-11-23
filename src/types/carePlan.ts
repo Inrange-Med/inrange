@@ -3,6 +3,10 @@
  * deliveries. Docs: docs/backend/consultations-and-care.md, docs/backend/medicine-cart.md.
  */
 
+/** What a coach wrote for the patient: the newest version. */
+export type CoachPlan = { text: string; by: string; at: string };
+export type CoachPlans = { diet: CoachPlan | null; fitness: CoachPlan | null };
+
 /** One medicine on a signed prescription. */
 export type PrescriptionItem = {
   medicineName: string;

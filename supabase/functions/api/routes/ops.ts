@@ -61,6 +61,8 @@ import { bookAppointment } from "../lib/booking.ts";
 import * as notices from "../lib/notices.ts";
 import { sendNow } from "../lib/notify.ts";
 import { endRoom, hmsLive, recordingLink } from "../integrations/hms.ts";
+import * as payLinks from "../lib/paymentLinks.ts";
+import { coaching } from "./coach.ts";
 
 export const opsRoutes = new Hono();
 
@@ -303,7 +305,7 @@ opsRoutes.get("/admin/medicine/patients", async (c) => {
   const rows = await sql`
     select pu.id::text as id, ${name} as name, pu.mobile, pp.coach_id::text as "coachId", cu.full_name as "coachName",
       (select f.full_name from users f where f.id = pp.fitness_coach_id) as "fitnessCoachName",
-      pp.salesperson, (select string_agg(d.full_name, ', ' order by t.added_at, t.doctor_id) from care_team_doctors t
+      ${me.role === "ADMIN" ? sql`pp.salesperson` : sql`null::text as salesperson`}, (select string_agg(d.full_name, ', ' order by t.added_at, t.doctor_id) from care_team_doctors t
         join doctors d on d.id = t.doctor_id where t.patient_id = pu.id) as doctors, (select pl.name from subscriptions sb join plans pl on pl.id = sb.plan_id
         where sb.user_id = pu.id and sb.status = 'Active' and sb.ends_at > now() order by sb.ends_at desc limit 1) as "planName",
       lo.status as "lastOrderStatus", ${iso("lo.placed_at")} as "lastOrderAt",
@@ -349,8 +351,11 @@ opsRoutes.get("/admin/medicine/patients/:patientId", async (c) => {
     sql`select e.id, s.medicine, e.status, e.skip_reason, ${iso("e.due_at")} as due from dose_events e join dose_schedules s on s.id = e.schedule_id
         where e.patient_id = ${p.id} and e.due_at < now() + interval '3 days' order by e.due_at desc limit 30`,
     // the plan they are on, with how it was paid for: in the app (its payment), or outside it (the sales form)
-    sql`select pl.name, ${iso("s.ends_at")} as ends, s.id as subscription_id, s.plan_id, ${iso("s.starts_at")} as starts,
-          po.provider_payment_id, ${iso("po.paid_at")} as paid_at
+    sql`select pl.name, ${iso("s.ends_at")} as ends, s.id as subscription_id, s.plan_id, ${iso("s.starts_at")} as starts, s.starts_at as starts_raw,
+          pl.doctor_consults, pl.coach_calls, pl.fitness_calls,
+          (select count(*) from appointments a2 join doctor_slots s2 on s2.id = a2.slot_id where a2.patient_id = s.user_id and a2.status = 'Completed'
+            and (s2.slot_date + s2.start_time) >= (s.starts_at at time zone 'Asia/Kolkata'))::int as consults_done,
+          po.provider_payment_id, ${iso("po.paid_at")} as paid_at, po.amount_paise as paid_paise, coalesce((po.meta->>'paymentLink')::boolean, false) as by_link
         from subscriptions s join plans pl on pl.id = s.plan_id left join payment_orders po on po.id = s.payment_order_id
         where s.user_id = ${p.id} and s.status = 'Active' and s.ends_at > now() order by s.ends_at desc limit 1`,
     p.coach_id ? sql`select id, full_name from users where id = ${p.coach_id}` : Promise.resolve([]),
@@ -382,26 +387,37 @@ opsRoutes.get("/admin/medicine/patients/:patientId", async (c) => {
       and r.created_at <= (select s.created_at from subscriptions s where s.id = ${plan.subscription_id})
     order by r.created_at desc limit 1` : [];
   const priced = await Promise.all(carts.map((k) => priceCart(sql, k as never)));
+  // a coach never sees a sale: who sold it, what was paid and how are admin's alone (23 Nov 2026 call)
+  const isAdmin = me.role === "ADMIN";
+  const [side, links] = await Promise.all([coaching(p.id, plan?.starts_raw ?? null), me.role === "ADMIN" ? payLinks.linksFor(p.id) : Promise.resolve([])]);
   return ok(c, {
     patient: { id: String(p.id), name: p.name, mobile: p.mobile, plan: plan?.name ?? null, planEndsAt: plan?.ends ?? null,
       // how the plan they are on was sold and paid for
-      planSale: plan ? { startedAt: plan.starts, salesperson: sold?.salesperson ?? null, coachPreference: sold?.coach_preference ?? null,
+      planSale: plan && isAdmin ? { startedAt: plan.starts, salesperson: sold?.salesperson ?? null, coachPreference: sold?.coach_preference ?? null,
         note: sold?.note ?? null,
-        paid: plan.provider_payment_id ? { where: "APP", ref: plan.provider_payment_id, at: plan.paid_at, amountRupees: null }
+        paid: plan.provider_payment_id ? { where: plan.by_link ? "LINK" : "APP", ref: plan.provider_payment_id, at: plan.paid_at,
+            amountRupees: plan.by_link ? plan.paid_paise / 100 : null }
           : sold?.payment_ref ? { where: "OUTSIDE", ref: sold.payment_ref, at: plan.starts, amountRupees: sold.amount_paise != null ? sold.amount_paise / 100 : null }
           : null } : null,
       whatsappSince: consent?.at ?? null, coach: coach ? { id: String(coach.id), name: coach.full_name } : null,
       fitnessCoach: fitness ? { id: String(fitness.id), name: fitness.full_name } : null,
-      salesperson: profile?.salesperson ?? null, salespersonId: profile?.salesperson_id ? String(profile.salesperson_id) : null,
+      salesperson: isAdmin ? profile?.salesperson ?? null : null,
+      salespersonId: isAdmin && profile?.salesperson_id ? String(profile.salesperson_id) : null,
       // their doctors, the main one (who joined first) first
       doctors: doctors.map((d) => ({ id: String(d.id), name: d.full_name })),
       // the plan admin put them on that they have not paid for yet (it waits in the app, with any medicines)
-      assignedPlan: assigned ? { planId: String(assigned.plan_id), name: assigned.name, priceRupees: assigned.price_rupees,
+      assignedPlan: assigned && isAdmin ? { planId: String(assigned.plan_id), name: assigned.name, priceRupees: assigned.price_rupees,
         assignedAt: ist(assigned.created_at), salesperson: assigned.salesperson ?? null,
         salespersonId: assigned.salesperson_id ? String(assigned.salesperson_id) : null,
         coachPreference: assigned.coach_preference ?? null, note: assigned.note ?? null } : null },
     // the month's remarks from the coach, which the doctor reads at the follow-up
     remarks: remarks.map((r) => ({ id: String(r.id), at: r.at, by: r.author_name, text: r.text })),
+    // what the plan includes against what has happened since it started, and the coach's side (routes/coach.ts)
+    included: plan ? { doctorConsults: plan.doctor_consults ?? null, coachCalls: plan.coach_calls ?? null, fitnessCalls: plan.fitness_calls ?? null,
+      consultsDone: plan.consults_done, coachCallsMade: side.healthCallsMade, fitnessCallsMade: side.fitnessCallsMade } : null,
+    coaching: { diet: side.diet, fitness: side.fitness, calls: side.calls },
+    // their payment links, newest first (admin)
+    links,
     prescriptions: issued.map((x, i) => ({
       id: String(x.id), version: x.version, current: x.status === "SIGNED", doctorName: x.doctor ?? "", sentAt: x.sent,
       edited: Boolean(x.revises_id) || Boolean(x.appointment_id && issued.slice(i + 1).some((y) => y.appointment_id === x.appointment_id)),
@@ -539,6 +555,9 @@ opsRoutes.put("/admin/medicine/patients/:patientId/plan", async (c) => {
     ? { amountPaise: Math.round(Number(b.paidOutside.amountRupees) * 100), ref: words(b.paidOutside.paymentRef, 80) } : null;
   if (outside && (!(outside.amountPaise > 0) || !outside.ref || outside.ref.length < 4))
     fail(400, "Add the amount received and its payment ID.");
+  if (outside && (await sql`select 1 from plan_recommendations where payment_ref = ${outside.ref}
+                             union all select 1 from payment_orders where provider_payment_id = ${outside.ref} limit 1`).length)
+    fail(409, "That payment ID has been used already.");
   await sql.begin(async (tx) => {
     // the plan not yet paid for (an earlier assignment, or a doctor's old suggestion) gives way to this one
     await tx`delete from plan_recommendations where patient_id = ${p.id}
@@ -551,11 +570,17 @@ opsRoutes.put("/admin/medicine/patients/:patientId/plan", async (c) => {
       await tx`insert into patient_profiles (user_id, salesperson, salesperson_id) values (${p.id}, ${seller.full_name}, ${seller.id})
                on conflict (user_id) do update set salesperson = excluded.salesperson, salesperson_id = excluded.salesperson_id`;
     // paid outside the app: the plan starts now, with no payment in the app behind it
-    if (plan && outside) await startPlan(tx, p.id, plan.id, null);
+    if (plan && outside) {
+      await startPlan(tx, p.id, plan.id, null);
+      await tx`update received_payments set used_for_patient = ${p.id}, used_at = now() where id = ${outside.ref}`;
+    }
     await tx`insert into audit_log (patient_id, actor_id, action)
              values (${p.id}, ${me.id}, ${!plan ? "Plan withdrawn before payment"
                : `${outside ? `Started ${plan.name}, paid outside the app (${outside.ref})` : `Put on ${plan.name}`}${seller ? `, sold by ${seller.full_name}` : ""}`})`;
   });
+  // one way to pay at a time: a payment link still waiting is withdrawn
+  await payLinks.cancelOpen(sql, p.id);
+  if (plan && outside) await notices.planStarted(sql, p.id, plan.name, outside.ref!).then(sendNow).catch((e) => console.error("plan notice", (e as Error).message));
   return ok(c, { planId: plan ? String(plan.id) : null, started: Boolean(plan && outside) },
     !plan ? "Plan withdrawn" : outside ? `${plan.name} started` : `${plan.name}: waiting for the patient to pay in the app`);
 });
@@ -612,8 +637,10 @@ async function takeSlot(tx: TransactionSql, slotId: number) {
 opsRoutes.post("/admin/medicine/patients/:patientId/consultations", async (c) => {
   const me = await admin(c);
   const p = await patientFor(me, intParam(c.req.param("patientId"), "patient"));
-  const b = await body<{ slotId?: unknown; reason?: unknown }>(c);
+  const b = await body<{ slotId?: unknown; reason?: unknown; salespersonId?: unknown }>(c);
   const slotId = intParam(String(b.slotId ?? ""), "time");
+  // 23 Nov 2026 call: a booking names the doctor, the patient and the salesperson who joins after the doctor
+  const seller = b.salespersonId === undefined ? undefined : await salespersonOf(b.salespersonId);
   const { appointmentId, messages } = await sql.begin(async (tx) => {
     const [slot] = await tx`select s.doctor_id, d.full_name from doctor_slots s join doctors d on d.id = s.doctor_id and d.active where s.id = ${slotId}`;
     if (!slot) fail(400, "That time was not found.");
@@ -623,7 +650,11 @@ opsRoutes.post("/admin/medicine/patients/:patientId/consultations", async (c) =>
     // a patient who already has doctors books only with them, so this doctor joins the team
     const [has] = await tx`select 1 from care_team_doctors where patient_id = ${p.id} limit 1`;
     if (has) await careTeam.addDoctor(tx, p.id, slot.doctor_id, me.id);
-    await tx`insert into audit_log (patient_id, actor_id, action) values (${p.id}, ${me.id}, ${`Booked a consultation with ${slot.full_name} for the patient`})`;
+    if (seller)
+      await tx`insert into patient_profiles (user_id, salesperson, salesperson_id) values (${p.id}, ${seller.full_name}, ${seller.id})
+               on conflict (user_id) do update set salesperson = excluded.salesperson, salesperson_id = excluded.salesperson_id`;
+    await tx`insert into audit_log (patient_id, actor_id, action) values (${p.id}, ${me.id},
+               ${`Booked a consultation with ${slot.full_name} for the patient${seller ? `, with ${seller.full_name} from sales` : ""}`})`;
     return { appointmentId: booked.appointmentId, messages: await notices.within(tx, (sp) => notices.appointmentBooked(sp, booked.appointmentId)) };
   });
   await sendNow(messages);
@@ -930,7 +961,7 @@ opsRoutes.post("/admin/coaches", async (c) => {
  * keeps their numbers and sits at the end without a rank. Sold: a plan they sold that the patient has paid for.
  */
 const salespeople = () => sql`
-  select s.id::text as id, s.full_name as "fullName", s.mobile, s.active,
+  select s.id::text as id, s.full_name as "fullName", s.mobile, s.active, (s.user_id is not null and s.active) as "canSignIn",
     case when s.active then (row_number() over (partition by s.active order by s.rank, s.id))::int end as rank,
     (select count(*) from patient_profiles p where p.salesperson_id = s.id)::int as patients,
     (select count(*) from plan_recommendations r where r.salesperson_id = s.id and exists (
@@ -953,17 +984,56 @@ function salesMobile(raw: unknown): string | null {
   return digits;
 }
 
+/**
+ * A salesperson signs in to the sales panel with their mobile number (role SALES). The number must be nobody
+ * else's: never a patient's, a doctor's, a coach's or an admin's, so one sign-in is only ever one kind of person.
+ * A changed number moves the sign-in to the new one and ends every session on the old one.
+ */
+async function salesLogin(tx: TransactionSql, s: { id: number; user_id: number | null; mobile?: string | null }, fullName: string, mobile: string | null) {
+  if (!mobile) {
+    // no number, no sign-in: they are signed out at once, and the panel refuses a sign-in nobody on the team owns
+    if (s.user_id) {
+      await tx`update salespeople set user_id = null where id = ${s.id}`;
+      await tx`update auth_sessions set revoked_at = now() where user_id = ${s.user_id} and revoked_at is null`;
+    }
+    return;
+  }
+  const [taken] = await tx`
+    select u.id, (u.role = 'SALES' and not exists (select 1 from salespeople o where o.user_id = u.id)) as spare
+    from users u where u.mobile = ${mobile} for update`;
+  // a sales sign-in nobody on the team owns any more (its number was cleared earlier) can be taken up again
+  if (taken && taken.id !== s.user_id && !taken.spare)
+    fail(409, "That number already belongs to someone else: a patient, a doctor, a coach, an admin or another salesperson.");
+  if (s.user_id && !taken) {
+    await tx`update users set mobile = ${mobile}, full_name = ${fullName} where id = ${s.user_id} and role = 'SALES'`;
+    if (s.mobile !== mobile) await tx`update auth_sessions set revoked_at = now() where user_id = ${s.user_id} and revoked_at is null`;
+    return;
+  }
+  if (taken && taken.id === s.user_id) {
+    await tx`update users set full_name = ${fullName} where id = ${taken.id}`;
+    return;
+  }
+  // a new sign-in, or the spare one with this number; any old sign-in of theirs ends
+  if (s.user_id) await tx`update auth_sessions set revoked_at = now() where user_id = ${s.user_id} and revoked_at is null`;
+  const [u] = taken ? await tx`update users set full_name = ${fullName} where id = ${taken.id} returning id`
+    : await tx`insert into users (mobile, role, full_name, onboarding_completed) values (${mobile}, 'SALES', ${fullName}, true) returning id`;
+  await tx`update salespeople set user_id = ${u.id} where id = ${s.id}`;
+}
+
 opsRoutes.post("/admin/salespeople", async (c) => {
   await admin(c);
   const b = await body<{ fullName?: unknown; mobile?: unknown }>(c);
   const fullName = salesName(b.fullName);
   if (fullName.length < 2) fail(400, "Add the salesperson's full name.");
   const mobile = salesMobile(b.mobile);
-  const [s] = await sql`
-    insert into salespeople (full_name, mobile, rank) values (${fullName}, ${mobile}, (select coalesce(max(rank), 0) + 1 from salespeople))
-    on conflict (lower(full_name)) do nothing returning id`;
-  if (!s) fail(409, "Someone with that name is on the list already.");
-  return ok(c, await salespeople(), `${fullName} added to the sales team`);
+  await sql.begin(async (tx) => {
+    const [s] = await tx`
+      insert into salespeople (full_name, mobile, rank) values (${fullName}, ${mobile}, (select coalesce(max(rank), 0) + 1 from salespeople))
+      on conflict (lower(full_name)) do nothing returning id, user_id`;
+    if (!s) fail(409, "Someone with that name is on the list already.");
+    await salesLogin(tx, s as never, fullName, mobile);
+  });
+  return ok(c, await salespeople(), mobile ? `${fullName} added. They sign in with this number.` : `${fullName} added. Add a mobile number so they can sign in.`);
 });
 
 opsRoutes.patch("/admin/salespeople/:id", async (c) => {
@@ -983,10 +1053,18 @@ opsRoutes.patch("/admin/salespeople/:id", async (c) => {
       await tx`update patient_profiles set salesperson = ${fullName} where salesperson_id = ${id}`;
       await tx`update plan_recommendations set salesperson = ${fullName} where salesperson_id = ${id}`;
     }
-    if (b.mobile !== undefined) await tx`update salespeople set mobile = ${salesMobile(b.mobile)} where id = ${id}`;
-    if (typeof b.active === "boolean" && b.active !== s.active)
-      // back on the team: at the bottom of the ranking. Off it: their patients keep their name until reassigned.
+    if (b.fullName !== undefined && s.user_id) await tx`update users set full_name = ${salesName(b.fullName)} where id = ${s.user_id} and role = 'SALES'`;
+    if (b.mobile !== undefined) {
+      const mobile = salesMobile(b.mobile);
+      await salesLogin(tx, s as never, b.fullName !== undefined ? salesName(b.fullName) : s.full_name, mobile);
+      await tx`update salespeople set mobile = ${mobile} where id = ${id}`;
+    }
+    if (typeof b.active === "boolean" && b.active !== s.active) {
+      // back on the team: at the bottom of the ranking. Off it: their patients keep their name until reassigned,
+      // and they are signed out at once (the sales panel also refuses anyone not on the team).
       await tx`update salespeople set active = ${b.active}, rank = (select coalesce(max(rank), 0) + 1 from salespeople) where id = ${id}`;
+      if (!b.active && s.user_id) await tx`update auth_sessions set revoked_at = now() where user_id = ${s.user_id} and revoked_at is null`;
+    }
     if (b.rank !== undefined) {
       const order = (await tx`select id from salespeople where active order by rank, id for update`).map((r) => r.id as number);
       const from = order.indexOf(id);

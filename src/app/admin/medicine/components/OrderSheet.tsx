@@ -23,10 +23,10 @@ import {
 } from "@/services/medicineOpsService";
 import { combineDateAndTime, toApiDate } from "@/lib/format/dateTime";
 import type { OpsOrder } from "@/types/medicineOps";
-import { ORDER_WORDS, when } from "./words";
+import { ORDER_WORDS, when } from "@/features/medicine-queue/words";
 import formStyles from "@/components/ui/styles/FormControls.module.css";
-import adminStyles from "@/app/admin/styles/AdminSurfaces.module.css";
-import s from "./Medicine.module.css";
+import adminStyles from "@/components/ui/styles/StaffSurfaces.module.css";
+import s from "@/components/ui/styles/StaffPanels.module.css";
 
 /** An India-time day as the end of that day's deliveries (7 pm). */
 const dayToIso = (day: string) => combineDateAndTime(day, "19:00");

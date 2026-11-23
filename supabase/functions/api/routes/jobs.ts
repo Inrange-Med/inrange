@@ -12,6 +12,7 @@ import { handleReply } from "../lib/replies.ts";
 import { capturedPaymentFor, safeEqual } from "../integrations/razorpay.ts";
 import * as wa from "../integrations/whatsapp.ts";
 import { fulfil } from "./payments.ts";
+import { checkOpen } from "../lib/paymentLinks.ts";
 
 export const jobRoutes = new Hono();
 
@@ -75,6 +76,8 @@ jobRoutes.post("/jobs/tick", async (c) => {
   await run("followups", () => flow.advanceDueFollowups());
   await run("orders", () => flow.checkOrders());
   await run("doses", () => flow.checkDoses());
+  // payment links still waiting: a paid one starts its plan even if the webhook never came
+  await run("paymentLinks", () => checkOpen());
   if (await flow.firstRunToday("refills")) await run("refills", () => flow.checkRefills(), true);
   if (await flow.firstRunToday("reconcile")) await run("reconcile", () => reconcile(), true);
   await run("messages", () => sendDue(Math.max(10_000, 100_000 - (Date.now() - started))));

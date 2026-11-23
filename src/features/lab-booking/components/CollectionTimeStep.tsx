@@ -3,7 +3,7 @@
 /**
  * Step 4: the day and time. The app's slot chooser (Arhaan's Booking: days, then times grouped
  * Morning, Afternoon and Evening) over Redcliffe's one-hour windows at the chosen address. Redcliffe
- * offers times up to 4 days ahead, so four collection days are shown.
+ * offers times up to 4 days ahead; we book within two days of today (23 Nov 2026 call), so three days are shown.
  */
 
 import { useCallback } from "react";
@@ -39,15 +39,13 @@ export default function CollectionTimeStep({
   return (
     <>
       {fastingSentence(labPackage.fastingNote) && (
-        <p className={styles.fast}>
-          {fastingSentence(labPackage.fastingNote)}
-        </p>
+        <p className={styles.fast}>{fastingSentence(labPackage.fastingNote)}</p>
       )}
       <SlotPicker
         loadSlots={loadSlots}
         onConfirm={async (slot) => onChoose(slot)}
         confirmLabel="Continue with"
-        dayCount={4}
+        dayCount={3}
         closedWeekdays={NO_CLOSED_DAYS}
         note="The collector comes within the hour you pick."
       />

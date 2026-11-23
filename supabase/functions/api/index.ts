@@ -20,6 +20,9 @@ import { medicineRoutes } from "./routes/medicines.ts";
 import { opsRoutes } from "./routes/ops.ts";
 import { consultationRoutes } from "./routes/consultations.ts";
 import { homeRoutes } from "./routes/home.ts";
+import { salesRoutes } from "./routes/sales.ts";
+import { coachRoutes } from "./routes/coach.ts";
+import { adminSalesRoutes } from "./routes/adminSales.ts";
 
 // A database socket closing after a response can raise an error nobody awaits; in Deno that kills the
 // worker and the gateway keeps routing requests to it until it times out. Log it instead of dying.
@@ -75,6 +78,9 @@ app.route("/api", jobRoutes);
 app.route("/api", medicineRoutes);
 app.route("/api", opsRoutes);
 app.route("/api", homeRoutes);
+app.route("/api", salesRoutes);
+app.route("/api", coachRoutes);
+app.route("/api", adminSalesRoutes);
 
 app.notFound((c) => c.json({ success: false, message: "This feature is not available yet." }, 404));
 app.onError((err, c) => {
