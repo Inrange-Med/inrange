@@ -295,6 +295,16 @@ careRoutes.get("/care-team", async (c) => {
   return ok(c, { doctor: d ? doctorSummary(d) : null });
 });
 
+/** What the patient's coaches wrote for them (23 Nov 2026 call): the newest diet chart and exercise plan, with who wrote each. */
+careRoutes.get("/care/coach-plans", async (c) => {
+  const me = await requirePatient(c);
+  const rows = await sql`select distinct on (kind) kind, text, author_name as by,
+      to_char(created_at at time zone 'Asia/Kolkata', 'YYYY-MM-DD"T"HH24:MI:SS"+05:30"') as at
+    from coach_plans where patient_id = ${me.id} order by kind, created_at desc`;
+  const of = (kind: string) => rows.find((r) => r.kind === kind) ?? null;
+  return ok(c, { diet: of("DIET"), fitness: of("FITNESS") });
+});
+
 careRoutes.get("/care/prescription/current", async (c) => {
   const me = await requirePatient(c);
   const [p] = await sql`

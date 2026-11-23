@@ -7,7 +7,9 @@
     payment ID). Read only.
   - Put on a plan, not paid yet: it waits in the patient's app (with any medicines, one payment). Change it
     or withdraw it.
-  - No plan: the form. The length, who sold it, the kind of coach the customer asked for, a note, and how
+  - No plan: a payment link (PaymentLinks, beside this in the sheet) is the usual way since the 23 Nov 2026
+    call: its payment starts the plan by itself. This form is for the other two ways.
+  - No plan, the other ways: the form. The length, who sold it, the kind of coach the customer asked for, a note, and how
     it is paid: in the app (the usual way; the amount and payment ID then come from that payment by
     themselves), or already paid outside the app (a payment link, a transfer): admin types the amount and
     its payment ID and the plan starts at once.
@@ -23,8 +25,8 @@ import { errorMessage } from "@/lib/http/apiClient";
 import { assignPlan, listSalespeople } from "@/services/medicineOpsService";
 import { listPlans } from "@/services/subscriptionService";
 import type { OpsPatient } from "@/types/medicineOps";
-import adminStyles from "@/app/admin/styles/AdminSurfaces.module.css";
-import s from "./Medicine.module.css";
+import adminStyles from "@/components/ui/styles/StaffSurfaces.module.css";
+import s from "@/components/ui/styles/StaffPanels.module.css";
 
 type Paying = "APP" | "OUTSIDE";
 
@@ -71,7 +73,9 @@ export default function PlanSale({
               {sale.paid
                 ? sale.paid.where === "APP"
                   ? `Paid in the app${sale.paid.at ? `, ${shortDate(sale.paid.at)}` : ""}. Payment ID `
-                  : `Paid outside the app${sale.paid.amountRupees != null ? `, ${formatRupees(sale.paid.amountRupees)}` : ""}. Payment ID `
+                  : sale.paid.where === "LINK"
+                    ? `Paid on a payment link${sale.paid.amountRupees != null ? `, ${formatRupees(sale.paid.amountRupees)}` : ""}${sale.paid.at ? `, ${shortDate(sale.paid.at)}` : ""}. Payment ID `
+                    : `Paid outside the app${sale.paid.amountRupees != null ? `, ${formatRupees(sale.paid.amountRupees)}` : ""}. Payment ID `
                 : "Started without a payment on record."}
               {sale.paid && <span className="num">{sale.paid.ref}</span>}
             </span>
@@ -143,6 +147,8 @@ export default function PlanSale({
               <span className="num">{formatRupees(assigned.priceRupees)}</span>:
               waiting for the patient to pay in the app
             </>
+          ) : data.links.some((link) => link.status === "CREATED") ? (
+            "No plan yet: a payment link is waiting"
           ) : (
             "No plan yet"
           )}
@@ -172,7 +178,9 @@ export default function PlanSale({
             disabled={busy}
             onClick={() => setChoosing(true)}
           >
-            {assigned ? "Change the sale" : "Fill in the sales form"}
+            {assigned
+              ? "Change the sale"
+              : "Paid another way, or pays in the app"}
           </button>
           {assigned && (
             <button

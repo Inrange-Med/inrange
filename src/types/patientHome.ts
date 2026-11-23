@@ -45,6 +45,8 @@ export type NextStep =
       bill: Bill;
       hasAddress: boolean;
       followedBy: "MEDICINES" | null;
+      /** the plan was sold on a payment link: Pay opens that link (Razorpay's page), at the price agreed on the call */
+      payUrl?: string;
       /** the plan the doctor prescribed is in this bill with the medicines: one payment */
       withPlan?: boolean;
     }

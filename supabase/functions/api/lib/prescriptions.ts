@@ -287,10 +287,12 @@ export async function renderRx(doctor: Doctor, patientId: number, rx: Row, signe
   return path;
 }
 
-/** The months a prescription is issued for: without an active plan (the nano plan) one month. */
-export async function issueMonths(patientId: number, asked: number) {
-  const onPlan = await hasPlan(sql, patientId);
-  return { onPlan, months: onPlan ? Math.min(12, Math.max(1, Math.round(asked))) : 1 };
+/**
+ * The months a prescription is issued for: always one, plan or not (23 Nov 2026 call: "every prescription is for
+ * one month only", and a plan has nothing to do with it). The next month's comes from the next consultation.
+ */
+export async function issueMonths(patientId: number, _asked: number) {
+  return { onPlan: await hasPlan(sql, patientId), months: 1 };
 }
 
 // ---------------------------------------------------------------- issuing

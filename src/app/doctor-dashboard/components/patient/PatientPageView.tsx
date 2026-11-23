@@ -236,6 +236,22 @@ function Loaded({
   const current = data.prescriptions.find((rx) => rx.current) ?? null;
   const last = data.prescriptions[0] ?? null;
   const report = data.reports[0] ?? null;
+  // the coach's diet chart and exercise plan, then (beside the form) their latest remark
+  const plans = [
+    data.coach.diet && { key: "diet", title: "Diet chart", ...data.coach.diet },
+    data.coach.fitness && {
+      key: "fitness",
+      title: "Exercise plan",
+      ...data.coach.fitness,
+    },
+  ].filter((note) => !!note);
+  const latestRemark = data.coachRemarks[0];
+  const fromCoach = [
+    ...(latestRemark
+      ? [{ key: "remark", title: "Latest remark", ...latestRemark }]
+      : []),
+    ...plans,
+  ];
 
   // the call: open from 10 minutes before the start until the doctor ends it (the server decides; it stays
   // open after a mid-call send, so a dropped call can be rejoined from here)
@@ -487,13 +503,28 @@ function Loaded({
 
       {/* the form stays mounted while another section is looked at, so nothing typed is lost */}
       <div className={styles.section} hidden={tab !== "prescriptions"}>
+        {writing && fromCoach.length > 0 && (
+          // what the coach wrote, beside the form while the doctor writes (23 Nov 2026 call)
+          <details className={styles.coachAside}>
+            <summary>From the coach</summary>
+            <ol className={styles.remarks}>
+              {fromCoach.map((note) => (
+                <li key={note.key}>
+                  <p className={`${styles.remarkBy} num`}>
+                    {note.title}: {note.by}, {dayAndTime(note.at)}
+                  </p>
+                  <p className={styles.remarkText}>{note.text}</p>
+                </li>
+              ))}
+            </ol>
+          </details>
+        )}
         {writing ? (
           <PrescriptionWriter
             key={writing.turn}
             target={writing.target}
             initial={writing.initial}
             last={last}
-            onPlan={p.onPlan}
             onClose={() => {
               setWriting(null);
               reload();
@@ -605,6 +636,28 @@ function Loaded({
         <h2 id="remarks-heading" className={clinicStyles.h2}>
           Coach remarks
         </h2>
+        {(data.coach.healthCallsMade > 0 ||
+          data.coach.fitnessCallsMade > 0) && (
+          <p className={`${styles.remarkBy} num`}>
+            {data.coach.healthCallsMade} coach calls and{" "}
+            {data.coach.fitnessCallsMade} fitness calls on this plan
+            {data.coach.lastCallOn
+              ? `, the last on ${shortDate(data.coach.lastCallOn)}`
+              : ""}
+          </p>
+        )}
+        {plans.length > 0 && (
+          <ol className={styles.remarks}>
+            {plans.map((note) => (
+              <li key={note.key}>
+                <p className={`${styles.remarkBy} num`}>
+                  {note.title}: {note.by}, {dayAndTime(note.at)}
+                </p>
+                <p className={styles.remarkText}>{note.text}</p>
+              </li>
+            ))}
+          </ol>
+        )}
         {data.coachRemarks.length === 0 ? (
           <p className={clinicStyles.empty}>
             No remarks yet. The patient&apos;s coach writes here how the month

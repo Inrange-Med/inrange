@@ -58,7 +58,7 @@ def main():
     a, b_ = f"Test Seller A{RUN}", f"Test Seller B{RUN}"
 
     # ---------------------------------------------------------------- the sales team
-    s, b = call("POST", "/api/admin/salespeople", admin, {"fullName": a, "mobile": "9800012345"})
+    s, b = call("POST", "/api/admin/salespeople", admin, {"fullName": a, "mobile": f"980000{RUN[-4:]}"})
     step("a salesperson is added", s == 200, b)
     s, b = call("POST", "/api/admin/salespeople", admin, {"fullName": b_})
     step("a second, without a mobile", s == 200, b)

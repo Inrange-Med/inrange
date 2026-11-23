@@ -18,7 +18,7 @@ import { searchMedicines } from "@/services/consultationService";
 import { getUnmatched, matchMedicine } from "@/services/medicineOpsService";
 import type { MedicineSearch } from "@/types/consultation";
 import type { UnmatchedLine } from "@/types/medicineOps";
-import s from "./Medicine.module.css";
+import s from "@/components/ui/styles/StaffPanels.module.css";
 
 function MatchLine({
   taskId,

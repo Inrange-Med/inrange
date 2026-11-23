@@ -6,8 +6,12 @@ import { env } from "./env.ts";
 import { sql } from "./db.ts";
 import { fail } from "./http.ts";
 
-/** COACH: a health coach (docs/backend/medicine-flow.md); sees only their own patients in the medicine queue. */
-export type Role = "PATIENT" | "DOCTOR" | "ADMIN" | "COACH";
+/**
+ * COACH: a health or fitness coach; reaches only their own patients (routes/coach.ts, and the medicine queue).
+ * SALES: a salesperson; reaches only the sales panel and the patients assigned to them (routes/sales.ts).
+ * ADMIN passes every role check below; each route still decides what an admin may do there.
+ */
+export type Role = "PATIENT" | "DOCTOR" | "ADMIN" | "COACH" | "SALES";
 export type AuthUser = { id: number; role: Role; mobile: string; fullName: string | null; sid: string };
 
 const key = () => {

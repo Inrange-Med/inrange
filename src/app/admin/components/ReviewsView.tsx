@@ -25,7 +25,7 @@ import type {
   ReviewDecision,
 } from "@/types/admin";
 import ReviewItem from "./ReviewItem";
-import adminStyles from "@/app/admin/styles/AdminSurfaces.module.css";
+import adminStyles from "@/components/ui/styles/StaffSurfaces.module.css";
 
 const LAB_WORDS: Record<NonNullable<AwaitingLab["status"]>, string> = {
   PAYMENT_PENDING: "Not paid yet",

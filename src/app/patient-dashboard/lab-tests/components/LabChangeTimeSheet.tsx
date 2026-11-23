@@ -2,7 +2,7 @@
 
 /**
  * Moving a booked home test to another time, in one sheet: the same day and time chooser as booking
- * (Redcliffe gives times up to 4 days ahead). Redcliffe allows two moves, and none once a collector
+ * (today or the next two days: 23 Nov 2026 call). Redcliffe allows two moves, and none once a collector
  * is assigned; the page only opens this sheet when a move is allowed.
  */
 
@@ -64,7 +64,7 @@ export default function LabChangeTimeSheet({
           loadSlots={loadSlots}
           onConfirm={move}
           confirmLabel="Move to"
-          dayCount={4}
+          dayCount={3}
           closedWeekdays={NO_CLOSED_DAYS}
         />
       )}

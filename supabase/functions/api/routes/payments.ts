@@ -2,7 +2,9 @@
 //   POST /payments/orders        { purpose, referenceId, reason? } -> PaymentOrder (the server prices it)
 //   POST /payments/verify        { orderId, razorpayPaymentId, razorpaySignature } -> { status: "PAID", purpose, referenceId }
 //   GET  /payments               the patient's paid orders (invoices), newest first
-//   POST /webhooks/razorpay      X-Razorpay-Signature over the raw body; payment.captured / order.paid / payment.failed
+//   GET  /payments/link-return   where Razorpay sends the customer after a payment link; checks the link, then the app
+//   POST /webhooks/razorpay      X-Razorpay-Signature over the raw body; payment.captured / order.paid / payment.failed,
+//                                and payment_link.paid / .cancelled / .expired (lib/paymentLinks.ts)
 //                                (register ...?forceFunctionRegion=ap-south-1 in the Dashboard, Test and Live separately)
 //   POST /webhooks/redcliffe     x-redcliffe-secret header or ?token=; moves lab bookings and eligibility along
 // Mock mode (no Razorpay keys): orders are "order_mock_..." with razorpayKeyId "rzp_mock"; verify accepts them unsigned.
@@ -22,6 +24,7 @@ import { deliverQueued, onMedicinePaid, onMedicinePaymentFailed } from "../lib/m
 import { spokenSlot } from "../lib/hours.ts";
 import * as notices from "../lib/notices.ts";
 import { sendNow } from "../lib/notify.ts";
+import * as links from "../lib/paymentLinks.ts";
 
 export const paymentRoutes = new Hono();
 
@@ -257,6 +260,16 @@ paymentRoutes.get("/payments", async (c) => {
   })), "Payments");
 });
 
+/**
+ * Where Razorpay sends the customer after paying on a payment link. Nothing in the address is trusted: it only
+ * names a link of ours, which is then checked with Razorpay (the plan starts there). Then on to the app.
+ */
+paymentRoutes.get("/payments/link-return", async (c) => {
+  const id = String(c.req.query("razorpay_payment_link_id") ?? "");
+  if (/^plink_[A-Za-z0-9]+$/.test(id)) await links.check(id).catch((e) => console.error("link return", id, (e as Error).message));
+  return c.redirect(`${env.appUrl}/patient-dashboard`, 302);
+});
+
 // ---------------------------------------------------------------- webhooks (no user auth; trust is the signature)
 
 paymentRoutes.post("/webhooks/razorpay", async (c) => {
@@ -269,9 +282,34 @@ paymentRoutes.post("/webhooks/razorpay", async (c) => {
   if (eventId && (await sql`select 1 from razorpay_events where id = ${eventId}`).length) return c.json({ success: true });
   const event = JSON.parse(raw);
   const payment = event?.payload?.payment?.entity ?? {};
+  // a payment link's events (payment_link.paid, .cancelled, .expired): the body only tells us which link to ask
+  // Razorpay about; lib/paymentLinks.ts check() reads its real state and starts the plan
+  const linkId = String(event.event ?? "").startsWith("payment_link.") ? String(event?.payload?.payment_link?.entity?.id ?? "") : "";
+  if (linkId) {
+    await links.check(linkId);
+    if (eventId) await sql`insert into razorpay_events (id) values (${eventId}) on conflict do nothing`;
+    return c.json({ success: true });
+  }
   const orderId = payment.order_id ?? event?.payload?.order?.entity?.id;
   const [o] = orderId ? await sql`select * from payment_orders where id = ${orderId}` : [];
-  if (!o) return c.json({ success: true }); // not ours (or another environment's)
+  if (!o) {
+    // captured money that is no order of ours: one of our links (its own event may come later, so the payer's
+    // waiting link is checked now), or a payment taken outside the app, kept for admin to put against a patient
+    if (event.event === "payment.captured" && /^pay_[A-Za-z0-9]+$/.test(String(payment.id ?? "")) && payment.currency === "INR") {
+      const mobile = rzp.mobileOf(payment.contact);
+      const waiting = mobile ? await sql`select l.id from payment_links l join users u on u.id = l.patient_id
+        where u.mobile = ${mobile} and l.status = 'CREATED' and l.amount_paise = ${Number(payment.amount)}` : [];
+      for (const l of waiting) await links.check(l.id).catch((e) => console.error("link check", l.id, (e as Error).message));
+      await sql`insert into received_payments (id, amount_paise, mobile, email, method, description)
+        select ${payment.id}, ${Number(payment.amount)}, ${mobile}, ${String(payment.email ?? "").slice(0, 120) || null},
+          ${String(payment.method ?? "").slice(0, 30) || null}, ${String(payment.description ?? "").slice(0, 200) || null}
+        where not exists (select 1 from payment_orders where provider_payment_id = ${payment.id})
+          and not exists (select 1 from plan_recommendations where payment_ref = ${payment.id})
+        on conflict (id) do nothing`;
+      if (eventId) await sql`insert into razorpay_events (id) values (${eventId}) on conflict do nothing`;
+    }
+    return c.json({ success: true }); // not ours (or another environment's)
+  }
   if (event.event === "payment.captured" || event.event === "order.paid") {
     // both events mean the money is captured; it must be this order's exact amount in INR
     if (payment.amount !== undefined && (Number(payment.amount) !== o.amount_paise || payment.currency !== "INR")) {

@@ -10,16 +10,17 @@ import { useState } from "react";
 import { useToast } from "@/components/ui/ToastProvider";
 import { errorMessage } from "@/lib/http/apiClient";
 import { addCoachRemark } from "@/services/medicineOpsService";
-import type { OpsPatient } from "@/types/medicineOps";
-import adminStyles from "@/app/admin/styles/AdminSurfaces.module.css";
-import s from "./Medicine.module.css";
-import { when } from "./words";
+import adminStyles from "@/components/ui/styles/StaffSurfaces.module.css";
+import s from "@/components/ui/styles/StaffPanels.module.css";
+import { when } from "@/features/medicine-queue/words";
 
 export default function CoachRemarks({
-  data,
+  patientId,
+  remarks,
   onSaved,
 }: {
-  data: OpsPatient;
+  patientId: string;
+  remarks: { id: string; at: string; by: string; text: string }[];
   onSaved: () => void;
 }) {
   const toast = useToast();
@@ -30,7 +31,7 @@ export default function CoachRemarks({
     if (busy || text.trim().length < 3) return;
     setBusy(true);
     try {
-      await addCoachRemark(data.patient.id, text.trim());
+      await addCoachRemark(patientId, text.trim());
       toast("Remark saved. The doctor sees it at the follow-up.");
       setText("");
       onSaved();
@@ -62,11 +63,11 @@ export default function CoachRemarks({
           {busy ? "Saving" : "Save the remark"}
         </button>
       </span>
-      {data.remarks.length === 0 ? (
+      {remarks.length === 0 ? (
         <p className={adminStyles.empty}>No remarks yet.</p>
       ) : (
         <ol className={s.timeline}>
-          {data.remarks.map((remark) => (
+          {remarks.map((remark) => (
             <li key={remark.id}>
               <time dateTime={remark.at}>{when(remark.at)}</time>
               <span>

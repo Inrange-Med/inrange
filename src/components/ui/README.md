@@ -22,6 +22,7 @@ never calls a service. Each `X.tsx` default-exports `X`; its styles sit beside i
 | `QuantityStepper.tsx` | A count with minus and plus (the doctor's pack count, the patient's cart). |
 | `Sheet.tsx` | Bottom sheet on a phone, centred panel on a laptop. |
 | `SlotPicker.tsx` | Week, day, time, confirm; days come from `@/lib/calendar/bookingWeeks` (India time). |
+| `StaffShell.tsx` | The workspace around a staff area (admin, sales, coach): rail, top bar, dock, toast. Lets in one role and sends anyone else to their own home. |
 | `ToastProvider.tsx` | The confirmation toast; pages call `useToast()`. |
 | `PilotLegalPage.tsx` | The pilot privacy, terms and grievance pages: title, pilot note and plain sections. |
 | `Wordmark.tsx` | The inrange wordmark (geometry in `wordmarkPaths.ts`; the landing page reuses it). |
@@ -34,3 +35,5 @@ never calls a service. Each `X.tsx` default-exports `X`; its styles sit beside i
 | `FormControls.module.css` | `formStyles` | Fields, labels, inputs, the full-width action (`go`), quiet links, round icon buttons, hints, errors, the spinner. |
 | `CardSurface.module.css` | `surfaceStyles` | The bare card surface (`card`). |
 | `PageLayout.module.css` | `layoutStyles` | The page column (`page`, `page narrow`). |
+| `StaffSurfaces.module.css` | `adminStyles` or `surfaceStyles` | The staff areas' page, panel, pills and text buttons. |
+| `StaffPanels.module.css` | `s` | The staff areas' lists, sheets, facts, timelines, chips and small forms. |

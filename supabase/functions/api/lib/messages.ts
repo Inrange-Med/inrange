@@ -118,7 +118,8 @@ export const TEMPLATES = {
   },
   REPORT_READY: {
     name: "blood_test_report_ready",
-    body: "Hi {{1}}, your blood test report is ready. You can see it in the inrange app, and your care team sees it too.",
+    // 23 Nov 2026 call: once the report is out, someone on the team calls to book the doctor's consultation
+    body: "Hi {{1}}, your blood test report is ready. You can see it in the inrange app. Someone from our team will call you to book your video consultation with a doctor.",
     examples: ["Asha"],
     buttons: [{ kind: "URL", label: "See the report", path: "/patient-dashboard/reports" }],
   },
@@ -133,6 +134,13 @@ export const TEMPLATES = {
     body: "Hi {{1}}, the medical team has reviewed your report and left you a note in the inrange app.",
     examples: ["Asha"],
     buttons: [{ kind: "URL", label: "See the note", path: "/patient-dashboard/reports" }],
+  },
+  // a plan paid for on a payment link (23 Nov 2026 call): "your payment is received, your coach will be in touch"
+  PLAN_STARTED: {
+    name: "plan_payment_received",
+    body: "Hi {{1}}, we have received your payment for {{2}}. Your plan has started, and your health coach will call you soon.",
+    examples: ["Asha", "the 3 month plan"],
+    buttons: [{ kind: "URL", label: "Open the app", path: "/patient-dashboard" }],
   },
   PAYMENT_FAILED: {
     name: "payment_not_completed",

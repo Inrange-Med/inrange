@@ -153,6 +153,11 @@ export async function reviewDecided(tx: Tx, patientId: number, decision: "APPROV
   })];
 }
 
+/** A plan started from a paid payment link: the patient hears the money arrived and what happens next. */
+export async function planStarted(tx: Tx, patientId: number, planName: string, linkId: string): Promise<Id[]> {
+  return [await queueMessage(tx, { patientId, kind: "PLAN_STARTED", values: [await firstName(tx, patientId), planName], dedupeKey: `plan:${linkId}:started` })];
+}
+
 /** A chat message: the other side hears there is one, at most once an hour per conversation. The words stay in the app. */
 export async function chatMessage(s: { id: number; patient_id: number; doctor_id: number }, from: "PATIENT" | "DOCTOR"): Promise<Id[]> {
   const hour = new Date().toISOString().slice(0, 13);

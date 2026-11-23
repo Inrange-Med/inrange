@@ -23,7 +23,10 @@ import { formatRupees } from "@/lib/format/money";
 import { spacedMobile } from "@/lib/format/phone";
 import { errorMessage } from "@/lib/http/apiClient";
 import {
+  actOnPaymentLink,
   getPatient,
+  listStaffPlans,
+  makePaymentLink,
   listCoaches,
   listSalespeople,
   playReply,
@@ -44,14 +47,16 @@ import {
   STATUS_WORDS,
   WEEKDAYS,
   when,
-} from "./words";
-import CoachRemarks from "./CoachRemarks";
+} from "@/features/medicine-queue/words";
+import CoachRemarks from "@/features/coaching/CoachRemarks";
+import CoachingSections from "@/features/coaching/CoachingSections";
 import PatientConsultations from "./PatientConsultations";
 import PatientPrescriptions from "./PatientPrescriptions";
 import PlanSale from "./PlanSale";
+import PaymentLinks from "@/features/payment-links/PaymentLinks";
 import formStyles from "@/components/ui/styles/FormControls.module.css";
-import adminStyles from "@/app/admin/styles/AdminSurfaces.module.css";
-import s from "./Medicine.module.css";
+import adminStyles from "@/components/ui/styles/StaffSurfaces.module.css";
+import s from "@/components/ui/styles/StaffPanels.module.css";
 
 type Moment = { at: string; key: string; node: React.ReactNode };
 
@@ -417,6 +422,11 @@ export default function PatientSheet({
     patientId ? `medicine-patient-${patientId}` : null,
     () => getPatient(patientId!),
   );
+  const plans = useApiResource(isAdmin ? "staff-plans" : null, listStaffPlans);
+  const sellers = useApiResource(
+    isAdmin ? "salespeople" : null,
+    listSalespeople,
+  );
   // the last patient's record stays loaded while the next one loads: never show or act on it
   const data = patient.data?.patient.id === patientId ? patient.data : null;
   const refresh = () => {
@@ -455,11 +465,46 @@ export default function PatientSheet({
               <dt>Plan</dt>
               <dd>
                 {isAdmin ? (
-                  <PlanSale
-                    key={data.patient.id}
-                    data={data}
-                    onSaved={refresh}
-                  />
+                  <>
+                    <PlanSale
+                      key={data.patient.id}
+                      data={data}
+                      onSaved={refresh}
+                    />
+                    <PaymentLinks
+                      key={`links-${data.patient.id}`}
+                      links={data.links}
+                      plans={plans.data ?? []}
+                      canMake={!data.patient.plan}
+                      anyDiscount
+                      sellers={(sellers.data ?? [])
+                        .filter((p) => p.active)
+                        .map((p) => ({
+                          id: p.id,
+                          label: `${p.rank}. ${p.fullName}`,
+                        }))}
+                      defaultSeller={data.patient.salespersonId ?? ""}
+                      onMake={(form) => makePaymentLink(data.patient.id, form)}
+                      onAct={actOnPaymentLink}
+                      onChanged={refresh}
+                    />
+                    {data.included && (
+                      <span
+                        className={`${s.lineItem} ${adminStyles.muted} num`}
+                      >
+                        {[
+                          data.included.doctorConsults != null &&
+                            `${data.included.consultsDone} of ${data.included.doctorConsults} doctor consultations`,
+                          data.included.coachCalls != null &&
+                            `${data.included.coachCallsMade} of ${data.included.coachCalls} coach calls`,
+                          data.included.fitnessCalls != null &&
+                            `${data.included.fitnessCallsMade} of ${data.included.fitnessCalls} fitness calls`,
+                        ]
+                          .filter(Boolean)
+                          .join(", ")}
+                      </span>
+                    )}
+                  </>
                 ) : (
                   (data.patient.plan ??
                   (data.patient.assignedPlan
@@ -561,7 +606,29 @@ export default function PatientSheet({
             isAdmin={isAdmin}
             onChanged={refresh}
           />
-          <CoachRemarks key={data.patient.id} data={data} onSaved={refresh} />
+          <CoachingSections
+            key={`coaching-${data.patient.id}`}
+            patientId={data.patient.id}
+            can={{ health: true, fitness: true }}
+            diet={data.coaching.diet}
+            fitness={data.coaching.fitness}
+            calls={data.coaching.calls}
+            included={
+              data.included && {
+                coachCalls: data.included.coachCalls,
+                fitnessCalls: data.included.fitnessCalls,
+                healthCallsMade: data.included.coachCallsMade,
+                fitnessCallsMade: data.included.fitnessCallsMade,
+              }
+            }
+            onSaved={refresh}
+          />
+          <CoachRemarks
+            key={data.patient.id}
+            patientId={data.patient.id}
+            remarks={data.remarks}
+            onSaved={refresh}
+          />
           <PatientPrescriptions prescriptions={data.prescriptions} />
 
           {data.doses.schedules.length > 0 && (

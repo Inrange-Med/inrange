@@ -27,6 +27,7 @@
 // The page says where a new prescription is written (`write`): a consultation of the doctor's that still waits for
 // one, else the patient alone. The doctor never chooses.
 //   GET  /medicines/search?q=                         the master list, forgiving: { matches, didYouMean }
+import { coaching } from "./coach.ts";
 import { Hono } from "hono";
 import type { Context } from "hono";
 import { sql } from "../lib/db.ts";
@@ -223,7 +224,7 @@ async function pageFor(doctor: Doctor, patientId: number, r: Row | null) {
     sql`select x.*, d.full_name as doctor from prescriptions x left join doctors d on d.id = x.doctor_id
         where x.patient_id = ${patientId} and x.status in ('SIGNED', 'SUPERSEDED')
         order by (x.status = 'SIGNED') desc, coalesce(x.sent_at, x.signed_at) desc, x.version desc`,
-    sql`select pl.name, s.ends_at from subscriptions s join plans pl on pl.id = s.plan_id
+    sql`select pl.name, s.ends_at, s.starts_at from subscriptions s join plans pl on pl.id = s.plan_id
         where s.user_id = ${patientId} and s.status = 'Active' and s.ends_at > now() order by s.ends_at desc limit 1`,
     pendingPlan(sql, patientId),
     sql`select c.full_name as coach, f.full_name as fitness_coach from patient_profiles pp
@@ -296,6 +297,9 @@ async function pageFor(doctor: Doctor, patientId: number, r: Row | null) {
     write: waiting ? { kind: "consultation", id: String(waiting.id) } : { kind: "patient", id: String(patientId) },
     draft: prescriptionView(draft ?? null),
     coachRemarks: remarks.map((x) => ({ id: String(x.id), at: ist(x.created_at), by: x.author_name, text: x.text })),
+    // the coach's side (23 Nov 2026 call): the diet chart, the exercise plan and the calls made, read only
+    coach: await coaching(patientId, plan?.starts_at ?? null).then((k) => ({ diet: k.diet, fitness: k.fitness,
+      healthCallsMade: k.healthCallsMade, fitnessCallsMade: k.fitnessCallsMade, lastCallOn: k.calls[0]?.calledOn ?? null })),
     activePlan: plan ? { planName: plan.name, endsAt: ist(plan.ends_at) } : null,
     // sold and assigned, not paid yet: prescriptions stay one month until it is
     assignedPlan: !plan && assigned ? { planName: assigned.name } : null,
@@ -385,19 +389,18 @@ async function saveDraft(doctor: Doctor, t: Target, input: Row) {
   return saved;
 }
 
-/** The longest a line may run for a patient with no plan (the nano plan): one month (12 Nov 2026 call). */
+/** The longest any line may run: one month. Every prescription is for one month, plan or not (23 Nov 2026 call). */
 const NANO_DAYS = 31;
 
 /** What the PDF needs before it can be made; the first gap, in the words the doctor sees. */
-function missingFor(rx: Row, onPlan: boolean): string | null {
+function missingFor(rx: Row, _onPlan: boolean): string | null {
   if (!String(rx.diagnosis ?? "").trim()) return "Write the diagnosis first.";
   for (const [i, l] of (rx.items as Row[]).entries()) {
     const which = (rx.items as Row[]).length > 1 ? `medicine ${i + 1}` : "the medicine";
     if (!String(l.medicineName ?? "").trim()) return `Choose ${which} from the list, or type its name.`;
     if (!String(l.frequency ?? "").trim()) return `Choose how often for ${which}.`;
-    // issued for one month without a plan: a longer line would print one thing and order another
-    if (!onPlan && Number(l.durationDays) > NANO_DAYS)
-      return `This patient is not on a plan yet, so the prescription is for one month. Set ${which} to 1 month or less.`;
+    // a longer line would print one thing and order another
+    if (Number(l.durationDays) > NANO_DAYS) return `Every prescription is for one month. Set ${which} to 1 month or less.`;
   }
   return null;
 }

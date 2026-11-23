@@ -144,6 +144,8 @@ export type PrescriptionEntry = {
 
 /** How the patient's month went, written by their coach for the doctor. */
 export type CoachRemark = { id: string; at: string; by: string; text: string };
+/** A diet chart or an exercise plan, as the coach last wrote it. */
+export type CoachNote = { text: string; by: string; at: string };
 
 /**
  * The doctor's page for one patient, whether opened from a consultation or from the patient list (the same
@@ -195,6 +197,14 @@ export type PatientPageData = {
   /** the prescription being written there, if one was begun */
   draft: Prescription | null;
   coachRemarks: CoachRemark[];
+  /** the coach's side, read only: the diet chart, the exercise plan and the calls made on this plan */
+  coach: {
+    diet: CoachNote | null;
+    fitness: CoachNote | null;
+    healthCallsMade: number;
+    fitnessCallsMade: number;
+    lastCallOn: string | null;
+  };
 };
 
 /** An item on the master list (the doctor's medicine search). */

@@ -17,7 +17,7 @@ import { spacedMobile } from "@/lib/format/phone";
 import { errorMessage } from "@/lib/http/apiClient";
 import { updateDoctor } from "@/services/adminService";
 import type { AdminDoctor } from "@/types/admin";
-import adminStyles from "@/app/admin/styles/AdminSurfaces.module.css";
+import adminStyles from "@/components/ui/styles/StaffSurfaces.module.css";
 
 export default function DoctorRow({
   doctor,

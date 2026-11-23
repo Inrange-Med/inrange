@@ -235,6 +235,7 @@ adminRoutes.post("/admin/doctors", async (c) => {
     if (existing?.role === "ADMIN") fail(409, "This number belongs to an admin.");
     if (existing?.role === "DOCTOR") fail(409, "This number is already a doctor.");
     if (existing?.role === "COACH") fail(409, "This number belongs to a health coach.");
+    if (existing?.role === "SALES") fail(409, "This number belongs to a salesperson.");
     if (existing?.has_profile) fail(409, "This number already belongs to a patient. Use another number for the doctor.");
     const [u] = existing
       ? await tx`update users set role = 'DOCTOR', full_name = ${fields.full_name as string}, onboarding_completed = true

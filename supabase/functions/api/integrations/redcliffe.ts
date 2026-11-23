@@ -138,8 +138,10 @@ export function checkCollectionDate(date: string) {
   ensure(/^\d{4}-\d{2}-\d{2}$/.test(date) && !Number.isNaN(Date.parse(`${date}T00:00:00Z`)), "Choose a collection day.");
   const today = todayIST();
   const last = new Date(`${today}T00:00:00Z`);
-  last.setUTCDate(last.getUTCDate() + 4);
-  ensure(date >= today && date <= last.toISOString().slice(0, 10), "The lab collects from today up to 4 days ahead. Choose another day.");
+  // ours, tighter than the lab's 4 days (23 Nov 2026 call): a test is booked within two days of today, so nobody
+  // pays and then waits a week; a later day is arranged on a call with the team
+  last.setUTCDate(last.getUTCDate() + 2);
+  ensure(date >= today && date <= last.toISOString().slice(0, 10), "Blood tests are booked for today or the next two days. Choose one of those.");
 }
 
 export function checkPatient(p: NewPartnerBooking["patient"]) {

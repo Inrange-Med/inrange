@@ -6,7 +6,8 @@
   book one with any doctor at any open time, move one (to another time, or another doctor's), or cancel
   one with the reason. A consultation the patient agreed to have recorded (they are asked on their Join
   screen, each call) can be watched here by an admin; the recording is kept for 15 days.
-  A coach sees the list only.
+  A booking can name the salesperson who joins the call after the doctor. "Video links" gives the call's links
+  for the patient, the doctor and the salesperson, to send by any means (CallLinksBlock).
 */
 
 import { useState } from "react";
@@ -22,11 +23,13 @@ import {
   cancelConsultation,
   getRecordingLink,
   listDoctorSlots,
+  listSalespeople,
 } from "@/services/medicineOpsService";
+import CallLinksBlock from "./CallLinksBlock";
 import type { OpsConsultation, OpsPatient } from "@/types/medicineOps";
-import adminStyles from "@/app/admin/styles/AdminSurfaces.module.css";
-import s from "./Medicine.module.css";
-import { clockWords, when } from "./words";
+import adminStyles from "@/components/ui/styles/StaffSurfaces.module.css";
+import s from "@/components/ui/styles/StaffPanels.module.css";
+import { clockWords, when } from "@/features/medicine-queue/words";
 
 const STATUS: Record<OpsConsultation["status"], string> = {
   Booked: "Booked",
@@ -60,6 +63,10 @@ function SlotForm({
   const [date, setDate] = useState(today);
   const [slotId, setSlotId] = useState("");
   const [busy, setBusy] = useState(false);
+  // a booking names the salesperson who joins after the doctor (23 Nov 2026 call)
+  const team = useApiResource(moving ? null : "salespeople", listSalespeople);
+  const sellers = team.data?.filter((p) => p.active) ?? [];
+  const [seller, setSeller] = useState(data.patient.salespersonId ?? "");
   const slots = useApiResource(
     doctorId ? `slots-${doctorId}-${date}` : null,
     () => listDoctorSlots(doctorId, date),
@@ -67,15 +74,22 @@ function SlotForm({
   // free times still to come (today's earlier ones have passed)
   const free = (slots.data ?? []).filter(
     (slot) =>
-      slot.free &&
-      Date.parse(combineDateAndTime(date, slot.startTime)) > now,
+      slot.free && Date.parse(combineDateAndTime(date, slot.startTime)) > now,
   );
 
   const save = async () => {
     if (busy || !slotId) return;
     setBusy(true);
     try {
-      toast(await bookConsultation(data.patient.id, slotId, moving?.id));
+      toast(
+        await bookConsultation(
+          data.patient.id,
+          slotId,
+          moving?.id,
+          // only a choice from the list changes who sells to them
+          sellers.some((p) => p.id === seller) ? seller : undefined,
+        ),
+      );
       onDone();
     } catch (caught) {
       toast(errorMessage(caught, "That did not work. Try again."));
@@ -107,6 +121,21 @@ function SlotForm({
           </option>
         ))}
       </select>
+      {!moving && sellers.length > 0 && (
+        <select
+          className={s.input}
+          value={sellers.some((p) => p.id === seller) ? seller : ""}
+          aria-label="Salesperson on the call"
+          onChange={(e) => setSeller(e.target.value)}
+        >
+          <option value="">Salesperson on the call: as it is now</option>
+          {sellers.map((p) => (
+            <option key={p.id} value={p.id}>
+              Salesperson: {p.rank}. {p.fullName}
+            </option>
+          ))}
+        </select>
+      )}
       <DatePicker
         label="Day of the consultation"
         value={date}
@@ -178,7 +207,7 @@ export default function PatientConsultations({
   const toast = useToast();
   // what is open: the booking form, a move, or a cancel (one at a time)
   const [doing, setDoing] = useState<
-    null | { kind: "book" } | { kind: "move" | "cancel"; id: string }
+    null | { kind: "book" } | { kind: "move" | "cancel" | "links"; id: string }
   >(null);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
@@ -272,6 +301,15 @@ export default function PatientConsultations({
                               type="button"
                               className={s.chip}
                               onClick={() =>
+                                setDoing({ kind: "links", id: a.id })
+                              }
+                            >
+                              Video links
+                            </button>
+                            <button
+                              type="button"
+                              className={s.chip}
+                              onClick={() =>
                                 setDoing({ kind: "move", id: a.id })
                               }
                             >
@@ -297,6 +335,24 @@ export default function PatientConsultations({
                       onDone={done}
                       onClose={() => setDoing(null)}
                     />
+                  )}
+                  {open && doing.kind === "links" && (
+                    <>
+                      <CallLinksBlock
+                        consultationId={a.id}
+                        patientName={data.patient.name}
+                        doctorName={a.doctorName}
+                      />
+                      <span className={s.chips}>
+                        <button
+                          type="button"
+                          className={s.chip}
+                          onClick={() => setDoing(null)}
+                        >
+                          Close
+                        </button>
+                      </span>
+                    </>
                   )}
                   {open && doing.kind === "cancel" && (
                     <div className={s.planForm}>

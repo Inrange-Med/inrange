@@ -16,9 +16,13 @@ import { timeAgo } from "@/lib/format/dateTime";
 import { errorMessage } from "@/lib/http/apiClient";
 import { listMessages, playReply } from "@/services/medicineOpsService";
 import type { OpsMessage } from "@/types/medicineOps";
-import { MESSAGE_WORDS, REPLIES_FOR, STATUS_WORDS } from "./words";
-import adminStyles from "@/app/admin/styles/AdminSurfaces.module.css";
-import s from "./Medicine.module.css";
+import {
+  MESSAGE_WORDS,
+  REPLIES_FOR,
+  STATUS_WORDS,
+} from "@/features/medicine-queue/words";
+import adminStyles from "@/components/ui/styles/StaffSurfaces.module.css";
+import s from "@/components/ui/styles/StaffPanels.module.css";
 
 const notSent = (m: OpsMessage) =>
   m.status === "FAILED" || m.status === "SKIPPED";

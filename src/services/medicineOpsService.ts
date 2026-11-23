@@ -29,14 +29,25 @@
  *   POST  /api/admin/medicine/messages/:id/reply           { code?, text? }: plays the patient's reply while WhatsApp is mocked (admin)
  *   GET   /api/admin/medicine/numbers?days=                the measures (admin)
  *   GET   /api/admin/coaches   POST /api/admin/coaches     the health coaches (admin)
+ *   POST  /api/admin/medicine/patients/:id/payment-links   the sales form: makes a payment link -> { url } (admin)
+ *   POST  /api/admin/payment-links/:id/check|cancel|simulate-paid  asks Razorpay, withdraws, or plays a test payment (admin)
+ *   GET   /api/admin/payments                              every payment link, and payments matched to no order or link (admin)
+ *   POST  /api/admin/received-payments/:id/set-aside       hides one that is not for a plan (admin)
+ *   GET   /api/admin/plans   PATCH /api/admin/plans/:id    what each plan includes, and the sales discount allowed (admin)
+ *   GET   /api/admin/calls                                 consultations coming up, and who is due a follow-up (admin)
+ *   GET   /api/admin/consultations/:id/links               the video links for the patient, the doctor and the salesperson (admin)
  *   GET   /api/admin/salespeople                           the sales team, best first, with each one's numbers (admin)
  *   POST  /api/admin/salespeople                           { fullName, mobile? } -> the list (admin)
  *   PATCH /api/admin/salespeople/:id                       any of { fullName, mobile, active, rank } -> the list (admin)
  */
 
 import { apiRequest, listFrom, type ApiEnvelope } from "@/lib/http/apiClient";
+import type { LinkForm, PlanOnSale } from "@/types/sales";
 import type {
+  CallLinks,
   Coach,
+  OpsCalls,
+  OpsPayments,
   OpsMeasure,
   OpsMessage,
   OpsOrder,
@@ -191,17 +202,27 @@ export async function listDoctorSlots(
   }));
 }
 
-/** Books (no `consultationId`) or moves a consultation for the patient; returns the server's words. */
+/**
+ * Books (no `consultationId`) or moves a consultation for the patient; returns the server's words. A booking
+ * may name the salesperson who joins the call (`salespersonId`; leave undefined to keep the patient's own).
+ */
 export async function bookConsultation(
   patientId: string,
   slotId: string,
   consultationId?: string,
+  salespersonId?: string | null,
 ): Promise<string> {
   const body = await apiRequest<{ message?: string }>(
     consultationId
       ? `/api/admin/consultations/${consultationId}/move`
       : `${base}/patients/${patientId}/consultations`,
-    { method: "POST", body: { slotId } },
+    {
+      method: "POST",
+      body:
+        consultationId || salespersonId === undefined
+          ? { slotId }
+          : { slotId, salespersonId },
+    },
   );
   return body?.message ?? "Done";
 }
@@ -298,6 +319,74 @@ export async function addCoach(input: {
     body: input,
   });
   return body.data!;
+}
+
+/** Makes a payment link for the patient; returns the link and the server's words. */
+export async function makePaymentLink(patientId: string, form: LinkForm) {
+  const body = await apiRequest<
+    ApiEnvelope<{ url: string }> & { message?: string }
+  >(`${base}/patients/${patientId}/payment-links`, {
+    method: "POST",
+    body: form,
+  });
+  return { url: body.data!.url, message: body.message ?? "Link made" };
+}
+
+/** `check` asks Razorpay whether it was paid, `cancel` withdraws it, `simulate` plays a test patient's payment. */
+export async function actOnPaymentLink(
+  id: string,
+  action: "check" | "cancel" | "simulate",
+): Promise<string> {
+  const body = await apiRequest<{ message?: string }>(
+    `/api/admin/payment-links/${id}/${action === "simulate" ? "simulate-paid" : action}`,
+    { method: "POST" },
+  );
+  return body?.message ?? "Done";
+}
+
+export async function getPayments(): Promise<OpsPayments> {
+  return (await apiRequest<ApiEnvelope<OpsPayments>>("/api/admin/payments"))
+    .data!;
+}
+
+export async function setPaymentAside(id: string) {
+  await apiRequest(`/api/admin/received-payments/${id}/set-aside`, {
+    method: "POST",
+  });
+}
+
+export async function listStaffPlans(): Promise<PlanOnSale[]> {
+  return listFrom<PlanOnSale>(await apiRequest("/api/admin/plans"), "plans");
+}
+
+export async function updatePlan(
+  id: string,
+  changes: Partial<
+    Pick<
+      PlanOnSale,
+      "doctorConsults" | "coachCalls" | "fitnessCalls" | "maxDiscountPercent"
+    >
+  >,
+): Promise<PlanOnSale[]> {
+  return listFrom<PlanOnSale>(
+    await apiRequest(`/api/admin/plans/${id}`, {
+      method: "PATCH",
+      body: changes,
+    }),
+    "plans",
+  );
+}
+
+export async function getCalls(): Promise<OpsCalls> {
+  return (await apiRequest<ApiEnvelope<OpsCalls>>("/api/admin/calls")).data!;
+}
+
+export async function getCallLinks(consultationId: string): Promise<CallLinks> {
+  return (
+    await apiRequest<ApiEnvelope<CallLinks>>(
+      `/api/admin/consultations/${consultationId}/links`,
+    )
+  ).data!;
 }
 
 export async function listSalespeople(): Promise<Salesperson[]> {

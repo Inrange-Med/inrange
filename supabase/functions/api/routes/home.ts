@@ -34,7 +34,7 @@ const appointmentView = (a: Row) => ({
 
 export async function nextStep(patientId: number, now = new Date()) {
   const t = now.getTime();
-  const [appointments, [e], [plan], rec, [rx], [cart], [order], [delivered]] = await Promise.all([
+  const [appointments, [e], [plan], rec, [rx], [cart], [order], [delivered], [link]] = await Promise.all([
     sql`select a.id, a.status, a.visit_type, a.started_at, a.ended_at, d.full_name as doctor,
           (s.slot_date + s.start_time) at time zone 'Asia/Kolkata' as starts_at,
           (s.slot_date + s.end_time) at time zone 'Asia/Kolkata' as ends_at
@@ -54,6 +54,9 @@ export async function nextStep(patientId: number, now = new Date()) {
           and status in ('PLACED', 'PACKED', 'DISPATCHED', 'OUT_FOR_DELIVERY') order by placed_at desc limit 1`,
     sql`select id, delivered_at from medicine_orders where patient_id = ${patientId} and status = 'DELIVERED'
           and delivered_at > now() - interval '2 days' order by delivered_at desc limit 1`,
+    // the payment link the sales team sent for a plan, still waiting (23 Nov 2026 call: shown in the app too)
+    sql`select l.short_url, l.amount_paise, l.list_paise, p.name from payment_links l join plans p on p.id = l.plan_id
+        where l.patient_id = ${patientId} and l.status = 'CREATED' and l.expires_at > now() limit 1`,
   ]);
   const live = appointments.filter((a) => ["Booked", "InProgress"].includes(a.status) && !a.ended_at &&
     new Date(a.ends_at ?? a.starts_at).getTime() + 60 * MIN > t);
@@ -62,6 +65,15 @@ export async function nextStep(patientId: number, now = new Date()) {
 
   // money: one bill. The plan admin assigned rides in the open cart with the medicines (one payment); with no cart
   // to pay (none, or its medicines bought elsewhere) the plan is billed on its own, at once (20 Nov 2026).
+  // a plan sold on a payment link is paid on that link, at the price agreed on the call
+  if (link && !plan)
+    return {
+      stage: "PAYMENT_DUE", payFor: "PLAN", referenceId: "", payUrl: link.short_url,
+      bill: { lines: [{ key: "plan", label: link.name, mrpPaise: link.list_paise > link.amount_paise ? link.list_paise : null, amountPaise: link.amount_paise }],
+              totalPaise: link.amount_paise },
+      hasAddress: true,
+      followedBy: null,
+    };
   if (rec && !plan && !(cart && !cart.elsewhere_at)) {
     return {
       stage: "PAYMENT_DUE", payFor: "PLAN", referenceId: String(rec.plan_id),
