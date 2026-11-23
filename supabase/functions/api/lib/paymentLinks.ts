@@ -41,9 +41,13 @@ export const allLinks = () => sql`
   left join patient_profiles pp on pp.user_id = l.patient_id
   order by (l.status = 'CREATED') desc, l.created_at desc limit 150`;
 
-/** Cancels the patient's waiting link, here and at Razorpay (best effort there: one already paid is left to check()). */
-export async function cancelOpen(tx: TransactionSql | typeof sql, patientId: number) {
-  const open = await tx`update payment_links set status = 'CANCELLED' where patient_id = ${patientId} and status = 'CREATED' returning id`;
+/**
+ * Cancels the patient's waiting link for a plan, or for a blood test, here and at Razorpay (best effort there: one
+ * already paid is left to check()). The two kinds never touch each other: a patient can owe both at once.
+ */
+export async function cancelOpen(tx: TransactionSql | typeof sql, patientId: number, purpose: "PLAN" | "LAB_BOOKING" = "PLAN") {
+  const open = await tx`update payment_links set status = 'CANCELLED'
+                        where patient_id = ${patientId} and status = 'CREATED' and purpose = ${purpose} returning id`;
   // one Razorpay will not cancel may have just been paid: look, so the money is never lost
   for (const l of open) if (!(await rzp.cancelPaymentLink(l.id))) await check(l.id).catch((e) => console.error("link check", l.id, (e as Error).message));
 }
@@ -97,7 +101,7 @@ export async function createLink(patient: { id: number; name: string; mobile: st
  */
 export async function createLabLink(patient: { id: number; name: string; mobile: string }, booking: { id: string; amount_paise: number }, userId: number) {
   if (!(booking.amount_paise >= 100)) fail(409, "This booking has no amount to pay.");
-  await cancelOpen(sql, patient.id);
+  await cancelOpen(sql, patient.id, "LAB_BOOKING");
   const test = isTestMobile(patient.mobile);
   const expiresAt = new Date(Date.now() + 86_400_000);
   const made = await rzp.createPaymentLink({
@@ -125,6 +129,16 @@ export async function settle(linkId: string, paymentId: string) {
     const paid = { status: "PAID", paid_at: new Date(), provider_payment_id: paymentId };
     await tx`delete from received_payments where id = ${paymentId}`;
     if (l.purpose === "LAB_BOOKING") {
+      // the booking was paid another way meanwhile, or cancelled: this money has nothing to book. Kept, flagged, refunded by the team.
+      const [b] = await tx`select status, paid_at from lab_bookings where id = ${l.lab_booking_id} for update`;
+      if (!b || b.paid_at || b.status === "CANCELLED") {
+        const why = b?.paid_at ? "Paid on a link, but this blood test was already paid for. Refund it."
+          : "Paid on a link, but this blood test was cancelled. Book a new time on this payment, or refund it.";
+        await tx`update payment_links set ${tx({ ...paid, needs_attention: why })} where id = ${l.id}`;
+        await openTask(tx, { kind: "RECONCILE", priority: "CRITICAL", patientId: l.patient_id, title: "A blood test payment link was paid with nothing to book",
+          detail: `Link ${l.id}, payment ${paymentId}, Rs ${l.amount_paise / 100}. ${why}`, dueAt: new Date(), dedupeKey: `plink:${l.id}:lab` });
+        return [];
+      }
       // the blood test the team held: recorded and confirmed exactly as a payment in the app (routes/payments.ts fulfil)
       await tx`update payment_links set ${tx(paid)} where id = ${l.id}`;
       const [{ n }] = await tx`select nextval('invoice_seq') as n`;

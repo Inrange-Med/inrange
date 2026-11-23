@@ -185,19 +185,25 @@ function TimeForm({
   lab,
   moving,
   onDone,
+  onAddress,
   onClose,
 }: {
   patientId: string;
   lab: PatientLab;
   moving: TeamLabBooking | null;
   onDone: () => void;
+  /** an address was added: the list reloads and the form stays open on it */
+  onAddress: () => void;
   onClose: () => void;
 }) {
   const toast = useToast();
   const now = useNow(60_000);
   const today = toApiDate(new Date(now));
   const placed = lab.addresses.filter((a) => a.placed);
-  const [addressId, setAddressId] = useState(placed[0]?.id ?? "");
+  // a move keeps the booking's own address, so its times are the ones read
+  const [addressId, setAddressId] = useState(
+    moving?.addressId ?? placed[0]?.id ?? "",
+  );
   const [adding, setAdding] = useState(placed.length === 0 && !moving);
   const [date, setDate] = useState(toApiDate(new Date(now + DAY)));
   const [slotId, setSlotId] = useState<number | null>(null);
@@ -205,7 +211,7 @@ function TimeForm({
   const [age, setAge] = useState(String(lab.person.age ?? ""));
   const [gender, setGender] = useState(lab.person.gender ?? "");
   const [busy, setBusy] = useState(false);
-  // a move keeps the booking's own address: the first address on the map stands in to read the times
+
   const slots = useApiResource(
     addressId ? `lab-slots-${patientId}-${addressId}-${date}` : null,
     () => listLabSlots(patientId, addressId, date),
@@ -248,7 +254,7 @@ function TimeForm({
         onSaved={(id) => {
           setAdding(false);
           setAddressId(id);
-          onDone();
+          onAddress();
         }}
         onClose={() => (placed.length ? setAdding(false) : onClose())}
       />
@@ -273,6 +279,9 @@ function TimeForm({
                 {a.line}
               </option>
             ))}
+            {addressId && !placed.some((a) => a.id === addressId) && (
+              <option value={addressId}>The address just added</option>
+            )}
             <option value="new">Another address</option>
           </select>
           <input
@@ -383,9 +392,11 @@ export default function PatientLabSection({
   const [text, setText] = useState("");
   const [link, setLink] = useState<{ id: string; url: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [refunded, setRefunded] = useState(false);
   const done = () => {
     setDoing(null);
     setText("");
+    setRefunded(false);
     lab.reload();
     onChanged();
   };
@@ -414,8 +425,16 @@ export default function PatientLabSection({
   if (!lab.data) return null;
   const { bookings, priceRupees } = lab.data;
   // one test at a time: a new one can be booked once none is held or under way
+  // (one paid for whose time the lab refused is not in the way: the new time is booked on that payment)
   const live = bookings.some(
-    (b) => !["CANCELLED", "EXPIRED", "REPORT_READY"].includes(b.status),
+    (b) =>
+      [
+        "BOOKED",
+        "COLLECTOR_ASSIGNED",
+        "SAMPLE_COLLECTED",
+        "PROCESSING",
+      ].includes(b.status) ||
+      (b.status === "PAYMENT_PENDING" && !b.paid),
   );
 
   return (
@@ -432,7 +451,9 @@ export default function PatientLabSection({
                 <time dateTime={b.startsAt}>{when(b.startsAt)}</time>
                 <span>
                   <strong>
-                    {STATUS[b.status]}
+                    {b.status === "PAYMENT_PENDING" && b.paid
+                      ? "Paid, time not confirmed"
+                      : STATUS[b.status]}
                     {b.bookedByTeam ? ", booked by the team" : ""}
                   </strong>
                   <span className={s.reply}>{b.address}</span>
@@ -441,7 +462,13 @@ export default function PatientLabSection({
                       {b.needsAttention}
                     </span>
                   )}
-                  {b.status === "PAYMENT_PENDING" && (
+                  {b.status === "PAYMENT_PENDING" && b.paid && (
+                    <span className={s.reply}>
+                      Book a new time below. It goes on this payment, at no
+                      charge.
+                    </span>
+                  )}
+                  {b.status === "PAYMENT_PENDING" && !b.paid && (
                     <span className={s.reply}>
                       <span className="num">{formatRupees(b.totalRupees)}</span>
                       . The patient can pay from Home in the app
@@ -456,7 +483,7 @@ export default function PatientLabSection({
                   )}
                   {!open && (
                     <span className={s.chips}>
-                      {b.status === "PAYMENT_PENDING" && (
+                      {b.status === "PAYMENT_PENDING" && !b.paid && (
                         <>
                           <button
                             type="button"
@@ -502,6 +529,7 @@ export default function PatientLabSection({
                       lab={lab.data!}
                       moving={b}
                       onDone={done}
+                      onAddress={lab.reload}
                       onClose={() => setDoing(null)}
                     />
                   )}
@@ -524,6 +552,17 @@ export default function PatientLabSection({
                           }
                           onChange={(e) => setText(e.target.value)}
                         />
+                        {doing.kind === "cancel" && b.paid && (
+                          <label className={adminStyles.muted}>
+                            <input
+                              type="checkbox"
+                              checked={refunded}
+                              onChange={(e) => setRefunded(e.target.checked)}
+                            />{" "}
+                            I have refunded it in Razorpay. Unticked, the
+                            payment is kept for a new time.
+                          </label>
+                        )}
                         <span className={s.chips}>
                           <button
                             type="button"
@@ -535,7 +574,7 @@ export default function PatientLabSection({
                                 doing.kind === "paid" ? "paid" : "cancel",
                                 doing.kind === "paid"
                                   ? { paymentRef: text.trim() }
-                                  : { reason: text.trim() },
+                                  : { reason: text.trim(), refunded },
                               )
                             }
                           >
@@ -569,6 +608,7 @@ export default function PatientLabSection({
             lab={lab.data}
             moving={null}
             onDone={done}
+            onAddress={lab.reload}
             onClose={() => setDoing(null)}
           />
         ) : (

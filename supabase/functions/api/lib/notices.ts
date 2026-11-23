@@ -115,7 +115,7 @@ export async function callEnded(appointmentId: number): Promise<Id[]> {
 }
 
 /** A paid home collection: the confirmation, and a reminder the evening before (6 pm) when that is still ahead. */
-export async function labBooked(tx: Tx, bookingId: string): Promise<Id[]> {
+export async function labBooked(tx: Tx, bookingId: string, moved = false): Promise<Id[]> {
   const [b] = await tx`select id, user_id, status, to_char(slot_date, 'YYYY-MM-DD') as slot_date, slot_start, slot_end from lab_bookings where id = ${bookingId}`;
   if (!b || b.status !== "BOOKED" || !b.slot_date || !b.slot_start) return [];
   const name = await firstName(tx, b.user_id);
@@ -124,7 +124,9 @@ export async function labBooked(tx: Tx, bookingId: string): Promise<Id[]> {
   const evening = new Date(atIst(b.slot_date, "18:00").getTime() - 24 * HOUR);
   const base = { patientId: b.user_id, labBookingId: b.id, links: [b.id], slotDate: b.slot_date };
   return [
-    await queueMessage(tx, { ...base, kind: "LAB_BOOKED", values: [name, `${day}, ${window}`], dedupeKey: `lab:${b.id}:booked` }),
+    // a moved collection is told again, once per new time
+    await queueMessage(tx, { ...base, kind: "LAB_BOOKED", values: [name, `${day}, ${window}`],
+      dedupeKey: moved ? `lab:${b.id}:moved:${b.slot_date}:${b.slot_start}` : `lab:${b.id}:booked` }),
     evening.getTime() > Date.now() + HOUR
       ? await queueMessage(tx, { ...base, kind: "LAB_TOMORROW", values: [name, window], dedupeKey: `lab:${b.id}:${b.slot_date}:tomorrow`, sendAfter: evening })
       : null,

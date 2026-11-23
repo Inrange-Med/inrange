@@ -49,10 +49,9 @@ async function lab<T>(work: Promise<T>): Promise<T> {
     return await work;
   } catch (e) {
     if (e instanceof rc.RedcliffeError) {
-      if (e.httpStatus === null) return fail(422, e.message);
-      console.error("redcliffe", e.httpStatus, e.message, JSON.stringify(e.body)?.slice(0, 500));
-      return fail(502, e.httpStatus === 200 ? "That time is no longer free. Please choose another."
-        : "That did not go through. Please try again in a moment.");
+      if (e.httpStatus !== null) console.error("redcliffe", e.httpStatus, e.message, JSON.stringify(e.body)?.slice(0, 500));
+      if (e.httpStatus === null || e.ours) return fail(422, e.message);
+      return fail(502, "That did not go through just now. Please try again, or message us and we will help.");
     }
     throw e;
   }

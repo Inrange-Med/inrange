@@ -454,6 +454,8 @@ export type TeamLabBooking = {
     | "REPORT_READY"
     | "CANCELLED"
     | "EXPIRED";
+  /** the address the collector goes to; a move reads the free times there */
+  addressId: string | null;
   startsAt: string;
   endsAt: string | null;
   address: string;

@@ -12,7 +12,8 @@
 //   POST  /admin/lab-bookings/:id/payment-link        a payment link for a held booking
 //   POST  /admin/lab-bookings/:id/paid                { paymentRef } the money was taken another way: confirms the booking
 //   POST  /admin/lab-bookings/:id/move                { collectionDate, slotId }
-//   POST  /admin/lab-bookings/:id/cancel              { reason }
+//   POST  /admin/lab-bookings/:id/cancel              { reason, refunded? } refunded: the money went back (in Razorpay), so
+//                                                     it is not kept as credit for a new time
 import { Hono } from "hono";
 import type { Context } from "hono";
 import { sql } from "../lib/db.ts";
@@ -53,7 +54,7 @@ async function booking(id: string) {
 // deno-lint-ignore no-explicit-any
 const view = (r: Record<string, any>) => {
   const b = toLabBooking(r);
-  return { id: b.id, status: b.status, startsAt: b.collectionStartsAt, endsAt: b.collectionEndsAt, address: b.address, person: b.patient,
+  return { id: b.id, status: b.status, addressId: b.addressId ? String(b.addressId) : null, startsAt: b.collectionStartsAt, endsAt: b.collectionEndsAt, address: b.address, person: b.patient,
     totalRupees: b.price.total, holdExpiresAt: b.holdExpiresAt, reschedulesLeft: b.reschedulesLeft, paid: Boolean(r.paid_at),
     bookedByTeam: Boolean(r.booked_by), needsAttention: r.needs_attention ?? null };
 };
@@ -171,17 +172,22 @@ adminLabRoutes.post("/admin/patients/:patientId/lab/bookings", async (c) => {
   const b = await body<{ addressId?: unknown; collectionDate?: unknown; slotId?: unknown; person?: { name?: unknown; age?: unknown; gender?: unknown } }>(c);
   const [care] = await sql`select code, lab_package_code from care_packages where includes_lab_tests and lab_package_code is not null order by price_rupees limit 1`;
   if (!care) fail(409, "No blood test package is on sale.");
-  const [paid] = await sql`select 1 from lab_bookings where user_id = ${p.id} and paid_at is not null and status not in ('CANCELLED', 'EXPIRED', 'REPORT_READY')`;
-  if (paid) fail(409, "This patient already has a blood test booked. Move that one instead.");
+  // a test that is booked and under way is moved, not booked again. One that was paid for but never confirmed (the
+  // lab refused the time) is not in the way: the new time below is booked on that payment.
+  const [under] = await sql`select 1 from lab_bookings where user_id = ${p.id}
+                            and status in ('BOOKED', 'COLLECTOR_ASSIGNED', 'SAMPLE_COLLECTED', 'PROCESSING')`;
+  if (under) fail(409, "This patient already has a blood test booked. Move that one instead.");
   const saved = await holdBooking(p.id, {
     packageCode: care.lab_package_code, carePackageCode: care.code, addressId: Number(b.addressId), collectionDate: String(b.collectionDate ?? ""),
     slotId: Number(b.slotId),
     patient: { name: String(b.person?.name ?? ""), age: Number(b.person?.age), gender: String(b.person?.gender ?? ""), mobile: p.mobile, email: p.email ?? "" },
   });
   await sql`update lab_bookings set booked_by = ${me.id} where id = ${saved.id}`;
-  // someone who paid for a test that was then cancelled (by the lab, or by them) is rebooked on that payment: never charged twice
-  const [earlier] = await sql`select id from lab_bookings where user_id = ${p.id} and paid_at is not null and status in ('CANCELLED', 'EXPIRED')
-                              and care_package_code is not null order by paid_at desc limit 1`;
+  // someone who paid for a test that was then cancelled (by the lab, or by them), or whose time the lab refused after
+  // the payment, is rebooked on that payment: never charged twice. A refunded payment is no credit: the refund
+  // clears `paid_at` (the cancel route below).
+  const [earlier] = await sql`select id from lab_bookings where user_id = ${p.id} and id <> ${saved.id} and paid_at is not null
+                              and status in ('CANCELLED', 'EXPIRED') and care_package_code is not null order by paid_at desc limit 1`;
   if (earlier) {
     const messages = await sql.begin(async (tx) => {
       await fulfilLabBooking(tx, saved.id, p.id);
@@ -201,7 +207,7 @@ adminLabRoutes.post("/admin/patients/:patientId/lab/bookings", async (c) => {
 adminLabRoutes.post("/admin/lab-bookings/:id/payment-link", async (c) => {
   const me = await admin(c);
   const row = await booking(c.req.param("id"));
-  if (row.status !== "PAYMENT_PENDING") fail(409, "Only a time that is held and not yet paid for needs a link.");
+  if (row.status !== "PAYMENT_PENDING" || row.paid_at) fail(409, "Only a time that is held and not yet paid for needs a link.");
   const made = await links.createLabLink(await patient(row.user_id) as never, row as never, me.id);
   return ok(c, made, made.texted ? "Link made. Razorpay has texted it to the patient; you can send it too." : "Link made. Copy it and send it to the patient.");
 });
@@ -227,7 +233,7 @@ adminLabRoutes.post("/admin/lab-bookings/:id/paid", async (c) => {
     await tx`insert into audit_log (patient_id, actor_id, action) values (${row.user_id}, ${me.id}, ${`Blood test marked paid outside the app (${ref})`})`;
     return await notices.within(tx, (sp) => notices.labBooked(sp, row.id));
   });
-  await links.cancelOpen(sql, row.user_id);
+  await links.cancelOpen(sql, row.user_id, "LAB_BOOKING");
   await sendNow(messages);
   const [saved] = await bookingQuery(sql, row.id);
   return ok(c, view(saved), saved.needs_attention ? "Paid, but the time could not be confirmed. Hold a new time." : "Paid. The collection is booked and the patient was told.");
@@ -240,16 +246,33 @@ adminLabRoutes.post("/admin/lab-bookings/:id/move", async (c) => {
   const saved = await moveBooking(row, String(b.collectionDate ?? ""), Number(b.slotId));
   await sql`insert into audit_log (patient_id, actor_id, action) values (${row.user_id}, ${me.id}, 'Moved the blood test for the patient')`;
   // the patient hears the new time, as they did the first
-  await notices.labBooked(sql, row.id).then(sendNow).catch((e) => console.error("lab moved notice", (e as Error).message));
+  await notices.labBooked(sql, row.id, true).then(sendNow).catch((e) => console.error("lab moved notice", (e as Error).message));
   return ok(c, view(saved), "Collection moved");
 });
 
 adminLabRoutes.post("/admin/lab-bookings/:id/cancel", async (c) => {
   const me = await admin(c);
   const row = await booking(c.req.param("id"));
-  const reason = String((await body<{ reason?: unknown }>(c)).reason ?? "").trim().slice(0, 300);
+  const b = await body<{ reason?: unknown; refunded?: unknown }>(c);
+  const reason = String(b.reason ?? "").trim().slice(0, 300);
   if (reason.length < 3) fail(400, "Say why it is cancelled.");
-  const saved = await cancelBookingFor(row, reason);
-  await sql`insert into audit_log (patient_id, actor_id, action) values (${row.user_id}, ${me.id}, ${`Cancelled the blood test: ${reason}`})`;
-  return ok(c, view(saved), row.paid_at ? "Cancelled. The payment stays with us: book a new time, or refund it from Razorpay." : "Cancelled");
+  // a paid booking the lab never confirmed has nothing to cancel there: it is closed here
+  let saved = row.paid_at && row.status === "PAYMENT_PENDING"
+    ? (await sql`update lab_bookings set status = 'CANCELLED', updated_at = now() where id = ${row.id} returning *`)[0]
+    : await cancelBookingFor(row, reason);
+  // a link made for this booking must not stay payable
+  await links.cancelOpen(sql, row.user_id, "LAB_BOOKING");
+  // refunded (in Razorpay, by the team): the payment is no longer a credit for the next booking, and the patient
+  // is back at the start, to book and pay again if they wish
+  const refunded = Boolean(row.paid_at) && b.refunded === true;
+  if (refunded) {
+    await sql`update lab_bookings set paid_at = null, needs_attention = null where id = ${row.id}`;
+    await sql`update eligibility set stage = 'NOT_STARTED', lab_booking_id = null, consultation_paid = false, updated_at = now()
+              where user_id = ${row.user_id} and lab_booking_id = ${row.id} and not consultation_used`;
+    [saved] = await bookingQuery(sql, row.id);
+  }
+  await sql`insert into audit_log (patient_id, actor_id, action) values (${row.user_id}, ${me.id},
+              ${`Cancelled the blood test${refunded ? " (refunded)" : ""}: ${reason}`})`;
+  return ok(c, view(saved), !row.paid_at ? "Cancelled" : refunded ? "Cancelled and marked refunded."
+    : "Cancelled. Their payment is kept for a new time: book one, and it will not be charged again.");
 });

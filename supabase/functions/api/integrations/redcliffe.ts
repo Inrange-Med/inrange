@@ -8,9 +8,12 @@ import { sql } from "../lib/db.ts";
 
 export const redcliffeLive = live.redcliffe;
 
-/** httpStatus null = refused before sending (bad input); the route answers 422 then, else 502. */
+/**
+ * httpStatus null = refused before sending (bad input); the route answers 422 then, else 502.
+ * `ours`: the message is our own wording (safe to show a patient) although it came after the lab answered.
+ */
 export class RedcliffeError extends Error {
-  constructor(message: string, readonly httpStatus: number | null = null, readonly body: unknown = null) {
+  constructor(message: string, readonly httpStatus: number | null = null, readonly body: unknown = null, readonly ours = false) {
     super(message);
   }
 }
@@ -332,7 +335,7 @@ export async function coordinates(eloc: string): Promise<{ latitude: number; lon
   const body = await call<{ latitude: number | string; longitude: number | string }>(
     "GET", "/api/partner/v2/get-partner-loc-2-eloc/", { query: { eloc: id } })
     .catch((e) => { if (e instanceof RedcliffeError && e.httpStatus === 500) throw new RedcliffeError("That place is not valid. Search again."); throw e; });
-  if (body.latitude === "" || body.longitude === "") throw new RedcliffeError("That place is not valid. Search again.", 200, body);
+  if (body.latitude === "" || body.longitude === "") throw new RedcliffeError("That place is not valid. Search again.", 200, body, true);
   return { latitude: Number(body.latitude), longitude: Number(body.longitude) };
 }
 
@@ -413,7 +416,8 @@ export async function createBooking(b: NewPartnerBooking): Promise<PartnerBookin
     },
   });
   // a full slot comes back as status "Sucess" with a message and no booking
-  if (typeof body.booking_id !== "number") throw new RedcliffeError(body.message || "The lab could not hold that time. Choose another.", 200, body);
+  // what the lab said is in `body` for the log; the patient reads our own line
+  if (typeof body.booking_id !== "number") throw new RedcliffeError("That time is no longer free. Please choose another.", 200, body, true);
   const d = body.discounted_price;
   return {
     partnerBookingId: String(body.booking_id), packageName: body.packages?.[0]?.name ?? b.packageCode,
@@ -505,7 +509,7 @@ export async function reportUrl(partnerId: string): Promise<string> {
   // the doc says "Report_url"; the API sends "report_url", and "no report" until it is ready
   const body = await call<{ report_url?: string; Report_url?: string }>("GET", `/api/external/v2/get-consolidated-report/${partnerNumber(partnerId)}/`);
   const url = body.report_url ?? body.Report_url ?? "";
-  if (!/^https?:\/\//.test(url)) throw new RedcliffeError("The report is not ready yet.", 200, body);
+  if (!/^https?:\/\//.test(url)) throw new RedcliffeError("The report is not ready yet.", 200, body, true);
   return url;
 }
 

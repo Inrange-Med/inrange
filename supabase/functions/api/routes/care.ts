@@ -475,7 +475,8 @@ careRoutes.get("/video/appointments/:appointmentId/join", async (c) => {
     consentAt = null;
     await sql`update appointments set recording_consent_at = null where id = ${a.id}`;
     await sql`insert into audit_log (patient_id, actor_id, action) values (${a.patient_id}, ${me.id}, 'Took back their yes to recording this consultation')`;
-    if (hmsLive() && a.video_room_id && a.recording_id) await stopRecording(a.video_room_id).catch((e) => console.error("stop recording", a.id, e.message));
+    // by room, whether or not a recording id reached us: a start that answered late must still stop
+    if (hmsLive() && a.video_room_id) await stopRecording(a.video_room_id).catch((e) => console.error("stop recording", a.id, e.message));
   }
   if (hmsLive()) {
     let roomId: string;
@@ -494,7 +495,7 @@ careRoutes.get("/video/appointments/:appointmentId/join", async (c) => {
     if (consentAt && !a.recording_id) {
       const started = await Promise.race([
         startRecording(roomId).then((id) => ({ id, error: null as string | null })).catch((e) => ({ id: null, error: String((e as Error).message).slice(0, 300) })),
-        new Promise<{ id: null; error: string }>((done) => setTimeout(() => done({ id: null, error: "100ms did not answer in time" }), 6000)),
+        new Promise<{ id: null; error: string }>((done) => setTimeout(() => done({ id: null, error: "100ms did not answer in time" }), 12_000)),
       ]);
       await sql`update appointments set recording_id = coalesce(recording_id, ${started.id}),
                   recording_started_at = case when ${started.id}::text is not null then coalesce(recording_started_at, now()) else recording_started_at end,
