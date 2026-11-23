@@ -35,7 +35,7 @@ export default function CallsPanel({
   const { upcoming, followUpsDue } = calls.data;
 
   return (
-    <>
+    <div className={s.sheet}>
       <section className={adminStyles.panel} aria-labelledby="calls-h">
         <div className={adminStyles.panelHead}>
           <h2 id="calls-h" className={adminStyles.h2}>
@@ -153,6 +153,6 @@ export default function CallsPanel({
           </ul>
         )}
       </section>
-    </>
+    </div>
   );
 }

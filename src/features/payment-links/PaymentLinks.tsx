@@ -146,13 +146,15 @@ export default function PaymentLinks({
             .
           </span>
           {link.paymentId && (
-            <span className={surfaceStyles.muted}>
+            <span className={`${s.lineItem} ${surfaceStyles.muted}`}>
               Payment ID <span className="num">{link.paymentId}</span>
               {link.salesperson ? `. Sold by ${link.salesperson}` : ""}
             </span>
           )}
           {link.needsAttention && (
-            <span className={s.problem}>{link.needsAttention}</span>
+            <span className={`${s.lineItem} ${s.problem}`}>
+              {link.needsAttention}
+            </span>
           )}
           {link.status === "CREATED" && (
             <span className={s.chips}>

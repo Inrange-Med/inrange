@@ -73,7 +73,7 @@ export default function PaymentsPanel({
   const { links, received } = payments.data;
 
   return (
-    <>
+    <div className={s.sheet}>
       {received.length > 0 && (
         <section className={adminStyles.panel} aria-labelledby="received-h">
           <div className={adminStyles.panelHead}>
@@ -197,6 +197,6 @@ export default function PaymentsPanel({
           </ul>
         )}
       </section>
-    </>
+    </div>
   );
 }
