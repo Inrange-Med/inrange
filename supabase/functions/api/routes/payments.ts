@@ -223,6 +223,8 @@ export async function fulfil(orderId: string, paymentId: string) {
   });
   // the confirmations go once the payment is committed
   if (medicineOrderId) await deliverQueued({ medicineOrderId }).catch((e) => console.error("order confirmation", e.message));
+  // a blood test paid for in the app: a payment link the team made for it must not stay payable
+  if (done.purpose === "LAB_BOOKING") await links.cancelOpen(sql, done.user_id, "LAB_BOOKING").catch((e) => console.error("lab link", (e as Error).message));
   await sendNow(messages);
   return done;
 }

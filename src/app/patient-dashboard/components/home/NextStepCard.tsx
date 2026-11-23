@@ -189,7 +189,7 @@ function wordsFor(step: NextStep): Words {
     case "NOT_APPROVED":
       return {
         title: "Please upload a newer report",
-        text: step.note || "Our medical team could not use this report.",
+        text: step.note || "Our medical team needs a newer report to go on.",
         action: { label: "Upload a newer report", href: `${HOME}/reports` },
       };
     case "BOOK_CONSULTATION":

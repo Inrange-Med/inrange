@@ -19,7 +19,10 @@ export type PlanOnSale = {
 export type PaymentLink = {
   id: string;
   patientId: string;
-  planId: string;
+  /** null on a link for a blood test */
+  planId: string | null;
+  /** what it pays for: a plan, or the blood tests the team booked */
+  purpose: "PLAN" | "LAB_BOOKING";
   planName: string;
   status: "CREATED" | "PAID" | "CANCELLED" | "EXPIRED";
   url: string;

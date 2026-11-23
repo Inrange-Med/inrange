@@ -93,7 +93,10 @@ def main():
     admin_only = [("GET", "/api/admin/medicine/patients"), ("GET", f"/api/admin/medicine/patients/{pid}"), ("GET", "/api/admin/payments"),
                   ("GET", "/api/admin/plans"), ("GET", "/api/admin/calls"), ("GET", "/api/admin/salespeople"), ("GET", "/api/admin/doctors"),
                   ("GET", "/api/admin/reviews"), ("POST", f"/api/admin/medicine/patients/{pid}/payment-links"),
-                  ("PUT", f"/api/admin/medicine/patients/{pid}/plan"), ("POST", "/api/admin/salespeople"), ("PATCH", "/api/admin/plans/1")]
+                  ("PUT", f"/api/admin/medicine/patients/{pid}/plan"), ("POST", "/api/admin/salespeople"), ("PATCH", "/api/admin/plans/1"),
+                  ("GET", "/api/admin/pipeline"), ("GET", f"/api/admin/patients/{pid}/lab"), ("GET", "/api/admin/lab/places?q=delhi"),
+                  ("POST", f"/api/admin/patients/{pid}/lab/bookings"), ("POST", f"/api/admin/patients/{pid}/addresses"),
+                  ("POST", "/api/admin/lab-bookings/LB-1/paid"), ("POST", "/api/admin/lab-bookings/LB-1/cancel")]
     doctor_only = [("GET", f"/api/doctor/patients/{pid}/page"), ("PUT", f"/api/doctor/patients/{pid}/prescription"), ("GET", "/api/doctor/patients")]
     patient_only = [("GET", "/api/patient/next-step"), ("GET", "/api/care/cart"), ("GET", "/api/care/coach-plans"), ("GET", "/api/payments")]
     sales_only = [("GET", "/api/sales/me"), ("GET", "/api/sales/patients"), ("GET", f"/api/sales/patients/{pid}"), ("GET", "/api/sales/plans"),
@@ -111,6 +114,18 @@ def main():
     step("the sales panel is one salesperson's own: an admin works from the admin area", ok, bad)
     ok, bad = refused(None, admin_only + sales_only + coach_only + doctor_only + patient_only)
     step("nothing opens without a sign-in", ok, bad)
+
+    # ---------------------------------------------------------------- blood tests: the patient's two days, the team's side
+    day = lambda n: (datetime.now(IST) + timedelta(days=n)).date().isoformat()
+    for n, words in ((0, "today"), (3, "three days ahead")):
+        s, b = call("GET", f"/api/labs/slots?addressId=1&date={day(n)}", patient)
+        step(f"a patient cannot book a blood test for {words}", s == 400 and "tomorrow" in b["message"], b)
+    s, b = call("POST", "/api/labs/bookings", patient, {"packageCode": "X", "addressId": 1, "collectionDate": day(4), "slotId": 1})
+    step("nor hold a time beyond the day after tomorrow", s == 400 and "tomorrow" in b["message"], b)
+    s, b = call("GET", "/api/admin/pipeline", admin)
+    step("admin sees who to call, by where they are stuck", s == 200 and set(b["data"]) == {"bloodTest", "labProblem", "consultation", "plan", "coach"}, b)
+    s, b = call("GET", f"/api/admin/patients/{pid}/lab", admin)
+    step("admin opens what booking a blood test for the patient needs", s == 200 and b["data"]["bookings"] == [] and b["data"]["priceRupees"], b)
 
     # ---------------------------------------------------------------- a customer is assigned
     s, b = call("GET", f"/api/sales/patients/{pid}", seller)

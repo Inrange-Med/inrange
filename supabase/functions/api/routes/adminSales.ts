@@ -58,10 +58,10 @@ adminSalesRoutes.post("/admin/payment-links/:id/check", async (c) => {
 
 adminSalesRoutes.post("/admin/payment-links/:id/cancel", async (c) => {
   const me = await admin(c);
-  const [l] = await sql`select id, status, patient_id from payment_links where id = ${c.req.param("id").slice(0, 40)}`;
+  const [l] = await sql`select id, status, patient_id, purpose from payment_links where id = ${c.req.param("id").slice(0, 40)}`;
   if (!l) fail(404, "That payment link was not found.");
   if (l.status !== "CREATED") fail(409, "Only a link still waiting can be withdrawn.");
-  await links.cancelOpen(sql, l.patient_id);
+  await links.cancelOpen(sql, l.patient_id, l.purpose);
   await sql`insert into audit_log (patient_id, actor_id, action) values (${l.patient_id}, ${me.id}, 'Withdrew a payment link')`;
   return ok(c, null, "Link withdrawn");
 });

@@ -46,7 +46,7 @@ export default function ReportsView() {
       {notApproved && (
         <p className={styles.note}>
           {eligibility.data?.reviewNote ||
-            "Our medical team could not approve your last report."}
+            "Our medical team needs a newer report to go on."}
         </p>
       )}
       <LabReportUpload

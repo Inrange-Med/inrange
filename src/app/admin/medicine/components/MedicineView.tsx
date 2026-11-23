@@ -6,6 +6,7 @@
               patient, what happened, and the outcome to record
     Orders    the pharmacy's deliveries by step, one next step per row (admin)
     Patients  everyone: last order, run-out, doses, coach; the plans, the sales team and the coaches
+    To call   who is stuck and needs a call: no blood test, a test to rebook, no consultation, no plan, no coach
     Calls     the consultations coming up with their video links, and who is due a follow-up
     Payments  every payment link and who paid, and payments that matched no link
     Messages  every WhatsApp message, sent or not, and why (admin)
@@ -31,6 +32,7 @@ import NumbersPanel from "./NumbersPanel";
 import OrdersPanel from "./OrdersPanel";
 import PatientSheet from "./PatientSheet";
 import PatientsPanel from "./PatientsPanel";
+import ToCallPanel from "./ToCallPanel";
 import TasksPanel from "@/features/medicine-queue/TasksPanel";
 import adminStyles from "@/components/ui/styles/StaffSurfaces.module.css";
 import s from "@/components/ui/styles/StaffPanels.module.css";
@@ -39,6 +41,7 @@ type Tab =
   | "queue"
   | "orders"
   | "patients"
+  | "tocall"
   | "calls"
   | "payments"
   | "messages"
@@ -47,6 +50,7 @@ const TABS: Tab[] = [
   "queue",
   "orders",
   "patients",
+  "tocall",
   "calls",
   "payments",
   "messages",
@@ -101,6 +105,7 @@ export default function MedicineView() {
     queue: label("Queue", t?.open),
     orders: label("Orders", o?.toDispatch),
     patients: "Patients",
+    tocall: "To call",
     calls: "Calls",
     payments: "Payments",
     messages: "Messages",
@@ -167,6 +172,9 @@ export default function MedicineView() {
           onOpenPatient={setPatientId}
           onChanged={changed}
         />
+      )}
+      {role === "ADMIN" && tab === "tocall" && (
+        <ToCallPanel version={version} onOpenPatient={setPatientId} />
       )}
       {role === "ADMIN" && tab === "calls" && (
         <CallsPanel version={version} onOpenPatient={setPatientId} />
