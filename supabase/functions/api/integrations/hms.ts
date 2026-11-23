@@ -47,17 +47,9 @@ export async function createRoom(appointmentId: number): Promise<string> {
  * room). Short-lived auth tokens need 100ms's React Prebuilt, which does not support React 19 yet.
  */
 export async function joinLink(roomId: string, role: CallRole, name: string, userId: number) {
-  type Code = { code: string; role: string; enabled: boolean };
-  let codes: Code[] = (await hms(`/room-codes/room/${roomId}`)).data ?? [];
-  if (!codes.length) codes = (await hms(`/room-codes/room/${roomId}`, {})).data ?? [];
-  const code = codes.find((c) => c.role === role && c.enabled)?.code;
-  if (!code) throw new Error(`100ms room ${roomId} has no enabled code for role "${role}"`);
   // ponytail: 100ms shows its own preview after our camera check (two Join buttons); skip_preview would join with the
   // camera and microphone off, which is worse. Fix in the 100ms template or drop our check (19 Nov 2026).
-  const q = new URLSearchParams({ name, userId: String(userId) });
-  // HMS_SUBDOMAIN may be "inrange" or the full "inrange.app.100ms.live"
-  const sub = env.hmsSubdomain.replace(/^https?:\/\//, "").replace(/\.app\.100ms\.live\/?$/, "");
-  return `https://${sub}.app.100ms.live/meeting/${code}?${q}`;
+  return `${await roomAddress(roomId, role)}?${new URLSearchParams({ name, userId: String(userId) })}`;
 }
 
 export function mockJoinLink(appointmentId: number, role: CallRole, name: string) {
@@ -75,12 +67,30 @@ export async function endRoom(roomId: string | null) {
   await hms(`/rooms/${roomId}`, { enabled: false }).catch((e) => console.error(e));
 }
 
+/** The room's Prebuilt address for one role (a room code, minted once per room). */
+async function roomAddress(roomId: string, role: CallRole) {
+  type Code = { code: string; role: string; enabled: boolean };
+  let codes: Code[] = (await hms(`/room-codes/room/${roomId}`)).data ?? [];
+  if (!codes.length) codes = (await hms(`/room-codes/room/${roomId}`, {})).data ?? [];
+  const code = codes.find((c) => c.role === role && c.enabled)?.code;
+  if (!code) throw new Error(`100ms room ${roomId} has no enabled code for role "${role}"`);
+  const sub = env.hmsSubdomain.replace(/^https?:\/\//, "").replace(/\.app\.100ms\.live\/?$/, "");
+  return `https://${sub}.app.100ms.live/meeting/${code}`;
+}
+
 /**
  * Starts recording the room (browser composite: one MP4 of the call as the people in it see it). Asked for only when
  * the patient agreed to it for this call. https://www.100ms.live/docs/server-side/v2/api-reference/recordings/start-recording-for-room
+ * 100ms needs a `meeting_url` when "Composite recordings" is not switched on in the template (read 23 Nov 2026): the
+ * plain call is tried first, then with the room's own link, where the recorder comes in as a silent guest named
+ * "Recording", so everyone on the call can see it is being recorded.
  */
 export async function startRecording(roomId: string): Promise<string> {
-  const rec = await hms(`/recordings/room/${roomId}/start`, {});
+  const rec = await hms(`/recordings/room/${roomId}/start`, {}).catch(async (first) => {
+    const url = `${await roomAddress(roomId, "patient")}?${new URLSearchParams({ skip_preview: "true", name: "Recording" })}`;
+    return await hms(`/recordings/room/${roomId}/start`, { meeting_url: url, resolution: { width: 1280, height: 720 } })
+      .catch((second) => { throw new Error(`${(first as Error).message}; with the room link: ${(second as Error).message}`); });
+  });
   return String(rec.id);
 }
 

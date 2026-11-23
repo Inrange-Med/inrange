@@ -52,6 +52,7 @@ import CoachRemarks from "@/features/coaching/CoachRemarks";
 import CoachingSections from "@/features/coaching/CoachingSections";
 import PatientConsultations from "./PatientConsultations";
 import PatientPrescriptions from "./PatientPrescriptions";
+import PatientLabSection from "./PatientLab";
 import PlanSale from "./PlanSale";
 import PaymentLinks from "@/features/payment-links/PaymentLinks";
 import formStyles from "@/components/ui/styles/FormControls.module.css";
@@ -601,6 +602,13 @@ export default function PatientSheet({
             )}
           </dl>
 
+          {isAdmin && (
+            <PatientLabSection
+              key={`lab-${data.patient.id}`}
+              patientId={data.patient.id}
+              onChanged={onChanged}
+            />
+          )}
           <PatientConsultations
             data={data}
             isAdmin={isAdmin}

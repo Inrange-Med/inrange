@@ -49,9 +49,12 @@ export default function SlotPicker({
   onConfirm,
   confirmLabel = "Book",
   dayCount = 12,
+  firstDay = 0,
   closedWeekdays = SUNDAY_ONLY,
   note = "Times are India time (IST).",
 }: {
+  /** how many days ahead the first day is: 0 today, 1 tomorrow (home blood tests start tomorrow) */
+  firstDay?: number;
   loadSlots: (day: Date) => Promise<PickableSlot[]>;
   onConfirm: (slot: PickableSlot) => Promise<void>;
   confirmLabel?: string;
@@ -61,8 +64,8 @@ export default function SlotPicker({
   note?: string;
 }) {
   const days = useMemo(
-    () => upcomingOpenDays(dayCount, closedWeekdays),
-    [dayCount, closedWeekdays],
+    () => upcomingOpenDays(dayCount, closedWeekdays, firstDay),
+    [dayCount, closedWeekdays, firstDay],
   );
   const weeks = useMemo(() => groupIntoWeeks(days), [days]);
   const [selectedDay, setSelectedDay] = useState<Date>(days[0]);
@@ -236,9 +239,7 @@ export default function SlotPicker({
                 </div>
               ))}
             {slots !== null && groups.length === 0 && (
-              <p className={styles.empty}>
-                No times left on this day.
-              </p>
+              <p className={styles.empty}>No times left on this day.</p>
             )}
             {groups.map((group) => (
               <fieldset key={group.name} className={styles.group}>

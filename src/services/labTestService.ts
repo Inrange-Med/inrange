@@ -48,8 +48,8 @@ type RawSlot = {
   available: number;
 };
 
-/** Redcliffe books collections from today to today + 4 days. */
-const LAB_DAYS_AHEAD = 4;
+/** Patients book for tomorrow or the day after (23 Nov 2026 call); the backend checks the same. */
+const LAB_DAYS_AHEAD = 2;
 
 /** A backend without the endpoint answers 404 with an HTML page; say it in words instead. */
 async function labRequest<T>(
@@ -91,9 +91,14 @@ function labDateProblem(date: string) {
     today.getMonth(),
     today.getDate() + LAB_DAYS_AHEAD,
   );
+  const tomorrow = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate() + 1,
+  );
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return "Choose a collection day.";
-  if (date < toApiDate(today) || date > toApiDate(lastDay))
-    return `The lab collects from today up to ${LAB_DAYS_AHEAD} days ahead. Choose another day.`;
+  if (date < toApiDate(tomorrow) || date > toApiDate(lastDay))
+    return "Please choose tomorrow or the day after.";
   return null;
 }
 

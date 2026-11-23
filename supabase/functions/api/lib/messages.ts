@@ -112,9 +112,10 @@ export const TEMPLATES = {
   },
   LAB_CANCELLED: {
     name: "blood_test_cancelled",
-    body: "Hi {{1}}, the lab has cancelled your home blood test for {{2}}. You can choose a new time in the inrange app.",
+    // 23 Nov 2026 call: a cancelled collection is rebooked by the team on a call, at no charge
+    body: "Hi {{1}}, your home blood test on {{2}} needs a new time. Someone from our team will call you to arrange it.",
     examples: ["Asha", "Thu, 19 Nov"],
-    buttons: [{ kind: "URL", label: "Choose a time", path: "/patient-dashboard/lab-tests" }],
+    buttons: [{ kind: "URL", label: "Open the app", path: "/patient-dashboard/lab-tests" }],
   },
   REPORT_READY: {
     name: "blood_test_report_ready",

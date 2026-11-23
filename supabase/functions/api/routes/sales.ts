@@ -56,7 +56,7 @@ salesRoutes.get("/sales/me", async (c) => {
     select (select count(*) from patient_profiles p where p.salesperson_id = ${s.id})::int as patients,
       (select count(*) from plan_recommendations r where r.salesperson_id = ${s.id} and exists (
         select 1 from subscriptions b where b.user_id = r.patient_id and b.plan_id = r.plan_id and b.created_at >= r.created_at))::int as sold,
-      (select count(*) from payment_links l where l.salesperson_id = ${s.id} and l.status = 'CREATED')::int as waiting,
+      (select count(*) from payment_links l where l.salesperson_id = ${s.id} and l.status = 'CREATED' and l.purpose = 'PLAN')::int as waiting,
       (select count(*) from salespeople o where o.active and (o.rank, o.id) <= (select rank, id from salespeople where id = ${s.id}))::int as rank`;
   return ok(c, { name: s.full_name, rank: n.rank, patients: n.patients, plansSold: n.sold, linksWaiting: n.waiting });
 });
@@ -84,7 +84,7 @@ salesRoutes.get("/sales/patients", async (c) => {
     from patient_profiles pp join users pu on pu.id = pp.user_id and pu.role = 'PATIENT'
     left join lateral (select p.name, sb.ends_at from subscriptions sb join plans p on p.id = sb.plan_id
       where sb.user_id = pu.id and sb.status = 'Active' and sb.ends_at > now() order by sb.ends_at desc limit 1) pl on true
-    left join lateral (select l.amount_paise, l.created_at from payment_links l where l.patient_id = pu.id and l.status = 'CREATED' limit 1) lk on true
+    left join lateral (select l.amount_paise, l.created_at from payment_links l where l.patient_id = pu.id and l.status = 'CREATED' and l.purpose = 'PLAN' limit 1) lk on true
     left join lateral (select a.id, ${starts} as starts, d.full_name as doctor from appointments a
       join doctor_slots s on s.id = a.slot_id join doctors d on d.id = a.doctor_id
       where a.patient_id = pu.id and a.status in ('Booked', 'InProgress') and ${ahead}
@@ -126,7 +126,8 @@ salesRoutes.get("/sales/patients/:patientId", async (c) => {
     prescription: rx ? { doctorName: rx.doctor ?? "", sentAt: rx.sent, diagnosis: rx.diagnosis ?? "",
       // deno-lint-ignore no-explicit-any
       medicines: (rx.items as Record<string, any>[]).map(lineView).map((l) => l.name) } : null,
-    links: mine,
+    // a salesperson's links are for plans; a blood test's link is the team's
+    links: mine.filter((l) => l.purpose === "PLAN"),
   });
 });
 
@@ -141,7 +142,7 @@ salesRoutes.post("/sales/patients/:patientId/payment-links", async (c) => {
 /** A link of one of my customers. */
 async function myLink(sellerId: number, id: string) {
   const [l] = await sql`select l.id, l.status, l.patient_id from payment_links l join patient_profiles pp on pp.user_id = l.patient_id
-                        where l.id = ${id.slice(0, 40)} and pp.salesperson_id = ${sellerId}`;
+                        where l.id = ${id.slice(0, 40)} and pp.salesperson_id = ${sellerId} and l.purpose = 'PLAN'`;
   return l ?? fail(404, "That payment link was not found.");
 }
 

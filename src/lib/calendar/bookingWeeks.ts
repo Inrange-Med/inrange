@@ -22,10 +22,14 @@ const weekdayOf = (day: Date) => inIndiaTime(day).getUTCDay();
 const mondayOf = (day: Date) =>
   new Date(day.getTime() - ((weekdayOf(day) + 6) % 7) * DAY_MS);
 
-/** The next `count` open days from today (closedWeekdays: 0 = Sunday). */
-export function upcomingOpenDays(count: number, closedWeekdays: number[]) {
+/** The next `count` open days from today, or from `firstDay` days ahead (1 = tomorrow). closedWeekdays: 0 = Sunday. */
+export function upcomingOpenDays(
+  count: number,
+  closedWeekdays: number[],
+  firstDay = 0,
+) {
   const days: Date[] = [];
-  for (let i = 0; days.length < count && i < count * 2; i++) {
+  for (let i = firstDay; days.length < count && i < firstDay + count * 2; i++) {
     const day = indiaNoon(i);
     if (!closedWeekdays.includes(weekdayOf(day))) days.push(day);
   }

@@ -13,6 +13,7 @@ import * as rzp from "../integrations/razorpay.ts";
 import * as notices from "./notices.ts";
 import { sendNow } from "./notify.ts";
 import { openTask } from "./medicineFlow.ts";
+import { fulfilLabBooking } from "../routes/labs.ts";
 
 const DAYS_OPEN = 7;
 const words = (v: unknown, max: number) => String(v ?? "").trim().replace(/\s+/g, " ").slice(0, max) || null;
@@ -21,7 +22,8 @@ export type LinkInput = { planId: unknown; discountPercent?: unknown; coachPrefe
 type Maker = { userId: number; seller: { id: number; full_name: string } | null; isAdmin: boolean };
 
 const view = sql`
-  l.id, l.patient_id::text as "patientId", l.plan_id::text as "planId", p.name as "planName", l.status, l.short_url as url,
+  l.id, l.patient_id::text as "patientId", l.plan_id::text as "planId", l.purpose,
+  coalesce(p.name, 'Blood tests and consultation') as "planName", l.status, l.short_url as url,
   l.list_paise / 100 as "listRupees", l.amount_paise / 100 as "amountRupees", l.salesperson, l.coach_preference as "coachPreference",
   l.note, l.provider_payment_id as "paymentId", l.needs_attention as "needsAttention", l.provider = 'mock' as test,
   to_char(l.created_at at time zone 'Asia/Kolkata', 'YYYY-MM-DD"T"HH24:MI:SS"+05:30"') as "createdAt",
@@ -30,12 +32,12 @@ const view = sql`
 
 /** A patient's links, newest first. */
 export const linksFor = (patientId: number) => sql`
-  select ${view} from payment_links l join plans p on p.id = l.plan_id where l.patient_id = ${patientId} order by l.created_at desc limit 10`;
+  select ${view} from payment_links l left join plans p on p.id = l.plan_id where l.patient_id = ${patientId} order by l.created_at desc limit 10`;
 
 /** Every link, newest first, with who it is for (admin's Payments view). */
 export const allLinks = () => sql`
   select ${view}, coalesce(nullif(trim(concat_ws(' ', pp.first_name, pp.last_name)), ''), u.full_name, 'Patient ' || u.id) as "patientName", u.mobile as "patientMobile"
-  from payment_links l join plans p on p.id = l.plan_id join users u on u.id = l.patient_id
+  from payment_links l left join plans p on p.id = l.plan_id join users u on u.id = l.patient_id
   left join patient_profiles pp on pp.user_id = l.patient_id
   order by (l.status = 'CREATED') desc, l.created_at desc limit 150`;
 
@@ -89,16 +91,53 @@ export async function createLink(patient: { id: number; name: string; mobile: st
 }
 
 /**
+ * A link for a blood test the team held for the patient: the amount is the booking's own. Paid, the collection is
+ * confirmed as a payment in the app would (settle). The hold lasts 30 minutes; a payment after that books the time
+ * again if it is still free, and is flagged for the team if it is not.
+ */
+export async function createLabLink(patient: { id: number; name: string; mobile: string }, booking: { id: string; amount_paise: number }, userId: number) {
+  if (!(booking.amount_paise >= 100)) fail(409, "This booking has no amount to pay.");
+  await cancelOpen(sql, patient.id);
+  const test = isTestMobile(patient.mobile);
+  const expiresAt = new Date(Date.now() + 86_400_000);
+  const made = await rzp.createPaymentLink({
+    amountPaise: booking.amount_paise, description: "inrange blood tests and consultation", referenceId: `L${patient.id}-${Date.now().toString(36)}`,
+    customer: { name: patient.name, mobile: patient.mobile }, expiresAt,
+    notes: { patientId: String(patient.id), labBookingId: booking.id, purpose: "LAB_LINK" },
+    callbackUrl: `${env.supabaseUrl}/functions/v1/api/payments/link-return`, textTheCustomer: !test,
+  }).catch(() => fail(502, "The payment link could not be made. Please try again."));
+  await sql`insert into payment_links (id, patient_id, purpose, lab_booking_id, list_paise, amount_paise, short_url, provider, created_by, expires_at)
+            values (${made.id}, ${patient.id}, 'LAB_BOOKING', ${booking.id}, ${booking.amount_paise}, ${booking.amount_paise}, ${made.shortUrl},
+              ${made.provider}, ${userId}, ${expiresAt})`;
+  await sql`insert into audit_log (patient_id, actor_id, action) values (${patient.id}, ${userId}, ${`Made a payment link for the blood test, Rs ${booking.amount_paise / 100}`})`;
+  return { id: made.id, url: made.shortUrl, amountRupees: booking.amount_paise / 100, texted: made.provider === "razorpay" && !test };
+}
+
+/**
  * The link was paid: the plan starts, once (the row lock and the status guard it). The sale is written from the
  * link: who sold it, the coach asked for, the note, the amount and Razorpay's payment ID. A patient who got onto
  * a plan another way in the meantime keeps that plan; the payment is flagged for the team to refund.
  */
 export async function settle(linkId: string, paymentId: string) {
   const messages = await sql.begin(async (tx) => {
-    const [l] = await tx`select l.*, p.name as plan_name from payment_links l join plans p on p.id = l.plan_id where l.id = ${linkId} for update of l`;
+    const [l] = await tx`select l.*, p.name as plan_name from payment_links l left join plans p on p.id = l.plan_id where l.id = ${linkId} for update of l`;
     if (!l || l.status === "PAID") return [];
     const paid = { status: "PAID", paid_at: new Date(), provider_payment_id: paymentId };
     await tx`delete from received_payments where id = ${paymentId}`;
+    if (l.purpose === "LAB_BOOKING") {
+      // the blood test the team held: recorded and confirmed exactly as a payment in the app (routes/payments.ts fulfil)
+      await tx`update payment_links set ${tx(paid)} where id = ${l.id}`;
+      const [{ n }] = await tx`select nextval('invoice_seq') as n`;
+      await tx`insert into payment_orders (id, user_id, purpose, reference_id, amount_paise, title, line_items, status, provider,
+                 provider_payment_id, paid_at, invoice_number, fulfilled_at, meta)
+               values (${l.id}, ${l.patient_id}, 'LAB_BOOKING', ${l.lab_booking_id}, ${l.amount_paise}, 'Blood tests and consultation',
+                 ${tx.json([{ label: "Blood tests and consultation", amountPaise: l.amount_paise }])}, 'PAID', ${l.provider},
+                 ${paymentId}, now(), ${`INR-${new Date().getUTCFullYear()}-${String(n).padStart(6, "0")}`}, now(), ${tx.json({ paymentLink: true })})
+               on conflict (id) do nothing`;
+      await fulfilLabBooking(tx, l.lab_booking_id, l.patient_id);
+      await tx`insert into audit_log (patient_id, actor_id, action) values (${l.patient_id}, ${l.created_by}, ${`Blood test paid on a payment link (${paymentId})`})`;
+      return await notices.within(tx, (sp) => notices.labBooked(sp, l.lab_booking_id));
+    }
     if (await onPlan(tx, l.patient_id)) {
       const why = "Paid, but the patient was already on a plan. Refund it, or sort it out with them.";
       await tx`update payment_links set ${tx({ ...paid, needs_attention: why })} where id = ${l.id}`;

@@ -415,6 +415,80 @@ export type OpsCalls = {
   }[];
 };
 
+/** Who the team calls next, by where each patient is stuck (admin's To call view). */
+export type PipelineRow = {
+  patientId: string;
+  patientName: string;
+  patientMobile: string;
+  salesperson: string | null;
+};
+export type OpsPipeline = {
+  /** signed up, no blood test booked and no report sent in */
+  bloodTest: (PipelineRow & { since: string; holding: boolean })[];
+  /** a paid blood test that is not happening as booked */
+  labProblem: (PipelineRow & {
+    bookingId: string;
+    why: string;
+    since: string;
+  })[];
+  /** the report is in and no consultation is booked */
+  consultation: (PipelineRow & {
+    stage: "UNDER_REVIEW" | "APPROVED";
+    since: string;
+  })[];
+  /** seen by the doctor, not on a plan */
+  plan: (PipelineRow & { lastOn: string; linkWaiting: boolean })[];
+  /** on a plan, no health coach yet */
+  coach: (PipelineRow & { planName: string; since: string })[];
+};
+
+/** A blood test booking as the team sees it. */
+export type TeamLabBooking = {
+  id: string;
+  status:
+    | "PAYMENT_PENDING"
+    | "BOOKED"
+    | "COLLECTOR_ASSIGNED"
+    | "SAMPLE_COLLECTED"
+    | "PROCESSING"
+    | "REPORT_READY"
+    | "CANCELLED"
+    | "EXPIRED";
+  startsAt: string;
+  endsAt: string | null;
+  address: string;
+  person: { name: string; age: number; gender: string };
+  totalRupees: number;
+  holdExpiresAt: string | null;
+  reschedulesLeft: number;
+  paid: boolean;
+  bookedByTeam: boolean;
+  needsAttention: string | null;
+};
+
+/** What booking a blood test for a patient needs, and their bookings so far. */
+export type PatientLab = {
+  person: { name: string; age: number | null; gender: string | null };
+  addresses: { id: string; line: string; placed: boolean }[];
+  priceRupees: number | null;
+  bookings: TeamLabBooking[];
+};
+
+export type LabPlace = {
+  eloc: string;
+  name: string;
+  address: string;
+  city: string;
+  state: string;
+  pincode: string;
+};
+export type LabSlot = {
+  slotId: number;
+  startTime: string;
+  endTime: string;
+  available: number;
+};
+
 /** A consultation's video links, to share by any means. */
 export type CallLinks = {
   patient: string;

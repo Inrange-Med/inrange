@@ -50,11 +50,8 @@ export default function PreJoin({
             onChange={(event) => onRecord?.(event.target.checked)}
           />
           <span>
-            <strong>Record this consultation</strong>
-            <span>
-              Only your care team can watch it, to review your care. Your choice
-              changes nothing about your consultation.
-            </span>
+            <strong>Record this call</strong>
+            <span>Only your care team can watch it. It is your choice.</span>
           </span>
         </label>
       )}

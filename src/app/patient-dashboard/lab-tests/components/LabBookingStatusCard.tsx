@@ -33,9 +33,9 @@ import { fastingSentence } from "@/lib/format/labPackage";
 /** Why the time cannot be changed, or null when it can. */
 function rescheduleBlock(booking: LabBooking) {
   if (booking.reschedulesLeft <= 0)
-    return "This test has been moved twice, the most the lab allows.";
+    return "This test has been moved twice. Message us and we will help with another change.";
   if (!booking.canReschedule)
-    return "The time cannot be changed once a collector is assigned.";
+    return "Your collector is assigned, so the time is set.";
   return null;
 }
 

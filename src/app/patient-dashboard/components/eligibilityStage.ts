@@ -157,7 +157,7 @@ function wordsFor(
         title: "Please upload a newer report",
         text:
           eligibility.reviewNote ||
-          "Our medical team could not approve this report.",
+          "Our medical team needs a newer report to go on.",
         action: {
           label: "Upload a newer report",
           href: "/patient-dashboard/reports",

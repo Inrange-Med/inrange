@@ -56,7 +56,7 @@ export async function nextStep(patientId: number, now = new Date()) {
           and delivered_at > now() - interval '2 days' order by delivered_at desc limit 1`,
     // the payment link the sales team sent for a plan, still waiting (23 Nov 2026 call: shown in the app too)
     sql`select l.short_url, l.amount_paise, l.list_paise, p.name from payment_links l join plans p on p.id = l.plan_id
-        where l.patient_id = ${patientId} and l.status = 'CREATED' and l.expires_at > now() limit 1`,
+        where l.patient_id = ${patientId} and l.purpose = 'PLAN' and l.status = 'CREATED' and l.expires_at > now() limit 1`,
   ]);
   const live = appointments.filter((a) => ["Booked", "InProgress"].includes(a.status) && !a.ended_at &&
     new Date(a.ends_at ?? a.starts_at).getTime() + 60 * MIN > t);

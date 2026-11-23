@@ -36,6 +36,13 @@
  *   GET   /api/admin/plans   PATCH /api/admin/plans/:id    what each plan includes, and the sales discount allowed (admin)
  *   GET   /api/admin/calls                                 consultations coming up, and who is due a follow-up (admin)
  *   GET   /api/admin/consultations/:id/links               the video links for the patient, the doctor and the salesperson (admin)
+ *   GET   /api/admin/pipeline                              who to call next, by where they are stuck (admin)
+ *   GET   /api/admin/patients/:id/lab                      what booking a blood test for them needs, and their bookings (admin)
+ *   GET   /api/admin/lab/places?q=                         address search (admin)
+ *   POST  /api/admin/patients/:id/addresses                { addressLine, pincode, city, state, landmark, eloc } (admin)
+ *   GET   /api/admin/patients/:id/lab/slots?addressId=&date=   free collection times (admin)
+ *   POST  /api/admin/patients/:id/lab/bookings             { addressId, collectionDate, slotId, person } holds a time (admin)
+ *   POST  /api/admin/lab-bookings/:id/payment-link|paid|move|cancel   (admin)
  *   GET   /api/admin/salespeople                           the sales team, best first, with each one's numbers (admin)
  *   POST  /api/admin/salespeople                           { fullName, mobile? } -> the list (admin)
  *   PATCH /api/admin/salespeople/:id                       any of { fullName, mobile, active, rank } -> the list (admin)
@@ -46,6 +53,10 @@ import type { LinkForm, PlanOnSale } from "@/types/sales";
 import type {
   CallLinks,
   Coach,
+  LabPlace,
+  LabSlot,
+  OpsPipeline,
+  PatientLab,
   OpsCalls,
   OpsPayments,
   OpsMeasure,
@@ -387,6 +398,84 @@ export async function getCallLinks(consultationId: string): Promise<CallLinks> {
       `/api/admin/consultations/${consultationId}/links`,
     )
   ).data!;
+}
+
+export async function getPipeline(): Promise<OpsPipeline> {
+  return (await apiRequest<ApiEnvelope<OpsPipeline>>("/api/admin/pipeline"))
+    .data!;
+}
+
+export async function getPatientLab(patientId: string): Promise<PatientLab> {
+  return (
+    await apiRequest<ApiEnvelope<PatientLab>>(
+      `/api/admin/patients/${patientId}/lab`,
+    )
+  ).data!;
+}
+
+export async function searchLabPlaces(q: string): Promise<LabPlace[]> {
+  return listFrom<LabPlace>(
+    await apiRequest(`/api/admin/lab/places?q=${encodeURIComponent(q)}`),
+  );
+}
+
+export async function addPatientAddress(
+  patientId: string,
+  address: {
+    addressLine: string;
+    pincode: string;
+    city: string;
+    state: string;
+    landmark: string;
+    eloc: string;
+  },
+): Promise<string> {
+  const body = await apiRequest<ApiEnvelope<{ addressId: string }>>(
+    `/api/admin/patients/${patientId}/addresses`,
+    { method: "POST", body: address },
+  );
+  return body.data!.addressId;
+}
+
+export async function listLabSlots(
+  patientId: string,
+  addressId: string,
+  date: string,
+): Promise<LabSlot[]> {
+  return listFrom<LabSlot>(
+    await apiRequest(
+      `/api/admin/patients/${patientId}/lab/slots?addressId=${addressId}&date=${date}`,
+    ),
+  );
+}
+
+/** Holds a collection time for the patient; returns the server's words. */
+export async function holdLabBooking(
+  patientId: string,
+  booking: {
+    addressId: string;
+    collectionDate: string;
+    slotId: number;
+    person: { name: string; age: number; gender: string };
+  },
+): Promise<string> {
+  const body = await apiRequest<{ message?: string }>(
+    `/api/admin/patients/${patientId}/lab/bookings`,
+    { method: "POST", body: booking },
+  );
+  return body?.message ?? "Time held";
+}
+
+/** A held or booked blood test: a payment link, marked paid, moved or cancelled. Returns the link (if any) and the server's words. */
+export async function actOnLabBooking(
+  id: string,
+  action: "payment-link" | "paid" | "move" | "cancel",
+  input: Record<string, unknown> = {},
+) {
+  const body = await apiRequest<
+    ApiEnvelope<{ url?: string }> & { message?: string }
+  >(`/api/admin/lab-bookings/${id}/${action}`, { method: "POST", body: input });
+  return { url: body.data?.url ?? null, message: body.message ?? "Done" };
 }
 
 export async function listSalespeople(): Promise<Salesperson[]> {

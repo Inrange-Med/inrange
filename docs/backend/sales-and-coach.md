@@ -76,3 +76,26 @@ the prescription form (`coach` on the page).
 - A home blood test is booked for today or the next two days.
 - The report-ready WhatsApp message says someone will call to book the consultation (template text changed: sync
   the templates with Meta before WhatsApp goes live).
+
+## Blood tests: the patient's two days, and the team's bookings
+
+Code: `routes/adminLabs.ts`, `routes/labs.ts` (`holdBooking`, `moveBooking`, `cancelBookingFor`, `checkPatientDay`),
+migration `20261123000500`.
+
+- A patient books their own test for tomorrow or the day after only. Any other day, and anyone who did not book,
+  is handled by the team on a call.
+- `GET /admin/pipeline` (admin, To call): who is stuck where: no blood test, a paid test to rebook, a report with
+  no consultation, seen with no plan, on a plan with no coach. The follow-up after 25 days is under Calls.
+- On the patient's sheet (Blood test) the team holds a time for them (today up to 4 days ahead, at a saved address
+  or a new one found by search). The hold lasts 30 minutes and is booked once paid: in the app (Home shows it), on
+  a payment link (`payment_links.purpose = 'LAB_BOOKING'`), or by a payment ID admin enters.
+- Someone whose paid test was cancelled is rebooked on that payment, never charged again. The team can move a
+  booked test (twice, the lab's limit) or cancel it.
+- The lab is never named to a patient: its error text is logged and replaced by one calm line, and its tracking
+  page is not linked. The report PDF itself is the lab's own file and carries its letterhead.
+
+## Recording a call
+
+The patient ticks "Record this call" on their Join screen, each call; unticked by default. `startRecording` asks
+100ms with no body first and, when 100ms wants a `meeting_url` (composite recording not switched on in the
+template), again with the room's own link, where the recorder joins as a guest named "Recording".

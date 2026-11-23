@@ -40,14 +40,19 @@ const RANK: Record<string, number> = {
   PAYMENT_PENDING: 0, BOOKED: 1, COLLECTOR_ASSIGNED: 2, SAMPLE_COLLECTED: 3, PROCESSING: 4, REPORT_READY: 5,
 };
 
-/** Redcliffe failures as readable answers: our own refusal 422, the lab's 502. */
+/**
+ * The lab's failures, for a patient: our own checks (a missing field) in our own words, 422. Anything the lab itself
+ * said is logged and never shown: the patient reads one calm line, and nothing that names or quotes the lab.
+ */
 async function lab<T>(work: Promise<T>): Promise<T> {
   try {
     return await work;
   } catch (e) {
     if (e instanceof rc.RedcliffeError) {
-      if (e.httpStatus !== null) console.error("redcliffe", e.httpStatus, e.message, JSON.stringify(e.body)?.slice(0, 500));
-      return fail(e.httpStatus === null ? 422 : 502, e.message);
+      if (e.httpStatus === null) return fail(422, e.message);
+      console.error("redcliffe", e.httpStatus, e.message, JSON.stringify(e.body)?.slice(0, 500));
+      return fail(502, e.httpStatus === 200 ? "That time is no longer free. Please choose another."
+        : "That did not go through. Please try again in a moment.");
     }
     throw e;
   }
@@ -81,7 +86,8 @@ export function toLabBooking(r: Row) {
     reschedulesLeft: left,
     canReschedule: r.status === "BOOKED" && left > 0,
     canCancel: r.status === "PAYMENT_PENDING" || r.status === "BOOKED",
-    collector: r.collector ?? null,
+    // the collector's name and number; never the lab's own tracking page, which carries its name
+    collector: r.collector ? { ...r.collector, trackingUrl: null } : null,
     forEligibility: Boolean(r.care_package_code),
     reportFile: r.report_path ? `/api/files/lab-bookings/${r.id}` : null,
     tests: r.tests ?? [],
@@ -100,9 +106,18 @@ async function ownedBooking(userId: number, id: string): Promise<Row> {
 }
 
 /** Unpaid holds past their 30 minutes become EXPIRED (checked whenever bookings are read). */
-async function expireHolds(userId: number) {
+export async function expireHolds(userId: number) {
   await sql`update lab_bookings set status = 'EXPIRED', updated_at = now()
     where user_id = ${userId} and status = 'PAYMENT_PENDING' and hold_expires_at < now()`;
+}
+
+/**
+ * A patient books their own blood test for tomorrow or the day after only (23 Nov 2026 call: nobody pays and then
+ * waits a week). Any other day, and every change after two days, is arranged by the team on a call (routes/adminLabs.ts).
+ */
+export function checkPatientDay(date: string) {
+  const day = (n: number) => new Date(Date.parse(`${todayIST()}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
+  if (!(date >= day(1) && date <= day(2))) fail(400, "Please choose tomorrow or the day after. For another day, our team will arrange it with you.");
 }
 
 async function ownedAddress(userId: number, addressId: unknown): Promise<Row> {
@@ -165,6 +180,7 @@ labRoutes.get("/labs/serviceability", async (c) => {
 
 labRoutes.get("/labs/slots", async (c) => {
   const me = await requirePatient(c);
+  checkPatientDay(c.req.query("date") ?? "");
   const a = await ownedAddress(me.id, c.req.query("addressId"));
   const { latitude, longitude } = coords(a);
   return ok(c, await lab(rc.slots(c.req.query("date") ?? "", latitude, longitude)));
@@ -172,13 +188,25 @@ labRoutes.get("/labs/slots", async (c) => {
 
 // ---------------------------------------------------------------- bookings
 
+export type HoldInput = {
+  packageCode?: string; addressId?: number; collectionDate?: string; slotId?: string | number; carePackageCode?: string;
+  addOns?: string[];
+  patient?: { name?: string; age?: number; gender?: string; mobile?: string; email?: string };
+};
+
 labRoutes.post("/labs/bookings", async (c) => {
   const me = await requirePatient(c);
-  const input = await body<{
-    packageCode?: string; addressId?: number; collectionDate?: string; slotId?: string | number; carePackageCode?: string;
-    addOns?: string[];
-    patient?: { name?: string; age?: number; gender?: string; mobile?: string; email?: string };
-  }>(c);
+  const input = await body<HoldInput>(c);
+  checkPatientDay(String(input.collectionDate ?? ""));
+  return c.json({ success: true, message: "Collection time held for 30 minutes", data: toLabBooking(await holdBooking(me.id, input)) }, 201);
+});
+
+/**
+ * Holds a collection time for 30 minutes, until it is paid for. The patient's own booking and the team's booking
+ * for a patient (routes/adminLabs.ts) both come through here; who may choose which day is checked by the caller.
+ */
+export async function holdBooking(userId: number, input: HoldInput): Promise<Row> {
+  const me = { id: userId };
   const packageCode = String(input.packageCode ?? "").trim();
   if (!packageCode) fail(400, "Choose a test package.");
   const collectionDate = String(input.collectionDate ?? "");
@@ -251,8 +279,8 @@ labRoutes.post("/labs/bookings", async (c) => {
   if (care) await setEligibility(sql, me.id, { path: "LAB_TEST", stage: "AWAITING_PAYMENT", lab_booking_id: row.id });
 
   const [saved] = await bookingQuery(sql, row.id);
-  return c.json({ success: true, message: "Collection time held for 30 minutes", data: toLabBooking(saved) }, 201);
-});
+  return saved;
+}
 
 labRoutes.get("/labs/bookings", async (c) => {
   const me = await requirePatient(c);
@@ -290,22 +318,32 @@ labRoutes.post("/labs/bookings/:id/reschedule", async (c) => {
   const me = await requirePatient(c);
   const row = await ownedBooking(me.id, c.req.param("id"));
   const input = await body<{ collectionDate?: string; slotId?: string | number }>(c);
-  if (row.status !== "BOOKED") fail(400, "This booking can no longer be moved. Call the lab to change it.");
-  if ((row.reschedule_count ?? 0) >= MAX_RESCHEDULES) fail(400, "This booking has been moved twice already, the most the lab allows.");
-  const date = String(input.collectionDate ?? "");
-  const slotId = Number(input.slotId);
+  checkPatientDay(String(input.collectionDate ?? ""));
+  return ok(c, toLabBooking(await moveBooking(row, String(input.collectionDate ?? ""), Number(input.slotId))), "Collection moved");
+});
+
+/** Moves a booked collection to another time (twice at most). */
+export async function moveBooking(row: Row, date: string, slotId: number): Promise<Row> {
+  if (row.status !== "BOOKED") fail(400, "This booking can no longer be moved here. Our team can help: message us in the app.");
+  if ((row.reschedule_count ?? 0) >= MAX_RESCHEDULES) fail(400, "This booking has been moved twice, which is the most we can do. Our team can help: message us in the app.");
   const slot = await findSlot(date, slotId, row);
   await lab(rc.rescheduleBooking(row.provider_booking_id ?? "", date, slotId));
   await sql`update lab_bookings set slot_date = ${date}, slot_id = ${slotId}, slot_start = ${slot.startTime}, slot_end = ${slot.endTime},
     slot_time = ${slot.startTime}, reschedule_count = reschedule_count + 1, updated_at = now() where id = ${row.id}`;
   const [saved] = await bookingQuery(sql, row.id);
-  return ok(c, toLabBooking(saved), "Collection moved");
-});
+  return saved;
+}
 
 labRoutes.post("/labs/bookings/:id/cancel", async (c) => {
   const me = await requirePatient(c);
   const row = await ownedBooking(me.id, c.req.param("id"));
   const { reason } = await body<{ reason?: string }>(c);
+  return ok(c, toLabBooking(await cancelBookingFor(row, String(reason ?? ""))), "Booking cancelled");
+});
+
+/** Cancels a held or booked collection. A held one that was the patient's first step puts them back at the start. */
+export async function cancelBookingFor(row: Row, reason: string): Promise<Row> {
+  const me = { id: row.user_id as number };
   if (row.status === "PAYMENT_PENDING") {
     // best effort: the lab drops an unconfirmed hold after 30 minutes anyway
     if (row.provider_booking_id)
@@ -313,14 +351,14 @@ labRoutes.post("/labs/bookings/:id/cancel", async (c) => {
     const [e] = await sql`select lab_booking_id from eligibility where user_id = ${me.id}`;
     if (e?.lab_booking_id === row.id) await setEligibility(sql, me.id, { stage: "NOT_STARTED", lab_booking_id: null });
   } else if (row.status === "BOOKED") {
-    await lab(rc.cancelBooking(row.provider_booking_id ?? "", String(reason ?? "")));
+    await lab(rc.cancelBooking(row.provider_booking_id ?? "", reason));
   } else {
-    fail(400, "This booking can no longer be cancelled. Call the lab.");
+    fail(400, "This booking can no longer be cancelled here. Our team can help: message us in the app.");
   }
   await sql`update lab_bookings set status = 'CANCELLED', updated_at = now() where id = ${row.id}`;
   const [saved] = await bookingQuery(sql, row.id);
-  return ok(c, toLabBooking(saved), "Booking cancelled");
-});
+  return saved;
+}
 
 // ponytail: kept until the web app that opens /api/files/lab-bookings/:id is live; then delete this route
 labRoutes.get("/labs/bookings/:id/report", async (c) => {
@@ -408,7 +446,7 @@ async function attachReport(row: Row, forEligibility: boolean, simulated: boolea
       `Collected for ${row.person?.name ?? "the patient"} on ${isoDate(row.slot_date)}`,
       "",
       "This is a placeholder generated in pilot mode. No sample was tested.",
-      "When Redcliffe Labs is connected, the lab's own report replaces this file.",
+      "When the lab is connected, its own report replaces this file.",
     ]);
   }
   const path = `lab/${row.user_id}/${row.id}.pdf`;
