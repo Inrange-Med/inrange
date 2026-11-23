@@ -2,7 +2,8 @@
 
 /*
   The prescription saves as the doctor types (PRD rule 4: never lose what someone typed). Changes wait
-  0.8 s, then go to PUT /api/doctor/consultations/:id/prescription; a failed save keeps the words on the
+  0.8 s, then go to the target's autosave (a consultation's prescription, or one written with no
+  consultation: consultationService savePrescription); a failed save keeps the words on the
   page, says "Not saved yet" and tries again every 5 s. Leaving with anything unsaved asks first.
   The page's text is the doctor's: answers update the saved time, the PDF state and which medicines are
   on the list, never the words in the boxes (so the cursor never jumps).
@@ -14,11 +15,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError, errorMessage } from "@/lib/http/apiClient";
 import { savePrescription } from "@/services/consultationService";
 import type {
-  ConsultationPage,
   MedicineLine,
   MedicineLineView,
   Prescription,
   PrescriptionDraft,
+  PrescriptionEntry,
+  RxTarget,
 } from "@/types/consultation";
 
 /** "refused": the server said no (the prescription was sent elsewhere, say): retrying cannot help */
@@ -45,7 +47,12 @@ export function draftOf(rx: Prescription | null): PrescriptionDraft {
 }
 
 /** A follow-up's start: the last prescription's diagnosis, history, medicines and advice (remarks are the visit's own). */
-export function startFrom(last: ConsultationPage["lastPrescription"]): PrescriptionDraft | null {
+export function startFrom(
+  last: Pick<
+    PrescriptionEntry,
+    "diagnosis" | "patientHistory" | "advice" | "medicines"
+  > | null,
+): PrescriptionDraft | null {
   if (!last) return null;
   return {
     diagnosis: last.diagnosis,
@@ -58,31 +65,31 @@ export function startFrom(last: ConsultationPage["lastPrescription"]): Prescript
 
 function linesOf(medicines: MedicineLineView[]): MedicineLine[] {
   return medicines.map(
-      (m): MedicineLine => ({
-        key: m.key || `${m.medicineId ?? m.name}`,
-        medicineId: m.medicineId,
-        name: m.name,
-        genericName: m.genericName ?? null,
-        brand: m.brand ?? null,
-        form: m.form ?? "",
-        dose: m.dose,
-        frequency: m.frequency,
-        frequencyOther: m.frequencyOther,
-        durationValue: m.durationValue ?? 30,
-        durationUnit: m.durationUnit ?? "DAYS",
-        intake: m.intake,
-        unlisted: m.unlisted,
-      }),
+    (m): MedicineLine => ({
+      key: m.key || `${m.medicineId ?? m.name}`,
+      medicineId: m.medicineId,
+      name: m.name,
+      genericName: m.genericName ?? null,
+      brand: m.brand ?? null,
+      form: m.form ?? "",
+      dose: m.dose,
+      frequency: m.frequency,
+      frequencyOther: m.frequencyOther,
+      durationValue: m.durationValue ?? 30,
+      durationUnit: m.durationUnit ?? "DAYS",
+      intake: m.intake,
+      unlisted: m.unlisted,
+    }),
   );
 }
 
 export function usePrescriptionDraft(
-  appointmentId: string,
+  target: RxTarget,
   initial: Prescription | null,
   start: PrescriptionDraft | null = null,
 ) {
-  const [draft, setDraft] = useState<PrescriptionDraft>(
-    () => (initial ? draftOf(initial) : (start ?? EMPTY)),
+  const [draft, setDraft] = useState<PrescriptionDraft>(() =>
+    initial ? draftOf(initial) : (start ?? EMPTY),
   );
   const [saved, setSaved] = useState<Prescription | null>(initial);
   const [state, setState] = useState<SaveState>(
@@ -94,13 +101,14 @@ export function usePrescriptionDraft(
   const savedEdits = useRef(0);
   const latest = useRef(draft);
   const inFlight = useRef<Promise<Prescription | null> | null>(null);
+  const { kind, id } = target;
 
   const save = useCallback(async (): Promise<Prescription | null> => {
     if (inFlight.current) await inFlight.current;
     if (savedEdits.current === edits.current) return null;
     const upTo = edits.current;
     setState("saving");
-    const run = savePrescription(appointmentId, latest.current)
+    const run = savePrescription({ kind, id }, latest.current)
       .then((rx) => {
         savedEdits.current = upTo;
         setSaved(rx);
@@ -134,7 +142,7 @@ export function usePrescriptionDraft(
       });
     inFlight.current = run;
     return run;
-  }, [appointmentId]);
+  }, [kind, id]);
 
   const change = useCallback((patch: Partial<PrescriptionDraft>) => {
     setDraft((d) => {

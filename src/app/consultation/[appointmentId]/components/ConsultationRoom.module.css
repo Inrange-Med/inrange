@@ -387,3 +387,38 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* the patient's choice about recording: one unticked box, as plain as a consent */
+.recordChoice {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: var(--paper);
+  box-shadow: 0 0 0 1px var(--hair);
+  cursor: pointer;
+}
+
+.recordChoice input {
+  width: 22px;
+  height: 22px;
+  margin: 1px 0 0;
+  accent-color: var(--slate-900);
+}
+
+.recordChoice > span {
+  display: grid;
+  gap: 2px;
+}
+
+.recordChoice strong {
+  font-weight: 560;
+}
+
+.recordChoice > span > span {
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--ink-2);
+}

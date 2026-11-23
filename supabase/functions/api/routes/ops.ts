@@ -12,9 +12,17 @@
 //   GET   /admin/medicine/patients?q=                  admin: every patient; a coach: their own
 //   GET   /admin/medicine/patients/:patientId          everything about one patient's medicines, plan and sales
 //   PATCH /admin/medicine/patients/:patientId/coach    { coachId | null } (admin)
+//   PATCH /admin/medicine/patients/:patientId/fitness-coach  { coachId | null } (admin)
+//   POST  /admin/medicine/patients/:patientId/remarks  { text } a coach remark the doctor reads at the follow-up
+//   POST  /admin/medicine/patients/:patientId/consultations  { slotId, reason? } books one for the patient (admin)
+//   POST  /admin/consultations/:id/move                { slotId } to another time, or another doctor's (admin)
+//   POST  /admin/consultations/:id/cancel              { reason } (admin)
+//   GET   /admin/consultations/:id/recording           a link to watch the recording, if the patient agreed to one (admin)
 //   PATCH /admin/medicine/patients/:patientId/salesperson  { salespersonId | null } who sells to them (admin)
-//   PUT   /admin/medicine/patients/:patientId/plan     { planId | null, salespersonId? } puts them on a plan to pay for
-//                                                     in the app, or withdraws it (admin; 20 Nov 2026)
+//   PUT   /admin/medicine/patients/:patientId/plan     the sales form: { planId | null, salespersonId?, coachPreference?,
+//                                                     note?, paidOutside?: { amountRupees, paymentRef } }. Puts them on
+//                                                     a plan to pay for in the app, or starts it at once when the money
+//                                                     was taken outside the app; null withdraws it (admin)
 //   PUT   /admin/medicine/patients/:patientId/doctors/:doctorId     adds a doctor to their care team (admin)
 //   DELETE /admin/medicine/patients/:patientId/doctors/:doctorId    takes one off it (admin)
 //   GET   /admin/medicine/orders?status=               deliveries (admin)
@@ -32,6 +40,7 @@
 //   PATCH /admin/salespeople/:id                       any of { fullName, mobile, active, rank } (admin)
 import { Hono } from "hono";
 import type { Context } from "hono";
+import type { TransactionSql } from "postgres";
 import { sql } from "../lib/db.ts";
 import { body, fail, intParam, ok } from "../lib/http.ts";
 import { type AuthUser, requireUser } from "../lib/auth.ts";
@@ -46,8 +55,12 @@ import { env } from "../lib/env.ts";
 import { TEMPLATES, type Template } from "../lib/messages.ts";
 import { ist, lineOf, lineView } from "../lib/prescriptions.ts";
 import { packsFor } from "../lib/medicineSearch.ts";
-import { onPlan as hasPlan, pendingPlan } from "../lib/pharmacy.ts";
+import { onPlan as hasPlan, pendingPlan, startPlan } from "../lib/pharmacy.ts";
 import * as careTeam from "../lib/careTeam.ts";
+import { bookAppointment } from "../lib/booking.ts";
+import * as notices from "../lib/notices.ts";
+import { sendNow } from "../lib/notify.ts";
+import { endRoom, hmsLive, recordingLink } from "../integrations/hms.ts";
 
 export const opsRoutes = new Hono();
 
@@ -56,12 +69,12 @@ const admin = (c: Context) => requireUser(c, "ADMIN");
 const iso = (col: string) => sql`to_char(${sql(col)} at time zone 'Asia/Kolkata', 'YYYY-MM-DD"T"HH24:MI:SS"+05:30"')`;
 const name = sql`coalesce(nullif(trim(concat_ws(' ', pp.first_name, pp.last_name)), ''), pu.full_name, 'Patient ' || pu.id)`;
 
-/** A coach reaches only patients assigned to them; an admin reaches everyone. */
-const scope = (me: AuthUser) => (me.role === "COACH" ? sql`and pp.coach_id = ${me.id}` : sql``);
+/** A coach reaches only patients assigned to them (as health coach or fitness coach); an admin reaches everyone. */
+const scope = (me: AuthUser) => (me.role === "COACH" ? sql`and (pp.coach_id = ${me.id} or pp.fitness_coach_id = ${me.id})` : sql``);
 
 async function patientFor(me: AuthUser, patientId: number) {
   const [p] = await sql`
-    select pu.id, pu.mobile, ${name} as name, pp.coach_id from users pu left join patient_profiles pp on pp.user_id = pu.id
+    select pu.id, pu.mobile, ${name} as name, pp.coach_id, pp.fitness_coach_id from users pu left join patient_profiles pp on pp.user_id = pu.id
     where pu.id = ${patientId} and pu.role = 'PATIENT' ${scope(me)}`;
   if (!p) fail(404, "That patient was not found.");
   return p;
@@ -289,6 +302,7 @@ opsRoutes.get("/admin/medicine/patients", async (c) => {
   const q = (c.req.query("q") ?? "").trim().toLowerCase().slice(0, 40);
   const rows = await sql`
     select pu.id::text as id, ${name} as name, pu.mobile, pp.coach_id::text as "coachId", cu.full_name as "coachName",
+      (select f.full_name from users f where f.id = pp.fitness_coach_id) as "fitnessCoachName",
       pp.salesperson, (select string_agg(d.full_name, ', ' order by t.added_at, t.doctor_id) from care_team_doctors t
         join doctors d on d.id = t.doctor_id where t.patient_id = pu.id) as doctors, (select pl.name from subscriptions sb join plans pl on pl.id = sb.plan_id
         where sb.user_id = pu.id and sb.status = 'Active' and sb.ends_at > now() order by sb.ends_at desc limit 1) as "planName",
@@ -314,7 +328,8 @@ opsRoutes.get("/admin/medicine/patients/:patientId", async (c) => {
   const me = await staff(c);
   const p = await patientFor(me, intParam(c.req.param("patientId"), "patient"));
   await sql`insert into audit_log (patient_id, actor_id, action) values (${p.id}, ${me.id}, ${`Viewed medicines (${me.role === "COACH" ? "coach" : "care team"})`})`;
-  const [[rx], carts, followups, orders, messages, replies, tasks, schedules, events, [plan], [coach], [consent], [profile], assigned, doctors] = await Promise.all([
+  const [[rx], carts, followups, orders, messages, replies, tasks, schedules, events, [plan], [coach], [consent], [profile], assigned, doctors,
+    [fitness], remarks, issued, consultations] = await Promise.all([
     sql`select p.id, p.items, p.months, ${iso("p.signed_at")} as signed, ${iso("p.valid_until")} as valid, d.full_name as doctor
         from prescriptions p join doctors d on d.id = p.doctor_id where p.patient_id = ${p.id} and p.status = 'SIGNED' order by p.signed_at desc limit 1`,
     sql`select k.*, rx.months from medicine_carts k join prescriptions rx on rx.id = k.prescription_id
@@ -333,7 +348,10 @@ opsRoutes.get("/admin/medicine/patients/:patientId", async (c) => {
         from dose_schedules where patient_id = ${p.id} order by id desc limit 10`,
     sql`select e.id, s.medicine, e.status, e.skip_reason, ${iso("e.due_at")} as due from dose_events e join dose_schedules s on s.id = e.schedule_id
         where e.patient_id = ${p.id} and e.due_at < now() + interval '3 days' order by e.due_at desc limit 30`,
-    sql`select pl.name, ${iso("s.ends_at")} as ends from subscriptions s join plans pl on pl.id = s.plan_id
+    // the plan they are on, with how it was paid for: in the app (its payment), or outside it (the sales form)
+    sql`select pl.name, ${iso("s.ends_at")} as ends, s.plan_id, s.created_at, ${iso("s.starts_at")} as starts,
+          po.provider_payment_id, ${iso("po.paid_at")} as paid_at
+        from subscriptions s join plans pl on pl.id = s.plan_id left join payment_orders po on po.id = s.payment_order_id
         where s.user_id = ${p.id} and s.status = 'Active' and s.ends_at > now() order by s.ends_at desc limit 1`,
     p.coach_id ? sql`select id, full_name from users where id = ${p.coach_id}` : Promise.resolve([]),
     sql`select ${iso("accepted_at")} as at from consents where user_id = ${p.id} and consent_type = 'WHATSAPP' and revoked_at is null limit 1`,
@@ -341,18 +359,62 @@ opsRoutes.get("/admin/medicine/patients/:patientId", async (c) => {
     pendingPlan(sql, p.id),
     sql`select d.id, d.full_name from care_team_doctors t join doctors d on d.id = t.doctor_id
         where t.patient_id = ${p.id} order by t.added_at, t.doctor_id`,
+    p.fitness_coach_id ? sql`select id, full_name from users where id = ${p.fitness_coach_id}` : Promise.resolve([]),
+    sql`select id, text, author_name, ${iso("created_at")} as at from coach_remarks where patient_id = ${p.id} order by created_at desc limit 50`,
+    // every prescription issued, newest first, with who sent it and when (19 Nov 2026 call: admin and the coach
+    // team read old ones too; nobody downloads them)
+    sql`select x.id, x.version, x.status, x.items, x.diagnosis, x.revises_id, x.appointment_id, d.full_name as doctor,
+          ${iso("coalesce(x.sent_at, x.signed_at)")} as sent
+        from prescriptions x left join doctors d on d.id = x.doctor_id
+        where x.patient_id = ${p.id} and x.status in ('SIGNED', 'SUPERSEDED')
+        order by (x.status = 'SIGNED') desc, coalesce(x.sent_at, x.signed_at) desc, x.version desc limit 30`,
+    sql`select a.id, a.status, a.visit_type, a.doctor_id, d.full_name as doctor, a.recording_consent_at, a.recording_id, a.recording_error,
+          to_char((s.slot_date + s.start_time), 'YYYY-MM-DD"T"HH24:MI:SS"+05:30"') as starts,
+          (s.slot_date + s.start_time) > (now() at time zone 'Asia/Kolkata') as upcoming
+        from appointments a join doctor_slots s on s.id = a.slot_id join doctors d on d.id = a.doctor_id
+        where a.patient_id = ${p.id} order by s.slot_date desc, s.start_time desc limit 12`,
   ]);
+  // the sales form behind the plan they are on: the latest assignment of that plan made before it started
+  const [sold] = plan ? await sql`
+    select r.salesperson, r.coach_preference, r.note, r.amount_paise, r.payment_ref from plan_recommendations r
+    where r.patient_id = ${p.id} and r.plan_id = ${plan.plan_id} and r.created_at <= ${plan.created_at}
+    order by r.created_at desc limit 1` : [];
   const priced = await Promise.all(carts.map((k) => priceCart(sql, k as never)));
   return ok(c, {
     patient: { id: String(p.id), name: p.name, mobile: p.mobile, plan: plan?.name ?? null, planEndsAt: plan?.ends ?? null,
+      // how the plan they are on was sold and paid for
+      planSale: plan ? { startedAt: plan.starts, salesperson: sold?.salesperson ?? null, coachPreference: sold?.coach_preference ?? null,
+        note: sold?.note ?? null,
+        paid: plan.provider_payment_id ? { where: "APP", ref: plan.provider_payment_id, at: plan.paid_at, amountRupees: null }
+          : sold?.payment_ref ? { where: "OUTSIDE", ref: sold.payment_ref, at: plan.starts, amountRupees: sold.amount_paise != null ? sold.amount_paise / 100 : null }
+          : null } : null,
       whatsappSince: consent?.at ?? null, coach: coach ? { id: String(coach.id), name: coach.full_name } : null,
+      fitnessCoach: fitness ? { id: String(fitness.id), name: fitness.full_name } : null,
       salesperson: profile?.salesperson ?? null, salespersonId: profile?.salesperson_id ? String(profile.salesperson_id) : null,
       // their doctors, the main one (who joined first) first
       doctors: doctors.map((d) => ({ id: String(d.id), name: d.full_name })),
       // the plan admin put them on that they have not paid for yet (it waits in the app, with any medicines)
       assignedPlan: assigned ? { planId: String(assigned.plan_id), name: assigned.name, priceRupees: assigned.price_rupees,
         assignedAt: ist(assigned.created_at), salesperson: assigned.salesperson ?? null,
-        salespersonId: assigned.salesperson_id ? String(assigned.salesperson_id) : null } : null },
+        salespersonId: assigned.salesperson_id ? String(assigned.salesperson_id) : null,
+        coachPreference: assigned.coach_preference ?? null, note: assigned.note ?? null } : null },
+    // the month's remarks from the coach, which the doctor reads at the follow-up
+    remarks: remarks.map((r) => ({ id: String(r.id), at: r.at, by: r.author_name, text: r.text })),
+    prescriptions: issued.map((x, i) => ({
+      id: String(x.id), version: x.version, current: x.status === "SIGNED", doctorName: x.doctor ?? "", sentAt: x.sent,
+      edited: Boolean(x.revises_id) || Boolean(x.appointment_id && issued.slice(i + 1).some((y) => y.appointment_id === x.appointment_id)),
+      diagnosis: x.diagnosis ?? "",
+      // deno-lint-ignore no-explicit-any
+      medicines: (x.items as Record<string, any>[]).map(lineView).map((l) => ({
+        name: l.name, words: [l.dose, l.frequencyWords, l.duration && `for ${l.duration}`, l.intakeWords].filter(Boolean).join(", ") })),
+    })),
+    consultations: consultations.map((a) => ({
+      id: String(a.id), startsAt: a.starts, doctorId: String(a.doctor_id), doctorName: a.doctor,
+      visitType: a.visit_type === "FOLLOW_UP" ? "FOLLOW_UP" : "FIRST", status: a.status, upcoming: Boolean(a.upcoming),
+      // the patient said yes to recording on their Join screen; what came of it
+      recording: !a.recording_consent_at ? "NOT_AGREED" : a.recording_id ? "RECORDED" : a.recording_error ? "FAILED" : "AGREED",
+      recordingProblem: a.recording_consent_at && !a.recording_id ? a.recording_error ?? null : null,
+    })),
     prescription: rx ? { id: String(rx.id), doctor: rx.doctor, signedAt: rx.signed, validUntil: rx.valid, months: rx.months,
       items: (rx.items ?? []).map((i: Record<string, unknown>) => ({ name: `${i.medicineName ?? ""} ${i.strength ?? ""}`.trim(), frequency: i.frequency ?? "", stocked: Boolean(i.medicineId) })) } : null,
     carts: carts.map((k, i) => ({ id: String(k.id), kind: k.kind, status: k.status, boughtElsewhere: Boolean(k.elsewhere_at),
@@ -401,6 +463,41 @@ async function salespersonOf(raw: unknown) {
   return s ?? fail(400, "That salesperson is not on the sales team.");
 }
 
+opsRoutes.patch("/admin/medicine/patients/:patientId/fitness-coach", async (c) => {
+  const me = await admin(c);
+  const p = await patientFor(me, intParam(c.req.param("patientId"), "patient"));
+  const b = await body<{ coachId?: unknown }>(c);
+  let coachId: number | null = null;
+  if (b.coachId != null && b.coachId !== "") {
+    const [u] = await sql`select id from users where id = ${Number(b.coachId) || 0} and role = 'COACH'`;
+    if (!u) fail(400, "That coach was not found.");
+    coachId = u.id;
+  }
+  await sql.begin(async (tx) => {
+    await tx`insert into patient_profiles (user_id, fitness_coach_id) values (${p.id}, ${coachId})
+             on conflict (user_id) do update set fitness_coach_id = excluded.fitness_coach_id`;
+    await tx`insert into audit_log (patient_id, actor_id, action) values (${p.id}, ${me.id}, ${coachId ? "Assigned a fitness coach" : "Removed the fitness coach"})`;
+  });
+  return ok(c, { coachId: coachId ? String(coachId) : null }, coachId ? "Fitness coach assigned" : "Fitness coach removed");
+});
+
+/**
+ * A coach remark (19 Nov 2026 call): how the patient's month went, what they followed and what they did not. The
+ * doctor reads these on the patient's page at the follow-up. Written by the patient's coach, or by admin.
+ */
+opsRoutes.post("/admin/medicine/patients/:patientId/remarks", async (c) => {
+  const me = await staff(c);
+  const p = await patientFor(me, intParam(c.req.param("patientId"), "patient"));
+  const text = String((await body<{ text?: unknown }>(c)).text ?? "").trim().slice(0, 4000);
+  if (text.length < 3) fail(400, "Write the remark first.");
+  const by = me.fullName?.trim() || (me.role === "COACH" ? "Coach" : "Care team");
+  const [r] = await sql`
+    insert into coach_remarks (patient_id, author_id, author_name, text) values (${p.id}, ${me.id}, ${by}, ${text})
+    returning id, ${iso("created_at")} as at`;
+  await sql`insert into audit_log (patient_id, actor_id, action) values (${p.id}, ${me.id}, 'Added a coach remark')`;
+  return ok(c, { id: String(r.id), at: r.at, by, text }, "Remark saved. The doctor sees it at the follow-up.");
+});
+
 opsRoutes.patch("/admin/medicine/patients/:patientId/salesperson", async (c) => {
   const me = await admin(c);
   const p = await patientFor(me, intParam(c.req.param("patientId"), "patient"));
@@ -414,34 +511,51 @@ opsRoutes.patch("/admin/medicine/patients/:patientId/salesperson", async (c) => 
 });
 
 /**
- * Puts the patient on a plan (20 Nov 2026): the salesperson sold it on the call and told admin. From now the app asks
- * the patient to pay for it, with any medicines waiting in the same payment (lib/pharmacy.ts priceCart). A plan
- * assigned again replaces the one not yet paid for; `planId: null` withdraws it. Never for someone already on a plan.
- * Whoever sold it becomes the patient's salesperson.
+ * The sales form (19 Nov 2026 call): when the sale closes the salesperson gives admin the plan, what kind of coach
+ * the customer asked for, anything else to know, and the payment. Admin puts the patient on the plan here.
+ * - Paid in the app (the usual way): from now the app asks the patient to pay for it, with any medicines waiting in
+ *   the same payment (lib/pharmacy.ts priceCart). The amount and the payment ID come from that payment by themselves.
+ * - Paid outside the app (`paidOutside`: a payment link, a transfer): the plan starts at once and is never billed
+ *   in the app; the amount and the payment ID admin typed are kept with the sale.
+ * A plan assigned again replaces the one not yet paid for; `planId: null` withdraws it. Never for someone already
+ * on a plan. Whoever sold it becomes the patient's salesperson.
  */
 opsRoutes.put("/admin/medicine/patients/:patientId/plan", async (c) => {
   const me = await admin(c);
   const p = await patientFor(me, intParam(c.req.param("patientId"), "patient"));
-  const b = await body<{ planId?: unknown; salespersonId?: unknown }>(c);
+  const b = await body<{ planId?: unknown; salespersonId?: unknown; coachPreference?: unknown; note?: unknown;
+    paidOutside?: { amountRupees?: unknown; paymentRef?: unknown } | null }>(c);
   const planId = b.planId == null || b.planId === "" ? null : Number(b.planId);
   const seller = await salespersonOf(b.salespersonId);
+  const words = (v: unknown, max: number) => String(v ?? "").trim().replace(/\s+/g, " ").slice(0, max) || null;
+  const coachPreference = words(b.coachPreference, 200);
+  const note = words(b.note, 1000);
   const [plan] = planId ? await sql`select id, name from plans where id = ${planId} and active and price_rupees > 0` : [];
   if (planId !== null && !plan) fail(400, "That plan is not available.");
   if (plan && await hasPlan(sql, p.id)) fail(409, "This patient is already on a plan.");
+  const outside = plan && b.paidOutside
+    ? { amountPaise: Math.round(Number(b.paidOutside.amountRupees) * 100), ref: words(b.paidOutside.paymentRef, 80) } : null;
+  if (outside && (!(outside.amountPaise > 0) || !outside.ref || outside.ref.length < 4))
+    fail(400, "Add the amount received and its payment ID.");
   await sql.begin(async (tx) => {
     // the plan not yet paid for (an earlier assignment, or a doctor's old suggestion) gives way to this one
     await tx`delete from plan_recommendations where patient_id = ${p.id}
              and created_at > coalesce((select max(s.created_at) from subscriptions s where s.user_id = ${p.id}), '-infinity')`;
     if (plan)
-      await tx`insert into plan_recommendations (patient_id, plan_id, assigned_by, salesperson, salesperson_id)
-               values (${p.id}, ${plan.id}, ${me.id}, ${seller?.full_name ?? null}, ${seller?.id ?? null})`;
+      await tx`insert into plan_recommendations (patient_id, plan_id, assigned_by, salesperson, salesperson_id, coach_preference, note, amount_paise, payment_ref)
+               values (${p.id}, ${plan.id}, ${me.id}, ${seller?.full_name ?? null}, ${seller?.id ?? null}, ${coachPreference}, ${note},
+                 ${outside?.amountPaise ?? null}, ${outside?.ref ?? null})`;
     if (seller)
       await tx`insert into patient_profiles (user_id, salesperson, salesperson_id) values (${p.id}, ${seller.full_name}, ${seller.id})
                on conflict (user_id) do update set salesperson = excluded.salesperson, salesperson_id = excluded.salesperson_id`;
+    // paid outside the app: the plan starts now, with no payment in the app behind it
+    if (plan && outside) await startPlan(tx, p.id, plan.id, null);
     await tx`insert into audit_log (patient_id, actor_id, action)
-             values (${p.id}, ${me.id}, ${plan ? `Put on ${plan.name}${seller ? `, sold by ${seller.full_name}` : ""}` : "Plan withdrawn before payment"})`;
+             values (${p.id}, ${me.id}, ${!plan ? "Plan withdrawn before payment"
+               : `${outside ? `Started ${plan.name}, paid outside the app (${outside.ref})` : `Put on ${plan.name}`}${seller ? `, sold by ${seller.full_name}` : ""}`})`;
   });
-  return ok(c, { planId: plan ? String(plan.id) : null }, plan ? `${plan.name}: waiting for the patient to pay in the app` : "Plan withdrawn");
+  return ok(c, { planId: plan ? String(plan.id) : null, started: Boolean(plan && outside) },
+    !plan ? "Plan withdrawn" : outside ? `${plan.name} started` : `${plan.name}: waiting for the patient to pay in the app`);
 });
 
 // ---------------------------------------------------------------- the patient's doctors (23 Nov 2026)
@@ -476,6 +590,104 @@ opsRoutes.delete("/admin/medicine/patients/:patientId/doctors/:doctorId", async 
   });
   return ok(c, { doctorId: String(doctorId) },
     n ? `${d.full_name} removed. Their consultation still to come with this patient stays booked.` : `${d.full_name} removed from the care team`);
+});
+
+// ---------------------------------------------------------------- consultations, for the patient (23 Nov 2026)
+// Patients book and move their own consultations in the app. These are for when the team has to do it for them
+// (19 Nov 2026 call: someone on the team books the consultation): any doctor, any open time, no payment asked.
+
+/** Takes an open future slot for an admin's booking; the doctor it belongs to. */
+async function takeSlot(tx: TransactionSql, slotId: number) {
+  const [slot] = await tx`
+    update doctor_slots s set status = 'Booked', held_by = null, held_until = null
+    from doctors d where s.id = ${slotId} and d.id = s.doctor_id and d.active
+      and (s.status = 'Available' or (s.status = 'Held' and s.held_until < now()))
+      and (s.slot_date + s.start_time) > (now() at time zone 'Asia/Kolkata')
+    returning s.id, s.doctor_id, d.full_name`;
+  return slot ?? fail(409, "That time was just taken, or has passed. Choose another.");
+}
+
+opsRoutes.post("/admin/medicine/patients/:patientId/consultations", async (c) => {
+  const me = await admin(c);
+  const p = await patientFor(me, intParam(c.req.param("patientId"), "patient"));
+  const b = await body<{ slotId?: unknown; reason?: unknown }>(c);
+  const slotId = intParam(String(b.slotId ?? ""), "time");
+  const { appointmentId, messages } = await sql.begin(async (tx) => {
+    const [slot] = await tx`select s.doctor_id, d.full_name from doctor_slots s join doctors d on d.id = s.doctor_id and d.active where s.id = ${slotId}`;
+    if (!slot) fail(400, "That time was not found.");
+    const booked = await bookAppointment(tx, { patientId: p.id, slotId, reason: typeof b.reason === "string" ? b.reason.slice(0, 300) : null, prepaid: true });
+    // a first consultation the patient paid for is now used; one booked without payment is the team's decision
+    await tx`update eligibility set consultation_used = true where user_id = ${p.id} and consultation_paid and not consultation_used`;
+    // a patient who already has doctors books only with them, so this doctor joins the team
+    const [has] = await tx`select 1 from care_team_doctors where patient_id = ${p.id} limit 1`;
+    if (has) await careTeam.addDoctor(tx, p.id, slot.doctor_id, me.id);
+    await tx`insert into audit_log (patient_id, actor_id, action) values (${p.id}, ${me.id}, ${`Booked a consultation with ${slot.full_name} for the patient`})`;
+    return { appointmentId: booked.appointmentId, messages: await notices.within(tx, (sp) => notices.appointmentBooked(sp, booked.appointmentId)) };
+  });
+  await sendNow(messages);
+  return ok(c, { appointmentId: String(appointmentId) }, "Consultation booked. The patient and the doctor were told.");
+});
+
+opsRoutes.post("/admin/consultations/:id/move", async (c) => {
+  const me = await admin(c);
+  const id = intParam(c.req.param("id"), "consultation");
+  const slotId = intParam(String((await body<{ slotId?: unknown }>(c)).slotId ?? ""), "time");
+  const messages = await sql.begin(async (tx) => {
+    const [a] = await tx`select * from appointments where id = ${id} for update`;
+    if (!a) fail(404, "That consultation was not found.");
+    if (a.status !== "Booked" && a.status !== "InProgress") fail(409, "Only a booked consultation can be moved.");
+    const [from] = await tx`select to_char(slot_date, 'YYYY-MM-DD') as "slotDate", to_char(start_time, 'HH24:MI') as "startTime"
+                            from doctor_slots where id = ${a.slot_id}`;
+    const slot = await takeSlot(tx, slotId);
+    await tx`update doctor_slots set status = 'Available', held_by = null, held_until = null where id = ${a.slot_id}`;
+    // another doctor's time moves the consultation to that doctor
+    await tx`update appointments set slot_id = ${slot.id}, doctor_id = ${slot.doctor_id}, status = 'Booked', started_at = null,
+             patient_joined_at = null, doctor_joined_at = null where id = ${id}`;
+    const [has] = await tx`select 1 from care_team_doctors where patient_id = ${a.patient_id} limit 1`;
+    if (has) await careTeam.addDoctor(tx, a.patient_id, slot.doctor_id, me.id);
+    await tx`insert into audit_log (patient_id, actor_id, action) values (${a.patient_id}, ${me.id}, ${`Moved a consultation (now with ${slot.full_name})`})`;
+    const moved = from as { slotDate: string; startTime: string } | undefined;
+    return moved ? await notices.within(tx, (sp) => notices.appointmentMoved(sp, id, moved)) : [];
+  });
+  await sendNow(messages);
+  return ok(c, { id: String(id) }, "Consultation moved. The patient and the doctor were told.");
+});
+
+opsRoutes.post("/admin/consultations/:id/cancel", async (c) => {
+  const me = await admin(c);
+  const id = intParam(c.req.param("id"), "consultation");
+  const reason = String((await body<{ reason?: unknown }>(c)).reason ?? "").trim().slice(0, 300);
+  if (reason.length < 3) fail(400, "Say why the consultation is cancelled.");
+  const a = await sql.begin(async (tx) => {
+    const [a] = await tx`select * from appointments where id = ${id} for update`;
+    if (!a) fail(404, "That consultation was not found.");
+    if (a.status !== "Booked" && a.status !== "InProgress") fail(409, "Only a booked consultation can be cancelled.");
+    await tx`update appointments set status = 'Cancelled' where id = ${id}`;
+    // its time opens again while it is still to come
+    await tx`update doctor_slots set status = 'Available', held_by = null, held_until = null
+             where id = ${a.slot_id} and (slot_date + start_time) > (now() at time zone 'Asia/Kolkata')`;
+    // a first consultation that was paid for can be booked again, at no charge
+    if (a.visit_type === "FIRST") await tx`update eligibility set consultation_used = false where user_id = ${a.patient_id} and consultation_paid`;
+    await tx`insert into audit_log (patient_id, actor_id, action) values (${a.patient_id}, ${me.id}, ${`Cancelled a consultation: ${reason}`})`;
+    return a;
+  });
+  await endRoom(a.video_room_id);
+  // ponytail: no WhatsApp template says "cancelled" yet, so nothing is sent; add one with the final WhatsApp set
+  return ok(c, { id: String(id) }, "Cancelled. Nothing was sent: call the patient and the doctor.");
+});
+
+/** A link to watch a consultation's recording (good for an hour). Only for a call the patient agreed to record. */
+opsRoutes.get("/admin/consultations/:id/recording", async (c) => {
+  const me = await admin(c);
+  const [a] = await sql`select patient_id, video_room_id, recording_consent_at, recording_id from appointments
+                        where id = ${intParam(c.req.param("id"), "consultation")}`;
+  if (!a) fail(404, "That consultation was not found.");
+  if (!a.recording_consent_at || !a.recording_id) fail(404, "This consultation was not recorded.");
+  if (!hmsLive() || !a.video_room_id) fail(409, "Recordings are not available in test mode.");
+  const url = await recordingLink(a.video_room_id).catch((e) => fail(502, `The recording could not be fetched: ${(e as Error).message}`));
+  if (!url) fail(409, "The recording is not ready yet. It takes a few minutes after the call, and is kept for 15 days.");
+  await sql`insert into audit_log (patient_id, actor_id, action) values (${a.patient_id}, ${me.id}, 'Opened a consultation recording')`;
+  return ok(c, { url });
 });
 
 // ---------------------------------------------------------------- deliveries (the pharmacy)

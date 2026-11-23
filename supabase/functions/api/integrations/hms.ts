@@ -1,8 +1,10 @@
 // Video rooms through 100ms Prebuilt (https://www.100ms.live/docs/prebuilt/v2/prebuilt/room-codes/room-links).
 // LIVE when HMS_ACCESS_KEY, HMS_SECRET, HMS_TEMPLATE_ID and HMS_SUBDOMAIN are set; MOCK otherwise: the web
 // app's own pilot room page. One room per appointment, hosted in India (region "in"). The template's roles
-// are "doctor" (may end the room and remove others) and "patient"; recording, streaming and transcription
-// are off in the template. The secret and management tokens never leave this function.
+// are "doctor" (may end the room and remove others) and "patient"; streaming and transcription are off in the
+// template. Recording is started here, per call, only when the patient agreed to it (startRecording); it needs
+// "Composite recording" switched on in the template (dashboard, Templates, Recordings). The secret and management
+// tokens never leave this function.
 import { SignJWT } from "jose";
 import { env, live } from "../lib/env.ts";
 
@@ -71,4 +73,30 @@ export async function endRoom(roomId: string | null) {
   if (!hmsLive() || !roomId) return;
   await hms(`/active-rooms/${roomId}/end-room`, { reason: "The consultation has ended.", lock: true }).catch(() => {});
   await hms(`/rooms/${roomId}`, { enabled: false }).catch((e) => console.error(e));
+}
+
+/**
+ * Starts recording the room (browser composite: one MP4 of the call as the people in it see it). Asked for only when
+ * the patient agreed to it for this call. https://www.100ms.live/docs/server-side/v2/api-reference/recordings/start-recording-for-room
+ */
+export async function startRecording(roomId: string): Promise<string> {
+  const rec = await hms(`/recordings/room/${roomId}/start`, {});
+  return String(rec.id);
+}
+
+/** Stops every recording running in the room (the patient changed their mind). */
+export async function stopRecording(roomId: string) {
+  await hms(`/recordings/room/${roomId}/stop`, {});
+}
+
+/**
+ * A link to watch the room's latest finished recording, good for an hour; null while there is none yet (100ms
+ * finishes the file a few minutes after the call). Without our own storage bucket 100ms keeps a recording 15 days.
+ */
+export async function recordingLink(roomId: string): Promise<string | null> {
+  type Asset = { id: string; type: string; status: string; created_at: string };
+  const assets: Asset[] = (await hms(`/recording-assets?room_id=${roomId}&status=completed`)).data ?? [];
+  const latest = assets.filter((a) => a.type === "room-composite").sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
+  if (!latest) return null;
+  return (await hms(`/recording-assets/${latest.id}/presigned-url?presign_duration=3600`)).url ?? null;
 }

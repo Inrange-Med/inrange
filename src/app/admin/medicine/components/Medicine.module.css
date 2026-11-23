@@ -538,3 +538,23 @@ fieldset.section > legend {
   justify-content: flex-end;
   gap: 4px 16px;
 }
+
+/* a problem said in the form it belongs to */
+.problem {
+  font-size: 0.875rem;
+  font-weight: 560;
+  color: var(--alert);
+}
+
+/* a remark keeps the line breaks it was written with */
+.pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* a chosen time among the free ones */
+.chip[data-on="true"] {
+  background: var(--slate-900);
+  box-shadow: none;
+  color: var(--on-dark);
+}

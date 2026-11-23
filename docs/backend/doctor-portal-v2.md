@@ -125,6 +125,51 @@ autosave (DRAFT, saved_at)  ->  Create PDF (pdf_made_at, pdf_path)  ->  Send (SI
 - **Patients is back in the doctor's navigation** (23 Nov 2026): `/doctor-dashboard/patients` lists the doctor's own
   patients (anyone they consulted or whose care team they are on) and each row opens the chart. The chart's Messages
   buttons are gone (Messages stays off the doctor's navigation).
+- **One page for a patient** (23 Nov 2026, from the 19 Nov call): the doctor's page is the same whether it is opened
+  from a consultation (`GET /api/doctor/consultations/:id`) or from the patient list
+  (`GET /api/doctor/patients/:patientId/page`). At the top: age, height, weight, BMI, the diagnosis on the current
+  prescription, allergies, the plan, who looks after them (health coach, fitness coach, salesperson, doctors) and
+  the latest report. Then three places: Prescriptions, Reports, Coach remarks. The prescription form does not open
+  by itself: the doctor presses Write prescription (Today's "Write prescription" opens it at once, `?write=1`).
+- **A prescription without a consultation** (19 Nov call: "prescription and call should have no relation"): the
+  six prescription steps exist twice, under `/api/doctor/consultations/:id/prescription...` and under
+  `/api/doctor/patients/:patientId/prescription...` (a draft with no `appointment_id`; one per doctor and patient).
+  The page's `write` says which one a new prescription uses, so the doctor never chooses: the consultation on the
+  page while it has none, else the doctor's latest consultation with this patient that waits for one (so "Do this
+  now" clears), else the patient alone. A consultation whose patient got a later prescription this way drops off
+  "Do this now". Its PDF says "Review without a call" where a consultation's says "Video teleconsultation".
+- **Edit is not a new prescription** (19 Nov call): "Edit and send new version" on the current prescription (only
+  for the doctor who sent it) makes a new version of it (`revise`, `prescriptions.revises_id`): what the patient
+  already paid for stays bought. "New prescription" starts another one from the current one: a new order.
+- **Every prescription, with who sent it and when** (19 Nov call: no separate log): `prescriptions[]` on the page,
+  the current one first, each with `doctorName`, `sentAt`, `edited`, the diagnosis, the lines and the advice. Any
+  doctor of the patient sees all of them, earlier doctors' too. Admin and the coach see the same list on the
+  patient's sheet.
+- **Only the current prescription is a PDF** (19 Nov call: a new prescription makes the old one invalid):
+  `GET /api/files/prescriptions/:id` answers 409 for a replaced one, for everyone; `pdf` is null on replaced
+  entries (the doctor's page, Today's rows, the patient's list), which are read in the app instead.
+- **Coach remarks** (19 Nov call): the patient's coach, or admin, writes how the month went
+  (`POST /api/admin/medicine/patients/:id/remarks`, table `coach_remarks`); the doctor reads them under Coach
+  remarks. Never edited or removed.
+- **A fitness coach beside the health coach** (19 Nov call): `patient_profiles.fitness_coach_id`,
+  `PATCH /api/admin/medicine/patients/:id/fitness-coach`. Any coach can be either; a coach reaches the patients
+  they coach in either way.
+- **The sales form** (19 Nov call): `PUT /api/admin/medicine/patients/:id/plan` takes the plan, who sold it, the
+  coach the customer asked for and a note. The usual way, the patient pays in the app and the amount and payment ID
+  come from that payment. With `paidOutside: { amountRupees, paymentRef }` (a payment link, a transfer) the plan
+  starts at once and the app never bills it. The sheet shows how the plan the patient is on was sold and paid.
+- **Consultations, for the team** (23 Nov 2026): the patient's sheet lists them, and admin books one for the patient
+  (`POST /api/admin/medicine/patients/:id/consultations { slotId }`: any doctor, any open time, no payment asked),
+  moves one (`POST /api/admin/consultations/:id/move`, to another doctor's time too) or cancels one
+  (`.../cancel { reason }`; nothing is sent, a paid first consultation can be booked again).
+- **Recording, only with the patient's yes** (19 Nov call): the patient's Join screen has one unticked box, asked
+  each call (`GET /api/video/appointments/:id/join?record=1|0`). With a yes the room is recorded through 100ms
+  (browser composite; needs "Composite recording" on in the 100ms template) and admin watches it from the
+  patient's sheet (`GET /api/admin/consultations/:id/recording`, a link good for an hour; 100ms keeps a recording
+  15 days unless a storage bucket is set in the template). A yes taken back stops it. What 100ms answered is kept on
+  the consultation, so the sheet says why a recording is missing.
+- **"With food"** joins Before food, After food and Empty stomach on a medicine line (19 Nov call).
+- **The lab's name is never shown to a patient** (19 Nov call): the booking screens say "our partner lab".
 - **Names carry the form:** "Inj." for a pen or injection, "Tab.", "Cap.", "Syp." before the brand (compliance;
   `withForm` in `lib/medicineSearch.ts`), in the search, the lines, the record and the PDF. A name typed by hand prints
   as written.

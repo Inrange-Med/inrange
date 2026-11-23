@@ -104,8 +104,8 @@ export default function LabBookingStatusCard({
 
       {booking.collector && changeable && (
         <div className={styles.fast}>
-          <strong>{booking.collector.name}</strong>, your collector from
-          Redcliffe Labs.{" "}
+          <strong>{booking.collector.name}</strong>, your collector from our
+          partner lab.{" "}
           <a
             href={`tel:${booking.collector.phone}`}
             className={formStyles.link}

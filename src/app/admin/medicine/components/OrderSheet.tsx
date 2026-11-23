@@ -138,9 +138,7 @@ export default function OrderSheet({
           moveOrder(order.id, {
             to: "DISPATCHED",
             courier: courier.trim(),
-            ...(link
-              ? { trackingUrl: typed }
-              : { trackingNo: typed }),
+            ...(link ? { trackingUrl: typed } : { trackingNo: typed }),
             expectedAt: dayToIso(day),
           }),
         `${order.orderNumber} dispatched. The patient has the tracking.`,

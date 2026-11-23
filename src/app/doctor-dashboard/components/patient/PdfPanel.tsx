@@ -10,7 +10,7 @@ import { useEffect, useState } from "react";
 import FileOpenButton from "@/components/ui/FileOpenButton";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import { getFile } from "@/services/fileService";
-import styles from "./ConsultationPage.module.css";
+import styles from "./PatientPage.module.css";
 
 export default function PdfPanel({
   path,

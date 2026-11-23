@@ -115,6 +115,7 @@ export type OpsPatientRow = {
   salesperson: string | null;
   /** the doctors on their care team, by name, the main one first ("Dr. A, Dr. B") */
   doctors: string | null;
+  fitnessCoachName: string | null;
   /** the active plan's name, if any */
   planName: string | null;
   lastOrderStatus: OpsOrder["status"] | null;
@@ -176,6 +177,21 @@ export type OpsPatient = {
     planEndsAt: string | null;
     whatsappSince: string | null;
     coach: { id: string; name: string } | null;
+    fitnessCoach: { id: string; name: string } | null;
+    /** how the plan they are on was sold and paid for (the sales form) */
+    planSale: {
+      startedAt: string;
+      salesperson: string | null;
+      coachPreference: string | null;
+      note: string | null;
+      /** in the app (its payment ID), or outside it (what admin typed); null when unknown */
+      paid: {
+        where: "APP" | "OUTSIDE";
+        ref: string;
+        at: string | null;
+        amountRupees: number | null;
+      } | null;
+    } | null;
     salesperson: string | null;
     salespersonId: string | null;
     /** the doctors on their care team, the main one (who joined first) first */
@@ -188,8 +204,24 @@ export type OpsPatient = {
       assignedAt: string;
       salesperson: string | null;
       salespersonId: string | null;
+      coachPreference: string | null;
+      note: string | null;
     } | null;
   };
+  /** how the month went, written by the coach for the doctor */
+  remarks: { id: string; at: string; by: string; text: string }[];
+  /** every prescription issued, the current one first, with who sent it and when (no PDFs here) */
+  prescriptions: {
+    id: string;
+    version: number;
+    current: boolean;
+    doctorName: string;
+    sentAt: string | null;
+    edited: boolean;
+    diagnosis: string;
+    medicines: { name: string; words: string }[];
+  }[];
+  consultations: OpsConsultation[];
   prescription: {
     id: string;
     doctor: string;
@@ -293,3 +325,30 @@ export type Salesperson = {
   plansSold: number;
   plansWaiting: number;
 };
+
+/** One of the patient's consultations, as admin sees it. */
+export type OpsConsultation = {
+  id: string;
+  startsAt: string;
+  doctorId: string;
+  doctorName: string;
+  visitType: "FIRST" | "FOLLOW_UP";
+  status: "Booked" | "InProgress" | "Completed" | "Cancelled" | "NoShow";
+  upcoming: boolean;
+  /** the patient is asked on their Join screen; RECORDED has a recording to watch */
+  recording: "NOT_AGREED" | "AGREED" | "RECORDED" | "FAILED";
+  recordingProblem: string | null;
+};
+
+/** What the salesperson gives admin when a sale closes. */
+export type SalesForm = {
+  planId: string;
+  salespersonId: string | null;
+  coachPreference: string;
+  note: string;
+  /** the money was taken outside the app: the plan starts at once */
+  paidOutside: { amountRupees: number; paymentRef: string } | null;
+};
+
+/** A doctor's time on a day, for admin's booking. */
+export type OpsSlot = { id: string; startTime: string; free: boolean };

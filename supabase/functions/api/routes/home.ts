@@ -148,7 +148,8 @@ homeRoutes.get("/care/prescriptions", async (c) => {
     prescriptions: rows.map((x) => ({
       id: String(x.id), version: x.version, current: x.status === "SIGNED", sentAt: ist(x.sent_at), validUntil: ist(x.valid_until),
       doctorName: x.doctor, doctorQualification: x.qualification ?? "", medicines: (x.items as Row[]).map(lineView),
-      pdf: `/api/files/prescriptions/${x.id}`,
+      // only the current prescription is handed out; a replaced one is read here (19 Nov 2026 call)
+      pdf: x.status === "SIGNED" ? `/api/files/prescriptions/${x.id}` : null,
     })),
   });
 });

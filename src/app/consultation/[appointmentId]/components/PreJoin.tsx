@@ -1,4 +1,8 @@
-/** Before joining: the camera and microphone check, then Join the call (or back home). */
+/**
+ * Before joining: the camera and microphone check, then Join the call (or back home). The patient is also
+ * asked, each call, whether it may be recorded (19 Nov 2026 call: only if the patient is ready for it): one
+ * box, not ticked, on the screen they are already on. Not ticked, nothing is recorded.
+ */
 
 import Link from "next/link";
 import { ArrowRight } from "@phosphor-icons/react";
@@ -14,12 +18,17 @@ export default function PreJoin({
   error,
   home,
   onJoin,
+  record,
+  onRecord,
 }: {
   seenBy: string;
   joining: boolean;
   error: string | null;
   home: string;
   onJoin: () => void;
+  /** the patient's choice about recording; undefined for the doctor, who is not asked */
+  record?: boolean;
+  onRecord?: (yes: boolean) => void;
 }) {
   return (
     <div className={styles.prejoin}>
@@ -33,6 +42,22 @@ export default function PreJoin({
         </h2>
         <DeviceCheck seenBy={seenBy} quiet />
       </section>
+      {record !== undefined && (
+        <label className={styles.recordChoice}>
+          <input
+            type="checkbox"
+            checked={record}
+            onChange={(event) => onRecord?.(event.target.checked)}
+          />
+          <span>
+            <strong>Record this consultation</strong>
+            <span>
+              Only your care team can watch it, to review your care. Your choice
+              changes nothing about your consultation.
+            </span>
+          </span>
+        </label>
+      )}
       {error && <ErrorNotice message={error} onRetry={onJoin} />}
       <button
         type="button"

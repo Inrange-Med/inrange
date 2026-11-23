@@ -11,7 +11,7 @@ import { useEffect, useRef, useState } from "react";
 import { MagnifyingGlass, Plus } from "@phosphor-icons/react";
 import { searchMedicines } from "@/services/consultationService";
 import type { ListItem, MedicineSearch } from "@/types/consultation";
-import styles from "./ConsultationPage.module.css";
+import styles from "./PatientPage.module.css";
 
 export default function MedicinePicker({
   first,
