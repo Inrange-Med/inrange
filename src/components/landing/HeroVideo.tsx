@@ -1,9 +1,9 @@
 "use client";
 
 /*
-  The hero's film (v4, 22 Nov 2026): four everyday moments of India's well-off, 3 s each with hard cuts: two friends
-  walking off a padel court in Gurugram, a couple laughing on the verandah of a sea-facing Alibaug home, a father and son
-  on a Delhi golf fairway, a mother and daughter dancing barefoot in a Mumbai penthouse. Lightness and joy, never a body,
+  The hero's film (v4, 22 Nov 2026): four everyday moments of India's well-off, 3 s each with hard cuts: a man doing
+  dumbbell curls in his home gym in Gurugram (it replaced the padel players, Shivam, 23 Nov 2026), a couple laughing on
+  the verandah of a sea-facing Alibaug home, a father and son on a Delhi golf fairway, a mother and daughter dancing barefoot in a Mumbai penthouse. Lightness and joy, never a body,
   a number or a product. Arhaan: the v3 push-in "looks very AI slop"; it must look real, premium and upper-class Indian.
   So every shot is locked off (no pan, zoom or drift), short, real-time, and carries one grade and film grain, the way a
   real shoot looks (research: scripts/media/README.md). Stills with Nano Banana Pro, motion with Kling 4.0

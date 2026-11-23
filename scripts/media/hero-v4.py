@@ -28,7 +28,17 @@ LOOK = ("Everyone is Indian, with Indian features and skin tones, well groomed, 
         "light from one clear source, open shadows. Vertical frame; the people sit in the middle of the frame with "
         "space above and below them; no one cut off at the edge.")
 
-SHOTS = {  # the film's order; each still is the first frame of its shot
+SHOTS = {  # each still is the first frame of its shot; hero-v4-encode.sh sets the film's order
+  "gym": "Early morning in a private gym on the top floor of a Gurugram home: an Indian man in his early forties, fit in "
+    "an ordinary way, in a plain charcoal t-shirt and black training shorts, stands in the middle of the room doing "
+    "slow standing dumbbell curls with plain black hex dumbbells, focused, a small smile. Oak floor, a rack of plain "
+    "dumbbells and a few plants behind him, a tall window on the left with soft low sun, the trees outside. Wide enough "
+    "to show the room; about the effort and the morning, never about muscles.",
+  "rower": "Early morning in a private gym on the top floor of a Gurugram home: an Indian man in his early forties, fit "
+    "in an ordinary way, in a plain charcoal t-shirt and black training shorts, mid-stroke on a plain wooden rowing "
+    "machine, side-on to us, steady and focused. Oak floor, a rack of plain dumbbells and a few plants behind him, a "
+    "tall window with soft low sun from behind him, the trees outside. Wide enough to show the room; about the effort "
+    "and the morning, never about muscles.",
   "padel": "Early morning at a private padel club in Gurugram: two Indian women in their late thirties in plain white "
     "sports clothes walk off the blue court past the glass wall, rackets in hand, one laughing at what the other just "
     "said. Low sun from behind them, rim light in their hair, a few trees beyond the court.",
@@ -47,6 +57,10 @@ SHOTS = {  # the film's order; each still is the first frame of its shot
 }
 
 MOTION = {  # what happens in each shot, real time; the camera never moves
+  "gym": "He keeps curling the dumbbells at an easy steady pace, two or three controlled reps, breathing out on each "
+    "lift, then lowers them and lets out a short satisfied breath with a small smile.",
+  "rower": "He keeps rowing at a steady, unhurried rhythm, legs then back then arms, sliding forward and back, "
+    "breathing evenly; the light moves on the floor.",
   "padel": "The two women keep walking towards us off the court, unhurried, rackets swinging, still laughing; one "
     "nudges the other with her shoulder. Their hair moves with each step.",
   "verandah": "She finishes laughing and reaches for her cup, he leans back and says something more, she shakes her "
