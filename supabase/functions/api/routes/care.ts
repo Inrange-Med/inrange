@@ -34,7 +34,7 @@ import { bookAppointment } from "../lib/booking.ts";
 import { joinIfFirst } from "../lib/careTeam.ts";
 import * as notices from "../lib/notices.ts";
 import { sendNow } from "../lib/notify.ts";
-import { createRoom, endRoom, hmsLive, joinLink, mockJoinLink } from "../integrations/hms.ts";
+import { createRoom, endRoom, hmsLive, joinLink, mockJoinLink, startRecording, stopRecording } from "../integrations/hms.ts";
 
 export const careRoutes = new Hono();
 
@@ -453,16 +453,43 @@ careRoutes.get("/video/appointments/:appointmentId/join", async (c) => {
                 from users u left join patient_profiles pp on pp.user_id = u.id where u.id = ${me.id}`;
   const name = who?.name ?? "";
   let link = mockJoinLink(a.id, role, name);
+  // recording (19 Nov 2026 call: optional, only if the patient is ready for it): the patient says yes or no on
+  // their Join screen, for this call. ?record=1 is their yes, ?record=0 their no (a yes taken back stops it).
+  const said = role === "patient" ? c.req.query("record") : undefined;
+  let consentAt: Date | null = a.recording_consent_at ?? null;
+  if (said === "1" && !consentAt) {
+    consentAt = new Date();
+    await sql`update appointments set recording_consent_at = ${consentAt} where id = ${a.id}`;
+    await sql`insert into audit_log (patient_id, actor_id, action) values (${a.patient_id}, ${me.id}, 'Agreed to this consultation being recorded')`;
+  } else if (said === "0" && consentAt) {
+    consentAt = null;
+    await sql`update appointments set recording_consent_at = null where id = ${a.id}`;
+    await sql`insert into audit_log (patient_id, actor_id, action) values (${a.patient_id}, ${me.id}, 'Took back their yes to recording this consultation')`;
+    if (hmsLive() && a.video_room_id && a.recording_id) await stopRecording(a.video_room_id).catch((e) => console.error("stop recording", a.id, e.message));
+  }
   if (hmsLive()) {
+    let roomId: string;
     try {
       // two people joining at once land in one room: the first room stored wins
-      const roomId = a.video_room_id ?? (await sql`
+      roomId = a.video_room_id ?? (await sql`
         update appointments set video_room_id = coalesce(video_room_id, ${await createRoom(a.id)})
         where id = ${a.id} returning video_room_id`)[0].video_room_id;
       link = await joinLink(roomId, role, name, me.id);
     } catch (e) {
       console.error("100ms join", a.id, e);
-      fail(502, "The video room could not be opened. Please try again in a moment.");
+      return fail(502, "The video room could not be opened. Please try again in a moment.");
+    }
+    // asked for at each join until it starts (the first person's ask can come before anyone is in the room);
+    // the call never waits on it for more than a few seconds, and never fails because of it
+    if (consentAt && !a.recording_id) {
+      const started = await Promise.race([
+        startRecording(roomId).then((id) => ({ id, error: null as string | null })).catch((e) => ({ id: null, error: String((e as Error).message).slice(0, 300) })),
+        new Promise<{ id: null; error: string }>((done) => setTimeout(() => done({ id: null, error: "100ms did not answer in time" }), 6000)),
+      ]);
+      await sql`update appointments set recording_id = coalesce(recording_id, ${started.id}),
+                  recording_started_at = case when ${started.id}::text is not null then coalesce(recording_started_at, now()) else recording_started_at end,
+                  recording_error = ${started.error} where id = ${a.id}`;
+      if (started.error) console.error("recording", a.id, started.error);
     }
   }
   // each join is stamped; from a quarter of an hour before the start, the other side hears it on WhatsApp
@@ -481,7 +508,7 @@ careRoutes.get("/video/appointments/:appointmentId/join", async (c) => {
     if (!other || new Date(other) < new Date(seen.window_opens))
       await notices.joined(a.id, role).then(sendNow).catch((e) => console.error("join notice", (e as Error).message));
   }
-  return ok(c, { joinLink: link, role });
+  return ok(c, { joinLink: link, role, recording: Boolean(consentAt) });
 });
 
 careRoutes.post("/video/appointments/:appointmentId/end", async (c) => {

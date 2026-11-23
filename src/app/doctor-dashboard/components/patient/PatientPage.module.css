@@ -765,3 +765,316 @@
     padding-left: 0;
   }
 }
+
+/* ---------- the patient at the top: readings as figures, then what the doctor needs to know ---------- */
+.summary {
+  display: grid;
+  gap: 4px;
+  padding: 6px;
+  border-radius: var(--r-surface);
+  background: var(--paper);
+  box-shadow: 0 0 0 1px var(--hair);
+}
+
+/* the readings sit on the brand's green wash: the one coloured plate on the page */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border-radius: calc(var(--r-surface) - 6px);
+  background: color-mix(in srgb, var(--slate-800) 10%, var(--signal-wash));
+}
+
+.stats > div {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  padding: 14px 16px;
+  background: var(--signal-wash);
+}
+
+.stats dt,
+.facts dt {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--ink-3);
+}
+
+.stats dd {
+  display: grid;
+  gap: 2px;
+  font-family: var(--font-display);
+  font-size: 1.375rem;
+  font-weight: 520;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+.stats small,
+.facts small {
+  display: block;
+  font-family: var(--font-text);
+  font-size: 0.8125rem;
+  font-weight: 450;
+  letter-spacing: 0;
+  color: var(--ink-2);
+}
+
+.facts {
+  display: grid;
+  padding: 4px 16px 6px;
+}
+
+.facts > div {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  gap: 4px 16px;
+  align-items: baseline;
+  padding: 12px 0;
+}
+
+.facts > div + div {
+  border-top: 1px solid var(--hair);
+}
+
+.facts dd {
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.facts dd small {
+  margin-top: 2px;
+  color: var(--ink-3);
+}
+
+.factAction {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 14px;
+}
+
+.factAction .textBtn {
+  min-height: 0;
+}
+
+@media (min-width: 720px) {
+  .stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 519px) {
+  .facts > div {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ---------- the three places ---------- */
+.tabs {
+  display: flex;
+  overflow-x: auto;
+  margin-inline: calc(var(--gutter) * -1);
+  padding-inline: var(--gutter);
+  scrollbar-width: none;
+}
+
+.tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.tabs button {
+  white-space: nowrap;
+}
+
+.section {
+  display: grid;
+  gap: 20px;
+}
+
+.section[hidden] {
+  display: none;
+}
+
+/* ---------- prescriptions: every one, with who sent it and when ---------- */
+.write {
+  min-height: 52px;
+}
+
+.writerSide {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0 18px;
+}
+
+.draftNote {
+  font-size: 0.9375rem;
+  color: var(--ink-2);
+}
+
+.rxList {
+  display: grid;
+  gap: 10px;
+  list-style: none;
+}
+
+.rx {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border-radius: 16px;
+  background: var(--bg);
+}
+
+.rxHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+  font-size: 1.0625rem;
+}
+
+.rxHead strong,
+.rxOld summary strong {
+  font-weight: 600;
+}
+
+.rxSent {
+  margin-top: -6px;
+  font-size: 0.875rem;
+  color: var(--ink-2);
+}
+
+.rxBody {
+  display: grid;
+  gap: 10px;
+}
+
+.rxLine {
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.rxLine > span {
+  margin-right: 6px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--ink-3);
+}
+
+.rxMeds {
+  display: grid;
+  gap: 8px;
+  list-style: none;
+}
+
+.rxMeds li {
+  display: grid;
+  gap: 1px;
+}
+
+.rxMeds strong {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.rxMeds span {
+  font-size: 0.875rem;
+  color: var(--ink-2);
+}
+
+.rxActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* a replaced prescription: one line that opens to read; never a PDF */
+.rxOld {
+  border-radius: 16px;
+  box-shadow: inset 0 0 0 1px var(--hair);
+}
+
+.rxOld summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 14px;
+  min-height: 52px;
+  padding: 14px 18px;
+  cursor: pointer;
+  list-style: none;
+  font-size: 0.9375rem;
+}
+
+.rxOld summary::-webkit-details-marker {
+  display: none;
+}
+
+.rxOld summary span {
+  font-size: 0.875rem;
+  color: var(--ink-3);
+}
+
+.rxOld summary:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+  border-radius: 16px;
+}
+
+.rxOld .rxBody {
+  padding: 0 18px 16px;
+}
+
+@media (max-width: 639px) {
+  .write,
+  .rxActions > * {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+  .write {
+    justify-content: space-between;
+  }
+}
+
+/* ---------- coach remarks ---------- */
+.remarks {
+  display: grid;
+  list-style: none;
+}
+
+.remarks li {
+  display: grid;
+  gap: 4px;
+  padding: 14px 0;
+}
+
+.remarks li + li {
+  border-top: 1px solid var(--hair);
+}
+
+.remarkBy {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--ink-3);
+}
+
+.remarkText {
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* only the chosen place shows: a panel's own display must not undo `hidden` */
+.page > [hidden] {
+  display: none;
+}

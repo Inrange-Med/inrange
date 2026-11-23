@@ -57,7 +57,10 @@ export default function ConsultationRow({
     if (sending) return;
     setSending(true);
     try {
-      const sent = await sendPrescription(row.id);
+      const sent = await sendPrescription({
+        kind: "consultation",
+        id: row.id,
+      });
       toast(
         `Sent to patient, ${clockTime(new Date(sent.sentAt ?? Date.now()))}`,
       );
@@ -102,14 +105,21 @@ export default function ConsultationRow({
               {arrow}
             </button>
             {lead && (
-              <Link href={href} className={`btn btn--ghost ${styles.act}`}>
+              <Link
+                href={`${href}?write=1`}
+                className={`btn btn--ghost ${styles.act}`}
+              >
                 {ACTION_LABEL.WRITE}
               </Link>
             )}
           </>
         )}
         {(action === "OPEN" || action === "WRITE") && (
-          <Link href={href} className={buttonClass}>
+          // "Write prescription" opens the patient's page with the form already open; Open, the page alone
+          <Link
+            href={action === "WRITE" ? `${href}?write=1` : href}
+            className={buttonClass}
+          >
             <span>{ACTION_LABEL[action]}</span>
             {arrow}
           </Link>

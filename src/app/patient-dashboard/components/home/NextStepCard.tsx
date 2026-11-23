@@ -264,7 +264,7 @@ export default function NextStepCard({ step }: { step: NextStep }) {
         />
       )}
       {w.action && (
-        <Link href={w.action.href} className={`btn ${styles.go}`}>
+        <Link href={w.action.href} className={`btn btn--signal ${styles.go}`}>
           <span>{w.action.label}</span>
           <span className="well" aria-hidden="true">
             {w.action.icon === "video" ? (

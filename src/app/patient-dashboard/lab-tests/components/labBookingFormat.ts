@@ -26,7 +26,7 @@ export function labStatusLine(booking: LabBooking): string | null {
   const who = booking.collector?.name ?? "The collector";
   switch (booking.status) {
     case "BOOKED":
-      return "Your test is booked with our partner lab, Redcliffe Labs. When they assign a collector, their name and number appear here.";
+      return "Your test is booked with our partner lab. When they assign a collector, their name and number appear here.";
     case "COLLECTOR_ASSIGNED":
       if (booking.collector?.journey === "ARRIVED")
         return `${who} has reached your address.`;

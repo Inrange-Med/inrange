@@ -1,9 +1,11 @@
 "use client";
 
 /*
-  One patient's medicines, for the care team and their coach: the plan, the salesperson (from the ranked
-  sales team), their doctors (the first consultation's doctor by default; admin adds and removes the
-  rest), WhatsApp, the coach, the prescription, then one timeline (messages and the patient's replies, order steps, tasks) newest
+  One patient, for the care team and their coach: the plan and its sales form (PlanSale), the salesperson
+  (from the ranked sales team), their doctors (the first consultation's doctor by default; admin adds and
+  removes the rest), WhatsApp, the health coach and the fitness coach, the prescription; then their
+  consultations (admin books, moves and cancels them, and watches a recording the patient agreed to), the
+  coach's remarks for the doctor, every prescription with who sent it, the doses, and one timeline (messages and the patient's replies, order steps, tasks) newest
   first, and the doses. While WhatsApp is in test mode an admin can play the patient's reply on a
   message, exactly as a tap on the phone would act. Opening it is logged (audit_log).
   The plan is sold, not prescribed (20 Nov 2026): the salesperson tells admin, admin puts the patient on
@@ -11,7 +13,6 @@
 */
 
 import { useState } from "react";
-import SegmentedControl from "@/components/ui/SegmentedControl";
 import Sheet from "@/components/ui/Sheet";
 import ErrorNotice from "@/components/ui/ErrorNotice";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
@@ -22,17 +23,16 @@ import { formatRupees } from "@/lib/format/money";
 import { spacedMobile } from "@/lib/format/phone";
 import { errorMessage } from "@/lib/http/apiClient";
 import {
-  assignPlan,
   getPatient,
   listCoaches,
   listSalespeople,
   playReply,
   setCareTeamDoctor,
   setCoach,
+  setFitnessCoach,
   setSalesperson,
 } from "@/services/medicineOpsService";
 import { listDoctors } from "@/services/adminService";
-import { listPlans } from "@/services/subscriptionService";
 import type { OpsMessage, OpsPatient } from "@/types/medicineOps";
 import {
   ACTION_WORDS,
@@ -45,6 +45,10 @@ import {
   WEEKDAYS,
   when,
 } from "./words";
+import CoachRemarks from "./CoachRemarks";
+import PatientConsultations from "./PatientConsultations";
+import PatientPrescriptions from "./PatientPrescriptions";
+import PlanSale from "./PlanSale";
 import formStyles from "@/components/ui/styles/FormControls.module.css";
 import adminStyles from "@/app/admin/styles/AdminSurfaces.module.css";
 import s from "./Medicine.module.css";
@@ -210,33 +214,37 @@ function Timeline({
   );
 }
 
+/** The health coach or the fitness coach, chosen from the coaches (any coach can be either). */
 function CoachPicker({
   data,
+  fitness = false,
   onSaved,
 }: {
   data: OpsPatient;
+  fitness?: boolean;
   onSaved: () => void;
 }) {
   const coaches = useApiResource("coaches", listCoaches);
   const toast = useToast();
   const [busy, setBusy] = useState(false);
+  const now = fitness ? data.patient.fitnessCoach : data.patient.coach;
+  const what = fitness ? "Fitness coach" : "Coach";
   if (!coaches.data)
-    return (
-      <span className={adminStyles.muted}>
-        {data.patient.coach?.name ?? "No coach"}
-      </span>
-    );
+    return <span className={adminStyles.muted}>{now?.name ?? "No coach"}</span>;
   return (
     <select
       className={s.input}
-      value={data.patient.coach?.id ?? ""}
+      value={now?.id ?? ""}
       disabled={busy}
-      aria-label="Health coach"
+      aria-label={fitness ? "Fitness coach" : "Health coach"}
       onChange={async (e) => {
         setBusy(true);
         try {
-          await setCoach(data.patient.id, e.target.value || null);
-          toast(e.target.value ? "Coach assigned" : "Coach removed");
+          await (fitness ? setFitnessCoach : setCoach)(
+            data.patient.id,
+            e.target.value || null,
+          );
+          toast(e.target.value ? `${what} assigned` : `${what} removed`);
           onSaved();
         } catch (caught) {
           toast(errorMessage(caught, "The coach could not be changed."));
@@ -245,7 +253,7 @@ function CoachPicker({
         }
       }}
     >
-      <option value="">No coach</option>
+      <option value="">{fitness ? "No fitness coach" : "No coach"}</option>
       {coaches.data.map((c) => (
         <option key={c.id} value={c.id}>
           {c.fullName}
@@ -392,154 +400,6 @@ function DoctorsField({
   );
 }
 
-/**
- * The plan: active (read only), assigned and waiting for payment (change or withdraw), or none (put them on one:
- * the length, the price, who sold it).
- */
-function PlanAssign({
-  data,
-  onSaved,
-}: {
-  data: OpsPatient;
-  onSaved: () => void;
-}) {
-  const toast = useToast();
-  const plans = useApiResource("plans-for-assigning", listPlans);
-  const sellers = useSalesOptions();
-  const assigned = data.patient.assignedPlan;
-  const [choosing, setChoosing] = useState(false);
-  const [planId, setPlanId] = useState(assigned?.planId ?? "");
-  // whoever sold it: the plan's seller, else the patient's salesperson
-  const [seller, setSeller] = useState(
-    assigned?.salespersonId ?? data.patient.salespersonId ?? "",
-  );
-  const [busy, setBusy] = useState(false);
-
-  if (data.patient.plan)
-    return (
-      <>
-        {data.patient.plan}
-        {data.patient.planEndsAt
-          ? `, until ${shortDate(data.patient.planEndsAt)}`
-          : ""}
-      </>
-    );
-
-  const save = async (id: string | null) => {
-    setBusy(true);
-    try {
-      toast(await assignPlan(data.patient.id, id, id ? seller || null : null));
-      setChoosing(false);
-      onSaved();
-    } catch (caught) {
-      toast(errorMessage(caught, "The plan could not be changed."));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  if (!choosing)
-    return (
-      <>
-        <span className={s.lineItem}>
-          {assigned ? (
-            <>
-              {assigned.name},{" "}
-              <span className="num">{formatRupees(assigned.priceRupees)}</span>:
-              waiting for the patient to pay in the app
-            </>
-          ) : (
-            "No plan yet"
-          )}
-        </span>
-        {assigned && (
-          <span className={`${s.lineItem} ${adminStyles.muted}`}>
-            Put on it {shortDate(assigned.assignedAt)}
-            {assigned.salesperson ? `, sold by ${assigned.salesperson}` : ""}
-          </span>
-        )}
-        <span className={s.chips}>
-          <button
-            type="button"
-            className={s.chip}
-            disabled={busy}
-            onClick={() => setChoosing(true)}
-          >
-            {assigned ? "Change the plan" : "Put on a plan"}
-          </button>
-          {assigned && (
-            <button
-              type="button"
-              className={s.chip}
-              disabled={busy}
-              onClick={() => save(null)}
-            >
-              Withdraw it
-            </button>
-          )}
-        </span>
-      </>
-    );
-
-  const offered = (plans.data ?? []).filter(
-    (plan) => plan.isActive && plan.priceRupees,
-  );
-  const chosen = offered.find((plan) => String(plan.id) === planId);
-  return (
-    <div className={s.planForm}>
-      {plans.error && !plans.data ? (
-        <span className={adminStyles.muted}>The plans could not load.</span>
-      ) : (
-        <SegmentedControl
-          label="Plan length"
-          value={planId}
-          options={offered.map((plan) => ({
-            value: String(plan.id),
-            label: `${plan.durationMonths} months`,
-          }))}
-          onChange={setPlanId}
-        />
-      )}
-      {chosen && (
-        <span className="num">
-          {chosen.name}, {formatRupees(chosen.priceRupees!)}
-        </span>
-      )}
-      <select
-        className={s.input}
-        value={sellers?.some((p) => p.id === seller) ? seller : ""}
-        aria-label="Sold by"
-        onChange={(e) => setSeller(e.target.value)}
-      >
-        <option value="">Sold by: not recorded</option>
-        {(sellers ?? []).map((p) => (
-          <option key={p.id} value={p.id}>
-            Sold by {p.rank}. {p.fullName}
-          </option>
-        ))}
-      </select>
-      <span className={s.chips}>
-        <button
-          type="button"
-          className={s.chip}
-          disabled={!chosen || busy}
-          onClick={() => save(planId)}
-        >
-          {busy ? "Saving" : "Put on this plan"}
-        </button>
-        <button
-          type="button"
-          className={s.chip}
-          disabled={busy}
-          onClick={() => setChoosing(false)}
-        >
-          Cancel
-        </button>
-      </span>
-    </div>
-  );
-}
-
 export default function PatientSheet({
   patientId,
   isAdmin,
@@ -595,7 +455,7 @@ export default function PatientSheet({
               <dt>Plan</dt>
               <dd>
                 {isAdmin ? (
-                  <PlanAssign
+                  <PlanSale
                     key={data.patient.id}
                     data={data}
                     onSaved={refresh}
@@ -647,6 +507,16 @@ export default function PatientSheet({
                 )}
               </dd>
             </div>
+            <div>
+              <dt>Fitness coach</dt>
+              <dd>
+                {isAdmin ? (
+                  <CoachPicker data={data} fitness onSaved={refresh} />
+                ) : (
+                  (data.patient.fitnessCoach?.name ?? "No fitness coach")
+                )}
+              </dd>
+            </div>
             {data.prescription && (
               <div>
                 <dt>Prescription</dt>
@@ -685,6 +555,14 @@ export default function PatientSheet({
               </div>
             )}
           </dl>
+
+          <PatientConsultations
+            data={data}
+            isAdmin={isAdmin}
+            onChanged={refresh}
+          />
+          <CoachRemarks key={data.patient.id} data={data} onSaved={refresh} />
+          <PatientPrescriptions prescriptions={data.prescriptions} />
 
           {data.doses.schedules.length > 0 && (
             <section className={s.section} aria-label="Doses">

@@ -16,16 +16,16 @@ and 250 kg.").
 
 ## Endpoints
 
-| Method | Path | Status | Service function | Used for |
-| --- | --- | --- | --- | --- |
-| GET | `/api/onboarding/config` | PROPOSED | `onboardingService.getOnboardingConfig` | answer lists and consent wording |
-| GET | `/api/onboarding/status` | PROPOSED | `onboardingService.getOnboardingStatus` | resume where the patient left off |
-| PATCH | `/api/onboarding/step` | exists; new fields PROPOSED | `onboardingService.saveOnboardingStep` | save one question's answer |
-| POST | `/api/onboarding/complete` | exists; `ageYears` in place of `dateOfBirth` PROPOSED | `onboardingService.completeOnboarding` | finish the profile |
-| GET | `/api/eligibility` | PROPOSED (patient-dashboard.md) | `eligibilityService.getMyEligibility` | skip the blood test step once a path is chosen |
-| POST | `/api/reports` | PROPOSED (reports.md) | `reportService.uploadReport` | "yes": the report, `purpose=ELIGIBILITY` |
-| GET | `/api/care-packages` | PROPOSED | `carePackageService.listCarePackages` | "no": the package with lab tests |
-| POST | `/api/labs/bookings` | PROPOSED (lab-tests-redcliffe.md) | `labTestService.createLabBooking` | "no": hold the collection slot, with `carePackageCode` |
+| Method | Path                       | Status                                                | Service function                        | Used for                                               |
+| ------ | -------------------------- | ----------------------------------------------------- | --------------------------------------- | ------------------------------------------------------ |
+| GET    | `/api/onboarding/config`   | PROPOSED                                              | `onboardingService.getOnboardingConfig` | answer lists and consent wording                       |
+| GET    | `/api/onboarding/status`   | PROPOSED                                              | `onboardingService.getOnboardingStatus` | resume where the patient left off                      |
+| PATCH  | `/api/onboarding/step`     | exists; new fields PROPOSED                           | `onboardingService.saveOnboardingStep`  | save one question's answer                             |
+| POST   | `/api/onboarding/complete` | exists; `ageYears` in place of `dateOfBirth` PROPOSED | `onboardingService.completeOnboarding`  | finish the profile                                     |
+| GET    | `/api/eligibility`         | PROPOSED (patient-dashboard.md)                       | `eligibilityService.getMyEligibility`   | skip the blood test step once a path is chosen         |
+| POST   | `/api/reports`             | PROPOSED (reports.md)                                 | `reportService.uploadReport`            | "yes": the report, `purpose=ELIGIBILITY`               |
+| GET    | `/api/care-packages`       | PROPOSED                                              | `carePackageService.listCarePackages`   | "no": the package with lab tests                       |
+| POST   | `/api/labs/bookings`       | PROPOSED (lab-tests-redcliffe.md)                     | `labTestService.createLabBooking`       | "no": hold the collection slot, with `carePackageCode` |
 
 ## Requests and responses
 
@@ -35,16 +35,16 @@ Today the backend reads flat fields: `mobile`, `fullName`, `email`, `dateOfBirth
 (`"Male" | "Female" | "Other"`), `weightKg`, `heightCm`. The app keeps those names and sends **one
 step at a time**, so accept a partial body. Every body carries `step` (1 to 8) and `mobile`.
 
-| Step | Question | Body | Already accepted? |
-| --- | --- | --- | --- |
-| 1 | Name and email | `{ "step": 1, "mobile": "9876543210", "fullName": "Asha Rao", "firstName": "Asha", "lastName": "Rao", "email": "asha@example.com" }` | `fullName`, `email` yes. **New:** `firstName`, `lastName` (last name may be `""`). |
-| 2 | Gender | `{ "step": 2, "mobile": "9876543210", "gender": "Female" }` | yes |
-| 3 | Age | `{ "step": 3, "mobile": "9876543210", "ageYears": 41 }` | **New:** `ageYears` (integer, 18 to 90). `dateOfBirth` is never sent. |
-| 4 | Height | `{ "step": 4, "mobile": "9876543210", "heightCm": 165.1 }` | yes (one decimal; feet and inches converted to cm) |
-| 5 | Weight | `{ "step": 5, "mobile": "9876543210", "weightKg": 82.6 }` | yes (one decimal; lb converted to kg). The baseline weight. |
-| 6 | Tried before | `{ "step": 6, "mobile": "9876543210", "weightLossExperience": ["SELF_DIET", "PROGRAMME"] }` | **New.** Codes: `FIRST_TIME`, `SELF_DIET`, `PROGRAMME`, `DOCTOR_MEDS`, `SURGERY`. `FIRST_TIME` is never combined with another. |
-| 7 | Conditions | `{ "step": 7, "mobile": "9876543210", "noConditions": false, "conditions": [{ "code": "T2D" }, { "code": "OTHER", "otherText": "Asthma" }] }` | **New.** Codes: `T2D`, `PREDIABETES`, `BP`, `PCOS`, `THYROID`, `FATTY_LIVER`, `LIPIDS`, `SLEEP_APNOEA`, `HEART`, `KIDNEY`, `OTHER`. "None of these" is `{ "noConditions": true, "conditions": [] }`. Saving replaces the previous list. |
-| 8 | Consent | `{ "step": 8, "mobile": "9876543210", "consents": [{ "type": "TERMS", "version": "2026-09", "accepted": true }, { "type": "PRIVACY", ... }, { "type": "HEALTH_DATA", ... }, { "type": "TELECONSULT", ... }, { "type": "AI", ... }] }` | **New.** See Notes, consent storage. |
+| Step | Question       | Body                                                                                                                                                                                                                                  | Already accepted?                                                                                                                                                                                                                       |
+| ---- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1    | Name and email | `{ "step": 1, "mobile": "9876543210", "fullName": "Asha Rao", "firstName": "Asha", "lastName": "Rao", "email": "asha@example.com" }`                                                                                                  | `fullName`, `email` yes. **New:** `firstName`, `lastName` (last name may be `""`).                                                                                                                                                      |
+| 2    | Gender         | `{ "step": 2, "mobile": "9876543210", "gender": "Female" }`                                                                                                                                                                           | yes                                                                                                                                                                                                                                     |
+| 3    | Age            | `{ "step": 3, "mobile": "9876543210", "ageYears": 41 }`                                                                                                                                                                               | **New:** `ageYears` (integer, 18 to 90). `dateOfBirth` is never sent.                                                                                                                                                                   |
+| 4    | Height         | `{ "step": 4, "mobile": "9876543210", "heightCm": 165.1 }`                                                                                                                                                                            | yes (one decimal; feet and inches converted to cm)                                                                                                                                                                                      |
+| 5    | Weight         | `{ "step": 5, "mobile": "9876543210", "weightKg": 82.6 }`                                                                                                                                                                             | yes (one decimal; lb converted to kg). The baseline weight.                                                                                                                                                                             |
+| 6    | Tried before   | `{ "step": 6, "mobile": "9876543210", "weightLossExperience": ["SELF_DIET", "PROGRAMME"] }`                                                                                                                                           | **New.** Codes: `FIRST_TIME`, `SELF_DIET`, `PROGRAMME`, `DOCTOR_MEDS`, `SURGERY`. `FIRST_TIME` is never combined with another.                                                                                                          |
+| 7    | Conditions     | `{ "step": 7, "mobile": "9876543210", "noConditions": false, "conditions": [{ "code": "T2D" }, { "code": "OTHER", "otherText": "Asthma" }] }`                                                                                         | **New.** Codes: `T2D`, `PREDIABETES`, `BP`, `PCOS`, `THYROID`, `FATTY_LIVER`, `LIPIDS`, `SLEEP_APNOEA`, `HEART`, `KIDNEY`, `OTHER`. "None of these" is `{ "noConditions": true, "conditions": [] }`. Saving replaces the previous list. |
+| 8    | Consent        | `{ "step": 8, "mobile": "9876543210", "consents": [{ "type": "TERMS", "version": "2026-09", "accepted": true }, { "type": "PRIVACY", ... }, { "type": "HEALTH_DATA", ... }, { "type": "TELECONSULT", ... }, { "type": "AI", ... }] }` | **New.** See Notes, consent storage.                                                                                                                                                                                                    |
 
 Response: `{ "success": true, "message": "Saved", "data": { "currentStep": 4 } }` (only a 2xx is
 needed).
@@ -55,7 +55,15 @@ Sent once, after step 8 saves and before the blood test step. The flat shape the
 with `ageYears` in place of `dateOfBirth`:
 
 ```json
-{ "mobile": "9876543210", "fullName": "Asha Rao", "email": "asha@example.com", "gender": "Female", "ageYears": 41, "heightCm": 165.1, "weightKg": 82.6 }
+{
+  "mobile": "9876543210",
+  "fullName": "Asha Rao",
+  "email": "asha@example.com",
+  "gender": "Female",
+  "ageYears": 41,
+  "heightCm": 165.1,
+  "weightKg": 82.6
+}
 ```
 
 Response: `{ "success": true, "message": "Profile complete", "data": { "bmi": 30.3 } }` (only a 2xx
@@ -74,8 +82,16 @@ question 1 with empty answers.
     "lastCompletedStep": 3,
     "completed": false,
     "answers": {
-      "firstName": "Asha", "lastName": "Rao", "email": "asha@example.com", "gender": "Female", "ageYears": 41,
-      "heightCm": null, "weightKg": null, "weightLossExperience": [], "conditions": null, "noConditions": false,
+      "firstName": "Asha",
+      "lastName": "Rao",
+      "email": "asha@example.com",
+      "gender": "Female",
+      "ageYears": 41,
+      "heightCm": null,
+      "weightKg": null,
+      "weightLossExperience": [],
+      "conditions": null,
+      "noConditions": false,
       "consents": [{ "type": "TERMS", "version": "2026-09", "accepted": true }]
     }
   }
@@ -99,12 +115,34 @@ which is also the right starting content. Keep the codes `FIRST_TIME` (never com
   "success": true,
   "data": {
     "consentVersion": "2026-09",
-    "genders": [{ "code": "Male", "label": "Male" }, { "code": "Female", "label": "Female" }, { "code": "Other", "label": "Other" }],
-    "experiences": [{ "code": "FIRST_TIME", "label": "This is my first real attempt" }, { "code": "SELF_DIET", "label": "Diet and exercise on my own" }],
-    "conditions": [{ "code": "T2D", "label": "Type 2 diabetes" }, { "code": "OTHER", "label": "Something else" }],
+    "genders": [
+      { "code": "Male", "label": "Male" },
+      { "code": "Female", "label": "Female" },
+      { "code": "Other", "label": "Other" }
+    ],
+    "experiences": [
+      { "code": "FIRST_TIME", "label": "This is my first real attempt" },
+      { "code": "SELF_DIET", "label": "Diet and exercise on my own" }
+    ],
+    "conditions": [
+      { "code": "T2D", "label": "Type 2 diabetes" },
+      { "code": "OTHER", "label": "Something else" }
+    ],
     "consents": [
-      { "type": "TERMS", "title": "Terms of service", "line": "How InRange works, what it costs and how to cancel.", "more": "You are 18 or over and ...", "required": true },
-      { "type": "AI", "title": "Call transcription", "line": "An AI scribe drafts your doctor's notes from your video calls.", "more": "If you agree, ...", "required": false }
+      {
+        "type": "TERMS",
+        "title": "Terms of service",
+        "line": "How InRange works, what it costs and how to cancel.",
+        "more": "You are 18 or over and ...",
+        "required": true
+      },
+      {
+        "type": "AI",
+        "title": "Call transcription",
+        "line": "An AI scribe drafts your doctor's notes from your video calls.",
+        "more": "If you agree, ...",
+        "required": false
+      }
     ]
   }
 }
@@ -119,8 +157,31 @@ test is not available yet. `labPackageCode` must be a code `GET /api/labs/packag
 {
   "success": true,
   "data": [
-    { "code": "CONSULT_ONLY", "name": "Consultation", "description": "A video consultation with a doctor.", "priceRupees": 999, "includesLabTests": false, "labPackageCode": null, "includes": ["Video consultation with a doctor", "A call with your health coach"] },
-    { "code": "LAB_AND_CONSULT", "name": "Lab tests and consultation", "description": "Home blood tests by Redcliffe Labs, then your consultation.", "priceRupees": 1499, "includesLabTests": true, "labPackageCode": "MD028", "includes": ["Blood tests at home", "Video consultation with a doctor", "A call with your health coach"] }
+    {
+      "code": "CONSULT_ONLY",
+      "name": "Consultation",
+      "description": "A video consultation with a doctor.",
+      "priceRupees": 999,
+      "includesLabTests": false,
+      "labPackageCode": null,
+      "includes": [
+        "Video consultation with a doctor",
+        "A call with your health coach"
+      ]
+    },
+    {
+      "code": "LAB_AND_CONSULT",
+      "name": "Lab tests and consultation",
+      "description": "Home blood tests, then your consultation.",
+      "priceRupees": 1499,
+      "includesLabTests": true,
+      "labPackageCode": "MD028",
+      "includes": [
+        "Blood tests at home",
+        "Video consultation with a doctor",
+        "A call with your health coach"
+      ]
+    }
   ]
 }
 ```
@@ -144,7 +205,7 @@ test is not available yet. `labPackageCode` must be a code `GET /api/labs/packag
 - **Ask: keep the lead before the code (16 Nov 2026).** Today a person who fills in their details and
   never enters the code leaves nothing behind, because nothing is sent before `send-otp`. Proposed:
   `POST /api/leads` (no auth, rate-limited by IP and number) with `{ firstName, lastName, email,
-  mobile, consents, consentVersion, source: "free-check" }`, called when they tap "See my next step".
+mobile, consents, consentVersion, source: "free-check" }`, called when they tap "See my next step".
   It stores only those fields, never a health answer (DPDP Act: the consent tick on that screen
   covers being contacted about care; confirm the wording with counsel), and pre-sales can call anyone
   who stopped there. `send-otp` could then reuse it. Until it exists the app sends nothing early.

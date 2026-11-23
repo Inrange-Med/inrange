@@ -49,7 +49,7 @@ export const FREQUENCIES: Record<string, string> = {
   WEEKLY: "Once a week",
 };
 export const INTAKES: Record<string, string> = {
-  BEFORE_FOOD: "Before food", AFTER_FOOD: "After food", EMPTY_STOMACH: "On an empty stomach",
+  BEFORE_FOOD: "Before food", WITH_FOOD: "With food", AFTER_FOOD: "After food", EMPTY_STOMACH: "On an empty stomach",
 };
 export const DURATION_UNITS = ["DAYS", "WEEKS", "MONTHS"] as const;
 const unitWords = (n: number, unit: string) =>
@@ -167,7 +167,7 @@ export async function renderRx(doctor: Doctor, patientId: number, rx: Row, signe
     sql`select min(id) as n from prescriptions where patient_id = ${patientId}`,
     sql`select version, signed_at from prescriptions where patient_id = ${patientId} and status = 'SIGNED' and id <> ${rx.id}
         order by version desc limit 1`,
-    ids.length ? sql`select id, molecule, brand, form, strength, pack, pack_days, route, storage, seek_help from medicines where id in ${sql(ids)}` : [],
+    ids.length ? sql`select id, molecule, brand, form, strength, pack, pack_days, route, storage, seek_help, mrp_paise from medicines where id in ${sql(ids)}` : [],
   ]);
   const stock = new Map(stockRows.map((m: Row) => [m.id, m]));
   const sections = (note?.sections ?? []) as Row[];
@@ -218,7 +218,10 @@ export async function renderRx(doctor: Doctor, patientId: number, rx: Row, signe
   const pdfItems: RxPdfItem[] = lines.map(({ i, at, m, q }) => m
     ? { generic: m.molecule, brand: withForm(m.form, m.brand), form: packOf(m).holds ? `${m.form}, ${packOf(m).holds} per ${packOf(m).unit}` : m.form,
         strength: m.strength, how: how(i), route: m.route ?? "", step: steps.get(at)?.step ?? null,
-        when: steps.get(at)?.when ?? (v2 && i.duration ? `For ${i.duration}` : daysWord(q * m.pack_days)), quantity: qtyOf(m, q),
+        when: steps.get(at)?.when ?? (v2 && i.duration ? `For ${i.duration}` : daysWord(q * m.pack_days)),
+        // a count of packs only for what our pharmacy sells: an item on the list without a price is bought anywhere,
+        // and its pack count would be a guess (the master list of 23 Nov 2026 has many such)
+        quantity: m.mrp_paise != null ? qtyOf(m, q) : "",
         instructions: i.instructions ?? "" }
     : { generic: i.medicineName ?? "", brand: null, form: i.form ?? "", strength: i.strength ?? "", how: how(i),
         route: i.route ?? "", step: null, when: v2 && i.duration ? `For ${i.duration}` : monthsWord(months), quantity: "",
@@ -250,8 +253,12 @@ export async function renderRx(doctor: Doctor, patientId: number, rx: Row, signe
       vitals: [kg ? `Weight ${kg} kg` : null, u?.height_cm ? `Height ${u.height_cm} cm` : null, bmi ? `BMI ${bmi}` : null]
         .filter(Boolean).join("  ·  ") || null,
     },
-    consult: { mode: "Video teleconsultation", type: appt?.visit_type === "FOLLOW_UP" ? "Follow-up" : "First consultation",
-      dateTime: `${dayOf(callAt)}, ${timeOf(callAt)}`, signedAt: `${dayOf(signedAt)}, ${timeOf(signedAt)}` },
+    // written without a consultation (a refill when no call can happen, 19 Nov 2026 call): it says so, never a call that did not happen
+    consult: rx.appointment_id
+      ? { mode: "Video teleconsultation", type: appt?.visit_type === "FOLLOW_UP" ? "Follow-up" : "First consultation",
+          dateTime: `${dayOf(callAt)}, ${timeOf(callAt)}`, signedAt: `${dayOf(signedAt)}, ${timeOf(signedAt)}` }
+      : { mode: "Review without a call", type: previous ? "Follow-up" : "First prescription",
+          dateTime: `${dayOf(signedAt)}, ${timeOf(signedAt)}`, signedAt: `${dayOf(signedAt)}, ${timeOf(signedAt)}` },
     clinical: {
       complaint: String(appt?.reason ?? "").split(" | Note:")[0] || "Weight and metabolic care",
       diagnosis: (v2 ? rx.diagnosis : said("assessment").join(" ")) || "Not recorded",
@@ -334,6 +341,12 @@ export async function issueRx(doctor: Doctor, patientId: number, rxId: number,
           and (s.slot_date + s.start_time) > (select s2.slot_date + s2.start_time from appointments a2
                                               join doctor_slots s2 on s2.id = a2.slot_id where a2.id = ${rx.appointment_id})`;
       if (newer) fail(409, "This patient has a newer prescription from a later consultation, so this one cannot be sent.");
+      // nor one written without a consultation after this consultation's time
+      const [later] = await tx`
+        select 1 from prescriptions x where x.patient_id = ${patientId} and x.status = 'SIGNED' and x.appointment_id is null
+          and coalesce(x.sent_at, x.signed_at) > (select (s2.slot_date + s2.start_time) at time zone 'Asia/Kolkata' from appointments a2
+                                                   join doctor_slots s2 on s2.id = a2.slot_id where a2.id = ${rx.appointment_id})`;
+      if (later) fail(409, "This patient has a newer prescription, written after this consultation, so this one cannot be sent.");
     }
     if (o.sentAt && locked.saved_at && locked.pdf_made_at && new Date(locked.saved_at) > new Date(locked.pdf_made_at))
       fail(409, "The prescription changed after the PDF was made. Create the PDF again, then send it.");
@@ -350,7 +363,9 @@ export async function issueRx(doctor: Doctor, patientId: number, rxId: number,
     // a new version of the same consultation's prescription ("Edit and send new version"): what the patient already
     // paid for stays bought. Its paid order moves to the new version (so refills follow it), and the new order
     // carries only what is left to buy.
-    const sameVisit = superseded.filter((r) => rx.appointment_id && r.appointment_id === rx.appointment_id).map((r) => r.id);
+    // (an edit of a prescription written without a consultation names the one it corrects: revises_id)
+    const sameVisit = superseded.filter((r) => (rx.appointment_id && r.appointment_id === rx.appointment_id) || r.id === rx.revises_id)
+      .map((r) => r.id);
     if (sameVisit.length) {
       const paid = await tx`select id, lines from medicine_carts where prescription_id in ${tx(sameVisit)} and status = 'PAID'`;
       for (const k of paid) {

@@ -17,7 +17,7 @@ import { bookAppointment, holdSlot } from "../lib/booking.ts";
 import * as rzp from "../integrations/razorpay.ts";
 import { applyLabEvent, fulfilLabBooking, type LabEvent } from "./labs.ts";
 import * as rc from "../integrations/redcliffe.ts";
-import { priceCart, type CartLine } from "../lib/pharmacy.ts";
+import { priceCart, startPlan, type CartLine } from "../lib/pharmacy.ts";
 import { deliverQueued, onMedicinePaid, onMedicinePaymentFailed } from "../lib/medicineFlow.ts";
 import { spokenSlot } from "../lib/hours.ts";
 import * as notices from "../lib/notices.ts";
@@ -157,14 +157,6 @@ paymentRoutes.post("/payments/orders", async (c) => {
   });
   return ok(c, toOrder(order), "Order created");
 });
-
-/** A paid plan starts now. */
-async function startPlan(tx: TransactionSql, userId: number, planId: number, orderId: string) {
-  const [plan] = await tx`select duration_months from plans where id = ${planId}`;
-  await tx`update subscriptions set status = 'Expired' where user_id = ${userId} and status = 'Active' and ends_at <= now()`;
-  await tx`insert into subscriptions (user_id, plan_id, status, starts_at, ends_at, payment_order_id)
-    values (${userId}, ${planId}, 'Active', now(), now() + make_interval(months => ${plan?.duration_months ?? 1}), ${orderId})`;
-}
 
 /**
  * Marks the order PAID and fulfils it, once (guarded by fulfilled_at under a row lock). Shared by

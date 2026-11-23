@@ -3,7 +3,8 @@
 /*
   Prescriptions (Home's first row, and where WhatsApp's "See the prescription" lands with ?rx=): the
   current one first, its medicines in plain words, View (the PDF) with Download beside it; the ones it
-  replaced below, quieter. Data: GET /api/care/prescriptions (patientHomeService); the PDF comes through
+  replaced below, quieter, to read only: a new prescription makes the old one invalid, so it is never
+  handed out again (19 Nov 2026 call). Data: GET /api/care/prescriptions (patientHomeService); the PDF comes through
   the signed-in file route, so no link leaves the app.
 */
 
@@ -27,7 +28,7 @@ import styles from "./PrescriptionsView.module.css";
 const HOME = { href: "/patient-dashboard", label: "Home" };
 const year = (iso: string) => new Date(iso).getFullYear();
 
-function DownloadButton({ rx }: { rx: PatientPrescription }) {
+function DownloadButton({ rx }: { rx: PatientPrescription & { pdf: string } }) {
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   return (
@@ -122,17 +123,25 @@ export default function PrescriptionsView() {
                   Advice from your doctor, no medicines.
                 </p>
               )}
-              <div className={styles.actions}>
-                <FileOpenButton
-                  load={() => getFile(rx.pdf)}
-                  className={`btn ${rx.current ? "" : "btn--ghost"} ${styles.action}`}
-                >
-                  {(opening) => (
-                    <span>{opening ? "Opening" : "View prescription"}</span>
-                  )}
-                </FileOpenButton>
-                <DownloadButton rx={rx} />
-              </div>
+              {rx.pdf ? (
+                <div className={styles.actions}>
+                  <FileOpenButton
+                    load={() => getFile(rx.pdf!)}
+                    className={`btn ${styles.action}`}
+                  >
+                    {(opening) => (
+                      <span>{opening ? "Opening" : "View prescription"}</span>
+                    )}
+                  </FileOpenButton>
+                  <DownloadButton rx={{ ...rx, pdf: rx.pdf }} />
+                </div>
+              ) : (
+                // a new prescription makes the old one invalid: it stays to read, and is never handed out again
+                <p className={styles.meta}>
+                  A newer prescription replaced this one, so it can no longer be
+                  used or downloaded.
+                </p>
+              )}
             </li>
           ))}
         </ol>

@@ -131,7 +131,7 @@ function wordsFor(
               : labBooking?.collector?.journey === "ON_THE_WAY"
                 ? "Your collector is on the way"
                 : "Your collector is assigned",
-          text: `${labBooking?.collector?.name ?? "A collector from Redcliffe Labs"} comes ${collection ?? "at the booked time"}.`,
+          text: `${labBooking?.collector?.name ?? "A collector from our partner lab"} comes ${collection ?? "at the booked time"}.`,
           action: seeBooking,
         };
       return {

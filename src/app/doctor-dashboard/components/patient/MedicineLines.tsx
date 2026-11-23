@@ -20,7 +20,7 @@ import type {
 } from "@/types/consultation";
 import ChoiceChips from "./ChoiceChips";
 import MedicinePicker from "./MedicinePicker";
-import styles from "./ConsultationPage.module.css";
+import styles from "./PatientPage.module.css";
 
 const FREQUENCIES: { value: Exclude<Frequency, "">; label: string }[] = [
   { value: "1-0-0", label: "Every morning" },
@@ -49,6 +49,7 @@ const UNITS: { value: DurationUnit; label: string }[] = [
 ];
 const INTAKES: { value: Exclude<Intake, "">; label: string }[] = [
   { value: "BEFORE_FOOD", label: "Before food" },
+  { value: "WITH_FOOD", label: "With food" },
   { value: "AFTER_FOOD", label: "After food" },
   { value: "EMPTY_STOMACH", label: "Empty stomach" },
 ];

@@ -1,6 +1,6 @@
 /* Tap, don't type: one choice out of a few, as pills at 48px (the PRD's floor for anything pressed). */
 
-import styles from "./ConsultationPage.module.css";
+import styles from "./PatientPage.module.css";
 
 export default function ChoiceChips<T extends string>({
   label,

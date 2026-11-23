@@ -1,7 +1,8 @@
 "use client";
 
 /**
- * The consultation room for both roles. Before joining: a camera and microphone check, then Join now,
+ * The consultation room for both roles. Before joining: a camera and microphone check (and, for the
+ * patient, one unticked box: may this call be recorded), then Join now,
  * which asks the backend for the 100ms room (GET /api/video/appointments/:id/join) and embeds it
  * full screen. The doctor's call opens in its own tab (doctor portal v2), so for the doctor Leave and End
  * both end on "Finish the prescription in your other tab" with Close this tab; the patient's Leave goes
@@ -51,6 +52,8 @@ export default function ConsultationRoom({
   const [joinError, setJoinError] = useState<string | null>(null);
   const [confirmingEnd, setConfirmingEnd] = useState(false);
   const [loadedLink, setLoadedLink] = useState<string | null>(null);
+  // the patient's yes to recording, asked each call and never assumed
+  const [record, setRecord] = useState(false);
   const home = homePathFor(isDoctor ? "DOCTOR" : "PATIENT");
   // each dashboard's first section: the doctor's Today, the patient's Home
   const homeLabel = isDoctor ? "Today" : "Home";
@@ -68,7 +71,10 @@ export default function ConsultationRoom({
     try {
       setStage({
         name: "live",
-        room: await joinVideoConsultation(appointmentId),
+        room: await joinVideoConsultation(
+          appointmentId,
+          isDoctor ? undefined : record,
+        ),
       });
     } catch (caught) {
       setJoinError(errorMessage(caught));
@@ -118,6 +124,8 @@ export default function ConsultationRoom({
           error={joinError}
           home={home}
           onJoin={join}
+          record={isDoctor ? undefined : record}
+          onRecord={setRecord}
         />
       )}
 

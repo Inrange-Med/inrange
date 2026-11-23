@@ -1,8 +1,9 @@
-/* /doctor-dashboard/consultations/<id>: one consultation, top to bottom (doctor portal v2 PRD): the
-   patient and Join, the reports, the last prescription, then the prescription, its PDF and Send. */
+/* /doctor-dashboard/consultations/<id>: the patient's page, opened from a consultation (Today, History):
+   the consultation and Join, what the doctor needs at the top, then prescriptions, reports and coach remarks.
+   ?write=1 opens the prescription form at once (Today's "Write prescription"). */
 
 import type { Metadata } from "next";
-import ConsultationView from "./components/ConsultationView";
+import PatientPageView from "@/app/doctor-dashboard/components/patient/PatientPageView";
 
 export const metadata: Metadata = { title: "Consultation | inrange" };
 
@@ -12,5 +13,5 @@ export default async function ConsultationPage({
   params: Promise<{ appointmentId: string }>;
 }) {
   const { appointmentId } = await params;
-  return <ConsultationView appointmentId={appointmentId} />;
+  return <PatientPageView appointmentId={appointmentId} />;
 }

@@ -95,5 +95,6 @@ export type PatientPrescription = {
   doctorName: string;
   doctorQualification: string;
   medicines: MedicineLineView[];
-  pdf: string;
+  /** only the current prescription has a PDF; a replaced one is read in the app and never handed out */
+  pdf: string | null;
 };

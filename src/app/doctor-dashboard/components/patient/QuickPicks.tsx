@@ -7,7 +7,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { CaretDown, Check } from "@phosphor-icons/react";
-import styles from "./ConsultationPage.module.css";
+import styles from "./PatientPage.module.css";
 
 export default function QuickPicks({
   label,

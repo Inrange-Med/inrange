@@ -10,8 +10,15 @@
  *   GET   /api/admin/medicine/patients?q=                  admin: every patient; a coach: their own
  *   GET   /api/admin/medicine/patients/:id                 one patient's plan, medicines, messages, tasks and doses
  *   PATCH /api/admin/medicine/patients/:id/coach           { coachId | null } (admin)
+ *   PATCH /api/admin/medicine/patients/:id/fitness-coach   { coachId | null } (admin)
+ *   POST  /api/admin/medicine/patients/:id/remarks         { text }: a coach remark the doctor reads
  *   PATCH /api/admin/medicine/patients/:id/salesperson     { salespersonId | null } (admin)
- *   PUT   /api/admin/medicine/patients/:id/plan            { planId | null, salespersonId }: the plan to pay for in the app (admin)
+ *   PUT   /api/admin/medicine/patients/:id/plan            the sales form, or { planId: null } to withdraw (admin)
+ *   GET   /api/schedule/slots/:doctorId/:date              a doctor's times on a day (for admin's booking)
+ *   POST  /api/admin/medicine/patients/:id/consultations   { slotId }: books a consultation for the patient (admin)
+ *   POST  /api/admin/consultations/:id/move                { slotId } (admin)
+ *   POST  /api/admin/consultations/:id/cancel              { reason } (admin)
+ *   GET   /api/admin/consultations/:id/recording           -> { url }: a link to watch it, good for an hour (admin)
  *   PUT   /api/admin/medicine/patients/:id/doctors/:doctorId     adds a doctor to the patient's care team (admin)
  *   DELETE /api/admin/medicine/patients/:id/doctors/:doctorId    takes one off it (admin)
  *   GET   /api/admin/medicine/orders                       deliveries (admin)
@@ -37,7 +44,9 @@ import type {
   OpsPatientRow,
   OpsSummary,
   OpsTask,
+  OpsSlot,
   OrderMove,
+  SalesForm,
   Salesperson,
   TaskOutcome,
   UnmatchedLine,
@@ -135,17 +144,85 @@ export async function setSalesperson(
   });
 }
 
-/** Puts the patient on a plan to pay for in the app (`planId: null` withdraws it); returns the server's words. */
+export async function setFitnessCoach(
+  patientId: string,
+  coachId: string | null,
+) {
+  await apiRequest(`${base}/patients/${patientId}/fitness-coach`, {
+    method: "PATCH",
+    body: { coachId },
+  });
+}
+
+export async function addCoachRemark(patientId: string, text: string) {
+  await apiRequest(`${base}/patients/${patientId}/remarks`, {
+    method: "POST",
+    body: { text },
+  });
+}
+
+/**
+ * The sales form: puts the patient on a plan to pay for in the app, or starts it at once when the money was
+ * taken outside the app. `null` withdraws a plan not yet paid for. Returns the server's words.
+ */
 export async function assignPlan(
   patientId: string,
-  planId: string | null,
-  salespersonId: string | null,
+  form: SalesForm | null,
 ): Promise<string> {
   const body = await apiRequest<{ message?: string }>(
     `${base}/patients/${patientId}/plan`,
-    { method: "PUT", body: { planId, salespersonId } },
+    { method: "PUT", body: form ?? { planId: null } },
   );
-  return body?.message ?? (planId ? "Plan assigned" : "Plan withdrawn");
+  return body?.message ?? (form ? "Plan assigned" : "Plan withdrawn");
+}
+
+/** A doctor's times on a day (YYYY-MM-DD), free or taken. */
+export async function listDoctorSlots(
+  doctorId: string,
+  date: string,
+): Promise<OpsSlot[]> {
+  type Raw = { SlotId: number; StartTime: string; Status: string };
+  return listFrom<Raw>(
+    await apiRequest(`/api/schedule/slots/${doctorId}/${date}`),
+  ).map((slot) => ({
+    id: String(slot.SlotId),
+    startTime: slot.StartTime,
+    free: slot.Status === "Available",
+  }));
+}
+
+/** Books (no `consultationId`) or moves a consultation for the patient; returns the server's words. */
+export async function bookConsultation(
+  patientId: string,
+  slotId: string,
+  consultationId?: string,
+): Promise<string> {
+  const body = await apiRequest<{ message?: string }>(
+    consultationId
+      ? `/api/admin/consultations/${consultationId}/move`
+      : `${base}/patients/${patientId}/consultations`,
+    { method: "POST", body: { slotId } },
+  );
+  return body?.message ?? "Done";
+}
+
+export async function cancelConsultation(
+  consultationId: string,
+  reason: string,
+): Promise<string> {
+  const body = await apiRequest<{ message?: string }>(
+    `/api/admin/consultations/${consultationId}/cancel`,
+    { method: "POST", body: { reason } },
+  );
+  return body?.message ?? "Cancelled";
+}
+
+/** A link to watch a recorded consultation, good for an hour. */
+export async function getRecordingLink(consultationId: string) {
+  const body = await apiRequest<ApiEnvelope<{ url: string }>>(
+    `/api/admin/consultations/${consultationId}/recording`,
+  );
+  return body.data!.url;
 }
 
 /** Adds a doctor to the patient's care team, or takes one off it; returns the server's words. */

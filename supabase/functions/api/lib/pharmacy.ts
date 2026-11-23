@@ -100,12 +100,20 @@ export async function onPlan(tx: Tx, patientId: number) {
  */
 export async function pendingPlan(tx: Tx, patientId: number) {
   const [r] = await tx`
-    select r.plan_id, r.salesperson, r.salesperson_id, r.created_at, p.name, p.price_rupees, p.mrp_rupees, p.duration_months
+    select r.plan_id, r.salesperson, r.salesperson_id, r.created_at, r.coach_preference, r.note, p.name, p.price_rupees, p.mrp_rupees, p.duration_months
     from plan_recommendations r join plans p on p.id = r.plan_id
     where r.patient_id = ${patientId} and p.active
       and r.created_at > coalesce((select max(s.created_at) from subscriptions s where s.user_id = ${patientId}), '-infinity')
     order by r.created_at desc limit 1`;
   return r ?? null;
+}
+
+/** A paid plan starts now. `orderId` is the payment in the app; none when the money was taken outside it. */
+export async function startPlan(tx: TransactionSql, userId: number, planId: number, orderId: string | null) {
+  const [plan] = await tx`select duration_months from plans where id = ${planId}`;
+  await tx`update subscriptions set status = 'Expired' where user_id = ${userId} and status = 'Active' and ends_at <= now()`;
+  await tx`insert into subscriptions (user_id, plan_id, status, starts_at, ends_at, payment_order_id)
+    values (${userId}, ${planId}, 'Active', now(), now() + make_interval(months => ${plan?.duration_months ?? 1}), ${orderId})`;
 }
 
 if (import.meta.main) {
