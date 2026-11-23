@@ -349,7 +349,7 @@ opsRoutes.get("/admin/medicine/patients/:patientId", async (c) => {
     sql`select e.id, s.medicine, e.status, e.skip_reason, ${iso("e.due_at")} as due from dose_events e join dose_schedules s on s.id = e.schedule_id
         where e.patient_id = ${p.id} and e.due_at < now() + interval '3 days' order by e.due_at desc limit 30`,
     // the plan they are on, with how it was paid for: in the app (its payment), or outside it (the sales form)
-    sql`select pl.name, ${iso("s.ends_at")} as ends, s.plan_id, s.created_at, ${iso("s.starts_at")} as starts,
+    sql`select pl.name, ${iso("s.ends_at")} as ends, s.id as subscription_id, s.plan_id, ${iso("s.starts_at")} as starts,
           po.provider_payment_id, ${iso("po.paid_at")} as paid_at
         from subscriptions s join plans pl on pl.id = s.plan_id left join payment_orders po on po.id = s.payment_order_id
         where s.user_id = ${p.id} and s.status = 'Active' and s.ends_at > now() order by s.ends_at desc limit 1`,
@@ -377,7 +377,9 @@ opsRoutes.get("/admin/medicine/patients/:patientId", async (c) => {
   // the sales form behind the plan they are on: the latest assignment of that plan made before it started
   const [sold] = plan ? await sql`
     select r.salesperson, r.coach_preference, r.note, r.amount_paise, r.payment_ref from plan_recommendations r
-    where r.patient_id = ${p.id} and r.plan_id = ${plan.plan_id} and r.created_at <= ${plan.created_at}
+    where r.patient_id = ${p.id} and r.plan_id = ${plan.plan_id}
+      -- compared inside the database: a sale and the plan it starts can share one instant, to the microsecond
+      and r.created_at <= (select s.created_at from subscriptions s where s.id = ${plan.subscription_id})
     order by r.created_at desc limit 1` : [];
   const priced = await Promise.all(carts.map((k) => priceCart(sql, k as never)));
   return ok(c, {
