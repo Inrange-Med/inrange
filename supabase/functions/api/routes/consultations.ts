@@ -29,6 +29,7 @@ import { deliver, queueMessage } from "../lib/notify.ts";
 import { firstName } from "../lib/notices.ts";
 import { searchList, toListItem } from "../lib/medicineSearch.ts";
 import { pendingPlan } from "../lib/pharmacy.ts";
+import { joinIfFirst } from "../lib/careTeam.ts";
 import {
   type Doctor, issueMonths, issueRx, ist, lineOf, lineView, monthsOf, renderRx,
 } from "../lib/prescriptions.ts";
@@ -186,7 +187,7 @@ consultationRoutes.get("/doctor/consultations/:id", async (c) => {
   const id = intParam(c.req.param("id"), "consultation");
   const r = await consultationOf(doctor.id, id);
   const patientId = r.patient_id;
-  const [[p], [clinical], weights, reports, [last], rx, [plan], assigned, [coach]] = await Promise.all([
+  const [[p], [clinical], weights, reports, [last], rx, [plan], assigned, [coach], doctors] = await Promise.all([
     sql`select * from patient_profiles where user_id = ${patientId}`,
     sql`select allergies, outside_medicines from patient_clinical where patient_id = ${patientId}`,
     sql`select weight_kg, logged_at from weight_logs where user_id = ${patientId} order by logged_at desc limit 40`,
@@ -201,6 +202,7 @@ consultationRoutes.get("/doctor/consultations/:id", async (c) => {
         where s.user_id = ${patientId} and s.status = 'Active' and s.ends_at > now() order by s.ends_at desc limit 1`,
     pendingPlan(sql, patientId),
     sql`select u.full_name from patient_profiles pp join users u on u.id = pp.coach_id where pp.user_id = ${patientId}`,
+    sql`select d.full_name from care_team_doctors t join doctors d on d.id = t.doctor_id where t.patient_id = ${patientId} order by t.added_at, t.doctor_id`,
   ]);
   await sql`insert into audit_log (patient_id, actor_id, action) values (${patientId}, ${doctor.id}, ${`Opened the consultation, ${doctor.name}`})`;
   const kg = weights[0]?.weight_kg ?? p?.weight_kg ?? null;
@@ -218,6 +220,7 @@ consultationRoutes.get("/doctor/consultations/:id", async (c) => {
       allergies: clinical?.allergies ?? null, conditions, onPlan: Boolean(plan),
       // who looks after them besides the doctor (19 Nov 2026 call): the salesperson, and the coach once enrolled
       salesperson: p?.salesperson ?? null, coachName: coach?.full_name ?? null,
+      doctors: doctors.map((d) => String(d.full_name)),
     },
     reports: reports.map((x) => ({
       id: String(x.id), title: x.title || (x.source === "LAB" ? "Blood test" : x.file_name || "Report"),
@@ -334,10 +337,8 @@ consultationRoutes.post("/doctor/consultations/:id/prescription/send", async (c)
   const sentAt = new Date();
   await issueRx(doctor, r.patient_id, rx.id, { signedAt: new Date(rx.pdf_made_at), months: rx.months, path: rx.pdf_path, sentAt });
   // sent is done (the row reads SENT). The appointment itself is left alone: a doctor who sends during the
-  // call must not lock the patient out of rejoining. The patient joins this doctor's care team, as at End.
-  await sql`
-    insert into patient_profiles (user_id, care_team_doctor_id) values (${r.patient_id}, ${doctor.id})
-    on conflict (user_id) do update set care_team_doctor_id = coalesce(patient_profiles.care_team_doctor_id, excluded.care_team_doctor_id)`;
+  // call must not lock the patient out of rejoining. A patient without a doctor yet gets this one, as at End.
+  await joinIfFirst(sql, r.patient_id, doctor.id);
   const [sent] = await sql`select * from prescriptions where id = ${rx.id}`;
   return ok(c, prescriptionView(sent), "Sent to patient");
 });

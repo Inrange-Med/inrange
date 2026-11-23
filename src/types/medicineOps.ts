@@ -113,6 +113,8 @@ export type OpsPatientRow = {
   coachId: string | null;
   coachName: string | null;
   salesperson: string | null;
+  /** the doctors on their care team, by name, the main one first ("Dr. A, Dr. B") */
+  doctors: string | null;
   /** the active plan's name, if any */
   planName: string | null;
   lastOrderStatus: OpsOrder["status"] | null;
@@ -175,6 +177,9 @@ export type OpsPatient = {
     whatsappSince: string | null;
     coach: { id: string; name: string } | null;
     salesperson: string | null;
+    salespersonId: string | null;
+    /** the doctors on their care team, the main one (who joined first) first */
+    doctors: { id: string; name: string }[];
     /** the plan admin put them on, waiting for them to pay in the app */
     assignedPlan: {
       planId: string;
@@ -182,6 +187,7 @@ export type OpsPatient = {
       priceRupees: number;
       assignedAt: string;
       salesperson: string | null;
+      salespersonId: string | null;
     } | null;
   };
   prescription: {
@@ -272,4 +278,18 @@ export type Coach = {
   fullName: string;
   mobile: string;
   patients: number;
+};
+
+/** Someone on the sales team. `rank` is their place among the active people, 1 the best; null once off the team. */
+export type Salesperson = {
+  id: string;
+  fullName: string;
+  mobile: string | null;
+  active: boolean;
+  rank: number | null;
+  /** patients they are the salesperson of */
+  patients: number;
+  /** plans they sold that the patient has paid for, and those still waiting for payment */
+  plansSold: number;
+  plansWaiting: number;
 };

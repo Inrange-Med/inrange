@@ -29,7 +29,6 @@ import {
 import {
   getPatientRecord,
   listProgressPhotos,
-  listWaitingItems,
   recordPhotoViewing,
 } from "@/services/patientRecordService";
 import { isFreshRecord, recordChips } from "./recordChips";
@@ -83,7 +82,6 @@ export default function PatientRecordView({
     record.data?.photosShared ? `photos-${patientId}` : null,
     () => listProgressPhotos(patientId),
   );
-  const queue = useApiResource("doctor-queue", listWaitingItems);
   const notes = useApiResource("doctor-notes", listClinicalNotes);
 
   // a link to a section (a signed note's "Review and sign" opens #prescriptions) lands on it once the
@@ -148,9 +146,6 @@ export default function PatientRecordView({
   }
 
   const data = record.data;
-  const message = (queue.data ?? []).find(
-    (item) => item.kind === "message" && item.patientId === patientId,
-  );
   const noteToSign = (notes.data ?? [])
     .filter(
       (note) =>
@@ -165,7 +160,6 @@ export default function PatientRecordView({
       record={data ?? null}
       origin={origin}
       nextVisit={nextVisit}
-      message={message}
       now={now}
     />
   );
@@ -211,9 +205,7 @@ export default function PatientRecordView({
           />
         )}
         {!fresh && <PlanPanel plan={data.plan} />}
-        {!fresh && (
-          <ProgrammePlanPanel record={data} />
-        )}
+        <ProgrammePlanPanel record={data} />
         {!fresh && (
           <LabsPanel
             patientId={patientId}

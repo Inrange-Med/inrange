@@ -65,10 +65,10 @@ const programmeOf = (raw: unknown) =>
 const patientName = (r: Row) =>
   r.full_name || [r.first_name, r.last_name].filter(Boolean).join(" ") || `Patient ${r.patient_id ?? r.id}`;
 
-/** The doctor's patients: anyone with an appointment with them, or whose care-team doctor they are. */
+/** The doctor's patients: anyone with an appointment with them, or whose care team they are on. */
 export const treatedIds = (doctorId: number) => sql`
   select patient_id from appointments where doctor_id = ${doctorId}
-  union select user_id from patient_profiles where care_team_doctor_id = ${doctorId}`;
+  union select patient_id from care_team_doctors where doctor_id = ${doctorId}`;
 
 async function doctorOf(c: Context) {
   const me = await requireDoctor(c);
@@ -452,19 +452,21 @@ doctorRoutes.get("/doctor/patients/:patientId/record", async (c) => {
       sql`select city from addresses where user_id = ${patientId} order by is_default desc, id desc limit 1`,
     ]);
   const weightSource = (s: string) => (s === "ONBOARDING" ? "At sign-up" : s === "DOCTOR" ? "Doctor recorded" : "Patient logged");
-  const [rec, [sub], [team]] = await Promise.all([
+  const [rec, [sub], [team], doctors] = await Promise.all([
     // the plan admin assigned that is not paid for yet (20 Nov 2026)
     pendingPlan(sql, patientId),
     sql`select pl.name, s.ends_at from subscriptions s join plans pl on pl.id = s.plan_id
         where s.user_id = ${patientId} and s.status = 'Active' and s.ends_at > now() order by s.ends_at desc limit 1`,
     sql`select pp.salesperson, u.full_name as coach from patient_profiles pp left join users u on u.id = pp.coach_id
         where pp.user_id = ${patientId}`,
+    sql`select d.full_name from care_team_doctors t join doctors d on d.id = t.doctor_id where t.patient_id = ${patientId} order by t.added_at, t.doctor_id`,
   ]);
   return ok(c, {
     planRecommendation: rec ? { planId: rec.plan_id, planName: rec.name, note: "", recommendedAt: ist(rec.created_at) } : null,
     activePlan: sub ? { planName: sub.name, endsAt: ist(sub.ends_at) } : null,
     // who looks after them besides the doctor (19 Nov 2026 call)
     salesperson: team?.salesperson ?? null, coachName: team?.coach ?? null,
+    doctors: doctors.map((d) => String(d.full_name)),
     programme: programmeOf(p?.conditions),
     city: city?.city ?? "",
     careStartedAt: ist(first?.at),

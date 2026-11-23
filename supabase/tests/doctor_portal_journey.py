@@ -240,7 +240,11 @@ def main():
     plan_id = one("select id from plans where active and price_rupees > 0 order by duration_months limit 1")
     s, b = call("POST", f"/api/doctor/patients/{pid}/plan-recommendation", doctor, {"planId": plan_id})
     step("the doctor cannot recommend a plan any more", s == 404, b)
-    s, b = call("PUT", f"/api/admin/medicine/patients/{pid}/plan", admin, {"planId": plan_id, "salesperson": "Saisa Test"})
+    # the seller comes from the sales team (23 Nov 2026): added once, found again on a later run
+    s, b = call("POST", "/api/admin/salespeople", admin, {"fullName": "Saisa Test"})
+    s, b = call("GET", "/api/admin/salespeople", admin)
+    seller = next(p["id"] for p in b["data"] if p["fullName"] == "Saisa Test")
+    s, b = call("PUT", f"/api/admin/medicine/patients/{pid}/plan", admin, {"planId": plan_id, "salespersonId": seller})
     step("admin puts the patient on the plan the salesperson sold", s == 200, b)
     s, b = call("GET", f"/api/admin/medicine/patients/{pid}", admin)
     pa = b["data"]["patient"]
@@ -256,7 +260,7 @@ def main():
     s, b = call("PUT", f"/api/admin/medicine/patients/{pid}/plan", admin, {"planId": None})
     s2, b2 = call("GET", "/api/patient/next-step", patient)
     step("withdrawn: the bill is the medicines again", s == 200 and not b2["data"].get("withPlan"), b2)
-    call("PUT", f"/api/admin/medicine/patients/{pid}/plan", admin, {"planId": plan_id, "salesperson": "Saisa Test"})
+    call("PUT", f"/api/admin/medicine/patients/{pid}/plan", admin, {"planId": plan_id, "salespersonId": seller})
     s, b = call("GET", "/api/patient/next-step", patient)
     bill = b["data"].get("bill", {})
     step("patient: the plan joins the medicines, one bill", b["data"]["stage"] == "PAYMENT_DUE" and b["data"].get("withPlan")

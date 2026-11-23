@@ -347,6 +347,7 @@ function Loaded({
       ? `Plan: ${data.assignedPlan.planName}, not paid yet, so this prescription is for one month`
       : "Plan: none yet, so this prescription is for one month";
   const team = [
+    p.doctors.length > 1 && `Doctors: ${p.doctors.join(", ")}`,
     p.salesperson && `Salesperson: ${p.salesperson}`,
     p.coachName && `Health coach: ${p.coachName}`,
   ].filter(Boolean);
@@ -430,6 +431,12 @@ function Loaded({
         </div>
       )}
 
+      {/* the plan the patient is on and who looks after them: on show before and after the prescription is sent */}
+      <div className={styles.known}>
+        <p className="num">{planWords}</p>
+        {team.length > 0 && <p>{team.join("  ·  ")}</p>}
+      </div>
+
       <section className={clinicStyles.panel} aria-labelledby="reports-heading">
         <h2 id="reports-heading" className={clinicStyles.h2}>
           Reports
@@ -502,8 +509,6 @@ function Loaded({
                 <>. Conditions: {p.conditions.join(", ")}</>
               )}
             </p>
-            <p className="num">{planWords}</p>
-            {team.length > 0 && <p>{team.join("  ·  ")}</p>}
           </div>
           {field("diagnosis", "Diagnosis", "Needed for the PDF", {
             options: DIAGNOSES,

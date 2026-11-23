@@ -90,6 +90,7 @@ function toPatientRecord(
     activePlan: raw.activePlan ?? null,
     salesperson: raw.salesperson ?? null,
     coachName: raw.coachName ?? null,
+    doctors: raw.doctors ?? [],
     programme: raw.programme ?? "",
     city: raw.city ?? "",
     careStartedAt: raw.careStartedAt ?? null,
