@@ -1,5 +1,5 @@
 /* The patient's programme plan on the record, for the doctor to see: active, or put on by admin and not paid
-   yet, and who sells to the patient and coaches them. The doctor never chooses or suggests a plan: a
+   yet, and who looks after the patient: their doctors, who sells to them and who coaches them. The doctor never chooses or suggests a plan: a
    salesperson sells it on the call, after the doctor (19 Nov 2026 call). */
 
 import { inIndiaTime, shortDate } from "@/lib/format/dateTime";
@@ -21,10 +21,15 @@ export default function ProgrammePlanPanel({
 }: {
   record: Pick<
     PatientRecord,
-    "activePlan" | "planRecommendation" | "salesperson" | "coachName"
+    | "activePlan"
+    | "planRecommendation"
+    | "salesperson"
+    | "coachName"
+    | "doctors"
   >;
 }) {
   const team = [
+    record.doctors.length > 0 && `Doctors: ${record.doctors.join(", ")}`,
     record.salesperson && `Salesperson: ${record.salesperson}`,
     record.coachName && `Health coach: ${record.coachName}`,
   ].filter(Boolean);

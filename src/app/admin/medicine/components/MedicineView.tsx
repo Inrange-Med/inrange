@@ -155,6 +155,7 @@ export default function MedicineView() {
           isAdmin={role === "ADMIN"}
           version={version}
           onOpenPatient={setPatientId}
+          onChanged={changed}
         />
       )}
       {role === "ADMIN" && tab === "messages" && (

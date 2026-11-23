@@ -19,7 +19,8 @@ export type RxPdf = {
   rxNumber: number; version: number; supersedes: string | null;
   practice: { name: string; address: string; supportPhone: string };
   doctor: { name: string; qualification: string; registration: string; practiceAddress: string; contact: string };
-  patient: { name: string; ageSex: string; patientId: string; mobile: string; city: string | null; vitals: string | null };
+  patient: { name: string; ageSex: string; patientId: string; mobile: string; city: string | null; vitals: string | null;
+    plan?: string | null };
   consult: { mode: string; type: string; dateTime: string; signedAt: string };
   clinical: { complaint: string; diagnosis: string; history?: string | null; allergies: string; otherMedicines: string };
   items: RxPdfItem[];
@@ -169,7 +170,8 @@ export async function prescriptionPdf(rx: RxPdf): Promise<Uint8Array> {
   cardRow(
     ["Patient", [["Full name", rx.patient.name], ["Age, sex", rx.patient.ageSex], ["Patient ID", rx.patient.patientId],
       ["Mobile", rx.patient.mobile], ...(rx.patient.city ? [["City", rx.patient.city] as [string, string]] : []),
-      ...(rx.patient.vitals ? [["Vitals", rx.patient.vitals] as [string, string]] : [])]],
+      ...(rx.patient.vitals ? [["Vitals", rx.patient.vitals] as [string, string]] : []),
+      ...(rx.patient.plan ? [["Plan", rx.patient.plan] as [string, string]] : [])]],
     ["Consultation", [["Mode", rx.consult.mode], ["Type", rx.consult.type], ["Date, time", rx.consult.dateTime],
       ["Signed", rx.consult.signedAt]]],
   );

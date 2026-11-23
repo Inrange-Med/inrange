@@ -3,8 +3,8 @@
 /*
   Every patient (a coach: their own), newest activity first, found by name or number, so admin can set the
   salesperson and put someone on a plan before they have a prescription. A row says the plan, the last
-  order's step, when the medicines run out, how doses are going, who sells to them and who coaches them.
-  Admins manage the coaches from here.
+  order's step, when the medicines run out, how doses are going, their doctors, who sells to them and who
+  coaches them. Admins manage the coaches and the sales team from here.
 */
 
 import { useDeferredValue, useState } from "react";
@@ -14,6 +14,7 @@ import { useApiResource } from "@/hooks/useApiResource";
 import { shortDate } from "@/lib/format/dateTime";
 import { listPatients } from "@/services/medicineOpsService";
 import CoachesSheet from "./CoachesSheet";
+import SalesTeamSheet from "./SalesTeamSheet";
 import { ORDER_WORDS } from "./words";
 import adminStyles from "@/app/admin/styles/AdminSurfaces.module.css";
 import s from "./Medicine.module.css";
@@ -22,11 +23,14 @@ export default function PatientsPanel({
   isAdmin,
   version,
   onOpenPatient,
+  onChanged,
 }: {
   isAdmin: boolean;
   /** bumped by the page after a change in the patient sheet (a coach assigned), so the rows reload */
   version: number;
   onOpenPatient: (id: string) => void;
+  /** a salesperson renamed in the sales team sheet: the page reloads the rows */
+  onChanged: () => void;
 }) {
   const [query, setQuery] = useState("");
   const q = useDeferredValue(query.trim());
@@ -34,6 +38,7 @@ export default function PatientsPanel({
     listPatients(q),
   );
   const [coaches, setCoaches] = useState(false);
+  const [sales, setSales] = useState(false);
 
   return (
     <section className={adminStyles.panel} aria-labelledby="patients-h">
@@ -42,13 +47,22 @@ export default function PatientsPanel({
           Patients
         </h2>
         {isAdmin && (
-          <button
-            type="button"
-            className={adminStyles.textBtn}
-            onClick={() => setCoaches(true)}
-          >
-            Health coaches
-          </button>
+          <span className={s.headActions}>
+            <button
+              type="button"
+              className={adminStyles.textBtn}
+              onClick={() => setSales(true)}
+            >
+              Sales team
+            </button>
+            <button
+              type="button"
+              className={adminStyles.textBtn}
+              onClick={() => setCoaches(true)}
+            >
+              Health coaches
+            </button>
+          </span>
         )}
       </div>
       <input
@@ -98,6 +112,7 @@ export default function PatientsPanel({
                       {adherence !== null && (
                         <span className="num">{adherence}% of doses taken</span>
                       )}
+                      {p.doctors && <span>{p.doctors}</span>}
                       {!p.whatsapp && <span>WhatsApp off</span>}
                     </span>
                   </button>
@@ -123,7 +138,14 @@ export default function PatientsPanel({
         </ul>
       )}
       {isAdmin && (
-        <CoachesSheet open={coaches} onClose={() => setCoaches(false)} />
+        <>
+          <CoachesSheet open={coaches} onClose={() => setCoaches(false)} />
+          <SalesTeamSheet
+            open={sales}
+            onClose={() => setSales(false)}
+            onChanged={onChanged}
+          />
+        </>
       )}
     </section>
   );

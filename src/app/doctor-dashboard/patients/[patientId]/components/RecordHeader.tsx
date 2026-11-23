@@ -1,7 +1,8 @@
 /*
   The record's head (Arhaan's PatientRecord header): back to where it was opened from, who the
-  patient is, their mobile, next visit and identity check, and one main action: an open message,
-  else Start consultation from ten minutes before the visit (as the patient's Join is).
+  patient is, their mobile, next visit and identity check, and one main action: Start consultation
+  from ten minutes before the visit (as the patient's Join is). Messages is off the doctor's navigation
+  (doctor portal v2), so the header no longer links to it.
 */
 
 import Link from "next/link";
@@ -12,7 +13,7 @@ import { clockTime, shortDate } from "@/lib/format/dateTime";
 import type { BackDestination } from "@/lib/navigation/backDestination";
 import type { Appointment } from "@/types/appointment";
 import type { DoctorPatient } from "@/types/doctor";
-import type { PatientRecord, WaitingItem } from "@/types/patientRecord";
+import type { PatientRecord } from "@/types/patientRecord";
 import clinicStyles from "@/app/doctor-dashboard/styles/ClinicSurfaces.module.css";
 import styles from "./RecordHeader.module.css";
 
@@ -21,27 +22,24 @@ export default function RecordHeader({
   record,
   origin,
   nextVisit,
-  message,
   now,
 }: {
   patient: DoctorPatient;
   record: PatientRecord | null;
   origin: BackDestination;
   nextVisit?: Appointment;
-  message?: WaitingItem;
   now: number;
 }) {
   const startsAt = nextVisit ? Date.parse(nextVisit.startsAt) : 0;
   const live =
     !!nextVisit && now >= startsAt - 10 * 6e4 && now < startsAt + 30 * 6e4;
-  const startMain = live && !message;
+  const startMain = live;
   const facts = [patient.age, patient.sex].filter(Boolean).join(", ");
   const care = record
     ? [record.programme, record.careWeek ? `week ${record.careWeek}` : ""]
         .filter(Boolean)
         .join(", ")
     : "";
-  const messagesHref = `/doctor-dashboard/messages?p=${patient.id}`;
 
   return (
     <>
@@ -84,14 +82,6 @@ export default function RecordHeader({
           </div>
         </div>
         <div className={styles.recActions}>
-          {message && (
-            <Link href={messagesHref} className="btn">
-              <span>{message.urgent ? "Urgent message" : "Messages"}</span>
-              <span className="well" aria-hidden="true">
-                <ArrowRight size={18} />
-              </span>
-            </Link>
-          )}
           {nextVisit && (
             <Link
               href={`/consultation/${nextVisit.id}`}
@@ -109,11 +99,6 @@ export default function RecordHeader({
             <a href="#notes" className="btn btn--ghost">
               Add a note
             </a>
-          )}
-          {!message && (
-            <Link href={messagesHref} className="btn btn--ghost">
-              Messages
-            </Link>
           )}
         </div>
       </header>

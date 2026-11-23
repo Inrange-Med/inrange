@@ -133,6 +133,8 @@ export type PatientRecord = {
   /** who sells to the patient, and their health coach (19 Nov 2026 call) */
   salesperson: string | null;
   coachName: string | null;
+  /** the doctors on their care team, by name, the main one first */
+  doctors: string[];
   programme: string;
   city: string;
   careStartedAt: string | null;

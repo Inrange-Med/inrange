@@ -100,7 +100,7 @@ export async function onPlan(tx: Tx, patientId: number) {
  */
 export async function pendingPlan(tx: Tx, patientId: number) {
   const [r] = await tx`
-    select r.plan_id, r.salesperson, r.created_at, p.name, p.price_rupees, p.mrp_rupees, p.duration_months
+    select r.plan_id, r.salesperson, r.salesperson_id, r.created_at, p.name, p.price_rupees, p.mrp_rupees, p.duration_months
     from plan_recommendations r join plans p on p.id = r.plan_id
     where r.patient_id = ${patientId} and p.active
       and r.created_at > coalesce((select max(s.created_at) from subscriptions s where s.user_id = ${patientId}), '-infinity')

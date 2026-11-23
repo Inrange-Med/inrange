@@ -10,8 +10,10 @@
  *   GET   /api/admin/medicine/patients?q=                  admin: every patient; a coach: their own
  *   GET   /api/admin/medicine/patients/:id                 one patient's plan, medicines, messages, tasks and doses
  *   PATCH /api/admin/medicine/patients/:id/coach           { coachId | null } (admin)
- *   PATCH /api/admin/medicine/patients/:id/salesperson     { name } (admin)
- *   PUT   /api/admin/medicine/patients/:id/plan            { planId | null, salesperson }: the plan to pay for in the app (admin)
+ *   PATCH /api/admin/medicine/patients/:id/salesperson     { salespersonId | null } (admin)
+ *   PUT   /api/admin/medicine/patients/:id/plan            { planId | null, salespersonId }: the plan to pay for in the app (admin)
+ *   PUT   /api/admin/medicine/patients/:id/doctors/:doctorId     adds a doctor to the patient's care team (admin)
+ *   DELETE /api/admin/medicine/patients/:id/doctors/:doctorId    takes one off it (admin)
  *   GET   /api/admin/medicine/orders                       deliveries (admin)
  *   POST  /api/admin/medicine/orders/:id/move              { to, courier?, trackingNo?, trackingUrl?, expectedAt?, note? } (admin)
  *   POST  /api/admin/medicine/orders/:id/delay             { expectedAt } (admin)
@@ -20,6 +22,9 @@
  *   POST  /api/admin/medicine/messages/:id/reply           { code?, text? }: plays the patient's reply while WhatsApp is mocked (admin)
  *   GET   /api/admin/medicine/numbers?days=                the measures (admin)
  *   GET   /api/admin/coaches   POST /api/admin/coaches     the health coaches (admin)
+ *   GET   /api/admin/salespeople                           the sales team, best first, with each one's numbers (admin)
+ *   POST  /api/admin/salespeople                           { fullName, mobile? } -> the list (admin)
+ *   PATCH /api/admin/salespeople/:id                       any of { fullName, mobile, active, rank } -> the list (admin)
  */
 
 import { apiRequest, listFrom, type ApiEnvelope } from "@/lib/http/apiClient";
@@ -33,6 +38,7 @@ import type {
   OpsSummary,
   OpsTask,
   OrderMove,
+  Salesperson,
   TaskOutcome,
   UnmatchedLine,
 } from "@/types/medicineOps";
@@ -119,10 +125,13 @@ export async function setCoach(patientId: string, coachId: string | null) {
   });
 }
 
-export async function setSalesperson(patientId: string, name: string) {
+export async function setSalesperson(
+  patientId: string,
+  salespersonId: string | null,
+) {
   await apiRequest(`${base}/patients/${patientId}/salesperson`, {
     method: "PATCH",
-    body: { name },
+    body: { salespersonId },
   });
 }
 
@@ -130,13 +139,26 @@ export async function setSalesperson(patientId: string, name: string) {
 export async function assignPlan(
   patientId: string,
   planId: string | null,
-  salesperson: string,
+  salespersonId: string | null,
 ): Promise<string> {
   const body = await apiRequest<{ message?: string }>(
     `${base}/patients/${patientId}/plan`,
-    { method: "PUT", body: { planId, salesperson } },
+    { method: "PUT", body: { planId, salespersonId } },
   );
   return body?.message ?? (planId ? "Plan assigned" : "Plan withdrawn");
+}
+
+/** Adds a doctor to the patient's care team, or takes one off it; returns the server's words. */
+export async function setCareTeamDoctor(
+  patientId: string,
+  doctorId: string,
+  on: boolean,
+): Promise<string> {
+  const body = await apiRequest<{ message?: string }>(
+    `${base}/patients/${patientId}/doctors/${doctorId}`,
+    { method: on ? "PUT" : "DELETE" },
+  );
+  return body?.message ?? (on ? "Doctor added" : "Doctor removed");
 }
 
 export async function listOrders(): Promise<OpsOrder[]> {
@@ -199,4 +221,36 @@ export async function addCoach(input: {
     body: input,
   });
   return body.data!;
+}
+
+export async function listSalespeople(): Promise<Salesperson[]> {
+  return listFrom<Salesperson>(
+    await apiRequest("/api/admin/salespeople"),
+    "salespeople",
+  );
+}
+
+export async function addSalesperson(input: {
+  fullName: string;
+  mobile: string;
+}): Promise<Salesperson[]> {
+  return listFrom<Salesperson>(
+    await apiRequest("/api/admin/salespeople", { method: "POST", body: input }),
+    "salespeople",
+  );
+}
+
+export async function updateSalesperson(
+  id: string,
+  changes: Partial<
+    Pick<Salesperson, "fullName" | "active"> & { mobile: string; rank: number }
+  >,
+): Promise<Salesperson[]> {
+  return listFrom<Salesperson>(
+    await apiRequest(`/api/admin/salespeople/${id}`, {
+      method: "PATCH",
+      body: changes,
+    }),
+    "salespeople",
+  );
 }

@@ -1,8 +1,9 @@
 "use client";
 
 /*
-  One patient's medicines, for the care team and their coach: the plan, WhatsApp, the coach, the
-  salesperson, the prescription, then one timeline (messages and the patient's replies, order steps, tasks) newest
+  One patient's medicines, for the care team and their coach: the plan, the salesperson (from the ranked
+  sales team), their doctors (the first consultation's doctor by default; admin adds and removes the
+  rest), WhatsApp, the coach, the prescription, then one timeline (messages and the patient's replies, order steps, tasks) newest
   first, and the doses. While WhatsApp is in test mode an admin can play the patient's reply on a
   message, exactly as a tap on the phone would act. Opening it is logged (audit_log).
   The plan is sold, not prescribed (20 Nov 2026): the salesperson tells admin, admin puts the patient on
@@ -24,10 +25,13 @@ import {
   assignPlan,
   getPatient,
   listCoaches,
+  listSalespeople,
   playReply,
+  setCareTeamDoctor,
   setCoach,
   setSalesperson,
 } from "@/services/medicineOpsService";
+import { listDoctors } from "@/services/adminService";
 import { listPlans } from "@/services/subscriptionService";
 import type { OpsMessage, OpsPatient } from "@/types/medicineOps";
 import {
@@ -251,8 +255,14 @@ function CoachPicker({
   );
 }
 
-/** Who sells to the patient: saved when the field is left (or Enter). */
-function SalespersonField({
+/** The active sales team, best first, as the options of a picker ("1. Asha Verma"). */
+function useSalesOptions() {
+  const team = useApiResource("salespeople", listSalespeople);
+  return team.data?.filter((p) => p.active) ?? null;
+}
+
+/** Who sells to the patient, chosen from the sales team. Someone since taken off the team stays shown until changed. */
+function SalespersonPicker({
   data,
   onSaved,
 }: {
@@ -260,29 +270,125 @@ function SalespersonField({
   onSaved: () => void;
 }) {
   const toast = useToast();
-  const saved = data.patient.salesperson ?? "";
-  const [name, setName] = useState(saved);
-  const save = async () => {
-    if (name.trim() === saved) return;
+  const options = useSalesOptions();
+  const [busy, setBusy] = useState(false);
+  const { salesperson, salespersonId } = data.patient;
+  if (!options)
+    return (
+      <span className={adminStyles.muted}>{salesperson ?? "Not set"}</span>
+    );
+  if (!options.length && !salesperson)
+    return (
+      <span className={adminStyles.muted}>
+        Nobody on the sales team yet. Add them under Patients, Sales team.
+      </span>
+    );
+  const listed = options.some((p) => p.id === salespersonId);
+  return (
+    <select
+      className={s.input}
+      value={salespersonId ?? (salesperson ? "former" : "")}
+      disabled={busy}
+      aria-label="Salesperson"
+      onChange={async (e) => {
+        setBusy(true);
+        try {
+          await setSalesperson(data.patient.id, e.target.value || null);
+          toast(
+            e.target.value ? "Salesperson assigned" : "Salesperson removed",
+          );
+          onSaved();
+        } catch (caught) {
+          toast(errorMessage(caught, "The salesperson could not be changed."));
+        } finally {
+          setBusy(false);
+        }
+      }}
+    >
+      <option value="">No salesperson</option>
+      {salesperson && !listed && (
+        <option value={salespersonId ?? "former"} disabled>
+          {salesperson} (not on the team)
+        </option>
+      )}
+      {options.map((p) => (
+        <option key={p.id} value={p.id}>
+          {p.rank}. {p.fullName}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+/**
+ * The patient's doctors. The doctor of the first consultation joins by default; admin adds more and takes any
+ * off. The patient books only with the doctors listed here (anyone, while the list is empty).
+ */
+function DoctorsField({
+  data,
+  onSaved,
+}: {
+  data: OpsPatient;
+  onSaved: () => void;
+}) {
+  const toast = useToast();
+  const doctors = useApiResource("admin-doctors", listDoctors);
+  const [busy, setBusy] = useState(false);
+  const team = data.patient.doctors;
+  const others = (doctors.data ?? []).filter(
+    (d) => d.active && !team.some((t) => t.id === String(d.id)),
+  );
+  const change = async (doctorId: string, on: boolean) => {
+    setBusy(true);
     try {
-      await setSalesperson(data.patient.id, name.trim());
-      toast(name.trim() ? "Salesperson saved" : "Salesperson removed");
+      toast(await setCareTeamDoctor(data.patient.id, doctorId, on));
       onSaved();
     } catch (caught) {
-      toast(errorMessage(caught, "The salesperson could not be saved."));
+      toast(errorMessage(caught, "The care team could not be changed."));
+    } finally {
+      setBusy(false);
     }
   };
   return (
-    <input
-      className={s.input}
-      value={name}
-      maxLength={80}
-      placeholder="Who is selling to them"
-      aria-label="Salesperson"
-      onChange={(e) => setName(e.target.value)}
-      onBlur={save}
-      onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
-    />
+    <>
+      {team.length === 0 && (
+        <span className={s.lineItem}>
+          No doctor yet. The doctor of the first consultation joins by
+          themselves.
+        </span>
+      )}
+      {team.map((d) => (
+        <span key={d.id} className={s.lineItem}>
+          {d.name}{" "}
+          <button
+            type="button"
+            className={s.chip}
+            disabled={busy}
+            aria-label={`Remove ${d.name} from the care team`}
+            onClick={() => change(d.id, false)}
+          >
+            Remove
+          </button>
+        </span>
+      ))}
+      {others.length > 0 && (
+        <select
+          className={s.input}
+          value=""
+          disabled={busy}
+          aria-label="Add a doctor to the care team"
+          onChange={(e) => e.target.value && change(e.target.value, true)}
+        >
+          <option value="">Add a doctor</option>
+          {others.map((d) => (
+            <option key={d.id} value={d.id}>
+              {d.fullName}
+              {d.specialization ? `, ${d.specialization}` : ""}
+            </option>
+          ))}
+        </select>
+      )}
+    </>
   );
 }
 
@@ -299,11 +405,13 @@ function PlanAssign({
 }) {
   const toast = useToast();
   const plans = useApiResource("plans-for-assigning", listPlans);
+  const sellers = useSalesOptions();
   const assigned = data.patient.assignedPlan;
   const [choosing, setChoosing] = useState(false);
   const [planId, setPlanId] = useState(assigned?.planId ?? "");
+  // whoever sold it: the plan's seller, else the patient's salesperson
   const [seller, setSeller] = useState(
-    assigned?.salesperson ?? data.patient.salesperson ?? "",
+    assigned?.salespersonId ?? data.patient.salespersonId ?? "",
   );
   const [busy, setBusy] = useState(false);
 
@@ -320,7 +428,7 @@ function PlanAssign({
   const save = async (id: string | null) => {
     setBusy(true);
     try {
-      toast(await assignPlan(data.patient.id, id, seller.trim()));
+      toast(await assignPlan(data.patient.id, id, id ? seller || null : null));
       setChoosing(false);
       onSaved();
     } catch (caught) {
@@ -397,14 +505,19 @@ function PlanAssign({
           {chosen.name}, {formatRupees(chosen.priceRupees!)}
         </span>
       )}
-      <input
+      <select
         className={s.input}
-        value={seller}
-        maxLength={80}
-        placeholder="Sold by (the salesperson)"
+        value={sellers?.some((p) => p.id === seller) ? seller : ""}
         aria-label="Sold by"
         onChange={(e) => setSeller(e.target.value)}
-      />
+      >
+        <option value="">Sold by: not recorded</option>
+        {(sellers ?? []).map((p) => (
+          <option key={p.id} value={p.id}>
+            Sold by {p.rank}. {p.fullName}
+          </option>
+        ))}
+      </select>
       <span className={s.chips}>
         <button
           type="button"
@@ -499,13 +612,20 @@ export default function PatientSheet({
               <dt>Salesperson</dt>
               <dd>
                 {isAdmin ? (
-                  <SalespersonField
-                    key={data.patient.id}
-                    data={data}
-                    onSaved={refresh}
-                  />
+                  <SalespersonPicker data={data} onSaved={refresh} />
                 ) : (
                   (data.patient.salesperson ?? "Not set")
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt>Doctors</dt>
+              <dd>
+                {isAdmin ? (
+                  <DoctorsField data={data} onSaved={refresh} />
+                ) : (
+                  data.patient.doctors.map((d) => d.name).join(", ") ||
+                  "No doctor yet"
                 )}
               </dd>
             </div>

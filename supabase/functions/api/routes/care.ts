@@ -31,6 +31,7 @@ import { setEligibility } from "../lib/eligibility.ts";
 import { signedUrl } from "../lib/storage.ts";
 import { priceCart, type CartLine } from "../lib/pharmacy.ts";
 import { bookAppointment } from "../lib/booking.ts";
+import { joinIfFirst } from "../lib/careTeam.ts";
 import * as notices from "../lib/notices.ts";
 import { sendNow } from "../lib/notify.ts";
 import { createRoom, endRoom, hmsLive, joinLink, mockJoinLink } from "../integrations/hms.ts";
@@ -117,7 +118,7 @@ async function careTeamDoctorId(patientId: number): Promise<number | null> {
 async function doctorTreats(doctorId: number, patientId: number): Promise<boolean> {
   const [row] = await sql`
     select 1 from appointments where doctor_id = ${doctorId} and patient_id = ${patientId} and status <> 'Cancelled'
-    union all select 1 from patient_profiles where user_id = ${patientId} and care_team_doctor_id = ${doctorId}
+    union all select 1 from care_team_doctors where patient_id = ${patientId} and doctor_id = ${doctorId}
     limit 1`;
   return Boolean(row);
 }
@@ -152,8 +153,8 @@ careRoutes.get("/schedule/available-slots", async (c) => {
   const me = await requirePatient(c);
   const date = bookableDate(c.req.query("date"));
   await prepareSlots(date);
-  const assigned = (await sql`select care_team_doctor_id from patient_profiles where user_id = ${me.id}`)[0]?.care_team_doctor_id ?? null;
-  // before a care-team doctor exists every doctor's times merge (one slot per start time); after, only theirs
+  // before the patient has a doctor every doctor's times merge (one slot per start time); after, only their doctors'
+  const team = sql`select doctor_id from care_team_doctors where patient_id = ${me.id}`;
   const rows = await sql`
     select distinct on (s.start_time) s.id as "SlotId", to_char(s.start_time, 'HH24:MI') as "StartTime",
       to_char(s.end_time, 'HH24:MI') as "EndTime", 'Available' as "Status"
@@ -161,7 +162,7 @@ careRoutes.get("/schedule/available-slots", async (c) => {
     where s.slot_date = ${date}::date
       and (s.status = 'Available' or (s.status = 'Held' and s.held_by = ${me.id}))
       and (s.slot_date + s.start_time) > (now() at time zone 'Asia/Kolkata')
-      and (${assigned}::int is null or s.doctor_id = ${assigned}::int)
+      and (not exists (${team}) or s.doctor_id in (${team}))
     order by s.start_time, s.id`;
   return ok(c, rows);
 });
@@ -191,11 +192,11 @@ careRoutes.put("/schedule/book", async (c) => {
     if (first && (!el.consultation_paid || el.consultation_used))
       fail(400, "Your first consultation needs to be paid for. Choose a time and continue to payment.");
     // ponytail: pilot lets follow-ups book without an active plan; require a Subscription here when plans go live
-    const [assigned] = await tx`
-      select pp.care_team_doctor_id, s.doctor_id from doctor_slots s
-      left join patient_profiles pp on pp.user_id = ${me.id} where s.id = ${slotId}`;
-    if (assigned?.care_team_doctor_id && assigned.care_team_doctor_id !== assigned.doctor_id)
-      fail(400, "Choose one of your doctor's times.");
+    const [other] = await tx`
+      select 1 from doctor_slots s where s.id = ${slotId}
+        and exists (select 1 from care_team_doctors t where t.patient_id = ${me.id})
+        and s.doctor_id not in (select t.doctor_id from care_team_doctors t where t.patient_id = ${me.id})`;
+    if (other) fail(400, "Choose one of your doctor's times.");
     const booked = await bookAppointment(tx, {
       patientId: me.id, slotId, reason: input.reason, consultationType: input.consultationType, prepaid: first,
     });
@@ -279,7 +280,7 @@ careRoutes.get("/doctor/patients", async (c) => {
     where u.id in (
       select patient_id from appointments where doctor_id = ${me.id} and status <> 'Cancelled'
       union select patient_id from chat_sessions where doctor_id = ${me.id}
-      union select user_id from patient_profiles where care_team_doctor_id = ${me.id})
+      union select patient_id from care_team_doctors where doctor_id = ${me.id})
     order by 2`;
   return ok(c, rows);
 });
@@ -489,9 +490,7 @@ careRoutes.post("/video/appointments/:appointmentId/end", async (c) => {
   if (a.doctor_id !== me.id) fail(403, "Only the consultation's doctor can end it.");
   await sql.begin(async (tx) => {
     await tx`update appointments set status = 'Completed', ended_at = coalesce(ended_at, now()) where id = ${a.id}`;
-    await tx`
-      insert into patient_profiles (user_id, care_team_doctor_id) values (${a.patient_id}, ${a.doctor_id})
-      on conflict (user_id) do update set care_team_doctor_id = coalesce(patient_profiles.care_team_doctor_id, excluded.care_team_doctor_id)`;
+    await joinIfFirst(tx, a.patient_id, a.doctor_id);
   });
   await endRoom(a.video_room_id);
   // the note to sign: a reminder an hour later, unless it is signed by then

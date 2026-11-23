@@ -530,3 +530,11 @@ fieldset.section > legend {
 .planForm > .input {
   max-width: 320px;
 }
+
+/* the Patients panel's two list links (Sales team, Health coaches), side by side */
+.headActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px 16px;
+}

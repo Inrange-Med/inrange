@@ -1,12 +1,13 @@
 "use client";
 
 /*
-  The doctor's workspace around every /doctor-dashboard page. Three places only (doctor portal v2 PRD,
-  17 Nov 2026 call: "what a doctor needs, and nothing more"): Today, History, Availability, as a quiet
-  rail on a laptop and a three-tab dock on a phone, with the toast. Today carries the count of what is
-  waiting on the doctor (calls open, prescriptions to write or send). A consultation's page lights Today.
-  The rest of the old portal (Schedule, Patients, Notes, Messages, the patient record) is off the doctor's
-  navigation; its pages send old links to Today and its code stays for the back office.
+  The doctor's workspace around every /doctor-dashboard page. Four places (doctor portal v2 PRD,
+  17 Nov 2026 call: "what a doctor needs, and nothing more"; Patients added 23 Nov 2026 so a doctor can
+  open any of their patients' charts): Today, Patients, History, Availability, as a quiet rail on a laptop
+  and a dock on a phone, with the toast. Today carries the count of what is waiting on the doctor (calls
+  open, prescriptions to write or send). A consultation's page lights Today, a chart lights Patients.
+  The rest of the old portal (Schedule, Notes, Messages) is off the doctor's navigation; its pages send
+  old links to Today and its code stays for the back office.
   Only signed-in doctors get past it: anyone signed out goes to /sign-in (?next= brings them back to
   this page), anyone else (a patient, an admin, a coach) to their own home. Offline, a line above the
   page says so.
@@ -19,6 +20,7 @@ import {
   ClockCounterClockwise,
   Clock,
   SquaresFour,
+  UsersThree,
 } from "@phosphor-icons/react";
 import AppTheme from "@/components/ui/AppTheme";
 import Avatar from "@/components/ui/Avatar";
@@ -38,7 +40,7 @@ import SignOutButton from "./SignOutButton";
 import clinicStyles from "@/app/doctor-dashboard/styles/ClinicSurfaces.module.css";
 import styles from "./DoctorShell.module.css";
 
-type Section = "today" | "history" | "hours";
+type Section = "today" | "patients" | "history" | "hours";
 
 const SECTIONS: {
   id: Section;
@@ -54,6 +56,12 @@ const SECTIONS: {
     label: "Today",
     icon: SquaresFour,
     counted: true,
+  },
+  {
+    id: "patients",
+    href: "/doctor-dashboard/patients",
+    label: "Patients",
+    icon: UsersThree,
   },
   {
     id: "history",

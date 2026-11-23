@@ -13,7 +13,7 @@
 import { sql } from "./db.ts";
 import { fail } from "./http.ts";
 import { uploadFile } from "./storage.ts";
-import { onPlan as hasPlan, type CartLine } from "./pharmacy.ts";
+import { onPlan as hasPlan, pendingPlan, type CartLine } from "./pharmacy.ts";
 import { prescriptionPdf, type RxPdfItem } from "./prescriptionPdf.ts";
 import { closeTasks, openTask, startMedicineFlow } from "./medicineFlow.ts";
 import { deliver } from "./notify.ts";
@@ -137,6 +137,13 @@ async function signatureId(rxId: number, version: number, doctorId: number, sign
   return `${hex.slice(0, 4)}-${hex.slice(4, 8)}-${hex.slice(8, 12)}`;
 }
 
+/** The patient's plan for the prescription: the active one, else the one sold and assigned that is not paid for yet. */
+async function planNameOf(patientId: number): Promise<string | null> {
+  const [active] = await sql`select pl.name from subscriptions s join plans pl on pl.id = s.plan_id
+    where s.user_id = ${patientId} and s.status = 'Active' and s.ends_at > now() order by s.ends_at desc limit 1`;
+  return active?.name ?? (await pendingPlan(sql, patientId))?.name ?? null;
+}
+
 /** Renders and stores the PDF for a prescription row; returns its storage path. */
 export async function renderRx(doctor: Doctor, patientId: number, rx: Row, signedAt: Date, months: number): Promise<string> {
   const items = rx.items as Row[];
@@ -238,6 +245,8 @@ export async function renderRx(doctor: Doctor, patientId: number, rx: Row, signe
       ageSex: [u?.age_years ? `${u.age_years} years` : null, u?.gender].filter(Boolean).join(", ") || "Not recorded",
       patientId: `IR-${String(patientId).padStart(6, "0")}`, mobile: u?.mobile ? `+91 ${u.mobile}` : "",
       city: addr?.city ?? null,
+      // the plan they are on, or the one admin put them on that waits for payment (23 Nov 2026); none: no line
+      plan: await planNameOf(patientId),
       vitals: [kg ? `Weight ${kg} kg` : null, u?.height_cm ? `Height ${u.height_cm} cm` : null, bmi ? `BMI ${bmi}` : null]
         .filter(Boolean).join("  ·  ") || null,
     },
