@@ -1073,3 +1073,8 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+/* only the chosen place shows: a panel's own display must not undo `hidden` */
+.page > [hidden] {
+  display: none;
+}
