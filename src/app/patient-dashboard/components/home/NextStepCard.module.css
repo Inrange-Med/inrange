@@ -35,7 +35,9 @@
   color: var(--ink-2);
 }
 
+/* the action is the light green pill: its own words and arrow stay dark */
 .go {
+  --ink: var(--slate-950);
   width: 100%;
   min-height: 56px;
   margin-top: 6px;
