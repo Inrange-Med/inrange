@@ -9,7 +9,7 @@ cd "$(dirname "$0")/../../art/hero-v4"
 OUT=../../public/video; mkdir -p $OUT
 # clip | first second used | seconds on screen | where the 4:5 crop sits, 0 top to 1 bottom
 SHOTS=(
-  "padel-1-kling1.mp4|0.3|3.0|0.45"
+  "gym-1-kling1.mp4|0.3|3.0|0.35"
   "verandah-1-kling1.mp4|0.3|3.0|0.75"
   "fairway-2-kling1.mp4|0.3|3.0|0.70"
   "dance-4-kling1.mp4|0.3|3.0|0.55"
