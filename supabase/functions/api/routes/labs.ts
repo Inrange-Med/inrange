@@ -197,7 +197,9 @@ labRoutes.post("/labs/bookings", async (c) => {
   const me = await requirePatient(c);
   const input = await body<HoldInput>(c);
   checkPatientDay(String(input.collectionDate ?? ""));
-  return c.json({ success: true, message: "Collection time held for 30 minutes", data: toLabBooking(await holdBooking(me.id, input)) }, 201);
+  const saved = await holdBooking(me.id, input);
+  return c.json({ success: true, message: saved.status === "BOOKED" ? "Your home blood test is booked" : "Collection time held for 30 minutes",
+    data: toLabBooking(saved) }, 201);
 });
 
 /**
@@ -223,12 +225,17 @@ export async function holdBooking(userId: number, input: HoldInput): Promise<Row
     if (!care || !care.includes_lab_tests) fail(400, "That care package does not include lab tests.");
     if (care!.lab_package_code !== packageCode) fail(400, "That test package is not part of this care package.");
   }
+  // pay first, then book (24 Nov 2026): a care package already paid for (eligibility.lab_credit) books at once, with
+  // the optional tests that were paid for with it. Without it this is the older way: hold, then pay.
+  const [el] = care ? await sql`select lab_credit, lab_addons from eligibility where user_id = ${me.id}` : [];
+  const credit = Boolean(el?.lab_credit);
   // optional tests ticked on the review (the cortisol test): only a care package's own, at today's price
-  const wanted = Array.isArray(input.addOns) ? input.addOns.map(String).slice(0, 5) : [];
-  const addOns = care && wanted.length
+  const wanted = Array.isArray(input.addOns) && !credit ? input.addOns.map(String).slice(0, 5) : [];
+  const addOns: Row[] = credit ? (el.lab_addons ?? []).map((a: Row) => ({ code: a.code, name: a.name, price_rupees: a.price }))
+    : care && wanted.length
     ? await sql`select code, name, price_rupees from care_addons where active and care_package_code = ${care.code} and code in ${sql(wanted)}`
     : [];
-  if (addOns.length !== wanted.length) fail(400, "That add-on is not available.");
+  if (!credit && addOns.length !== wanted.length) fail(400, "That add-on is not available.");
   const a = await ownedAddress(me.id, input.addressId);
   const pkg = await lab(rc.findPackage(packageCode));
   const slot = await findSlot(collectionDate, slotId, a);
@@ -275,10 +282,31 @@ export async function holdBooking(userId: number, input: HoldInput): Promise<Row
       price = ${sql.json(price)}, amount_paise = ${Math.round(price.total * 100)},
       hold_expires_at = now() + make_interval(mins => ${HOLD_MINUTES}), updated_at = now()
     where id = ${row.id}`;
+  if (credit) {
+    // already paid for: confirmed with the lab now. A time the lab will not confirm leaves the payment untouched.
+    const messages = await sql.begin(async (tx) => {
+      await fulfilLabBooking(tx, row.id, me.id);
+      return await notices.within(tx, (sp) => notices.labBooked(sp, row.id));
+    });
+    const [booked] = await bookingQuery(sql, row.id);
+    if (booked.status !== "BOOKED") fail(409, "That time is no longer free. Please choose another.");
+    await sendNow(messages);
+    return booked;
+  }
   if (care) await setEligibility(sql, me.id, { path: "LAB_TEST", stage: "AWAITING_PAYMENT", lab_booking_id: row.id });
 
   const [saved] = await bookingQuery(sql, row.id);
   return saved;
+}
+
+/**
+ * A paid care-package collection that will not happen (cancelled by the patient, the team or the lab): the payment
+ * goes back to being a credit, so the next booking is not charged again, and the patient is back at "book your test".
+ */
+export async function giveCreditBack(db: Sql | TransactionSql, userId: number, bookingId: string) {
+  await db`update lab_bookings set paid_at = null where id = ${bookingId}`;
+  await db`update eligibility set lab_credit = true, stage = 'NOT_STARTED', lab_booking_id = null, updated_at = now()
+           where user_id = ${userId} and (lab_booking_id = ${bookingId} or lab_booking_id is null)`;
 }
 
 labRoutes.get("/labs/bookings", async (c) => {
@@ -351,6 +379,7 @@ export async function cancelBookingFor(row: Row, reason: string): Promise<Row> {
     if (e?.lab_booking_id === row.id) await setEligibility(sql, me.id, { stage: "NOT_STARTED", lab_booking_id: null });
   } else if (row.status === "BOOKED") {
     await lab(rc.cancelBooking(row.provider_booking_id ?? "", reason));
+    if (row.care_package_code && row.paid_at) await giveCreditBack(sql, me.id, row.id);
   } else {
     fail(400, "This booking can no longer be cancelled here. Our team can help: message us in the app.");
   }
@@ -423,6 +452,7 @@ export async function applyLabEvent(bookingId: string, event: LabEvent, simulate
     }
   }
   await sql`update lab_bookings set status = ${event}, updated_at = now() where id = ${bookingId}`;
+  if (event === "CANCELLED" && forEligibility && row.paid_at) await giveCreditBack(sql, row.user_id, bookingId);
   if (event === "SAMPLE_COLLECTED" && forEligibility) await setEligibility(sql, row.user_id, { stage: "SAMPLE_COLLECTED" });
   // the report, or a cancelled collection, on WhatsApp (once each: the message is keyed on the booking)
   await notices.labEvent(bookingId, event).then(sendNow).catch((e) => console.error("lab notice", bookingId, (e as Error).message));
@@ -493,12 +523,23 @@ export async function fulfilLabBooking(tx: TransactionSql, bookingId: string, us
       console.error("lab confirm", bookingId, problem);
     }
   }
+  if (problem && row.care_package_code) {
+    // paid, but the lab will not confirm this time: the booking is closed and the payment stays as a credit, so the
+    // patient (or the team, on a call) books another time at no charge
+    await tx`update lab_bookings set status = 'CANCELLED', hold_expires_at = null, needs_attention = ${problem}, updated_at = now() where id = ${bookingId}`;
+    await setEligibility(tx, userId, { path: "LAB_TEST", stage: "NOT_STARTED", lab_booking_id: null, consultation_paid: true });
+    await tx`update eligibility set lab_credit = true, lab_paid_at = coalesce(lab_paid_at, now()) where user_id = ${userId}`;
+    return;
+  }
   await tx`update lab_bookings set status = ${problem ? row.status : "BOOKED"}, provider_booking_id = ${partnerId || null},
     paid_at = now(), hold_expires_at = null, needs_attention = ${problem}, updated_at = now() where id = ${bookingId}`;
-  if (row.care_package_code)
+  if (row.care_package_code) {
     await setEligibility(tx, userId, {
       path: "LAB_TEST", stage: "LAB_SCHEDULED", lab_booking_id: bookingId, consultation_paid: true,
     });
+    // the credit, if this booking was made on one, is used now
+    await tx`update eligibility set lab_credit = false, lab_paid_at = coalesce(lab_paid_at, now()) where user_id = ${userId}`;
+  }
   // ponytail: an add-on (the cortisol test) is added to the lab booking by the team from Redcliffe's dashboard; send its
   // code with the package in createBooking once Redcliffe's production catalogue gives one, and drop this task
   const addOns = ((row.price?.addOns ?? []) as { name: string }[]).map((a) => a.name);

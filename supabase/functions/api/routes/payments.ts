@@ -1,5 +1,7 @@
 // Payments (Razorpay) and the two vendor webhooks. Contract: docs/backend/payments-razorpay.md.
-//   POST /payments/orders        { purpose, referenceId, reason? } -> PaymentOrder (the server prices it)
+//   POST /payments/orders        { purpose, referenceId, reason? } -> PaymentOrder (the server prices it). Purposes:
+//                                CARE_PACKAGE (pay first: blood tests and consultation, then book the collection),
+//                                LAB_BOOKING (a held collection), CONSULTATION_FEE, PLAN, MEDICINE_ORDER
 //   POST /payments/verify        { orderId, razorpayPaymentId, razorpaySignature } -> { status: "PAID", purpose, referenceId }
 //   GET  /payments               the patient's paid orders (invoices), newest first
 //   GET  /payments/link-return   where Razorpay sends the customer after a payment link; checks the link, then the app
@@ -28,7 +30,7 @@ import * as links from "../lib/paymentLinks.ts";
 
 export const paymentRoutes = new Hono();
 
-const PURPOSES = ["PLAN", "LAB_BOOKING", "CONSULTATION_FEE", "MEDICINE_ORDER"] as const;
+const PURPOSES = ["PLAN", "LAB_BOOKING", "CONSULTATION_FEE", "MEDICINE_ORDER", "CARE_PACKAGE"] as const;
 type Purpose = typeof PURPOSES[number];
 type Priced = { amountPaise: number; title: string; lineItems: { label: string; amountPaise: number }[]; meta?: Record<string, unknown> };
 
@@ -42,6 +44,25 @@ async function price(tx: TransactionSql, userId: number, purpose: Purpose, refer
     if (active) fail(409, "You already have an active plan.");
     const amountPaise = rupees(plan.price_rupees);
     return { amountPaise, title: plan.name, lineItems: [{ label: plan.name, amountPaise }] };
+  }
+
+  if (purpose === "CARE_PACKAGE") {
+    // pay first, then book (24 Nov 2026). referenceId: the care package's code, then "+CODE" for each optional test
+    // ticked ("LAB_AND_CONSULT+CORTISOL"). Paid, the patient books the collection at no further charge.
+    const [code, ...wanted] = referenceId.split("+").map((part) => part.trim()).filter(Boolean);
+    const [care] = await tx`select * from care_packages where code = ${code ?? ""} and includes_lab_tests and lab_package_code is not null`;
+    if (!care) fail(400, "This package is not available any more.");
+    const [e] = await tx`select lab_credit, stage from eligibility where user_id = ${userId}`;
+    if (e?.lab_credit) fail(409, "This is already paid for. Book your home blood test.");
+    if (["LAB_SCHEDULED", "SAMPLE_COLLECTED", "UNDER_REVIEW", "APPROVED"].includes(e?.stage)) fail(409, "Your blood tests are already under way.");
+    const addOns = wanted.length
+      ? await tx`select code, name, price_rupees from care_addons where active and care_package_code = ${care.code} and code in ${tx(wanted.slice(0, 5))}`
+      : [];
+    if (addOns.length !== wanted.length) fail(400, "That add-on is not available.");
+    const lineItems = [{ label: care.name, amountPaise: rupees(care.price_rupees) },
+      ...addOns.map((a) => ({ label: String(a.name), amountPaise: rupees(a.price_rupees) }))];
+    return { amountPaise: lineItems.reduce((n, l) => n + l.amountPaise, 0), title: care.name, lineItems,
+      meta: { addOns: addOns.map((a) => ({ code: a.code, name: a.name, price: Number(a.price_rupees) })) } };
   }
 
   if (purpose === "LAB_BOOKING") {
@@ -97,7 +118,7 @@ async function price(tx: TransactionSql, userId: number, purpose: Purpose, refer
       // `paid`: the quantities this payment is for; fulfil writes them back, so a cart changed in another tab
       // during checkout never decides the supply, the doses or the refill
       meta: { addressId: k.address_id, planId: priced.plan ? Number(priced.plan.id) : null,
-        lines: bought.map((l) => ({ name: `${l.brand} ${l.strength}`, quantity: `${l.quantity} x ${l.pack}` })),
+        lines: bought.map((l) => ({ name: `${l.brand} ${l.strength}`, quantity: `${l.quantity} x ${l.pack}`, productId: l.productId })),
         paid: bought.map((l) => ({ medicineId: Number(l.medicineId), quantity: l.quantity })) },
     };
   }
@@ -178,7 +199,12 @@ export async function fulfil(orderId: string, paymentId: string) {
     const invoice = `INR-${new Date().getUTCFullYear()}-${String(n).padStart(6, "0")}`;
     const meta: Record<string, unknown> = { ...(o.meta ?? {}) };
 
-    if (o.purpose === "PLAN") {
+    if (o.purpose === "CARE_PACKAGE") {
+      // paid for: the blood tests and the first consultation. The collection is booked next, by the patient or by
+      // the team on a call, on this credit.
+      await setEligibility(tx, o.user_id, { path: "LAB_TEST", consultation_paid: true });
+      await tx`update eligibility set lab_credit = true, lab_paid_at = now(), lab_addons = ${tx.json((meta.addOns ?? []) as never)} where user_id = ${o.user_id}`;
+    } else if (o.purpose === "PLAN") {
       await startPlan(tx, o.user_id, Number(o.reference_id), o.id);
     } else if (o.purpose === "MEDICINE_ORDER") {
       // the plan the prescription carried was in this payment: it starts now

@@ -419,6 +419,8 @@ patientRoutes.get("/eligibility", async (c) => {
     reviewNote: e?.review_note ?? null,
     labBookingId: e?.lab_booking_id ?? null,
     consultationPaid: (Boolean(e?.consultation_paid) && !e?.consultation_used) || covered,
+    // the blood tests are paid for and the collection is still to book
+    labCredit: Boolean(e?.lab_credit),
     updatedAt: e?.updated_at ?? null,
   });
 });

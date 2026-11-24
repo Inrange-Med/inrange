@@ -43,7 +43,7 @@ import type { Context } from "hono";
 import type { TransactionSql } from "postgres";
 import { sql } from "../lib/db.ts";
 import { body, fail, intParam, ok } from "../lib/http.ts";
-import { type AuthUser, requireUser } from "../lib/auth.ts";
+import { type AuthUser, type Desk, DESKS, requireDesk, requireUser, works } from "../lib/auth.ts";
 import { nextWorkingMorning } from "../lib/hours.ts";
 import * as flow from "../lib/medicineFlow.ts";
 import { deliver, queueMessage } from "../lib/notify.ts";
@@ -66,8 +66,18 @@ import { coaching } from "./coach.ts";
 
 export const opsRoutes = new Hono();
 
-const staff = (c: Context) => requireUser(c, "COACH");               // ADMIN always passes requireUser
+// Who reaches what here (24 Nov 2026): an admin, everything. A coach: their own patients and coaching tasks. The
+// operations team (role OPS): every patient's sheet, and the work of their desks (lib/auth.ts requireDesk).
+const staff = (c: Context) => requireUser(c, "COACH", "OPS");        // ADMIN always passes requireUser
 const admin = (c: Context) => requireUser(c, "ADMIN");
+/** The task queue: a coach (their own), the pharmacy desk, an admin. */
+const queue = async (c: Context) => {
+  const me = await staff(c);
+  if (me.role === "OPS" && !works(me, "MEDICINE")) fail(403, "You do not have access to this.");
+  return me;
+};
+const pharmacy = (c: Context) => requireDesk(c, "MEDICINE");
+const consults = (c: Context) => requireDesk(c, "CONSULTATIONS");
 const iso = (col: string) => sql`to_char(${sql(col)} at time zone 'Asia/Kolkata', 'YYYY-MM-DD"T"HH24:MI:SS"+05:30"')`;
 const name = sql`coalesce(nullif(trim(concat_ws(' ', pp.first_name, pp.last_name)), ''), pu.full_name, 'Patient ' || pu.id)`;
 
@@ -83,7 +93,7 @@ async function patientFor(me: AuthUser, patientId: number) {
 }
 
 /** What a coach works on; the pharmacy, payment and reconciliation tasks are the care team's alone. */
-const COACH_TASKS = ["ADHERENCE", "REFILL_GAP", "QUESTIONS", "NO_REPLY", "PLAN_CALL"];
+const COACH_TASKS = ["ADHERENCE", "REFILL_GAP", "QUESTIONS", "NO_REPLY", "PLAN_CALL", "COACH_FIRST_CALL", "FITNESS_START"];
 
 async function taskFor(me: AuthUser, taskId: number) {
   const [t] = await sql`select t.* from ops_tasks t left join patient_profiles pp on pp.user_id = t.patient_id
@@ -97,7 +107,7 @@ const entry = (me: AuthUser, what: string) => sql.json([{ at: new Date().toISOSt
 // ---------------------------------------------------------------- summary and queue
 
 opsRoutes.get("/admin/medicine/summary", async (c) => {
-  const me = await staff(c);
+  const me = await queue(c);
   const [t] = await sql`
     select count(*) filter (where t.status = 'OPEN') as open,
       count(*) filter (where t.status = 'OPEN' and t.due_at < now()) as overdue,
@@ -105,7 +115,7 @@ opsRoutes.get("/admin/medicine/summary", async (c) => {
       count(*) filter (where t.status = 'OPEN' and t.assigned_to = ${me.id}) as mine
     from ops_tasks t left join patient_profiles pp on pp.user_id = t.patient_id
     where true ${scope(me)} ${me.role === "COACH" ? sql`and t.kind in ${sql(COACH_TASKS)}` : sql``}`;
-  const [o] = me.role === "ADMIN" ? await sql`
+  const [o] = works(me, "MEDICINE") ? await sql`
     select count(*) filter (where status in ('PLACED', 'PACKED')) as to_dispatch,
       count(*) filter (where status in ('DISPATCHED', 'OUT_FOR_DELIVERY')) as on_the_way
     from medicine_orders` : [{ to_dispatch: 0, on_the_way: 0 }];
@@ -121,7 +131,7 @@ opsRoutes.get("/admin/medicine/summary", async (c) => {
 });
 
 opsRoutes.get("/admin/medicine/tasks", async (c) => {
-  const me = await staff(c);
+  const me = await queue(c);
   const status = c.req.query("status") === "DONE" ? "DONE" : "OPEN";
   const kind = c.req.query("kind") || null;
   const mine = c.req.query("mine") === "1";
@@ -147,7 +157,7 @@ opsRoutes.get("/admin/medicine/tasks", async (c) => {
 const OUTCOMES = ["RESOLVED", "WILL_PAY", "PAID", "ELSEWHERE", "DECLINED", "CALL_BACK", "NO_ANSWER"] as const;
 
 opsRoutes.post("/admin/medicine/tasks/:taskId/done", async (c) => {
-  const me = await staff(c);
+  const me = await queue(c);
   const t = await taskFor(me, intParam(c.req.param("taskId"), "task"));
   if (t.status !== "OPEN") fail(409, "This task is already done.");
   const b = await body<{ outcome?: string; note?: unknown; callBackAt?: unknown }>(c);
@@ -176,7 +186,7 @@ opsRoutes.post("/admin/medicine/tasks/:taskId/done", async (c) => {
 });
 
 opsRoutes.post("/admin/medicine/tasks/:taskId/assign", async (c) => {
-  const me = await staff(c);
+  const me = await queue(c);
   const t = await taskFor(me, intParam(c.req.param("taskId"), "task"));
   const b = await body<{ to?: unknown }>(c);
   let to: number | null = null;
@@ -194,7 +204,7 @@ opsRoutes.post("/admin/medicine/tasks/:taskId/assign", async (c) => {
 });
 
 opsRoutes.post("/admin/medicine/tasks/:taskId/send-link", async (c) => {
-  const me = await staff(c);
+  const me = await queue(c);
   const t = await taskFor(me, intParam(c.req.param("taskId"), "task"));
   const [k] = t.cart_id ? await sql`select * from medicine_carts where id = ${t.cart_id}` : [];
   if (!k || k.status !== "OPEN") fail(409, "There is no open order to send.");
@@ -223,7 +233,7 @@ async function unmatchedOf(taskId: number) {
 }
 
 opsRoutes.get("/admin/medicine/tasks/:taskId/unmatched", async (c) => {
-  await admin(c);
+  await pharmacy(c);
   const { rx, lines } = await unmatchedOf(intParam(c.req.param("taskId"), "task"));
   return ok(c, { prescriptionId: String(rx.id), current: rx.status === "SIGNED", lines });
 });
@@ -234,7 +244,7 @@ opsRoutes.get("/admin/medicine/tasks/:taskId/unmatched", async (c) => {
  * cart (or start one). The task closes when nothing is left unmatched.
  */
 opsRoutes.post("/admin/medicine/tasks/:taskId/match", async (c) => {
-  const me = await admin(c);
+  const me = await pharmacy(c);
   const b = await body<{ line?: unknown; medicineId?: unknown }>(c);
   const { t, rx, lines } = await unmatchedOf(intParam(c.req.param("taskId"), "task"));
   if (t.status !== "OPEN") fail(409, "This task is done already.");
@@ -305,7 +315,7 @@ opsRoutes.get("/admin/medicine/patients", async (c) => {
   const rows = await sql`
     select pu.id::text as id, ${name} as name, pu.mobile, pp.coach_id::text as "coachId", cu.full_name as "coachName",
       (select f.full_name from users f where f.id = pp.fitness_coach_id) as "fitnessCoachName",
-      ${me.role === "ADMIN" ? sql`pp.salesperson` : sql`null::text as salesperson`}, (select string_agg(d.full_name, ', ' order by t.added_at, t.doctor_id) from care_team_doctors t
+      ${me.role === "COACH" ? sql`null::text as salesperson` : sql`pp.salesperson`}, (select string_agg(d.full_name, ', ' order by t.added_at, t.doctor_id) from care_team_doctors t
         join doctors d on d.id = t.doctor_id where t.patient_id = pu.id) as doctors, (select pl.name from subscriptions sb join plans pl on pl.id = sb.plan_id
         where sb.user_id = pu.id and sb.status = 'Active' and sb.ends_at > now() order by sb.ends_at desc limit 1) as "planName",
       lo.status as "lastOrderStatus", ${iso("lo.placed_at")} as "lastOrderAt",
@@ -364,7 +374,8 @@ opsRoutes.get("/admin/medicine/patients/:patientId", async (c) => {
     pendingPlan(sql, p.id),
     sql`select d.id, d.full_name from care_team_doctors t join doctors d on d.id = t.doctor_id
         where t.patient_id = ${p.id} order by t.added_at, t.doctor_id`,
-    p.fitness_coach_id ? sql`select id, full_name from users where id = ${p.fitness_coach_id}` : Promise.resolve([]),
+    p.fitness_coach_id ? sql`select u.id, u.full_name, (select to_char(fitness_starts_on, 'YYYY-MM-DD') from patient_profiles where user_id = ${p.id}) as starts
+        from users u where u.id = ${p.fitness_coach_id}` : Promise.resolve([]),
     sql`select id, text, author_name, ${iso("created_at")} as at from coach_remarks where patient_id = ${p.id} order by created_at desc limit 50`,
     // every prescription issued, newest first, with who sent it and when (19 Nov 2026 call: admin and the coach
     // team read old ones too; nobody downloads them)
@@ -400,9 +411,9 @@ opsRoutes.get("/admin/medicine/patients/:patientId", async (c) => {
           : sold?.payment_ref ? { where: "OUTSIDE", ref: sold.payment_ref, at: plan.starts, amountRupees: sold.amount_paise != null ? sold.amount_paise / 100 : null }
           : null } : null,
       whatsappSince: consent?.at ?? null, coach: coach ? { id: String(coach.id), name: coach.full_name } : null,
-      fitnessCoach: fitness ? { id: String(fitness.id), name: fitness.full_name } : null,
-      salesperson: isAdmin ? profile?.salesperson ?? null : null,
-      salespersonId: isAdmin && profile?.salesperson_id ? String(profile.salesperson_id) : null,
+      fitnessCoach: fitness ? { id: String(fitness.id), name: fitness.full_name, startsOn: fitness.starts ?? null } : null,
+      salesperson: me.role === "COACH" ? null : profile?.salesperson ?? null,
+      salespersonId: me.role !== "COACH" && profile?.salesperson_id ? String(profile.salesperson_id) : null,
       // their doctors, the main one (who joined first) first
       doctors: doctors.map((d) => ({ id: String(d.id), name: d.full_name })),
       // the plan admin put them on that they have not paid for yet (it waits in the app, with any medicines)
@@ -468,7 +479,7 @@ opsRoutes.patch("/admin/medicine/patients/:patientId/coach", async (c) => {
   await sql.begin(async (tx) => {
     await tx`update patient_profiles set coach_id = ${coachId} where user_id = ${p.id}`;
     // the patient's open coaching tasks follow them to the new coach
-    await tx`update ops_tasks set assigned_to = ${coachId} where patient_id = ${p.id} and status = 'OPEN' and kind in ('ADHERENCE', 'REFILL_GAP')`;
+    await tx`update ops_tasks set assigned_to = ${coachId} where patient_id = ${p.id} and status = 'OPEN' and kind in ('ADHERENCE', 'REFILL_GAP', 'COACH_FIRST_CALL')`;
     await tx`insert into audit_log (patient_id, actor_id, action) values (${p.id}, ${me.id}, ${coachId ? "Assigned a health coach" : "Removed the health coach"})`;
   });
   return ok(c, { coachId: coachId ? String(coachId) : null }, coachId ? "Coach assigned" : "Coach removed");
@@ -492,8 +503,10 @@ opsRoutes.patch("/admin/medicine/patients/:patientId/fitness-coach", async (c) =
     coachId = u.id;
   }
   await sql.begin(async (tx) => {
+    // chosen by hand: they start now (a plan's own assignment starts three weeks in, lib/coaches.ts)
     await tx`insert into patient_profiles (user_id, fitness_coach_id) values (${p.id}, ${coachId})
-             on conflict (user_id) do update set fitness_coach_id = excluded.fitness_coach_id`;
+             on conflict (user_id) do update set fitness_coach_id = excluded.fitness_coach_id, fitness_starts_on = null`;
+    await tx`update ops_tasks set assigned_to = ${coachId} where patient_id = ${p.id} and status = 'OPEN' and kind = 'FITNESS_START'`;
     await tx`insert into audit_log (patient_id, actor_id, action) values (${p.id}, ${me.id}, ${coachId ? "Assigned a fitness coach" : "Removed the fitness coach"})`;
   });
   return ok(c, { coachId: coachId ? String(coachId) : null }, coachId ? "Fitness coach assigned" : "Fitness coach removed");
@@ -517,7 +530,7 @@ opsRoutes.post("/admin/medicine/patients/:patientId/remarks", async (c) => {
 });
 
 opsRoutes.patch("/admin/medicine/patients/:patientId/salesperson", async (c) => {
-  const me = await admin(c);
+  const me = await consults(c);
   const p = await patientFor(me, intParam(c.req.param("patientId"), "patient"));
   const s = await salespersonOf((await body<{ salespersonId?: unknown }>(c)).salespersonId);
   await sql.begin(async (tx) => {
@@ -589,7 +602,7 @@ opsRoutes.put("/admin/medicine/patients/:patientId/plan", async (c) => {
 
 /** The doctor of the first consultation joins by default (lib/careTeam.ts); admin adds and removes the rest here. */
 opsRoutes.put("/admin/medicine/patients/:patientId/doctors/:doctorId", async (c) => {
-  const me = await admin(c);
+  const me = await consults(c);
   const p = await patientFor(me, intParam(c.req.param("patientId"), "patient"));
   const [d] = await sql`select id, full_name from doctors where id = ${intParam(c.req.param("doctorId"), "doctor")} and active`;
   if (!d) fail(400, "That doctor was not found, or is not active.");
@@ -601,7 +614,7 @@ opsRoutes.put("/admin/medicine/patients/:patientId/doctors/:doctorId", async (c)
 });
 
 opsRoutes.delete("/admin/medicine/patients/:patientId/doctors/:doctorId", async (c) => {
-  const me = await admin(c);
+  const me = await consults(c);
   const p = await patientFor(me, intParam(c.req.param("patientId"), "patient"));
   const doctorId = intParam(c.req.param("doctorId"), "doctor");
   const [d] = await sql`select d.full_name from care_team_doctors t join doctors d on d.id = t.doctor_id
@@ -635,7 +648,7 @@ async function takeSlot(tx: TransactionSql, slotId: number) {
 }
 
 opsRoutes.post("/admin/medicine/patients/:patientId/consultations", async (c) => {
-  const me = await admin(c);
+  const me = await consults(c);
   const p = await patientFor(me, intParam(c.req.param("patientId"), "patient"));
   const b = await body<{ slotId?: unknown; reason?: unknown; salespersonId?: unknown }>(c);
   const slotId = intParam(String(b.slotId ?? ""), "time");
@@ -662,7 +675,7 @@ opsRoutes.post("/admin/medicine/patients/:patientId/consultations", async (c) =>
 });
 
 opsRoutes.post("/admin/consultations/:id/move", async (c) => {
-  const me = await admin(c);
+  const me = await consults(c);
   const id = intParam(c.req.param("id"), "consultation");
   const slotId = intParam(String((await body<{ slotId?: unknown }>(c)).slotId ?? ""), "time");
   const messages = await sql.begin(async (tx) => {
@@ -687,7 +700,7 @@ opsRoutes.post("/admin/consultations/:id/move", async (c) => {
 });
 
 opsRoutes.post("/admin/consultations/:id/cancel", async (c) => {
-  const me = await admin(c);
+  const me = await consults(c);
   const id = intParam(c.req.param("id"), "consultation");
   const reason = String((await body<{ reason?: unknown }>(c)).reason ?? "").trim().slice(0, 300);
   if (reason.length < 3) fail(400, "Say why the consultation is cancelled.");
@@ -726,7 +739,7 @@ opsRoutes.get("/admin/consultations/:id/recording", async (c) => {
 // ---------------------------------------------------------------- deliveries (the pharmacy)
 
 opsRoutes.get("/admin/medicine/orders", async (c) => {
-  await admin(c);
+  await pharmacy(c);
   const status = c.req.query("status") || null;
   const rows = await sql`
     select o.id::text as id, 'MED-' || lpad(o.id::text, 5, '0') as "orderNumber", o.status, o.flow, ${iso("o.placed_at")} as "placedAt",
@@ -746,7 +759,7 @@ opsRoutes.get("/admin/medicine/orders", async (c) => {
 });
 
 opsRoutes.post("/admin/medicine/orders/:orderId/move", async (c) => {
-  const me = await admin(c);
+  const me = await pharmacy(c);
   const id = intParam(c.req.param("orderId"), "order");
   const b = await body<{ to?: string; courier?: string; trackingNo?: string; trackingUrl?: string; expectedAt?: string; note?: string }>(c);
   const to = flow.ORDER_STEPS.find((s) => s === b.to);
@@ -762,7 +775,7 @@ opsRoutes.post("/admin/medicine/orders/:orderId/move", async (c) => {
 });
 
 opsRoutes.post("/admin/medicine/orders/:orderId/delay", async (c) => {
-  const me = await admin(c);
+  const me = await pharmacy(c);
   const id = intParam(c.req.param("orderId"), "order");
   const b = await body<{ expectedAt?: string }>(c);
   const at = new Date(String(b.expectedAt ?? ""));
@@ -777,7 +790,7 @@ opsRoutes.post("/admin/medicine/orders/:orderId/delay", async (c) => {
 });
 
 opsRoutes.post("/admin/medicine/orders/:orderId/cancel", async (c) => {
-  const me = await admin(c);
+  const me = await pharmacy(c);
   const id = intParam(c.req.param("orderId"), "order");
   const b = await body<{ reason?: unknown }>(c);
   const reason = typeof b.reason === "string" ? b.reason.trim().slice(0, 500) : "";
@@ -928,30 +941,84 @@ opsRoutes.post("/admin/whatsapp/templates/sync", async (c) => {
 
 // ---------------------------------------------------------------- coaches
 
+const COACH_KINDS = ["HEALTH", "FITNESS", "BOTH"];
+const coaches = () => sql`
+  select u.id::text as id, u.full_name as "fullName", u.mobile, coalesce(u.coach_kind, 'HEALTH') as kind,
+    (select count(*) from patient_profiles p where p.coach_id = u.id)::int as patients,
+    (select count(*) from patient_profiles p where p.fitness_coach_id = u.id)::int as "fitnessPatients"
+  from users u where u.role = 'COACH' order by u.full_name`;
+
 opsRoutes.get("/admin/coaches", async (c) => {
   await admin(c);
-  const rows = await sql`
-    select u.id::text as id, u.full_name as "fullName", u.mobile,
-      (select count(*) from patient_profiles p where p.coach_id = u.id)::int as patients
-    from users u where u.role = 'COACH' order by u.full_name`;
-  return ok(c, rows);
+  return ok(c, await coaches());
 });
 
 opsRoutes.post("/admin/coaches", async (c) => {
   await admin(c);
-  const b = await body<{ fullName?: unknown; mobile?: unknown }>(c);
+  const b = await body<{ fullName?: unknown; mobile?: unknown; kind?: unknown }>(c);
   const fullName = String(b.fullName ?? "").trim().slice(0, 80);
   const mobile = String(b.mobile ?? "").replace(/\D/g, "").slice(-10);
+  const kind = COACH_KINDS.includes(String(b.kind)) ? String(b.kind) : "HEALTH";
   if (fullName.length < 2) fail(400, "Add the coach's full name.");
   if (!/^[6-9]\d{9}$/.test(mobile)) fail(400, "Enter a 10-digit mobile number.");
   const [existing] = await sql`select id, role from users where mobile = ${mobile}`;
-  if (existing && existing.role !== "COACH") fail(409, "That number already belongs to a patient, doctor or admin.");
+  if (existing && existing.role !== "COACH") fail(409, "That number already belongs to someone else.");
   // a patient signing up with this number in between is never renamed: the update only touches a coach
   const [u] = await sql`
-    insert into users (mobile, role, full_name) values (${mobile}, 'COACH', ${fullName})
-    on conflict (mobile) do update set full_name = excluded.full_name where users.role = 'COACH' returning id`;
-  if (!u) fail(409, "That number already belongs to a patient, doctor or admin.");
-  return ok(c, { id: String(u.id), fullName, mobile, patients: 0 }, "Coach added. They sign in with this number.");
+    insert into users (mobile, role, full_name, onboarding_completed, coach_kind) values (${mobile}, 'COACH', ${fullName}, true, ${kind})
+    on conflict (mobile) do update set full_name = excluded.full_name, coach_kind = excluded.coach_kind where users.role = 'COACH' returning id`;
+  if (!u) fail(409, "That number already belongs to someone else.");
+  return ok(c, { id: String(u.id), fullName, mobile, kind, patients: 0, fitnessPatients: 0 }, "Coach added. They sign in with this number.");
+});
+
+/** Health coach, fitness coach or both: decides which patients a new plan gives them (lib/coaches.ts). */
+opsRoutes.patch("/admin/coaches/:id", async (c) => {
+  await admin(c);
+  const kind = String((await body<{ kind?: unknown }>(c)).kind);
+  if (!COACH_KINDS.includes(kind)) fail(400, "Choose health coach, fitness coach or both.");
+  const [u] = await sql`update users set coach_kind = ${kind} where id = ${intParam(c.req.param("id"), "coach")} and role = 'COACH' returning id`;
+  if (!u) fail(404, "That coach was not found.");
+  return ok(c, await coaches(), "Saved");
+});
+
+// ---------------------------------------------------------------- the operations team (24 Nov 2026)
+// Someone on the operations team signs in with their mobile (role OPS) and does the work of their desks: blood
+// tests, consultations, the pharmacy. No desks: no access, and they are signed out.
+
+const team = () => sql`select id::text as id, full_name as "fullName", mobile, desks from users where role = 'OPS' order by (cardinality(desks) = 0), full_name`;
+const desksOf = (raw: unknown): Desk[] => DESKS.filter((d) => Array.isArray(raw) && raw.includes(d));
+
+opsRoutes.get("/admin/team", async (c) => {
+  await admin(c);
+  return ok(c, await team());
+});
+
+opsRoutes.post("/admin/team", async (c) => {
+  await admin(c);
+  const b = await body<{ fullName?: unknown; mobile?: unknown; desks?: unknown }>(c);
+  const fullName = String(b.fullName ?? "").trim().replace(/\s+/g, " ").slice(0, 80);
+  const mobile = String(b.mobile ?? "").replace(/\D/g, "").slice(-10);
+  const desks = desksOf(b.desks);
+  if (fullName.length < 2) fail(400, "Add their full name.");
+  if (!/^[6-9]\d{9}$/.test(mobile)) fail(400, "Enter a 10-digit mobile number.");
+  if (!desks.length) fail(400, "Choose at least one team.");
+  // one number is one kind of person: never a patient's, a doctor's, a coach's, a salesperson's or an admin's
+  const [u] = await sql`
+    insert into users (mobile, role, full_name, onboarding_completed, desks) values (${mobile}, 'OPS', ${fullName}, true, ${desks})
+    on conflict (mobile) do update set full_name = excluded.full_name, desks = excluded.desks where users.role = 'OPS' returning id`;
+  if (!u) fail(409, "That number already belongs to someone else.");
+  return ok(c, await team(), `${fullName} added. They sign in with this number.`);
+});
+
+opsRoutes.patch("/admin/team/:id", async (c) => {
+  await admin(c);
+  const id = intParam(c.req.param("id"), "team member");
+  const desks = desksOf((await body<{ desks?: unknown }>(c)).desks);
+  const [u] = await sql`update users set desks = ${desks} where id = ${id} and role = 'OPS' returning id`;
+  if (!u) fail(404, "That team member was not found.");
+  // their next request reads the new desks; with none left they are signed out at once
+  if (!desks.length) await sql`update auth_sessions set revoked_at = now() where user_id = ${id} and revoked_at is null`;
+  return ok(c, await team(), desks.length ? "Saved" : "Taken off the team");
 });
 
 // ---------------------------------------------------------------- the sales team (23 Nov 2026)
@@ -971,7 +1038,7 @@ const salespeople = () => sql`
   from salespeople s order by s.active desc, s.rank, s.id`;
 
 opsRoutes.get("/admin/salespeople", async (c) => {
-  await admin(c);
+  await consults(c); // a booking names the salesperson on the call
   return ok(c, await salespeople());
 });
 
