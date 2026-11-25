@@ -103,6 +103,9 @@ export default function SalesTeamSheet({
   };
 
   const active = (team.data ?? []).filter((p) => p.active);
+  // people taken off the team stay out of the way until asked for
+  const [showRemoved, setShowRemoved] = useState(false);
+  const removed = (team.data ?? []).length - active.length;
 
   const body = (
     <div className={s.sheet}>
@@ -114,7 +117,7 @@ export default function SalesTeamSheet({
         <p className={adminStyles.empty}>No salespeople yet.</p>
       ) : (
         <ul className={s.rows}>
-          {team.data.map((p) => (
+          {(showRemoved ? team.data : active).map((p) => (
             <li key={p.id} className={s.row}>
               <span className={s.open}>
                 <span className={s.what}>
@@ -209,6 +212,15 @@ export default function SalesTeamSheet({
             </li>
           ))}
         </ul>
+      )}
+      {removed > 0 && (
+        <button
+          type="button"
+          className={adminStyles.textBtn}
+          onClick={() => setShowRemoved(!showRemoved)}
+        >
+          {showRemoved ? "Hide removed" : `Show removed (${removed})`}
+        </button>
       )}
       <h3 className={s.sectionHead}>
         {editing ? `Edit ${editing.fullName}` : "Add a salesperson"}
