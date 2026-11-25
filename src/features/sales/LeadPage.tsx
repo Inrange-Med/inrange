@@ -13,7 +13,7 @@
   Never here: reports, lab values, the prescription itself or the doctor's notes. Opening the page is logged.
 */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import BackLink from "@/components/ui/BackLink";
 import DatePicker from "@/components/ui/DatePicker";
 import ErrorNotice from "@/components/ui/ErrorNotice";
@@ -136,11 +136,13 @@ function PlanPanel({
   const copy = async (url: string) => {
     try {
       await navigator.clipboard.writeText(url);
-      toast("Link copied");
+      return true;
     } catch {
-      toast("Select the link and copy it.");
+      return false;
     }
   };
+  const copyAndSay = async (url: string) =>
+    toast((await copy(url)) ? "Link copied" : "Select the link and copy it.");
 
   const picker = (
     <label className={p.field}>
@@ -179,7 +181,7 @@ function PlanPanel({
           link={link}
           mobile={lead.mobile}
           busy={busy}
-          onCopy={() => copy(link.url)}
+          onCopy={() => copyAndSay(link.url)}
           onCheck={() => run(() => actOnSalesLink(link.id, "check"))}
           onCancel={() => run(() => actOnSalesLink(link.id, "cancel"))}
         />
@@ -200,8 +202,9 @@ function PlanPanel({
                     note: "",
                     ...(admin ? { salespersonId: lead.salespersonId } : {}),
                   });
-                  await copy(made.url);
-                  return "Plan sent. Link copied.";
+                  return (await copy(made.url))
+                    ? "Plan sent. Link copied."
+                    : "Plan sent. The link is below.";
                 })
               }
             >
@@ -577,6 +580,7 @@ function CallsPanel({
 function nextWords(data: LeadDetail): { words: string; small?: string } {
   const { lead } = data;
   if (lead.formDue) return { words: "Fill in the sales form." };
+  if (followUpDue(lead)) return { words: "Call them today." };
   if (lead.stage === "ON_PLAN")
     return { words: "Done. They are on a plan.", small: lead.planName! };
   if (lead.stage === "LINK_SENT")
@@ -590,7 +594,6 @@ function nextWords(data: LeadDetail): { words: string; small?: string } {
       small: `${lead.nextCallDoctor ?? "The doctor"} goes first. Then you explain the plan.`,
     };
   if (lead.stage === "CONSULTED") return { words: "Send the plan." };
-  if (followUpDue(lead)) return { words: "Call them today." };
   return {
     words: `${STAGE_WORDS[lead.stage]}.`,
     small: "The care team books the consultation. Nothing for you yet.",
@@ -605,13 +608,7 @@ export default function LeadPage({
   admin?: boolean;
 }) {
   const toast = useToast();
-  // only the first load is someone opening the lead; the page's own reloads are not logged as views
-  const opened = useRef(false);
-  const detail = useApiResource(`lead-${leadId}`, async () => {
-    const lead = await getLead(leadId, opened.current);
-    opened.current = true;
-    return lead;
-  });
+  const detail = useApiResource(`lead-${leadId}`, () => getLead(leadId));
   const plans = useApiResource("plans-on-sale", listPlansOnSale);
   const team = useApiResource(admin ? "salespeople" : null, listSalespeople);
   const data = detail.data?.lead.id === leadId ? detail.data : null;

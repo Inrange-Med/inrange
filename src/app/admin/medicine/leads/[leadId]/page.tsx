@@ -1,4 +1,4 @@
-/* /admin/leads/[leadId]: the same lead page a salesperson has, for an admin, who can also change the salesperson. */
+/* /admin/medicine/leads/[leadId]: the same lead page a salesperson has, for an admin, who can also change the salesperson. */
 
 import LeadPage from "@/features/sales/LeadPage";
 

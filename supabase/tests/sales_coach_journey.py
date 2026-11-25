@@ -246,11 +246,11 @@ def main():
          d["lead"]["stage"] == "ON_PLAN" and d["lead"]["formDue"] is True and d["sale"]["paymentId"].startswith("pay_")
          and d["sale"]["amountRupees"] == plan["priceRupees"] and d["sale"]["salesperson"] == names[SELLER] and d["sale"]["submittedAt"] is None, d["sale"])
     s, b = call("PUT", f"/api/sales/patients/{pid}/sale-form", seller,
-                {"condition": "Obesity", "programme": "Weight care", "coachPreference": "Hindi, mornings", "note": "Starts Monday"})
+                {"condition": "Obesity", "programme": "Weight care", "note": "Starts Monday"})
     step("the salesperson fills in the sales form", s == 200, b)
     d = call("GET", f"/api/sales/patients/{pid}", seller)[1]["data"]
     step("and it is kept with the sale", d["lead"]["formDue"] is False and d["sale"]["condition"] == "Obesity" and d["sale"]["programme"] == "Weight care"
-         and d["sale"]["coachPreference"] == "Hindi, mornings" and d["sale"]["submittedBy"], d["sale"])
+         and d["sale"]["coachPreference"] == "Hindi, evenings" and d["sale"]["submittedBy"], d["sale"])
     s, b = call("GET", "/api/payments", patient)
     step("the patient has the payment, with an invoice number", s == 200 and any(x["id"] == link and x["invoiceNumber"] for x in b["data"]), b)
     s, b = call("GET", "/api/patient/next-step", patient)

@@ -183,18 +183,9 @@
   color: inherit;
   text-decoration: none;
 }
-.table tr {
-  position: relative;
-}
-/* the whole row opens the lead */
-.table a.name::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-}
-.table .over {
-  position: relative;
-  z-index: 1;
+/* the whole row opens the lead (a click handler on the row; the name is the link) */
+.table tbody tr {
+  cursor: pointer;
 }
 @media (hover: hover) and (pointer: fine) {
   .table tbody tr:hover td {

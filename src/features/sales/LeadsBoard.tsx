@@ -10,6 +10,7 @@
 
 import { useDeferredValue, useState } from "react";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import ErrorNotice from "@/components/ui/ErrorNotice";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import SegmentedControl from "@/components/ui/SegmentedControl";
@@ -61,13 +62,33 @@ export default function LeadsBoard({
   const toast = useToast();
   const [query, setQuery] = useState("");
   const q = useDeferredValue(query.trim());
-  const [view, setView] = useState<View>(admin ? "all" : "todo");
-  const [seller, setSeller] = useState("");
+  // the list chosen and whose leads stay in the address, so coming back from a lead finds them as they were
+  const router = useRouter();
+  const pathname = usePathname();
+  const params = useSearchParams();
+  const asked = params.get("view") as View | null;
+  const view: View =
+    asked && VIEWS.some((v) => v.value === asked)
+      ? asked
+      : admin
+        ? "all"
+        : "todo";
+  const seller = admin ? (params.get("seller") ?? "") : "";
+  const put = (name: string, value: string) => {
+    const next = new URLSearchParams(params);
+    if (value) next.set(name, value);
+    else next.delete(name);
+    router.replace(next.size ? `${pathname}?${next}` : pathname, {
+      scroll: false,
+    });
+  };
+  const setView = (value: View) => put("view", value);
+  const setSeller = (value: string) => put("seller", value);
   const leads = useApiResource(`leads-${q}-${seller}`, () =>
     listLeads(q, seller),
   );
   const team = useApiResource(admin ? "salespeople" : null, listSalespeople);
-  const base = admin ? "/admin/leads" : "/sales/leads";
+  const base = admin ? "/admin/medicine/leads" : "/sales/leads";
 
   const join = async (callId: string) => {
     // opened before the wait, so the browser treats the new tab as the person's own click
@@ -172,7 +193,14 @@ export default function LeadsBoard({
                   lead.nextCallAt &&
                   relativeDayName(lead.nextCallAt) === "Today";
                 return (
-                  <tr key={lead.id}>
+                  <tr
+                    key={lead.id}
+                    onClick={(e) => {
+                      // the name is the link (keyboard, new tab); a click anywhere else on the row opens it too
+                      if (!(e.target as HTMLElement).closest("a, button"))
+                        router.push(`${base}/${lead.id}`);
+                    }}
+                  >
                     <td>
                       <Link href={`${base}/${lead.id}`} className={p.name}>
                         {lead.name}
@@ -220,7 +248,7 @@ export default function LeadsBoard({
                       {callToday ? (
                         <button
                           type="button"
-                          className={`${s.chip} ${p.over}`}
+                          className={s.chip}
                           data-on="true"
                           onClick={() => join(lead.nextCallId!)}
                         >

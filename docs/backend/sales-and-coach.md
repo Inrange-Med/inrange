@@ -137,7 +137,7 @@ last medicine order, the plan, the coach. Never a report, a lab value, the presc
 - After a call: call status, remark, call-again date (`lead_updates`).
 - Payment link, or a Razorpay payment ID for money already taken.
 - Sales form, once the plan is paid: customer, plan, amount, payment ID and salesperson come from the payment; the
-  salesperson adds condition, programme, coach asked for and remarks (`PUT /sales/patients/:id/sale-form`).
+  salesperson picks the condition and the programme and adds remarks (`PUT /sales/patients/:id/sale-form`).
 - An admin uses the same routes for every lead, filters by salesperson, and assigns the salesperson on the lead's page.
 
 ### Drug list

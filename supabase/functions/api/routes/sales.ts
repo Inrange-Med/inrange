@@ -163,13 +163,17 @@ salesRoutes.get("/sales/patients/:patientId", async (c) => {
   const x = await seller(c);
   const p = await customer(x, intParam(c.req.param("patientId"), "lead"));
   // a payment link still waiting: Razorpay is asked now (at most every 10 seconds), so a payment shows on the page,
-  // the plan starts and the sale is recorded with nobody pressing anything. The page asks again while it is open,
-  // and only its first load is logged as a view.
-  const [open] = await sql`select id from payment_links where patient_id = ${p.id} and status = 'CREATED' and purpose = 'PLAN'
-                           and coalesce(checked_at, created_at) < now() - interval '10 seconds'`;
-  if (open) await links.check(open.id).catch((e) => console.error("link check", (e as Error).message));
-  if (c.req.query("quiet") !== "1")
-    await sql`insert into audit_log (patient_id, actor_id, action) values (${p.id}, ${x.me.id}, 'Viewed the lead (sales)')`;
+  // the plan starts and the sale is recorded with nobody pressing anything. The page asks again while it is open.
+  // Stamped before asking and given 4 seconds, so a slow Razorpay never holds the page.
+  const [open] = await sql`update payment_links set checked_at = now() where patient_id = ${p.id} and status = 'CREATED' and purpose = 'PLAN'
+                           and coalesce(checked_at, created_at) < now() - interval '10 seconds' returning id`;
+  if (open)
+    await Promise.race([links.check(open.id), new Promise((done) => setTimeout(done, 4000))])
+      .catch((e) => console.error("link check", (e as Error).message));
+  // a view is logged once in ten minutes: the page reloading itself is not someone opening the lead again
+  await sql`insert into audit_log (patient_id, actor_id, action) select ${p.id}, ${x.me.id}, 'Viewed the lead (sales)'
+            where not exists (select 1 from audit_log where patient_id = ${p.id} and actor_id = ${x.me.id}
+              and action = 'Viewed the lead (sales)' and at > now() - interval '10 minutes')`;
   const [[lead], calls, [rx], mine, updates, payments, [sale]] = await Promise.all([
     leads(x, { only: p.id }),
     sql`select a.id::text as id, ${starts} as "startsAt", d.full_name as "doctorName", a.status,
