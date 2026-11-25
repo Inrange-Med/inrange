@@ -130,9 +130,7 @@ export default function TasksPanel({
           <LoadingSkeleton />
         ) : shown.length === 0 ? (
           <p className={adminStyles.empty}>
-            {who === "mine"
-              ? "Nothing assigned to you."
-              : "Nothing to do. Calls, delivery checks and dose alerts appear here as they come up, soonest due first."}
+            {who === "mine" ? "Nothing assigned to you." : "Nothing to do."}
           </p>
         ) : (
           <ul className={s.rows}>
@@ -159,7 +157,7 @@ export default function TasksPanel({
             </span>
           </div>
           <details className={adminStyles.history}>
-            <summary className="num">Show {done.data!.length} done</summary>
+            <summary>Show all</summary>
             <ul className={s.rows}>
               {done.data!.map((task) => (
                 <TaskRow

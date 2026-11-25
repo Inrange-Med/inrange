@@ -102,7 +102,7 @@ export default function TaskSheet({
         note: note.trim(),
         ...(outcome === "CALL_BACK" ? { callBackAt: callBackIso! } : {}),
       });
-      toast(result.status === "OPEN" ? "Moved to the call-back time" : "Done");
+      toast(result.status === "OPEN" ? "Moved to call back" : "Done");
       onChanged();
       onClose();
     } catch (caught) {
@@ -157,7 +157,7 @@ export default function TaskSheet({
             </dd>
           </div>
           <div>
-            <dt>Kind</dt>
+            <dt>Type</dt>
             <dd>
               {KIND_WORDS[task.kind]}
               {task.orderNumber ? `, ${task.orderNumber}` : ""}
@@ -182,7 +182,7 @@ export default function TaskSheet({
           <MatchMedicines
             taskId={task.id}
             onDone={() => {
-              toast("Every medicine matched. The task is done.");
+              toast("All matched. Task done.");
               onChanged();
               onClose();
             }}
@@ -202,7 +202,7 @@ export default function TaskSheet({
                     try {
                       await assignTask(task.id, "me");
                       setAssigned(String(user?.userId));
-                      toast("It is yours");
+                      toast("Assigned to you");
                       onChanged();
                     } catch (caught) {
                       toast(
@@ -213,7 +213,7 @@ export default function TaskSheet({
                     }
                   }}
                 >
-                  {busy === "take" ? "Taking it" : "Take this task"}
+                  {busy === "take" ? "Saving" : "Assign to me"}
                 </button>
               )}
               {task.cartId && CART_KINDS.includes(task.kind) && (
@@ -235,7 +235,7 @@ export default function TaskSheet({
                     }
                   }}
                 >
-                  {busy === "link" ? "Sending" : "Send the order link"}
+                  {busy === "link" ? "Sending" : "Send order link"}
                 </button>
               )}
             </div>
@@ -280,7 +280,7 @@ export default function TaskSheet({
                 aria-invalid={
                   problem === "Add a short note on what happened." || undefined
                 }
-                placeholder="What was said, and what happens next"
+                placeholder="What was said"
                 onChange={(e) => {
                   setNote(e.target.value);
                   setProblem(null);

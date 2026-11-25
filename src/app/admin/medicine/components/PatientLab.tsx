@@ -33,16 +33,18 @@ import {
 import type { LabPlace, PatientLab, TeamLabBooking } from "@/types/medicineOps";
 import adminStyles from "@/components/ui/styles/StaffSurfaces.module.css";
 import s from "@/components/ui/styles/StaffPanels.module.css";
+import a from "@/features/medicine-queue/OpsActions.module.css";
+import formStyles from "@/components/ui/styles/FormControls.module.css";
 
 const STATUS: Record<TeamLabBooking["status"], string> = {
-  PAYMENT_PENDING: "Time held, waiting for payment",
+  PAYMENT_PENDING: "Time held. Not paid yet",
   BOOKED: "Booked",
   COLLECTOR_ASSIGNED: "Collector assigned",
   SAMPLE_COLLECTED: "Sample collected",
   PROCESSING: "At the lab",
   REPORT_READY: "Report ready",
   CANCELLED: "Cancelled",
-  EXPIRED: "Hold ended unpaid",
+  EXPIRED: "Not paid, time released",
 };
 const DAY = 86_400_000;
 
@@ -77,20 +79,22 @@ function AddressForm({
   };
 
   return (
-    <div className={s.planForm}>
+    <div className={a.form}>
       {!place ? (
         <>
-          <input
-            className={s.input}
-            value={query}
-            placeholder="Area, society or landmark"
-            aria-label="Search for the area"
-            onChange={(e) => setQuery(e.target.value)}
-          />
-          <span className={s.chips}>
+          <label className={formStyles.field}>
+            <span className={formStyles.label}>New address</span>
+            <input
+              className={s.input}
+              value={query}
+              placeholder="Area, society or landmark"
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </label>
+          <div className={a.actions}>
             <button
               type="button"
-              className={s.chip}
+              className={a.btn}
               disabled={busy || query.trim().length < 3}
               onClick={() =>
                 run(async () => setPlaces(await searchLabPlaces(query.trim())))
@@ -98,13 +102,17 @@ function AddressForm({
             >
               {busy ? "Searching" : "Search"}
             </button>
-            <button type="button" className={s.chip} onClick={onClose}>
-              Close
+            <button
+              type="button"
+              className={adminStyles.textBtn}
+              onClick={onClose}
+            >
+              Cancel
             </button>
-          </span>
+          </div>
           {places?.length === 0 && (
             <span className={adminStyles.muted}>
-              Nothing found. Try the area or a landmark nearby.
+              Nothing found. Try a landmark.
             </span>
           )}
           {places?.map((found) => (
@@ -126,28 +134,30 @@ function AddressForm({
           <span className={adminStyles.muted}>
             {place.name}, {place.address}
           </span>
-          <input
-            className={s.input}
-            value={line}
-            maxLength={200}
-            placeholder="House or flat number, building, street"
-            aria-label="House, building and street"
-            onChange={(e) => setLine(e.target.value)}
-          />
-          <input
-            className={s.input}
-            inputMode="numeric"
-            value={pincode}
-            placeholder="Pincode"
-            aria-label="Pincode"
-            onChange={(e) =>
-              setPincode(e.target.value.replace(/\D/g, "").slice(0, 6))
-            }
-          />
-          <span className={s.chips}>
+          <label className={formStyles.field}>
+            <span className={formStyles.label}>House, building, street</span>
+            <input
+              className={s.input}
+              value={line}
+              maxLength={200}
+              onChange={(e) => setLine(e.target.value)}
+            />
+          </label>
+          <label className={formStyles.field}>
+            <span className={formStyles.label}>Pincode</span>
+            <input
+              className={s.input}
+              inputMode="numeric"
+              value={pincode}
+              onChange={(e) =>
+                setPincode(e.target.value.replace(/\D/g, "").slice(0, 6))
+              }
+            />
+          </label>
+          <div className={a.actions}>
             <button
               type="button"
-              className={s.chip}
+              className={a.btn}
               disabled={busy || line.trim().length < 3 || pincode.length !== 6}
               onClick={() =>
                 run(async () =>
@@ -164,16 +174,16 @@ function AddressForm({
                 )
               }
             >
-              {busy ? "Saving" : "Save this address"}
+              {busy ? "Saving" : "Save address"}
             </button>
             <button
               type="button"
-              className={s.chip}
+              className={adminStyles.textBtn}
               onClick={() => setPlace(null)}
             >
               Search again
             </button>
-          </span>
+          </div>
         </>
       )}
     </div>
@@ -262,76 +272,90 @@ function TimeForm({
     );
 
   return (
-    <div className={s.planForm}>
+    <div className={a.form}>
       {!moving && (
         <>
-          <select
-            className={s.input}
-            value={addressId}
-            aria-label="Collection address"
-            onChange={(e) => {
-              if (e.target.value === "new") return setAdding(true);
-              setAddressId(e.target.value);
-              setSlotId(null);
-            }}
-          >
-            {placed.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.line}
-              </option>
-            ))}
-            {addressId && !placed.some((a) => a.id === addressId) && (
-              <option value={addressId}>The address just added</option>
-            )}
-            <option value="new">Another address</option>
-          </select>
-          <input
-            className={s.input}
-            value={name}
-            maxLength={30}
-            placeholder="Name of the person tested (letters only)"
-            aria-label="Name of the person tested"
-            onChange={(e) => setName(e.target.value)}
-          />
-          <input
-            className={s.input}
-            inputMode="numeric"
-            value={age}
-            placeholder="Age in years"
-            aria-label="Age in years"
-            onChange={(e) =>
-              setAge(e.target.value.replace(/\D/g, "").slice(0, 3))
-            }
-          />
-          <select
-            className={s.input}
-            value={gender === "Male" || gender === "Female" ? gender : ""}
-            aria-label="Gender"
-            onChange={(e) => setGender(e.target.value)}
-          >
-            <option value="">Male or female</option>
-            <option value="Male">Male</option>
-            <option value="Female">Female</option>
-          </select>
+          <label className={formStyles.field}>
+            <span className={formStyles.label}>Address</span>
+            <select
+              className={s.input}
+              value={addressId}
+              onChange={(e) => {
+                if (e.target.value === "new") return setAdding(true);
+                setAddressId(e.target.value);
+                setSlotId(null);
+              }}
+            >
+              {placed.map((address) => (
+                <option key={address.id} value={address.id}>
+                  {address.line}
+                </option>
+              ))}
+              {addressId &&
+                !placed.some((address) => address.id === addressId) && (
+                  <option value={addressId}>New address</option>
+                )}
+              <option value="new">Add an address</option>
+            </select>
+          </label>
+          <label className={formStyles.field}>
+            <span className={formStyles.label}>Name (letters only)</span>
+            <input
+              className={s.input}
+              value={name}
+              maxLength={30}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </label>
+          <div className={s.formGrid} data-cols="2">
+            <label className={formStyles.field}>
+              <span className={formStyles.label}>Age</span>
+              <input
+                className={s.input}
+                inputMode="numeric"
+                value={age}
+                onChange={(e) =>
+                  setAge(e.target.value.replace(/\D/g, "").slice(0, 3))
+                }
+              />
+            </label>
+            <label className={formStyles.field}>
+              <span className={formStyles.label}>Gender</span>
+              <select
+                className={s.input}
+                value={gender === "Male" || gender === "Female" ? gender : ""}
+                onChange={(e) => setGender(e.target.value)}
+              >
+                <option value="">Choose</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+              </select>
+            </label>
+          </div>
         </>
       )}
-      <DatePicker
-        label="Day of the collection"
-        value={date}
-        min={today}
-        max={toApiDate(new Date(now + 4 * DAY))}
-        onChange={(next) => {
-          setDate(next);
-          setSlotId(null);
-        }}
-      />
+      <div className={formStyles.field}>
+        <span className={formStyles.label} aria-hidden="true">
+          Day
+        </span>
+        <DatePicker
+          label="Day"
+          value={date}
+          min={today}
+          max={toApiDate(new Date(now + 4 * DAY))}
+          onChange={(next) => {
+            setDate(next);
+            setSlotId(null);
+          }}
+        />
+      </div>
       {slots.error && !slots.data ? (
         <span className={adminStyles.muted}>{slots.error}</span>
       ) : !slots.data ? (
-        <span className={adminStyles.muted}>Loading the times</span>
+        <span className={adminStyles.muted}>Loading</span>
       ) : free.length === 0 ? (
         <span className={adminStyles.muted}>
-          No free time that day. Choose another day.
+          No free time. Try another day.
         </span>
       ) : (
         <span className={s.chips} role="radiogroup" aria-label="Time">
@@ -350,10 +374,10 @@ function TimeForm({
           ))}
         </span>
       )}
-      <span className={s.chips}>
+      <div className={a.actions}>
         <button
           type="button"
-          className={s.chip}
+          className={a.btn}
           disabled={
             busy ||
             slotId === null ||
@@ -361,17 +385,17 @@ function TimeForm({
           }
           onClick={save}
         >
-          {busy ? "Saving" : moving ? "Move it here" : "Hold this time"}
+          {busy ? "Saving" : moving ? "Move" : lab.credit ? "Book" : "Hold time"}
         </button>
         <button
           type="button"
-          className={s.chip}
+          className={adminStyles.textBtn}
           disabled={busy}
           onClick={onClose}
         >
-          Close
+          Cancel
         </button>
-      </span>
+      </div>
     </div>
   );
 }
@@ -459,14 +483,16 @@ export default function PatientLabSection({
       <h3 className={s.sectionHead}>
         Blood test
         {lab.data.credit && (
-          <span className={adminStyles.muted}>
+          <>
             {" "}
-            Paid for. A time booked now is confirmed at once, at no charge.
-          </span>
+            <span className={adminStyles.pill} data-tone="ok">
+              Paid
+            </span>
+          </>
         )}
       </h3>
       {bookings.length === 0 ? (
-        <p className={adminStyles.empty}>No blood test booked yet.</p>
+        <p className={adminStyles.empty}>Not booked.</p>
       ) : (
         <ol className={s.timeline}>
           {bookings.map((b) => {
@@ -479,7 +505,7 @@ export default function PatientLabSection({
                     {b.status === "PAYMENT_PENDING" && b.paid
                       ? "Paid, time not confirmed"
                       : STATUS[b.status]}
-                    {b.bookedByTeam ? ", booked by the team" : ""}
+                    {b.bookedByTeam ? ", by the team" : ""}
                   </strong>
                   <span className={s.reply}>{b.address}</span>
                   {b.needsAttention && (
@@ -488,17 +514,14 @@ export default function PatientLabSection({
                     </span>
                   )}
                   {b.status === "PAYMENT_PENDING" && b.paid && (
-                    <span className={s.reply}>
-                      Book a new time below. It goes on this payment, at no
-                      charge.
-                    </span>
+                    <span className={s.reply}>Book a new time. No charge.</span>
                   )}
                   {b.status === "PAYMENT_PENDING" && !b.paid && (
                     <span className={s.reply}>
                       <span className="num">{formatRupees(b.totalRupees)}</span>
-                      . The patient can pay from Home in the app
+                      . They can pay in the app
                       {b.holdExpiresAt
-                        ? `, until ${when(b.holdExpiresAt).split(", ")[1]}`
+                        ? ` until ${when(b.holdExpiresAt).split(", ")[1]}`
                         : ""}
                       .
                     </span>
@@ -507,30 +530,30 @@ export default function PatientLabSection({
                     <CopyLine label="the patient" value={link.url} />
                   )}
                   {!open && (
-                    <span className={s.chips}>
+                    <span className={a.actions}>
                       {b.status === "PAYMENT_PENDING" && !b.paid && (
                         <>
                           <button
                             type="button"
-                            className={s.chip}
+                            className={a.btn}
                             disabled={busy}
                             onClick={() => act(b.id, "payment-link")}
                           >
-                            Make a payment link
+                            Make payment link
                           </button>
                           <button
                             type="button"
-                            className={s.chip}
+                            className={adminStyles.textBtn}
                             onClick={() => setDoing({ kind: "paid", id: b.id })}
                           >
-                            They paid another way
+                            Paid another way
                           </button>
                         </>
                       )}
                       {b.status === "BOOKED" && b.reschedulesLeft > 0 && (
                         <button
                           type="button"
-                          className={s.chip}
+                          className={adminStyles.textBtn}
                           onClick={() => setDoing({ kind: "move", id: b.id })}
                         >
                           Move
@@ -540,7 +563,7 @@ export default function PatientLabSection({
                         b.status === "PAYMENT_PENDING") && (
                         <button
                           type="button"
-                          className={s.chip}
+                          className={adminStyles.textBtn}
                           onClick={() => setDoing({ kind: "cancel", id: b.id })}
                         >
                           Cancel
@@ -560,38 +583,40 @@ export default function PatientLabSection({
                   )}
                   {open &&
                     (doing.kind === "cancel" || doing.kind === "paid") && (
-                      <div className={s.planForm}>
-                        <input
-                          className={s.input}
-                          value={text}
-                          maxLength={300}
-                          placeholder={
-                            doing.kind === "paid"
-                              ? "Payment ID (from Razorpay or the bank)"
-                              : "Why it is cancelled"
-                          }
-                          aria-label={
-                            doing.kind === "paid"
-                              ? "Payment ID"
-                              : "Why the blood test is cancelled"
-                          }
-                          onChange={(e) => setText(e.target.value)}
-                        />
+                      <div className={a.form}>
+                        <label className={formStyles.field}>
+                          <span className={formStyles.label}>
+                            {doing.kind === "paid" ? "Payment ID" : "Reason"}
+                          </span>
+                          <input
+                            className={s.input}
+                            value={text}
+                            maxLength={300}
+                            placeholder={
+                              doing.kind === "paid"
+                                ? "From Razorpay or the bank"
+                                : undefined
+                            }
+                            onChange={(e) => setText(e.target.value)}
+                          />
+                        </label>
                         {doing.kind === "cancel" && b.paid && (
-                          <label className={adminStyles.muted}>
+                          <label className={a.check}>
                             <input
                               type="checkbox"
                               checked={refunded}
                               onChange={(e) => setRefunded(e.target.checked)}
-                            />{" "}
-                            I have refunded it in Razorpay. Unticked, the
-                            payment is kept for a new time.
+                            />
+                            <span>
+                              Refunded in Razorpay. Leave unticked to keep the
+                              payment for a new time.
+                            </span>
                           </label>
                         )}
-                        <span className={s.chips}>
+                        <div className={a.actions}>
                           <button
                             type="button"
-                            className={s.chip}
+                            className={a.btn}
                             disabled={busy || text.trim().length < 3}
                             onClick={() =>
                               act(
@@ -606,18 +631,18 @@ export default function PatientLabSection({
                             {busy
                               ? "Saving"
                               : doing.kind === "paid"
-                                ? "Confirm the booking"
-                                : "Cancel the blood test"}
+                                ? "Confirm booking"
+                                : "Cancel blood test"}
                           </button>
                           <button
                             type="button"
-                            className={s.chip}
+                            className={adminStyles.textBtn}
                             disabled={busy}
                             onClick={() => setDoing(null)}
                           >
-                            Close
+                            Back
                           </button>
-                        </span>
+                        </div>
                       </div>
                     )}
                 </span>
@@ -636,65 +661,67 @@ export default function PatientLabSection({
             onAddress={lab.reload}
             onClose={() => setDoing(null)}
           />
-        ) : (
-          <span className={s.chips}>
-            {doing?.kind === "credit" ? (
-              <>
-                <input
-                  className={s.input}
-                  value={text}
-                  maxLength={80}
-                  placeholder="Payment ID (from Razorpay or the bank)"
-                  aria-label="Payment ID"
-                  onChange={(e) => setText(e.target.value)}
-                />
-                <button
-                  type="button"
-                  className={s.chip}
-                  disabled={busy || text.trim().length < 4}
-                  onClick={() => credit(text.trim())}
-                >
-                  Mark as paid
-                </button>
-                <button
-                  type="button"
-                  className={s.chip}
-                  onClick={() => setDoing(null)}
-                >
-                  Close
-                </button>
-              </>
-            ) : lab.data.credit ? (
+        ) : doing?.kind === "credit" ? (
+          <div className={a.form}>
+            <label className={formStyles.field}>
+              <span className={formStyles.label}>Payment ID</span>
+              <input
+                className={s.input}
+                value={text}
+                maxLength={80}
+                placeholder="From Razorpay or the bank"
+                onChange={(e) => setText(e.target.value)}
+              />
+            </label>
+            <div className={a.actions}>
               <button
                 type="button"
-                className={s.chip}
+                className={a.btn}
+                disabled={busy || text.trim().length < 4}
+                onClick={() => credit(text.trim())}
+              >
+                Mark as paid
+              </button>
+              <button
+                type="button"
+                className={adminStyles.textBtn}
+                onClick={() => setDoing(null)}
+              >
+                Back
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className={a.actions}>
+            <button
+              type="button"
+              className={a.btn}
+              onClick={() => setDoing({ kind: "book" })}
+            >
+              Book blood test
+              {!lab.data.credit && priceRupees
+                ? `, ${formatRupees(priceRupees)}`
+                : ""}
+            </button>
+            {lab.data.credit ? (
+              <button
+                type="button"
+                className={adminStyles.textBtn}
                 disabled={busy}
                 onClick={() => credit(null)}
               >
-                Their payment was refunded
+                Payment refunded
               </button>
             ) : (
               <button
                 type="button"
-                className={s.chip}
+                className={adminStyles.textBtn}
                 onClick={() => setDoing({ kind: "credit" })}
               >
-                They paid another way
+                Paid another way
               </button>
             )}
-            <button
-              type="button"
-              className={s.chip}
-              onClick={() => setDoing({ kind: "book" })}
-            >
-              Book a blood test for them
-              {lab.data.credit
-                ? ", already paid"
-                : priceRupees
-                  ? `, ${formatRupees(priceRupees)}`
-                  : ""}
-            </button>
-          </span>
+          </div>
         ))}
     </section>
   );

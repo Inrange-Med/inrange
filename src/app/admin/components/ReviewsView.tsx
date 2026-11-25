@@ -126,7 +126,7 @@ export default function ReviewsView() {
       <PageHead
         className={adminStyles.pageHead}
         title="Reviews"
-        sub="Eligibility checks waiting for a decision, oldest first. On each report, check the patient's name, the lab and the date printed on it: it must be from the last 3 months. A note on Not approved is shown to the patient."
+        sub="Check the name, lab and date on each report. The report must be from the last 3 months."
       />
       {reviews.error && !reviews.data ? (
         <ErrorNotice message={reviews.error} onRetry={reviews.reload} />
@@ -147,10 +147,7 @@ export default function ReviewsView() {
               </span>
             </div>
             {waiting.length === 0 ? (
-              <p className={adminStyles.empty}>
-                Nothing is waiting. New eligibility checks appear here as soon
-                as a patient sends a report or a home test result arrives.
-              </p>
+              <p className={adminStyles.empty}>Nothing is waiting.</p>
             ) : (
               <ul className={adminStyles.queue}>
                 {waiting.map((review) => (
@@ -172,7 +169,7 @@ export default function ReviewsView() {
             >
               <div className={adminStyles.panelHead}>
                 <h2 id="reviews-lab-h" className={adminStyles.h2}>
-                  Waiting on the lab
+                  At the lab
                 </h2>
                 <span className={`${adminStyles.count} num`}>
                   {awaitingLab.length}
@@ -182,7 +179,7 @@ export default function ReviewsView() {
                 {awaitingLab.map((entry) => (
                   <li key={entry.patientId} className={adminStyles.labRow}>
                     <span className={adminStyles.labWho}>
-                      <strong>{entry.name || "Name not given"}</strong>
+                      <strong>{entry.name || "No name"}</strong>
                       <span className={`${adminStyles.muted} num`}>
                         {labLine(entry)}
                       </span>
@@ -213,14 +210,14 @@ export default function ReviewsView() {
             >
               <div className={adminStyles.panelHead}>
                 <h2 id="reviews-decided-h" className={adminStyles.h2}>
-                  Recently decided
+                  Decided
                 </h2>
                 <span className={`${adminStyles.count} num`}>
                   {decided.length}
                 </span>
               </div>
               <details className={adminStyles.history}>
-                <summary className="num">Show {decided.length} decided</summary>
+                <summary>Show decided</summary>
                 <ul className={adminStyles.queue}>
                   {decided.map((review) => (
                     <ReviewItem

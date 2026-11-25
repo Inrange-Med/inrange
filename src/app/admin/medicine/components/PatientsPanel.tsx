@@ -51,7 +51,7 @@ export default function PatientsPanel({
               className={adminStyles.textBtn}
               onClick={() => setPlans(true)}
             >
-              Plans
+              Edit plans
             </button>
           </span>
         )}
@@ -93,7 +93,7 @@ export default function PatientsPanel({
                       <span>
                         {p.lastOrderStatus
                           ? `Last order: ${ORDER_WORDS[p.lastOrderStatus].toLowerCase()}`
-                          : "Not ordered yet"}
+                          : "No order"}
                       </span>
                       {p.runOutOn && (
                         <span className="num">
@@ -101,7 +101,7 @@ export default function PatientsPanel({
                         </span>
                       )}
                       {adherence !== null && (
-                        <span className="num">{adherence}% of doses taken</span>
+                        <span className="num">{adherence}% doses taken</span>
                       )}
                       {p.doctors && <span>{p.doctors}</span>}
                       {!p.whatsapp && <span>WhatsApp off</span>}
@@ -128,11 +128,7 @@ export default function PatientsPanel({
           })}
         </ul>
       )}
-      {isAdmin && (
-        <>
-          <PlansSheet open={plans} onClose={() => setPlans(false)} />
-        </>
-      )}
+      {isAdmin && <PlansSheet open={plans} onClose={() => setPlans(false)} />}
     </section>
   );
 }

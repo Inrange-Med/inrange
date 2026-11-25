@@ -13,6 +13,7 @@ import { addCoachRemark } from "@/services/medicineOpsService";
 import adminStyles from "@/components/ui/styles/StaffSurfaces.module.css";
 import s from "@/components/ui/styles/StaffPanels.module.css";
 import { when } from "@/features/medicine-queue/words";
+import c from "./Coaching.module.css";
 
 export default function CoachRemarks({
   patientId,
@@ -32,7 +33,7 @@ export default function CoachRemarks({
     setBusy(true);
     try {
       await addCoachRemark(patientId, text.trim());
-      toast("Remark saved. The doctor sees it at the follow-up.");
+      toast("Remark saved");
       setText("");
       onSaved();
     } catch (caught) {
@@ -44,25 +45,27 @@ export default function CoachRemarks({
 
   return (
     <section className={s.section} aria-label="Coach remarks">
-      <h3 className={s.sectionHead}>Coach remarks, for the doctor</h3>
-      <textarea
-        className={s.textarea}
-        value={text}
-        maxLength={4000}
-        placeholder="How the month went: what they followed, what they did not, anything the doctor should know"
-        aria-label="A remark for the doctor"
-        onChange={(e) => setText(e.target.value)}
-      />
-      <span className={s.chips}>
+      <h3 className={s.sectionHead}>
+        Remarks <span className={adminStyles.muted}>for the doctor</span>
+      </h3>
+      <div className={c.form}>
+        <textarea
+          className={s.textarea}
+          value={text}
+          maxLength={4000}
+          placeholder="What they followed. What they did not."
+          aria-label="A remark for the doctor"
+          onChange={(e) => setText(e.target.value)}
+        />
         <button
           type="button"
-          className={s.chip}
+          className={c.btn}
           disabled={busy || text.trim().length < 3}
           onClick={save}
         >
-          {busy ? "Saving" : "Save the remark"}
+          {busy ? "Saving" : "Save"}
         </button>
-      </span>
+      </div>
       {remarks.length === 0 ? (
         <p className={adminStyles.empty}>No remarks yet.</p>
       ) : (

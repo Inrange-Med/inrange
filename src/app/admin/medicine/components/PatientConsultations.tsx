@@ -29,6 +29,8 @@ import CallLinksBlock from "./CallLinksBlock";
 import type { OpsConsultation, OpsPatient } from "@/types/medicineOps";
 import adminStyles from "@/components/ui/styles/StaffSurfaces.module.css";
 import s from "@/components/ui/styles/StaffPanels.module.css";
+import a from "@/features/medicine-queue/OpsActions.module.css";
+import formStyles from "@/components/ui/styles/FormControls.module.css";
 import { clockWords, when } from "@/features/medicine-queue/words";
 
 const STATUS: Record<OpsConsultation["status"], string> = {
@@ -101,60 +103,68 @@ function SlotForm({
   };
 
   return (
-    <div className={s.planForm}>
-      <select
-        className={s.input}
-        value={doctorId}
-        aria-label="Doctor"
-        onChange={(e) => {
-          setDoctorId(e.target.value);
-          setSlotId("");
-        }}
-      >
-        <option value="">Choose the doctor</option>
-        {active.map((d) => (
-          <option key={d.id} value={d.id}>
-            {d.fullName}
-            {data.patient.doctors.some((own) => own.id === String(d.id))
-              ? " (their doctor)"
-              : ""}
-          </option>
-        ))}
-      </select>
-      {!moving && sellers.length > 0 && (
+    <div className={a.form}>
+      <label className={formStyles.field}>
+        <span className={formStyles.label}>Doctor</span>
         <select
           className={s.input}
-          value={sellers.some((p) => p.id === seller) ? seller : ""}
-          aria-label="Salesperson on the call"
-          onChange={(e) => setSeller(e.target.value)}
+          value={doctorId}
+          onChange={(e) => {
+            setDoctorId(e.target.value);
+            setSlotId("");
+          }}
         >
-          <option value="">Salesperson on the call: as it is now</option>
-          {sellers.map((p) => (
-            <option key={p.id} value={p.id}>
-              Salesperson: {p.rank}. {p.fullName}
+          <option value="">Choose</option>
+          {active.map((d) => (
+            <option key={d.id} value={d.id}>
+              {d.fullName}
+              {data.patient.doctors.some((own) => own.id === String(d.id))
+                ? " (their doctor)"
+                : ""}
             </option>
           ))}
         </select>
+      </label>
+      {!moving && sellers.length > 0 && (
+        <label className={formStyles.field}>
+          <span className={formStyles.label}>Salesperson on the call</span>
+          <select
+            className={s.input}
+            value={sellers.some((p) => p.id === seller) ? seller : ""}
+            onChange={(e) => setSeller(e.target.value)}
+          >
+            <option value="">No change</option>
+            {sellers.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.rank}. {p.fullName}
+              </option>
+            ))}
+          </select>
+        </label>
       )}
-      <DatePicker
-        label="Day of the consultation"
-        value={date}
-        min={today}
-        max={toApiDate(new Date(now + 60 * DAY))}
-        onChange={(next) => {
-          setDate(next);
-          setSlotId("");
-        }}
-      />
+      <div className={formStyles.field}>
+        <span className={formStyles.label} aria-hidden="true">
+          Day
+        </span>
+        <DatePicker
+          label="Day"
+          value={date}
+          min={today}
+          max={toApiDate(new Date(now + 60 * DAY))}
+          onChange={(next) => {
+            setDate(next);
+            setSlotId("");
+          }}
+        />
+      </div>
       {doctorId &&
         (slots.error && !slots.data ? (
           <span className={adminStyles.muted}>The times could not load.</span>
         ) : !slots.data ? (
-          <span className={adminStyles.muted}>Loading the times</span>
+          <span className={adminStyles.muted}>Loading</span>
         ) : free.length === 0 ? (
           <span className={adminStyles.muted}>
-            No free time that day. Choose another day, or add hours for this
-            doctor under Doctors.
+            No free time. Try another day.
           </span>
         ) : (
           <span className={s.chips} role="radiogroup" aria-label="Time">
@@ -173,24 +183,24 @@ function SlotForm({
             ))}
           </span>
         ))}
-      <span className={s.chips}>
+      <div className={a.actions}>
         <button
           type="button"
-          className={s.chip}
+          className={a.btn}
           disabled={!slotId || busy}
           onClick={save}
         >
-          {busy ? "Saving" : moving ? "Move it here" : "Book this time"}
+          {busy ? "Saving" : moving ? "Move" : "Book"}
         </button>
         <button
           type="button"
-          className={s.chip}
+          className={adminStyles.textBtn}
           disabled={busy}
           onClick={onClose}
         >
-          Close
+          Cancel
         </button>
-      </span>
+      </div>
     </div>
   );
 }
@@ -223,8 +233,7 @@ export default function PatientConsultations({
 
   const cancel = async (id: string) => {
     if (busy) return;
-    if (reason.trim().length < 3)
-      return toast("Say why the consultation is cancelled.");
+    if (reason.trim().length < 3) return toast("Add the reason.");
     setBusy(true);
     try {
       toast(await cancelConsultation(id, reason.trim()));
@@ -256,74 +265,70 @@ export default function PatientConsultations({
         <p className={adminStyles.empty}>No consultations yet.</p>
       ) : (
         <ol className={s.timeline}>
-          {data.consultations.map((a) => {
+          {data.consultations.map((c) => {
             const movable =
-              isAdmin && (a.status === "Booked" || a.status === "InProgress");
-            const open = doing && "id" in doing && doing.id === a.id;
+              isAdmin && (c.status === "Booked" || c.status === "InProgress");
+            const open = doing && "id" in doing && doing.id === c.id;
             return (
-              <li key={a.id}>
-                <time dateTime={a.startsAt}>{when(a.startsAt)}</time>
+              <li key={c.id}>
+                <time dateTime={c.startsAt}>{when(c.startsAt)}</time>
                 <span>
                   <strong>
-                    {a.doctorName},{" "}
-                    {a.visitType === "FOLLOW_UP"
+                    {c.doctorName},{" "}
+                    {c.visitType === "FOLLOW_UP"
                       ? "follow-up"
                       : "first consultation"}
-                    . {STATUS[a.status]}
+                    . {STATUS[c.status]}
                   </strong>
-                  {a.recording === "RECORDED" && (
+                  {c.recording === "RECORDED" && (
+                    <span className={s.reply}>Recorded</span>
+                  )}
+                  {c.recording === "FAILED" && (
                     <span className={s.reply}>
-                      Recorded, with the patient&apos;s yes.
+                      Recording did not start
+                      {c.recordingProblem ? `: ${c.recordingProblem}` : ""}
                     </span>
                   )}
-                  {a.recording === "FAILED" && (
-                    <span className={s.reply}>
-                      The patient agreed to recording, but it did not start
-                      {a.recordingProblem ? `: ${a.recordingProblem}` : "."}
-                    </span>
+                  {c.recording === "AGREED" && (
+                    <span className={s.reply}>Recording agreed</span>
                   )}
-                  {a.recording === "AGREED" && (
-                    <span className={s.reply}>
-                      The patient agreed to recording.
-                    </span>
-                  )}
-                  {(movable || (canWatch && a.recording === "RECORDED")) &&
+                  {(movable || (canWatch && c.recording === "RECORDED")) &&
                     !open && (
-                      <span className={s.chips}>
-                        {canWatch && a.recording === "RECORDED" && (
+                      <span className={a.actions}>
+                        {canWatch && c.recording === "RECORDED" && (
                           <button
                             type="button"
-                            className={s.chip}
-                            onClick={() => watch(a.id)}
+                            className={adminStyles.textBtn}
+                            onClick={() => watch(c.id)}
                           >
-                            Watch the recording
+                            Watch recording
                           </button>
                         )}
                         {movable && (
                           <>
                             <button
                               type="button"
-                              className={s.chip}
+                              className={adminStyles.textBtn}
                               onClick={() =>
-                                setDoing({ kind: "links", id: a.id })
+                                setDoing({ kind: "links", id: c.id })
                               }
                             >
                               Video links
                             </button>
                             <button
                               type="button"
-                              className={s.chip}
+                              className={adminStyles.textBtn}
                               onClick={() =>
-                                setDoing({ kind: "move", id: a.id })
+                                setDoing({ kind: "move", id: c.id })
                               }
                             >
                               Move
                             </button>
                             <button
                               type="button"
-                              className={s.chip}
+                              className={adminStyles.textBtn}
                               onClick={() =>
-                                setDoing({ kind: "cancel", id: a.id })
+                                setDoing({ kind: "cancel", id: c.id })
                               }
                             >
                               Cancel
@@ -335,7 +340,7 @@ export default function PatientConsultations({
                   {open && doing.kind === "move" && (
                     <SlotForm
                       data={data}
-                      moving={a}
+                      moving={c}
                       onDone={done}
                       onClose={() => setDoing(null)}
                     />
@@ -343,52 +348,53 @@ export default function PatientConsultations({
                   {open && doing.kind === "links" && (
                     <>
                       <CallLinksBlock
-                        consultationId={a.id}
+                        consultationId={c.id}
                         patientName={data.patient.name}
-                        doctorName={a.doctorName}
+                        doctorName={c.doctorName}
                       />
-                      <span className={s.chips}>
+                      <span className={a.actions}>
                         <button
                           type="button"
-                          className={s.chip}
+                          className={adminStyles.textBtn}
                           onClick={() => setDoing(null)}
                         >
-                          Close
+                          Hide links
                         </button>
                       </span>
                     </>
                   )}
                   {open && doing.kind === "cancel" && (
-                    <div className={s.planForm}>
-                      <input
-                        className={s.input}
-                        value={reason}
-                        maxLength={300}
-                        placeholder="Why it is cancelled"
-                        aria-label="Why the consultation is cancelled"
-                        onChange={(e) => setReason(e.target.value)}
-                      />
+                    <div className={a.form}>
+                      <label className={formStyles.field}>
+                        <span className={formStyles.label}>Reason</span>
+                        <input
+                          className={s.input}
+                          value={reason}
+                          maxLength={300}
+                          onChange={(e) => setReason(e.target.value)}
+                        />
+                      </label>
                       <span className={adminStyles.muted}>
-                        Nothing is sent to the patient or the doctor: call them.
+                        No message is sent. Call the patient and the doctor.
                       </span>
-                      <span className={s.chips}>
+                      <div className={a.actions}>
                         <button
                           type="button"
-                          className={s.chip}
+                          className={a.btn}
                           disabled={busy}
-                          onClick={() => cancel(a.id)}
+                          onClick={() => cancel(c.id)}
                         >
-                          {busy ? "Cancelling" : "Cancel the consultation"}
+                          {busy ? "Cancelling" : "Cancel consultation"}
                         </button>
                         <button
                           type="button"
-                          className={s.chip}
+                          className={adminStyles.textBtn}
                           disabled={busy}
                           onClick={() => setDoing(null)}
                         >
                           Keep it
                         </button>
-                      </span>
+                      </div>
                     </div>
                   )}
                 </span>
@@ -406,15 +412,15 @@ export default function PatientConsultations({
             onClose={() => setDoing(null)}
           />
         ) : (
-          <span className={s.chips}>
+          <div className={a.actions}>
             <button
               type="button"
-              className={s.chip}
+              className={a.btn}
               onClick={() => setDoing({ kind: "book" })}
             >
-              Book a consultation for them
+              Book consultation
             </button>
-          </span>
+          </div>
         ))}
     </section>
   );

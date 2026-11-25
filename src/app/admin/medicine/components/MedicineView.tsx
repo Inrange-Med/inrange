@@ -135,20 +135,12 @@ export default function MedicineView() {
 
   return (
     <main className={adminStyles.page}>
-      <PageHead
-        className={adminStyles.pageHead}
-        title="Operations"
-        sub={
-          status === "OPS"
-            ? "Your team's work: who to call, what to book, and what is coming up."
-            : "Everything around a patient: who to call, every lead and sale, the consultations coming up, who has paid, and what to pack and dispatch."
-        }
-      />
+      <PageHead className={adminStyles.pageHead} title="Operations" />
       <div className={s.bar}>
         {role && (
           <div className={s.tabs}>
             <SegmentedControl
-              label="Medicine views"
+              label="Views"
               value={tab}
               options={tabs.map((value) => ({ value, label: LABELS[value] }))}
               onChange={go}
@@ -159,13 +151,13 @@ export default function MedicineView() {
           <p className={s.status}>
             {summary.data.messages.whatsapp === "mock" && (
               <span className={adminStyles.pill} data-tone="new">
-                WhatsApp in test mode
+                WhatsApp test mode
               </span>
             )}
             <span>
               {summary.data.lastTickAt
-                ? `Checked ${timeAgo(summary.data.lastTickAt, now).toLowerCase()}`
-                : "The scheduler has not run yet"}
+                ? `Updated ${timeAgo(summary.data.lastTickAt, now).toLowerCase()}`
+                : "Not updated yet"}
             </span>
           </p>
         )}

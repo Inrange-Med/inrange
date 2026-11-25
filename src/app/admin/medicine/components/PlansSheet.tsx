@@ -19,12 +19,13 @@ import type { PlanOnSale } from "@/types/sales";
 import formStyles from "@/components/ui/styles/FormControls.module.css";
 import adminStyles from "@/components/ui/styles/StaffSurfaces.module.css";
 import s from "@/components/ui/styles/StaffPanels.module.css";
+import a from "@/features/medicine-queue/OpsActions.module.css";
 
 const FIELDS = [
   { key: "doctorConsults", label: "Doctor consultations" },
   { key: "coachCalls", label: "Coach calls" },
   { key: "fitnessCalls", label: "Fitness calls" },
-  { key: "maxDiscountPercent", label: "Most a salesperson can take off, %" },
+  { key: "maxDiscountPercent", label: "Max sales discount %" },
 ] as const;
 type Key = (typeof FIELDS)[number]["key"];
 
@@ -83,16 +84,16 @@ function PlanRow({ plan, onSaved }: { plan: PlanOnSale; onSaved: () => void }) {
         ))}
       </div>
       {changed && (
-        <span className={s.chips}>
+        <div className={a.actions}>
           <button
             type="button"
-            className={s.chip}
+            className={a.btn}
             disabled={busy}
             onClick={save}
           >
             {busy ? "Saving" : "Save"}
           </button>
-        </span>
+        </div>
       )}
     </section>
   );
@@ -122,10 +123,7 @@ export default function PlansSheet({
             />
           ))
         )}
-        <p className={adminStyles.muted}>
-          A change counts for everyone on the plan from now, and for links made
-          from now.
-        </p>
+        <p className={adminStyles.muted}>Changes apply from now.</p>
       </div>
     </Sheet>
   );

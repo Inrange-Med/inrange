@@ -1,18 +1,18 @@
 "use client";
 
 /*
-  The patient's plan, and the sales form (19 Nov 2026 call). The doctor never chooses a plan: a salesperson
-  sells it on the call and tells admin what was sold. Three states:
-  - On a plan: its name and end, and how it was sold and paid for (who sold it, the coach asked for, the
-    payment ID). Read only.
-  - Put on a plan, not paid yet: it waits in the patient's app (with any medicines, one payment). Change it
-    or withdraw it.
-  - No plan: a payment link (PaymentLinks, beside this in the sheet) is the usual way since the 23 Nov 2026
-    call: its payment starts the plan by itself. This form is for the other two ways.
-  - No plan, the other ways: the form. The length, who sold it, the kind of coach the customer asked for, a note, and how
-    it is paid: in the app (the usual way; the amount and payment ID then come from that payment by
-    themselves), or already paid outside the app (a payment link, a transfer): admin types the amount and
-    its payment ID and the plan starts at once.
+  The patient's plan, as its own section of the patient sheet (19 Nov 2026 call). The doctor never chooses a
+  plan: a salesperson sells it on the call and tells admin what was sold. Three states:
+  - On a plan: label and value rows: the plan, its end, how it was paid, the payment ID, who sold it, the
+    coach asked for, the note. Read only.
+  - Put on a plan, not paid yet: it waits in the patient's app (with any medicines, one payment). "Change"
+    or "Remove plan".
+  - No plan: a payment link (PaymentLinks, under this in the sheet) is the usual way since the 23 Nov 2026
+    call: its payment starts the plan by itself. "Add plan without a link" opens the form for the other two
+    ways: the length, who sold it, the coach the customer asked for, a note, and how it is paid: in the app
+    (the amount and payment ID then come from that payment by themselves), or already paid outside the app
+    (a transfer, a Razorpay dashboard link): admin types the amount and its payment ID and the plan starts
+    at once.
 */
 
 import { useState } from "react";
@@ -25,8 +25,10 @@ import { errorMessage } from "@/lib/http/apiClient";
 import { assignPlan, listSalespeople } from "@/services/medicineOpsService";
 import { listPlans } from "@/services/subscriptionService";
 import type { OpsPatient } from "@/types/medicineOps";
+import formStyles from "@/components/ui/styles/FormControls.module.css";
 import adminStyles from "@/components/ui/styles/StaffSurfaces.module.css";
 import s from "@/components/ui/styles/StaffPanels.module.css";
+import a from "@/features/medicine-queue/OpsActions.module.css";
 
 type Paying = "APP" | "OUTSIDE";
 
@@ -62,42 +64,68 @@ export default function PlanSale({
   const sale = patient.planSale;
   if (patient.plan)
     return (
-      <>
-        <span className={s.lineItem}>
-          {patient.plan}
-          {patient.planEndsAt ? `, until ${shortDate(patient.planEndsAt)}` : ""}
-        </span>
+      <dl className={s.facts}>
+        <div>
+          <dt>Plan</dt>
+          <dd>{patient.plan}</dd>
+        </div>
+        {patient.planEndsAt && (
+          <div>
+            <dt>Ends</dt>
+            <dd className="num">{shortDate(patient.planEndsAt)}</dd>
+          </div>
+        )}
         {sale && (
           <>
-            <span className={`${s.lineItem} ${adminStyles.muted}`}>
-              {sale.paid
-                ? sale.paid.where === "APP"
-                  ? `Paid in the app${sale.paid.at ? `, ${shortDate(sale.paid.at)}` : ""}. Payment ID `
-                  : sale.paid.where === "LINK"
-                    ? `Paid on a payment link${sale.paid.amountRupees != null ? `, ${formatRupees(sale.paid.amountRupees)}` : ""}${sale.paid.at ? `, ${shortDate(sale.paid.at)}` : ""}. Payment ID `
-                    : `Paid outside the app${sale.paid.amountRupees != null ? `, ${formatRupees(sale.paid.amountRupees)}` : ""}. Payment ID `
-                : "Started without a payment on record."}
-              {sale.paid && <span className="num">{sale.paid.ref}</span>}
-            </span>
-            {(sale.salesperson || sale.coachPreference) && (
-              <span className={`${s.lineItem} ${adminStyles.muted}`}>
-                {[
-                  sale.salesperson && `Sold by ${sale.salesperson}`,
-                  sale.coachPreference &&
-                    `Coach asked for: ${sale.coachPreference}`,
-                ]
-                  .filter(Boolean)
-                  .join(". ")}
-              </span>
+            <div>
+              <dt>Paid</dt>
+              <dd className="num">
+                {sale.paid
+                  ? [
+                      sale.paid.where === "APP"
+                        ? "In the app"
+                        : sale.paid.where === "LINK"
+                          ? "Payment link"
+                          : "Outside the app",
+                      sale.paid.where !== "APP" &&
+                        sale.paid.amountRupees != null &&
+                        formatRupees(sale.paid.amountRupees),
+                      sale.paid.where !== "OUTSIDE" &&
+                        sale.paid.at &&
+                        shortDate(sale.paid.at),
+                    ]
+                      .filter(Boolean)
+                      .join(", ")
+                  : "No payment on record"}
+              </dd>
+            </div>
+            {sale.paid && (
+              <div>
+                <dt>Payment ID</dt>
+                <dd className="num">{sale.paid.ref}</dd>
+              </div>
+            )}
+            {sale.salesperson && (
+              <div>
+                <dt>Sold by</dt>
+                <dd>{sale.salesperson}</dd>
+              </div>
+            )}
+            {sale.coachPreference && (
+              <div>
+                <dt>Coach request</dt>
+                <dd>{sale.coachPreference}</dd>
+              </div>
             )}
             {sale.note && (
-              <span className={`${s.lineItem} ${adminStyles.muted}`}>
-                Note: {sale.note}
-              </span>
+              <div>
+                <dt>Note</dt>
+                <dd>{sale.note}</dd>
+              </div>
             )}
           </>
         )}
-      </>
+      </dl>
     );
 
   const save = async (withdraw = false) => {
@@ -140,59 +168,76 @@ export default function PlanSale({
   if (!choosing)
     return (
       <>
-        <span className={s.lineItem}>
-          {assigned ? (
-            <>
-              {assigned.name},{" "}
-              <span className="num">{formatRupees(assigned.priceRupees)}</span>:
-              waiting for the patient to pay in the app
-            </>
-          ) : data.links.some((link) => link.status === "CREATED") ? (
-            "No plan yet: a payment link is waiting"
-          ) : (
-            "No plan yet"
-          )}
-        </span>
-        {assigned && (
-          <span className={`${s.lineItem} ${adminStyles.muted}`}>
-            {[
-              `Put on it ${shortDate(assigned.assignedAt)}`,
-              assigned.salesperson && `sold by ${assigned.salesperson}`,
-              assigned.coachPreference &&
-                `coach asked for: ${assigned.coachPreference}`,
-            ]
-              .filter(Boolean)
-              .join(", ")}
-            {assigned.note ? `. Note: ${assigned.note}` : ""}
-          </span>
+        {assigned ? (
+          <dl className={s.facts}>
+            <div>
+              <dt>Plan</dt>
+              <dd>
+                {assigned.name},{" "}
+                <span className="num">
+                  {formatRupees(assigned.priceRupees)}
+                </span>
+              </dd>
+            </div>
+            <div>
+              <dt>Payment</dt>
+              <dd>Not paid yet. They pay in the app.</dd>
+            </div>
+            <div>
+              <dt>Added</dt>
+              <dd className="num">{shortDate(assigned.assignedAt)}</dd>
+            </div>
+            {assigned.salesperson && (
+              <div>
+                <dt>Sold by</dt>
+                <dd>{assigned.salesperson}</dd>
+              </div>
+            )}
+            {assigned.coachPreference && (
+              <div>
+                <dt>Coach request</dt>
+                <dd>{assigned.coachPreference}</dd>
+              </div>
+            )}
+            {assigned.note && (
+              <div>
+                <dt>Note</dt>
+                <dd>{assigned.note}</dd>
+              </div>
+            )}
+          </dl>
+        ) : (
+          <p className={adminStyles.empty}>
+            {data.links.some((link) => link.status === "CREATED")
+              ? "No plan. Payment link sent."
+              : "No plan."}
+          </p>
         )}
         {problem && (
-          <span className={`${s.lineItem} ${s.problem}`} role="alert">
+          <span className={s.problem} role="alert">
             {problem}
           </span>
         )}
-        <span className={s.chips}>
+        <div className={a.actions}>
           <button
             type="button"
-            className={s.chip}
+            className={adminStyles.textBtn}
             disabled={busy}
             onClick={() => setChoosing(true)}
           >
-            {assigned
-              ? "Change the sale"
-              : "Paid another way, or pays in the app"}
+            {assigned ? "Change" : "Add plan without a link"}
           </button>
           {assigned && (
             <button
               type="button"
-              className={s.chip}
+              className={adminStyles.textBtn}
               disabled={busy}
               onClick={() => save(true)}
             >
-              Withdraw it
+              Remove plan
             </button>
           )}
-        </span>
+        </div>
       </>
     );
 
@@ -201,90 +246,99 @@ export default function PlanSale({
   );
   const chosen = offered.find((plan) => String(plan.id) === planId);
   return (
-    <div className={s.planForm}>
+    <div className={a.form}>
       {plans.error && !plans.data ? (
         <span className={adminStyles.muted}>The plans could not load.</span>
       ) : (
-        <SegmentedControl
-          label="Plan length"
-          value={planId}
-          options={offered.map((plan) => ({
-            value: String(plan.id),
-            label: `${plan.durationMonths} months`,
-          }))}
-          onChange={(id) => {
-            setPlanId(id);
-            const plan = offered.find((p) => String(p.id) === id);
-            // the amount starts at the plan's price; admin corrects it if less was taken
-            if (plan?.priceRupees) setAmount(String(plan.priceRupees));
-          }}
-        />
+        <>
+          <SegmentedControl
+            label="Plan"
+            value={planId}
+            options={offered.map((plan) => ({
+              value: String(plan.id),
+              label: `${plan.durationMonths} months`,
+            }))}
+            onChange={(id) => {
+              setPlanId(id);
+              const plan = offered.find((p) => String(p.id) === id);
+              // the amount starts at the plan's price; admin corrects it if less was taken
+              if (plan?.priceRupees) setAmount(String(plan.priceRupees));
+            }}
+          />
+        </>
       )}
       {chosen && (
         <span className="num">
           {chosen.name}, {formatRupees(chosen.priceRupees!)}
         </span>
       )}
-      <select
-        className={s.input}
-        value={sellers.some((p) => p.id === seller) ? seller : ""}
-        aria-label="Sold by"
-        onChange={(e) => setSeller(e.target.value)}
-      >
-        <option value="">Sold by: not recorded</option>
-        {sellers.map((p) => (
-          <option key={p.id} value={p.id}>
-            Sold by {p.rank}. {p.fullName}
-          </option>
-        ))}
-      </select>
-      <input
-        className={s.input}
-        value={coachPreference}
-        maxLength={200}
-        placeholder="The coach they asked for (language, timing), if any"
-        aria-label="The kind of coach the customer asked for"
-        onChange={(e) => setCoachPreference(e.target.value)}
-      />
-      <input
-        className={s.input}
-        value={note}
-        maxLength={1000}
-        placeholder="Anything else from the sale, if any"
-        aria-label="Note from the sale"
-        onChange={(e) => setNote(e.target.value)}
-      />
-      <SegmentedControl
-        label="How it is paid"
-        value={paying}
-        options={[
-          { value: "APP", label: "Patient pays in the app" },
-          { value: "OUTSIDE", label: "Already paid outside" },
-        ]}
-        onChange={setPaying}
-      />
+      <label className={formStyles.field}>
+        <span className={formStyles.label}>Sold by</span>
+        <select
+          className={s.input}
+          value={sellers.some((p) => p.id === seller) ? seller : ""}
+          onChange={(e) => setSeller(e.target.value)}
+        >
+          <option value="">Not recorded</option>
+          {sellers.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.rank}. {p.fullName}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className={formStyles.field}>
+        <span className={formStyles.label}>Coach request</span>
+        <input
+          className={s.input}
+          value={coachPreference}
+          maxLength={200}
+          placeholder="Language, timing"
+          onChange={(e) => setCoachPreference(e.target.value)}
+        />
+      </label>
+      <label className={formStyles.field}>
+        <span className={formStyles.label}>Note</span>
+        <input
+          className={s.input}
+          value={note}
+          maxLength={1000}
+          onChange={(e) => setNote(e.target.value)}
+        />
+      </label>
+      <span className={s.seg}>
+        <SegmentedControl
+          label="Payment"
+          value={paying}
+          options={[
+            { value: "APP", label: "Pays in the app" },
+            { value: "OUTSIDE", label: "Already paid" },
+          ]}
+          onChange={setPaying}
+        />
+      </span>
       {paying === "OUTSIDE" && (
         <>
-          <input
-            className={s.input}
-            inputMode="numeric"
-            value={amount}
-            placeholder="Amount received, in rupees"
-            aria-label="Amount received, in rupees"
-            onChange={(e) => setAmount(e.target.value.replace(/[^\d.]/g, ""))}
-          />
-          <input
-            className={s.input}
-            value={paymentRef}
-            maxLength={80}
-            placeholder="Payment ID (from Razorpay or the bank)"
-            aria-label="Payment ID"
-            onChange={(e) => setPaymentRef(e.target.value)}
-          />
-          <span className={adminStyles.muted}>
-            The plan starts now and the app does not ask the patient to pay for
-            it.
-          </span>
+          <label className={formStyles.field}>
+            <span className={formStyles.label}>Amount received (rupees)</span>
+            <input
+              className={s.input}
+              inputMode="numeric"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value.replace(/[^\d.]/g, ""))}
+            />
+          </label>
+          <label className={formStyles.field}>
+            <span className={formStyles.label}>Payment ID</span>
+            <input
+              className={s.input}
+              value={paymentRef}
+              maxLength={80}
+              placeholder="From Razorpay or the bank"
+              onChange={(e) => setPaymentRef(e.target.value)}
+            />
+          </label>
+          <span className={adminStyles.muted}>The plan starts now.</span>
         </>
       )}
       {problem && (
@@ -292,22 +346,18 @@ export default function PlanSale({
           {problem}
         </span>
       )}
-      <span className={s.chips}>
+      <div className={a.actions}>
         <button
           type="button"
-          className={s.chip}
+          className={a.btn}
           disabled={!chosen || busy}
           onClick={() => save()}
         >
-          {busy
-            ? "Saving"
-            : paying === "OUTSIDE"
-              ? "Start this plan"
-              : "Put on this plan"}
+          {busy ? "Saving" : paying === "OUTSIDE" ? "Start plan" : "Add plan"}
         </button>
         <button
           type="button"
-          className={s.chip}
+          className={adminStyles.textBtn}
           disabled={busy}
           onClick={() => {
             setChoosing(false);
@@ -316,7 +366,7 @@ export default function PlanSale({
         >
           Cancel
         </button>
-      </span>
+      </div>
     </div>
   );
 }

@@ -43,9 +43,7 @@ export default function CallsPanel({
           </h2>
         </div>
         {upcoming.length === 0 ? (
-          <p className={adminStyles.empty}>
-            No consultations booked. Open a patient to book one for them.
-          </p>
+          <p className={adminStyles.empty}>No consultations booked.</p>
         ) : (
           <ul className={s.rows}>
             {upcoming.map((a) => (
@@ -83,7 +81,7 @@ export default function CallsPanel({
                         setLinksFor(linksFor === a.id ? null : a.id)
                       }
                     >
-                      {linksFor === a.id ? "Hide the links" : "Video links"}
+                      {linksFor === a.id ? "Hide links" : "Video links"}
                     </button>
                   </span>
                 </div>
@@ -103,14 +101,11 @@ export default function CallsPanel({
       <section className={adminStyles.panel} aria-labelledby="due-h">
         <div className={adminStyles.panelHead}>
           <h2 id="due-h" className={adminStyles.h2}>
-            Due a follow-up
+            Follow-up due
           </h2>
         </div>
         {followUpsDue.length === 0 ? (
-          <p className={adminStyles.empty}>
-            Nobody is due. A patient appears here 25 days after their last
-            consultation, until the next one is booked.
-          </p>
+          <p className={adminStyles.empty}>Nobody is due.</p>
         ) : (
           <ul className={s.rows}>
             {followUpsDue.map((p) => (
@@ -134,7 +129,7 @@ export default function CallsPanel({
                         <span className="num">
                           {p.planName}
                           {p.consultsIncluded != null
-                            ? `: ${p.consultsDone} of ${p.consultsIncluded} consultations used`
+                            ? `: ${p.consultsDone} of ${p.consultsIncluded} used`
                             : ""}
                         </span>
                       ) : (
@@ -142,11 +137,6 @@ export default function CallsPanel({
                       )}
                     </span>
                   </button>
-                  <span className={s.side}>
-                    <span className={adminStyles.pill} data-tone="new">
-                      Call and book
-                    </span>
-                  </span>
                 </div>
               </li>
             ))}

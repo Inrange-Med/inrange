@@ -110,7 +110,7 @@ export default function OpsTeamPanel() {
     <section className={adminStyles.panel} aria-labelledby="ops-team-h">
       <div className={adminStyles.panelHead}>
         <h2 id="ops-team-h" className={adminStyles.h2}>
-          Operations team
+          Operations
         </h2>
       </div>
       <div className={s.sheet}>
@@ -119,10 +119,7 @@ export default function OpsTeamPanel() {
         ) : !team.data ? (
           <LoadingSkeleton />
         ) : team.data.length === 0 ? (
-          <p className={adminStyles.empty}>
-            Nobody yet. Until someone is added, admins do this work from
-            Operations.
-          </p>
+          <p className={adminStyles.empty}>Nobody yet.</p>
         ) : (
           <ul className={s.rows}>
             {team.data.map((member) => (
@@ -151,55 +148,58 @@ export default function OpsTeamPanel() {
             ))}
           </ul>
         )}
-        <div className={s.formGrid} data-cols="2">
-          <label className={formStyles.field}>
-            <span className={formStyles.label}>Full name</span>
-            <input
-              className={s.input}
-              value={name}
-              maxLength={80}
-              autoComplete="off"
-              onChange={(e) => setName(e.target.value)}
-            />
-          </label>
-          <label className={formStyles.field}>
-            <span className={formStyles.label}>Mobile, to sign in with</span>
-            <input
-              className={s.input}
-              type="tel"
-              inputMode="numeric"
-              value={spacedMobile(mobile)}
-              placeholder="98765 43210"
-              onChange={(e) => setMobile(mobileDigitsFrom(e.target.value))}
-            />
-          </label>
+        <div className={s.section}>
+          <h3 className={s.sectionHead}>Add a person</h3>
+          <div className={s.formGrid} data-cols="2">
+            <label className={formStyles.field}>
+              <span className={formStyles.label}>Full name</span>
+              <input
+                className={s.input}
+                value={name}
+                maxLength={80}
+                autoComplete="off"
+                onChange={(e) => setName(e.target.value)}
+              />
+            </label>
+            <label className={formStyles.field}>
+              <span className={formStyles.label}>Mobile</span>
+              <input
+                className={s.input}
+                type="tel"
+                inputMode="numeric"
+                value={spacedMobile(mobile)}
+                placeholder="98765 43210"
+                onChange={(e) => setMobile(mobileDigitsFrom(e.target.value))}
+              />
+            </label>
+          </div>
+          <DeskChips
+            desks={desks}
+            onToggle={(desk) => setDesks(toggled(desks, desk))}
+          />
+          {problem && (
+            <p className={formStyles.err} role="alert">
+              {problem}
+            </p>
+          )}
+          <button
+            type="button"
+            className={`btn ${formStyles.go}`}
+            data-busy={busy}
+            aria-busy={busy}
+            disabled={busy}
+            onClick={add}
+          >
+            <span>Add</span>
+            <span className="well" aria-hidden="true">
+              {busy ? (
+                <i className={formStyles.spin} />
+              ) : (
+                <ArrowRight size={18} />
+              )}
+            </span>
+          </button>
         </div>
-        <DeskChips
-          desks={desks}
-          onToggle={(desk) => setDesks(toggled(desks, desk))}
-        />
-        {problem && (
-          <p className={formStyles.err} role="alert">
-            {problem}
-          </p>
-        )}
-        <button
-          type="button"
-          className={`btn ${formStyles.go}`}
-          data-busy={busy}
-          aria-busy={busy}
-          disabled={busy}
-          onClick={add}
-        >
-          <span>Add to the operations team</span>
-          <span className="well" aria-hidden="true">
-            {busy ? (
-              <i className={formStyles.spin} />
-            ) : (
-              <ArrowRight size={18} />
-            )}
-          </span>
-        </button>
       </div>
     </section>
   );

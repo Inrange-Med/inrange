@@ -5,7 +5,7 @@
   the patient it was made for; a paid one has started that patient's plan by itself. Below, money Razorpay
   took that belongs to no order or link of ours (a link made in the Razorpay dashboard, a QR code): each is
   matched to the patient whose mobile number paid it, so admin opens that patient and records it against
-  their plan ("Paid another way", with this payment ID), or sets it aside when it is not for a plan.
+  their plan (under Plan: "Add plan without a link", with this payment ID), or sets it aside when it is not for a plan.
 */
 
 import { useState } from "react";
@@ -27,10 +27,10 @@ import adminStyles from "@/components/ui/styles/StaffSurfaces.module.css";
 import s from "@/components/ui/styles/StaffPanels.module.css";
 
 const STATUS: Record<PaymentLink["status"], string> = {
-  CREATED: "Waiting",
+  CREATED: "Not paid yet",
   PAID: "Paid",
-  CANCELLED: "Withdrawn",
-  EXPIRED: "Ended unpaid",
+  CANCELLED: "Cancelled",
+  EXPIRED: "Expired",
 };
 const TONE: Record<PaymentLink["status"], string | undefined> = {
   CREATED: "pending",
@@ -78,7 +78,7 @@ export default function PaymentsPanel({
         <section className={adminStyles.panel} aria-labelledby="received-h">
           <div className={adminStyles.panelHead}>
             <h2 id="received-h" className={adminStyles.h2}>
-              Paid outside a link
+              Paid without a link
             </h2>
           </div>
           <ul className={s.rows}>
@@ -93,7 +93,7 @@ export default function PaymentsPanel({
                   >
                     <span className={`${s.what} num`}>
                       {formatRupees(r.amountRupees)},{" "}
-                      {r.patientName ?? "no patient with this number"}
+                      {r.patientName ?? "no patient found"}
                     </span>
                     <span className={s.sub}>
                       {r.mobile && (
@@ -119,8 +119,7 @@ export default function PaymentsPanel({
             ))}
           </ul>
           <p className={adminStyles.muted}>
-            To start a plan from one of these, open the patient, choose
-            &quot;Paid another way&quot; under Plan and enter this payment ID.
+            To start a plan: open the patient, go to Plan, press Add plan without a link.
           </p>
         </section>
       )}
@@ -132,9 +131,7 @@ export default function PaymentsPanel({
           </h2>
         </div>
         {links.length === 0 ? (
-          <p className={adminStyles.empty}>
-            No payment links yet. Make one from a patient, under Plan.
-          </p>
+          <p className={adminStyles.empty}>No payment links yet.</p>
         ) : (
           <ul className={s.rows}>
             {links.map((link) => (

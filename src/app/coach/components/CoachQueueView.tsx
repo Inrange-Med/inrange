@@ -22,7 +22,7 @@ export default function CoachQueueView() {
       <PageHead
         className={surfaceStyles.pageHead}
         title="Queue"
-        sub="Who needs a call about their medicines: a missed dose, a supply running out, a question."
+        sub="Patients who need a call."
       />
       <TasksPanel
         now={now}

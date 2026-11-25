@@ -2,14 +2,15 @@
 
 /*
   To call (23 Nov 2026 call): about a third of patients stop somewhere and move on only when someone calls
-  them. Each list is one place they stop, with what the call is for:
-    paid           paid, and no blood test booked (they did not book in their two days): book it on the call
-    not paid       signed up and gone quiet: a call to bring them back
-    new time       a paid test that is not happening as booked: book a new time, at no charge
-    consultation   the report is in: call and book the doctor, with the salesperson
-    plan           seen by the doctor, not on a plan: the salesperson's to close with a payment link
-    coach          on a plan with no health coach: assign one so the first call can happen
-  A row opens the patient, where each of these is done. The follow-up after 25 days is under Calls.
+  them. Each list is one place they stop, named for what the call is for:
+    Book blood test     paid, and no blood test booked (they did not book in their two days)
+    Not paid yet        signed up and gone quiet: a call to bring them back
+    Rebook blood test   a paid test that is not happening as booked: a new time, at no charge
+    Book consultation   the report is in: call and book the doctor, with the salesperson
+    No plan yet         seen by the doctor, not on a plan: the salesperson's to close with a payment link
+    Assign a coach      on a plan with no health coach
+  Only the lists with someone in them show. A row opens the patient, where each of these is done. The
+  follow-up after 25 days is under Calls.
 */
 
 import ErrorNotice from "@/components/ui/ErrorNotice";
@@ -26,61 +27,56 @@ import s from "@/components/ui/styles/StaffPanels.module.css";
 function Bucket<Row extends PipelineRow>({
   id,
   title,
-  empty,
   rows,
   words,
   onOpen,
 }: {
   id: string;
   title: string;
-  empty: string;
   rows: Row[];
-  /** what the row says under the name, and the pill on its right */
-  words: (row: Row) => { sub: string[]; pill: string };
+  /** what the row says under the name, and a pill on its right when there is something more to know */
+  words: (row: Row) => { sub: string; pill?: string | false };
   onOpen: (id: string) => void;
 }) {
+  if (rows.length === 0) return null;
   return (
     <section className={adminStyles.panel} aria-labelledby={`${id}-h`}>
       <div className={adminStyles.panelHead}>
         <h2 id={`${id}-h`} className={adminStyles.h2}>
           {title}
-          {rows.length > 0 && <span className="num"> {rows.length}</span>}
         </h2>
+        <span className={`${adminStyles.count} num`}>{rows.length}</span>
       </div>
-      {rows.length === 0 ? (
-        <p className={adminStyles.empty}>{empty}</p>
-      ) : (
-        <ul className={s.rows}>
-          {rows.map((row, i) => {
-            const { sub, pill } = words(row);
-            return (
-              <li key={`${row.patientId}-${i}`}>
-                <div className={s.row}>
-                  <button
-                    type="button"
-                    className={s.open}
-                    onClick={() => onOpen(row.patientId)}
-                  >
-                    <span className={s.what}>{row.patientName}</span>
-                    <span className={`${s.sub} num`}>
-                      <span>{spacedMobile(row.patientMobile)}</span>
-                      {sub.map((line) => (
-                        <span key={line}>{line}</span>
-                      ))}
-                      {row.salesperson && <span>Sales: {row.salesperson}</span>}
-                    </span>
-                  </button>
+      <ul className={s.rows}>
+        {rows.map((row, i) => {
+          const { sub, pill } = words(row);
+          return (
+            <li key={`${row.patientId}-${i}`}>
+              <div className={s.row}>
+                <button
+                  type="button"
+                  className={s.open}
+                  onClick={() => onOpen(row.patientId)}
+                >
+                  <span className={s.what}>{row.patientName}</span>
+                  <span className={`${s.sub} num`}>
+                    <span>{spacedMobile(row.patientMobile)}</span>
+                    <span>{sub}</span>
+                    {row.salesperson && <span>Sales: {row.salesperson}</span>}
+                  </span>
+                </button>
+                {pill && (
                   <span className={s.side}>
                     <span className={adminStyles.pill} data-tone="new">
                       {pill}
                     </span>
                   </span>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
     </section>
   );
 }
@@ -105,18 +101,29 @@ export default function ToCallPanel({
     return <ErrorNotice message={pipeline.error} onRetry={pipeline.reload} />;
   if (!pipeline.data) return <LoadingSkeleton />;
   const p = pipeline.data;
+  const nobody = ![
+    lab && p.paidNoTest,
+    lab && p.bloodTest,
+    lab && p.labProblem,
+    dc && p.consultation,
+    admin && p.plan,
+    admin && p.coach,
+  ].some((rows) => rows && rows.length > 0);
 
   return (
     <div className={s.sheet}>
+      {nobody && (
+        <section className={adminStyles.panel} aria-label="To call">
+          <p className={adminStyles.empty}>Nobody to call.</p>
+        </section>
+      )}
       {lab && (
         <Bucket
           id="call-paid"
-          title="Paid, blood test not booked"
-          empty="Everyone who has paid has a blood test booked."
+          title="Book blood test"
           rows={p.paidNoTest}
           words={(row) => ({
-            sub: [row.since ? `Paid ${shortDate(row.since)}` : "Paid"],
-            pill: "Call and book the test",
+            sub: row.since ? `Paid ${shortDate(row.since)}` : "Paid",
           })}
           onOpen={onOpenPatient}
         />
@@ -124,12 +131,11 @@ export default function ToCallPanel({
       {lab && (
         <Bucket
           id="call-test"
-          title="Signed up, not paid"
-          empty="Everyone who signed up has paid or sent a report."
+          title="Not paid yet"
           rows={p.bloodTest}
           words={(row) => ({
-            sub: [`Signed up ${shortDate(row.since)}`],
-            pill: row.holding ? "Time held, not paid" : "Call them",
+            sub: `Signed up ${shortDate(row.since)}`,
+            pill: row.holding && "Time held",
           })}
           onOpen={onOpenPatient}
         />
@@ -137,26 +143,22 @@ export default function ToCallPanel({
       {lab && (
         <Bucket
           id="call-lab"
-          title="Blood test needs a new time"
-          empty="Every paid blood test is going ahead as booked."
+          title="Rebook blood test"
           rows={p.labProblem}
-          words={(row) => ({ sub: [row.why], pill: "Book a new time" })}
+          words={(row) => ({ sub: row.why })}
           onOpen={onOpenPatient}
         />
       )}
       {dc && (
         <Bucket
           id="call-consult"
-          title="Report in, no consultation booked"
-          empty="Everyone with a report has a consultation booked."
+          title="Book consultation"
           rows={p.consultation}
           words={(row) => ({
-            sub: [
+            sub:
               row.stage === "UNDER_REVIEW"
-                ? "The review is still to be done (Reviews)"
+                ? "Report not reviewed yet"
                 : `Reviewed ${shortDate(row.since)}`,
-            ],
-            pill: "Call and book the doctor",
           })}
           onOpen={onOpenPatient}
         />
@@ -164,14 +166,11 @@ export default function ToCallPanel({
       {admin && (
         <Bucket
           id="call-plan"
-          title="Seen by the doctor, no plan"
-          empty="Everyone seen in the last 60 days is on a plan."
+          title="No plan yet"
           rows={p.plan}
           words={(row) => ({
-            sub: [`Consultation ${shortDate(row.lastOn)}`],
-            pill: row.linkWaiting
-              ? "Link sent, not paid"
-              : "Sales to follow up",
+            sub: `Consultation ${shortDate(row.lastOn)}`,
+            pill: row.linkWaiting && "Link sent",
           })}
           onOpen={onOpenPatient}
         />
@@ -179,12 +178,10 @@ export default function ToCallPanel({
       {admin && (
         <Bucket
           id="call-coach"
-          title="On a plan, no coach"
-          empty="Everyone on a plan has a health coach."
+          title="Assign a coach"
           rows={p.coach}
           words={(row) => ({
-            sub: [`${row.planName}, started ${shortDate(row.since)}`],
-            pill: "Assign a coach",
+            sub: `${row.planName}, started ${shortDate(row.since)}`,
           })}
           onOpen={onOpenPatient}
         />

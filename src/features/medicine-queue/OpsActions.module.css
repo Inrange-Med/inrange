@@ -1,0 +1,61 @@
+/*
+  Operations' actions and small forms, as on the sales lead page: the one action of a panel, a row or a
+  form is an ink pill (.btn); the others beside it are quiet text buttons (StaffSurfaces .textBtn).
+  Imported as `a` by the Operations panels and sheets and by the payment links.
+*/
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 18px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--slate-900);
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 560;
+  color: var(--on-dark);
+  cursor: pointer;
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.btn:focus-visible {
+  outline: 2px solid var(--slate-600);
+  outline-offset: 2px;
+}
+
+/* a small form inside a sheet: labelled fields in one column, then its actions */
+.form {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  max-width: 400px;
+  margin-top: 8px;
+}
+
+/* a tick box with its words */
+.check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+.check input {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin: 1px 0 0;
+  accent-color: var(--ink);
+}

@@ -1,13 +1,15 @@
 "use client";
 
 /*
-  One patient, for the care team and their coach: the plan and its sales form (PlanSale), the salesperson
-  (from the ranked sales team), their doctors (the first consultation's doctor by default; admin adds and
-  removes the rest), WhatsApp, the health coach and the fitness coach, the prescription; then their
-  consultations (admin books, moves and cancels them, and watches a recording the patient agreed to), the
-  coach's remarks for the doctor, every prescription with who sent it, the doses, and one timeline (messages and the patient's replies, order steps, tasks) newest
-  first, and the doses. While WhatsApp is in test mode an admin can play the patient's reply on a
-  message, exactly as a tap on the phone would act. Opening it is logged (audit_log).
+  One patient, for the care team, in the order the work happens. Top: mobile, WhatsApp, the salesperson (from
+  the ranked sales team), their doctors (the first consultation's doctor by default; admin adds and removes
+  the rest), the health coach and the fitness coach. Then the blood test, the consultations (the team books,
+  moves and cancels them; an admin watches a recording the patient agreed to), the plan with its sale and
+  payment links (PlanSale, PaymentLinks; admins), the current prescription and any order waiting, coaching,
+  the coach's remarks for the doctor, every prescription with who sent it, the doses, and "History": one
+  timeline (messages and the patient's replies, order steps, tasks) newest first, folded until opened.
+  While WhatsApp is in test mode an admin can play the patient's reply on a message, exactly as a tap on the
+  phone would act. Opening it is logged (audit_log).
   The plan is sold, not prescribed (20 Nov 2026): the salesperson tells admin, admin puts the patient on
   it here, and the patient pays for it in the app (with any medicines waiting, in one payment).
 */
@@ -108,7 +110,7 @@ function ReplyChips({
   )
     return null;
   return (
-    <span className={s.chips} aria-label="Play the patient's reply (test mode)">
+    <span className={s.chips} aria-label="Test the patient's reply">
       {options.map((o) => (
         <button
           key={o.code}
@@ -294,7 +296,7 @@ function SalespersonPicker({
   if (!options.length && !salesperson)
     return (
       <span className={adminStyles.muted}>
-        Nobody on the sales team yet. Add them under Patients, Sales team.
+        No salespeople yet. Add one under Team.
       </span>
     );
   const listed = options.some((p) => p.id === salespersonId);
@@ -365,12 +367,7 @@ function DoctorsField({
   };
   return (
     <>
-      {team.length === 0 && (
-        <span className={s.lineItem}>
-          No doctor yet. The doctor of the first consultation joins by
-          themselves.
-        </span>
-      )}
+      {team.length === 0 && <span className={s.lineItem}>None yet</span>}
       {team.map((d) => (
         <span key={d.id} className={s.lineItem}>
           {d.name}{" "}
@@ -468,57 +465,24 @@ export default function PatientSheet({
               </dd>
             </div>
             <div>
-              <dt>Plan</dt>
+              <dt>WhatsApp</dt>
               <dd>
-                {isAdmin ? (
-                  <>
-                    <PlanSale
-                      key={data.patient.id}
-                      data={data}
-                      onSaved={refresh}
-                    />
-                    <PaymentLinks
-                      key={`links-${data.patient.id}`}
-                      links={data.links}
-                      plans={plans.data ?? []}
-                      canMake={!data.patient.plan}
-                      anyDiscount
-                      sellers={(sellers.data ?? [])
-                        .filter((p) => p.active)
-                        .map((p) => ({
-                          id: p.id,
-                          label: `${p.rank}. ${p.fullName}`,
-                        }))}
-                      defaultSeller={data.patient.salespersonId ?? ""}
-                      onMake={(form) => makePaymentLink(data.patient.id, form)}
-                      onAct={actOnPaymentLink}
-                      onChanged={refresh}
-                    />
-                    {data.included && (
-                      <span
-                        className={`${s.lineItem} ${adminStyles.muted} num`}
-                      >
-                        {[
-                          data.included.doctorConsults != null &&
-                            `${data.included.consultsDone} of ${data.included.doctorConsults} doctor consultations`,
-                          data.included.coachCalls != null &&
-                            `${data.included.coachCallsMade} of ${data.included.coachCalls} coach calls`,
-                          data.included.fitnessCalls != null &&
-                            `${data.included.fitnessCallsMade} of ${data.included.fitnessCalls} fitness calls`,
-                        ]
-                          .filter(Boolean)
-                          .join(", ")}
-                      </span>
-                    )}
-                  </>
-                ) : (
-                  (data.patient.plan ??
-                  (data.patient.assignedPlan
-                    ? `${data.patient.assignedPlan.name}, not paid yet`
-                    : "No plan yet"))
-                )}
+                {data.patient.whatsappSince
+                  ? `On since ${shortDate(data.patient.whatsappSince)}`
+                  : "Off. Call instead."}
               </dd>
             </div>
+            {!isAdmin && (
+              <div>
+                <dt>Plan</dt>
+                <dd>
+                  {data.patient.plan ??
+                    (data.patient.assignedPlan
+                      ? `${data.patient.assignedPlan.name}. Not paid yet`
+                      : "No plan")}
+                </dd>
+              </div>
+            )}
             <div>
               <dt>Salesperson</dt>
               <dd>
@@ -536,16 +500,8 @@ export default function PatientSheet({
                   <DoctorsField data={data} onSaved={refresh} />
                 ) : (
                   data.patient.doctors.map((d) => d.name).join(", ") ||
-                  "No doctor yet"
+                  "None yet"
                 )}
-              </dd>
-            </div>
-            <div>
-              <dt>WhatsApp</dt>
-              <dd>
-                {data.patient.whatsappSince
-                  ? `On since ${shortDate(data.patient.whatsappSince)}`
-                  : "Off: nothing is sent. Call instead."}
               </dd>
             </div>
             <div>
@@ -568,43 +524,6 @@ export default function PatientSheet({
                 )}
               </dd>
             </div>
-            {data.prescription && (
-              <div>
-                <dt>Prescription</dt>
-                <dd>
-                  {data.prescription.items.map((i) => (
-                    <span key={i.name} className={s.lineItem}>
-                      {i.name}
-                      {i.frequency ? `, ${i.frequency.toLowerCase()}` : ""}
-                      {!i.stocked ? " (not stocked)" : ""}
-                    </span>
-                  ))}
-                  <span className={`${s.lineItem} ${adminStyles.muted}`}>
-                    {data.prescription.doctor}, signed{" "}
-                    {shortDate(data.prescription.signedAt)}
-                    {data.prescription.validUntil
-                      ? `, valid until ${shortDate(data.prescription.validUntil)}`
-                      : ""}
-                  </span>
-                </dd>
-              </div>
-            )}
-            {cart && (
-              <div>
-                <dt>
-                  {cart.kind === "REFILL" ? "Refill waiting" : "Order waiting"}
-                </dt>
-                <dd>
-                  <span className="num">
-                    {formatRupees(cart.totalPaise / 100)}
-                  </span>
-                  , ready to pay in the app
-                  {cart.boughtElsewhere
-                    ? ". Bought elsewhere, no reminders."
-                    : ""}
-                </dd>
-              </div>
-            )}
           </dl>
 
           {lab && (
@@ -620,6 +539,112 @@ export default function PatientSheet({
             canWatch={isAdmin}
             onChanged={refresh}
           />
+          {isAdmin && (
+            <section className={s.section} aria-label="Plan">
+              <h3 className={s.sectionHead}>Plan</h3>
+              <PlanSale key={data.patient.id} data={data} onSaved={refresh} />
+              {data.included && (
+                <dl className={s.facts}>
+                  {data.included.doctorConsults != null && (
+                    <div>
+                      <dt>Consultations</dt>
+                      <dd className="num">
+                        {data.included.consultsDone} of{" "}
+                        {data.included.doctorConsults} used
+                      </dd>
+                    </div>
+                  )}
+                  {data.included.coachCalls != null && (
+                    <div>
+                      <dt>Coach calls</dt>
+                      <dd className="num">
+                        {data.included.coachCallsMade} of{" "}
+                        {data.included.coachCalls} used
+                      </dd>
+                    </div>
+                  )}
+                  {data.included.fitnessCalls != null && (
+                    <div>
+                      <dt>Fitness calls</dt>
+                      <dd className="num">
+                        {data.included.fitnessCallsMade} of{" "}
+                        {data.included.fitnessCalls} used
+                      </dd>
+                    </div>
+                  )}
+                </dl>
+              )}
+              <PaymentLinks
+                key={`links-${data.patient.id}`}
+                links={data.links}
+                plans={plans.data ?? []}
+                canMake={!data.patient.plan}
+                anyDiscount
+                sellers={(sellers.data ?? [])
+                  .filter((p) => p.active)
+                  .map((p) => ({
+                    id: p.id,
+                    label: `${p.rank}. ${p.fullName}`,
+                  }))}
+                defaultSeller={data.patient.salespersonId ?? ""}
+                onMake={(form) => makePaymentLink(data.patient.id, form)}
+                onAct={actOnPaymentLink}
+                onChanged={refresh}
+              />
+            </section>
+          )}
+          {(data.prescription || cart) && (
+            <section className={s.section} aria-label="Medicines">
+              <h3 className={s.sectionHead}>Medicines</h3>
+              <dl className={s.facts}>
+                {data.prescription && (
+                  <>
+                    <div>
+                      <dt>Prescription</dt>
+                      <dd>
+                        {data.prescription.items.map((i) => (
+                          <span key={i.name} className={s.lineItem}>
+                            {i.name}
+                            {i.frequency
+                              ? `, ${i.frequency.toLowerCase()}`
+                              : ""}
+                            {!i.stocked ? " (not stocked)" : ""}
+                          </span>
+                        ))}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Signed</dt>
+                      <dd className="num">
+                        {data.prescription.doctor},{" "}
+                        {shortDate(data.prescription.signedAt)}
+                      </dd>
+                    </div>
+                    {data.prescription.validUntil && (
+                      <div>
+                        <dt>Valid until</dt>
+                        <dd className="num">
+                          {shortDate(data.prescription.validUntil)}
+                        </dd>
+                      </div>
+                    )}
+                  </>
+                )}
+                {cart && (
+                  <div>
+                    <dt>{cart.kind === "REFILL" ? "Refill" : "Order"}</dt>
+                    <dd>
+                      <span className="num">
+                        {formatRupees(cart.totalPaise / 100)}
+                      </span>
+                      . Not paid yet
+                      {cart.boughtElsewhere ? ". Bought elsewhere." : ""}
+                    </dd>
+                  </div>
+                )}
+              </dl>
+            </section>
+          )}
           <CoachingSections
             key={`coaching-${data.patient.id}`}
             patientId={data.patient.id}
@@ -688,18 +713,16 @@ export default function PatientSheet({
             </section>
           )}
 
-          <section className={s.section} aria-label="What happened">
-            <h3 className={s.sectionHead}>What happened</h3>
+          <details className={adminStyles.history}>
+            <summary>History</summary>
             <Timeline
               data={data}
               mock={mock}
               isAdmin={isAdmin}
               onPlayed={refresh}
             />
-          </section>
-          <p className={formStyles.hint}>
-            Opening a patient&apos;s medicines is recorded in their audit log.
-          </p>
+          </details>
+          <p className={formStyles.hint}>Opening this record is logged.</p>
         </div>
       )}
     </Sheet>

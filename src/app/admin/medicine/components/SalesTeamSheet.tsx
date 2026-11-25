@@ -91,7 +91,7 @@ export default function SalesTeamSheet({
       if (editing)
         await updateSalesperson(editing.id, { fullName: name.trim(), mobile });
       else await addSalesperson({ fullName: name.trim(), mobile });
-      toast(editing ? "Saved" : `${name.trim()} added to the sales team`);
+      toast(editing ? "Saved" : `${name.trim()} added`);
       clear();
       team.reload();
       onChanged();
@@ -103,6 +103,9 @@ export default function SalesTeamSheet({
   };
 
   const active = (team.data ?? []).filter((p) => p.active);
+  // people taken off the team stay out of the way until asked for
+  const [showRemoved, setShowRemoved] = useState(false);
+  const removed = (team.data ?? []).length - active.length;
 
   const body = (
     <div className={s.sheet}>
@@ -110,36 +113,33 @@ export default function SalesTeamSheet({
         <ErrorNotice message={team.error} onRetry={team.reload} />
       ) : !team.data ? (
         <LoadingSkeleton />
-      ) : team.data.length === 0 ? (
-        <p className={adminStyles.empty}>
-          Nobody on the sales team yet. Add the first person below, then choose
-          them on a patient&apos;s page.
-        </p>
+      ) : (showRemoved ? team.data : active).length === 0 ? (
+        <p className={adminStyles.empty}>No salespeople yet.</p>
       ) : (
         <ul className={s.rows}>
-          {team.data.map((p) => (
+          {(showRemoved ? team.data : active).map((p) => (
             <li key={p.id} className={s.row}>
               <span className={s.open}>
                 <span className={s.what}>
                   {p.rank !== null && <span className="num">{p.rank}.</span>}
                   {p.fullName}
                   {!p.active && (
-                    <span className={adminStyles.pill}>Not on the team</span>
+                    <span className={adminStyles.pill} data-tone="pending">
+                      Removed
+                    </span>
                   )}
                 </span>
                 <span className={`${s.sub} num`}>
                   {p.mobile && <span>{spacedMobile(p.mobile)}</span>}
                   {p.active && (
                     <span>
-                      {p.canSignIn
-                        ? "Signs in to the sales panel"
-                        : "No sign-in: add a mobile number"}
+                      {p.canSignIn ? "Can sign in" : "Add a mobile to sign in"}
                     </span>
                   )}
                   <span>{count(p.patients, "patient", "patients")}</span>
                   <span>{count(p.plansSold, "plan sold", "plans sold")}</span>
                   {p.plansWaiting > 0 && (
-                    <span>{p.plansWaiting} waiting for payment</span>
+                    <span>{p.plansWaiting} not paid yet</span>
                   )}
                 </span>
                 <span className={s.chips}>
@@ -158,7 +158,7 @@ export default function SalesTeamSheet({
                           )
                         }
                       >
-                        Move up
+                        Up
                       </button>
                       <button
                         type="button"
@@ -173,7 +173,7 @@ export default function SalesTeamSheet({
                           )
                         }
                       >
-                        Move down
+                        Down
                       </button>
                     </>
                   )}
@@ -181,6 +181,7 @@ export default function SalesTeamSheet({
                     type="button"
                     className={s.chip}
                     disabled={busy}
+                    aria-label={`Edit ${p.fullName}`}
                     onClick={() => {
                       setEditing(p);
                       setName(p.fullName);
@@ -194,6 +195,7 @@ export default function SalesTeamSheet({
                     type="button"
                     className={s.chip}
                     disabled={busy}
+                    aria-label={`${p.active ? "Remove" : "Bring back"} ${p.fullName}`}
                     onClick={() =>
                       change(
                         () => updateSalesperson(p.id, { active: !p.active }),
@@ -203,7 +205,7 @@ export default function SalesTeamSheet({
                       )
                     }
                   >
-                    {p.active ? "Take off the team" : "Bring back"}
+                    {p.active ? "Remove" : "Bring back"}
                   </button>
                 </span>
               </span>
@@ -211,6 +213,18 @@ export default function SalesTeamSheet({
           ))}
         </ul>
       )}
+      {removed > 0 && (
+        <button
+          type="button"
+          className={adminStyles.textBtn}
+          onClick={() => setShowRemoved(!showRemoved)}
+        >
+          {showRemoved ? "Hide removed" : `Show removed (${removed})`}
+        </button>
+      )}
+      <h3 className={s.sectionHead}>
+        {editing ? `Edit ${editing.fullName}` : "Add a salesperson"}
+      </h3>
       <div className={s.formGrid} data-cols="2">
         <label className={formStyles.field}>
           <span className={formStyles.label}>Full name</span>
@@ -223,7 +237,7 @@ export default function SalesTeamSheet({
           />
         </label>
         <label className={formStyles.field}>
-          <span className={formStyles.label}>Mobile, to sign in with</span>
+          <span className={formStyles.label}>Mobile</span>
           <input
             className={s.input}
             type="tel"
@@ -247,23 +261,17 @@ export default function SalesTeamSheet({
         disabled={busy}
         onClick={save}
       >
-        <span>
-          {editing ? `Save ${editing.fullName}` : "Add to the sales team"}
-        </span>
+        <span>{editing ? "Save" : "Add salesperson"}</span>
         <span className="well" aria-hidden="true">
           {busy ? <i className={formStyles.spin} /> : <ArrowRight size={18} />}
         </span>
       </button>
       {editing && (
         <button type="button" className={adminStyles.textBtn} onClick={clear}>
-          Cancel the edit
+          Cancel
         </button>
       )}
-      <p className={formStyles.hint}>
-        New people join at the bottom. Number 1 is your best salesperson. Each
-        one signs in with their mobile number and sees only the patients
-        assigned to them.
-      </p>
+      <p className={formStyles.hint}>Number 1 is your best salesperson.</p>
     </div>
   );
   return inline ? (
