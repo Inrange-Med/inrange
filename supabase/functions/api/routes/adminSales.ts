@@ -15,7 +15,7 @@ import { Hono } from "hono";
 import type { Context } from "hono";
 import { sql } from "../lib/db.ts";
 import { body, fail, intParam, ok } from "../lib/http.ts";
-import { requireUser } from "../lib/auth.ts";
+import { requireDesk, requireUser } from "../lib/auth.ts";
 import { isTestMobile } from "../lib/env.ts";
 import * as links from "../lib/paymentLinks.ts";
 import { callLink } from "../lib/callLinks.ts";
@@ -133,7 +133,7 @@ adminSalesRoutes.patch("/admin/plans/:id", async (c) => {
 // ---------------------------------------------------------------- calls
 
 adminSalesRoutes.get("/admin/calls", async (c) => {
-  await admin(c);
+  await requireDesk(c, "CONSULTATIONS");
   const [upcoming, due] = await Promise.all([
     sql`select a.id::text as id, ${starts} as "startsAt", a.status, case when a.visit_type = 'FOLLOW_UP' then 'FOLLOW_UP' else 'FIRST' end as "visitType",
           pu.id::text as "patientId", ${name} as "patientName", pu.mobile as "patientMobile", d.full_name as "doctorName", pp.salesperson
@@ -164,7 +164,7 @@ adminSalesRoutes.get("/admin/calls", async (c) => {
 });
 
 adminSalesRoutes.get("/admin/consultations/:id/links", async (c) => {
-  const me = await admin(c);
+  const me = await requireDesk(c, "CONSULTATIONS");
   const [a] = await sql`
     select a.id, a.video_room_id, a.status, a.patient_id, a.doctor_id, d.full_name as doctor, ${name} as patient, sp.full_name as seller, sp.user_id as seller_user
     from appointments a join doctors d on d.id = a.doctor_id join users pu on pu.id = a.patient_id

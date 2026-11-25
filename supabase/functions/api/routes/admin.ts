@@ -12,7 +12,7 @@ import { Hono } from "hono";
 import type { Context } from "hono";
 import { sql } from "../lib/db.ts";
 import { body, fail, intParam, ok, todayIST } from "../lib/http.ts";
-import { requireUser } from "../lib/auth.ts";
+import { requireDesk, requireUser } from "../lib/auth.ts";
 import { setEligibility } from "../lib/eligibility.ts";
 import { signedUrl } from "../lib/storage.ts";
 import { bookingQuery, refreshFromLab, simulateLab, toLabBooking } from "./labs.ts";
@@ -217,7 +217,8 @@ const toDoctor = (d: Record<string, unknown>) => ({
 });
 
 adminRoutes.get("/admin/doctors", async (c) => {
-  await requireAdmin(c);
+  // the consultations desk books with any doctor, so it reads the list too
+  await requireDesk(c, "CONSULTATIONS");
   const rows = await sql`${doctorSelect()} order by d.active desc, d.full_name`;
   return ok(c, rows.map(toDoctor));
 });

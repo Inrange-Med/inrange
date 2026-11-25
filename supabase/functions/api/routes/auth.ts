@@ -122,7 +122,7 @@ async function signIn(c: Context, mobile: string) {
   const [user] = await sql`
     insert into users (mobile) values (${mobile})
     on conflict (mobile) do update set mobile = excluded.mobile
-    returning id, role, full_name, mobile, onboarding_completed`;
+    returning id, role, full_name, mobile, onboarding_completed, desks`;
   const [session] = await sql`insert into auth_sessions (user_id) values (${user.id}) returning id`;
   const accessToken = await issueToken(user as unknown as { id: number; role: Role; full_name: string | null }, session.id);
   const nextScreen = user.role === "PATIENT" && !user.onboarding_completed ? "ONBOARDING" : "DASHBOARD";
@@ -130,7 +130,8 @@ async function signIn(c: Context, mobile: string) {
     accessToken,
     refreshToken: null,
     nextScreen,
-    user: { id: user.id, userId: user.id, fullName: user.full_name ?? "", role: user.role, mobile: user.mobile },
+    user: { id: user.id, userId: user.id, fullName: user.full_name ?? "", role: user.role, mobile: user.mobile,
+      desks: user.role === "OPS" ? user.desks ?? [] : [] },
   }, "Signed in");
 }
 

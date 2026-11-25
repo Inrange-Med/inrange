@@ -99,3 +99,46 @@ migration `20261123000500`.
 The patient ticks "Record this call" on their Join screen, each call; unticked by default. `startRecording` asks
 100ms with no body first and, when 100ms wants a `meeting_url` (composite recording not switched on in the
 template), again with the room's own link, where the recorder joins as a guest named "Recording".
+
+## 24 Nov 2026: pay first, coaches by themselves, the team desks, the sales dashboard
+
+Migration `20261124000100`. Code: `routes/sales.ts`, `routes/adminLabs.ts`, `lib/coaches.ts`, `routes/ops.ts` (team).
+
+### Pay first, then book the blood test
+- The patient pays for the care package first (payment purpose `CARE_PACKAGE`, referenceId the package code, `+CODE` per
+  optional test) with no time chosen. That sets `eligibility.lab_credit`.
+- Home then says "Book your home blood test" (`BOOK_BLOOD_TEST`); the booking flow confirms the time at once, with
+  nothing to pay (`holdBooking` uses the credit).
+- A cancelled or refused collection gives the credit back (`giveCreditBack`), so a rebooking by the patient or the team
+  is never charged again. A refund ends the credit.
+- Paid and not booked is the team's first list under To call. The team can also record a payment taken outside the app
+  before any booking (`POST /admin/patients/:id/lab/credit`).
+
+### Coaches
+- A coach is HEALTH, FITNESS or BOTH (`users.coach_kind`). When a plan starts (`startPlan` -> `assignCoaches`) the patient
+  gets the health coach with the fewest patients, and a fitness coach who starts 21 days in
+  (`patient_profiles.fitness_starts_on`). Each gets a task in their queue (`COACH_FIRST_CALL`, `FITNESS_START`).
+- A coach admin already chose is kept. With no coach of a kind, the patient shows under To call, "On a plan, no coach".
+
+### The team desks (role OPS)
+| Desk | Sees in Operations | Can do |
+| --- | --- | --- |
+| BLOOD_TESTS | To call (paid not booked, not paid, needs a new time), Patients | book, move, cancel blood tests; payment link; mark paid |
+| CONSULTATIONS | To call (report in, no consultation), Calls, Patients | book, move, cancel consultations; video links; set the doctor and salesperson |
+| MEDICINE | Queue, Orders, Patients | pharmacy tasks, dispatch, delay, cancel and refund orders, match medicines |
+
+Admin adds people on the Team page (`/admin/team`): sales team, coaches, operations team. `requireDesk` checks every call.
+
+### Sales dashboard (`/sales`, and admin's Sales tab)
+One list of leads with five views (To do, Calls, To close, On a plan, All) and one page per lead. What a salesperson sees
+is what the team's sheet tracks: contact, BMI, what was paid, blood test and report status, the consultation and its
+doctor with Join, whether a prescription was sent and whether it has a GLP-1 medicine, the condition written on it, the
+last medicine order, the plan, the coach. Never a report, a lab value, the prescription or the doctor's notes.
+- After a call: call status, remark, call-again date (`lead_updates`).
+- Payment link, or a Razorpay payment ID for money already taken.
+- Sales form, once the plan is paid: customer, plan, amount, payment ID and salesperson come from the payment; the
+  salesperson adds condition, programme, coach asked for and remarks (`PUT /sales/patients/:id/sale-form`).
+- An admin uses the same routes for every lead, filters by salesperson, and assigns the salesperson on the lead's page.
+
+### Drug list
+Every order line now carries `productId` (the ERP's Product ID, `medicines.sku`) for the ERP link.

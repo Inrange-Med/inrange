@@ -27,6 +27,7 @@ import {
   getPatientLab,
   holdLabBooking,
   listLabSlots,
+  setLabCredit,
   searchLabPlaces,
 } from "@/services/medicineOpsService";
 import type { LabPlace, PatientLab, TeamLabBooking } from "@/types/medicineOps";
@@ -387,7 +388,10 @@ export default function PatientLabSection({
     getPatientLab(patientId),
   );
   const [doing, setDoing] = useState<
-    null | { kind: "book" } | { kind: "move" | "cancel" | "paid"; id: string }
+    | null
+    | { kind: "book" }
+    | { kind: "credit" }
+    | { kind: "move" | "cancel" | "paid"; id: string }
   >(null);
   const [text, setText] = useState("");
   const [link, setLink] = useState<{ id: string; url: string } | null>(null);
@@ -420,6 +424,19 @@ export default function PatientLabSection({
     }
   };
 
+  const credit = async (paymentRef: string | null) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      toast(await setLabCredit(patientId, paymentRef));
+      done();
+    } catch (caught) {
+      toast(errorMessage(caught, "That did not work. Try again."));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   if (lab.error && !lab.data)
     return <ErrorNotice message={lab.error} onRetry={lab.reload} />;
   if (!lab.data) return null;
@@ -439,7 +456,15 @@ export default function PatientLabSection({
 
   return (
     <section className={s.section} aria-label="Blood test">
-      <h3 className={s.sectionHead}>Blood test</h3>
+      <h3 className={s.sectionHead}>
+        Blood test
+        {lab.data.credit && (
+          <span className={adminStyles.muted}>
+            {" "}
+            Paid for. A time booked now is confirmed at once, at no charge.
+          </span>
+        )}
+      </h3>
       {bookings.length === 0 ? (
         <p className={adminStyles.empty}>No blood test booked yet.</p>
       ) : (
@@ -613,13 +638,61 @@ export default function PatientLabSection({
           />
         ) : (
           <span className={s.chips}>
+            {doing?.kind === "credit" ? (
+              <>
+                <input
+                  className={s.input}
+                  value={text}
+                  maxLength={80}
+                  placeholder="Payment ID (from Razorpay or the bank)"
+                  aria-label="Payment ID"
+                  onChange={(e) => setText(e.target.value)}
+                />
+                <button
+                  type="button"
+                  className={s.chip}
+                  disabled={busy || text.trim().length < 4}
+                  onClick={() => credit(text.trim())}
+                >
+                  Mark as paid
+                </button>
+                <button
+                  type="button"
+                  className={s.chip}
+                  onClick={() => setDoing(null)}
+                >
+                  Close
+                </button>
+              </>
+            ) : lab.data.credit ? (
+              <button
+                type="button"
+                className={s.chip}
+                disabled={busy}
+                onClick={() => credit(null)}
+              >
+                Their payment was refunded
+              </button>
+            ) : (
+              <button
+                type="button"
+                className={s.chip}
+                onClick={() => setDoing({ kind: "credit" })}
+              >
+                They paid another way
+              </button>
+            )}
             <button
               type="button"
               className={s.chip}
               onClick={() => setDoing({ kind: "book" })}
             >
               Book a blood test for them
-              {priceRupees ? `, ${formatRupees(priceRupees)}` : ""}
+              {lab.data.credit
+                ? ", already paid"
+                : priceRupees
+                  ? `, ${formatRupees(priceRupees)}`
+                  : ""}
             </button>
           </span>
         ))}

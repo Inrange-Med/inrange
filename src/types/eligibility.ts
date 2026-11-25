@@ -33,5 +33,7 @@ export type Eligibility = {
   labBookingId: string | null;
   /** true once the first consultation is paid for (LAB_TEST prepays it inside the package) */
   consultationPaid: boolean;
+  /** the blood tests are paid for and the collection is still to book (pay first, then book) */
+  labCredit: boolean;
   updatedAt: string | null;
 };

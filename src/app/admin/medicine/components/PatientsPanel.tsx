@@ -4,7 +4,8 @@
   Every patient (a coach: their own), newest activity first, found by name or number, so admin can set the
   salesperson and put someone on a plan before they have a prescription. A row says the plan, the last
   order's step, when the medicines run out, how doses are going, their doctors, who sells to them and who
-  coaches them. Admins manage the coaches and the sales team from here.
+  coaches them. Admins set what each plan includes here; the sales team, the coaches and the operations team
+  are on the Team page.
 */
 
 import { useDeferredValue, useState } from "react";
@@ -13,9 +14,7 @@ import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import { useApiResource } from "@/hooks/useApiResource";
 import { shortDate } from "@/lib/format/dateTime";
 import { listPatients } from "@/services/medicineOpsService";
-import CoachesSheet from "./CoachesSheet";
 import PlansSheet from "./PlansSheet";
-import SalesTeamSheet from "./SalesTeamSheet";
 import { ORDER_WORDS } from "@/features/medicine-queue/words";
 import adminStyles from "@/components/ui/styles/StaffSurfaces.module.css";
 import s from "@/components/ui/styles/StaffPanels.module.css";
@@ -24,7 +23,6 @@ export default function PatientsPanel({
   isAdmin,
   version,
   onOpenPatient,
-  onChanged,
 }: {
   isAdmin: boolean;
   /** bumped by the page after a change in the patient sheet (a coach assigned), so the rows reload */
@@ -38,8 +36,6 @@ export default function PatientsPanel({
   const patients = useApiResource(`medicine-patients-${q}-${version}`, () =>
     listPatients(q),
   );
-  const [coaches, setCoaches] = useState(false);
-  const [sales, setSales] = useState(false);
   const [plans, setPlans] = useState(false);
 
   return (
@@ -56,20 +52,6 @@ export default function PatientsPanel({
               onClick={() => setPlans(true)}
             >
               Plans
-            </button>
-            <button
-              type="button"
-              className={adminStyles.textBtn}
-              onClick={() => setSales(true)}
-            >
-              Sales team
-            </button>
-            <button
-              type="button"
-              className={adminStyles.textBtn}
-              onClick={() => setCoaches(true)}
-            >
-              Coaches
             </button>
           </span>
         )}
@@ -148,13 +130,7 @@ export default function PatientsPanel({
       )}
       {isAdmin && (
         <>
-          <CoachesSheet open={coaches} onClose={() => setCoaches(false)} />
           <PlansSheet open={plans} onClose={() => setPlans(false)} />
-          <SalesTeamSheet
-            open={sales}
-            onClose={() => setSales(false)}
-            onChanged={onChanged}
-          />
         </>
       )}
     </section>

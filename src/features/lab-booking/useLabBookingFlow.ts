@@ -2,7 +2,8 @@
 
 /**
  * The state of booking a home blood test, one decision per step: package, address, person, time,
- * then review and pay. Two modes:
+ * then review and pay. In onboarding the care package is paid for first (CarePackageStep sends an
+ * unpaid patient to the checkout), so the review books at once (`paid`). Two modes:
  *   "dashboard"   the patient picks any Redcliffe package (/patient-dashboard/lab-tests/book).
  *   "onboarding"  the patient picks a care package that includes lab tests (lab tests and
  *                 consultation); its Redcliffe package is booked and the booking carries the care
@@ -68,6 +69,8 @@ export function useLabBookingFlow(mode: LabBookingMode) {
   const [step, setStep] = useState<LabBookingStep>("package");
   const [chosenPackage, setChosenPackage] = useState<LabPackage | null>(null);
   const [carePackage, setCarePackage] = useState<CarePackage | null>(null);
+  // the care package is paid for already (pay first, then book): the review books at once, with nothing to pay
+  const [paid, setPaid] = useState(false);
   const [address, setAddress] = useState<Address | null>(null);
   const [patient, setPatient] = useState<LabPatient | null>(null);
   const [slot, setSlot] = useState<PickableSlot | null>(null);
@@ -117,6 +120,7 @@ export function useLabBookingFlow(mode: LabBookingMode) {
     isFirstStep: stepNumber === 1,
     chosenPackage,
     carePackage,
+    paid,
     address,
     patient,
     slot,
@@ -135,10 +139,13 @@ export function useLabBookingFlow(mode: LabBookingMode) {
     chooseCarePackage: ({
       care,
       lab,
+      paid: alreadyPaid = false,
     }: {
       care: CarePackage;
       lab: LabPackage;
+      paid?: boolean;
     }) => {
+      setPaid(alreadyPaid);
       setCarePackage(care);
       setChosenPackage(lab);
       setHeld(null);

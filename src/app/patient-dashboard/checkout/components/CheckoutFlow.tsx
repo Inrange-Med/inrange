@@ -56,6 +56,11 @@ const PURPOSE_WORDS: Record<
     sub: "Your collection time is held while you pay.",
     paid: "Your home collection is confirmed. The lab's collector comes at the time you chose.",
   },
+  CARE_PACKAGE: {
+    title: "Pay for your blood tests and consultation",
+    sub: "You choose your collection time next.",
+    paid: "Paid. Now choose a time for your home blood test.",
+  },
   CONSULTATION_FEE: {
     title: "Pay for your consultation",
     sub: "Your consultation time is held while you pay.",

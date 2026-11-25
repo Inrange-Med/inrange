@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 import { UsersThree } from "@phosphor-icons/react";
 import StaffShell from "@/components/ui/StaffShell";
 
-const SECTIONS = [{ href: "/sales", label: "Customers", icon: UsersThree }];
+const SECTIONS = [{ href: "/sales", label: "Leads", icon: UsersThree }];
 
 export default function SalesShell({ children }: { children: ReactNode }) {
   return (

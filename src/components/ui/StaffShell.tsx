@@ -35,8 +35,8 @@ export default function StaffShell({
   sections,
   children,
 }: {
-  /** the one role this area is for */
-  role: Exclude<UserRole, "PATIENT" | "DOCTOR">;
+  /** who this area is for: one role, or a few (admin's workspace also takes the operations team) */
+  role: UserRole | UserRole[];
   /** the word beside the wordmark: "Admin", "Sales", "Coach" */
   portal: string;
   /** under the person's name: "inrange team", "Sales team" */
@@ -51,15 +51,18 @@ export default function StaffShell({
   const online = useOnline();
   const { signOut, leaving } = useSignOut();
 
+  const allowed =
+    !!status && status !== "OUT" && [role].flat().includes(status as UserRole);
+
   useEffect(() => {
     if (status === "OUT")
       router.replace(
         signInHrefFor(window.location.pathname + window.location.search),
       );
-    else if (status && status !== role) router.replace(homePathFor(status));
-  }, [status, role, router, pathname]);
+    else if (status && !allowed) router.replace(homePathFor(status));
+  }, [status, allowed, router, pathname]);
 
-  if (status !== role) {
+  if (!allowed) {
     return (
       <AppTheme>
         <main className={surfaceStyles.page}>

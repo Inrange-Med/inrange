@@ -198,10 +198,14 @@ function SlotForm({
 export default function PatientConsultations({
   data,
   isAdmin,
+  canWatch = isAdmin,
   onChanged,
 }: {
   data: OpsPatient;
+  /** may book, move and cancel (an admin, or the consultations desk) */
   isAdmin: boolean;
+  /** may watch a recording: admins only */
+  canWatch?: boolean;
   onChanged: () => void;
 }) {
   const toast = useToast();
@@ -283,10 +287,10 @@ export default function PatientConsultations({
                       The patient agreed to recording.
                     </span>
                   )}
-                  {(movable || (isAdmin && a.recording === "RECORDED")) &&
+                  {(movable || (canWatch && a.recording === "RECORDED")) &&
                     !open && (
                       <span className={s.chips}>
-                        {isAdmin && a.recording === "RECORDED" && (
+                        {canWatch && a.recording === "RECORDED" && (
                           <button
                             type="button"
                             className={s.chip}

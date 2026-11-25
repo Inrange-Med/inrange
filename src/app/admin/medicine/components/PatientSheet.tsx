@@ -409,12 +409,17 @@ function DoctorsField({
 export default function PatientSheet({
   patientId,
   isAdmin,
+  lab = isAdmin,
+  consults = isAdmin,
   mock,
   onClose,
   onChanged,
 }: {
   patientId: string | null;
   isAdmin: boolean;
+  /** the blood test desk and the consultations desk do their own part of the sheet; an admin, all of it */
+  lab?: boolean;
+  consults?: boolean;
   mock: boolean;
   onClose: () => void;
   onChanged: () => void;
@@ -517,7 +522,7 @@ export default function PatientSheet({
             <div>
               <dt>Salesperson</dt>
               <dd>
-                {isAdmin ? (
+                {consults ? (
                   <SalespersonPicker data={data} onSaved={refresh} />
                 ) : (
                   (data.patient.salesperson ?? "Not set")
@@ -527,7 +532,7 @@ export default function PatientSheet({
             <div>
               <dt>Doctors</dt>
               <dd>
-                {isAdmin ? (
+                {consults ? (
                   <DoctorsField data={data} onSaved={refresh} />
                 ) : (
                   data.patient.doctors.map((d) => d.name).join(", ") ||
@@ -602,7 +607,7 @@ export default function PatientSheet({
             )}
           </dl>
 
-          {isAdmin && (
+          {lab && (
             <PatientLabSection
               key={`lab-${data.patient.id}`}
               patientId={data.patient.id}
@@ -611,13 +616,14 @@ export default function PatientSheet({
           )}
           <PatientConsultations
             data={data}
-            isAdmin={isAdmin}
+            isAdmin={consults}
+            canWatch={isAdmin}
             onChanged={refresh}
           />
           <CoachingSections
             key={`coaching-${data.patient.id}`}
             patientId={data.patient.id}
-            can={{ health: true, fitness: true }}
+            can={{ health: isAdmin, fitness: isAdmin }}
             diet={data.coaching.diet}
             fitness={data.coaching.fitness}
             calls={data.coaching.calls}

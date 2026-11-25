@@ -5,11 +5,13 @@ import type { TransactionSql } from "postgres";
 import { sql } from "./db.ts";
 
 type Tx = TransactionSql | typeof sql;
+import { assignCoaches } from "./coaches.ts";
+
 export type CartLine = { medicineId: number; quantity: number; prescribed: number };
 
 /** The catalogue row as the doctor's search and the prescription see it. */
 export const medicineColumns = (tx: Tx) => tx`
-  m.id, m.brand, m.molecule, m.form, m.strength, m.pack, m.pack_days, m.route, m.default_frequency, m.mrp_paise, m.active`;
+  m.id, m.brand, m.molecule, m.form, m.strength, m.pack, m.pack_days, m.route, m.default_frequency, m.mrp_paise, m.active, m.sku`;
 
 export const toInventoryItem = (m: Record<string, unknown>) => ({
   id: String(m.id), brand: m.brand, molecule: m.molecule, form: m.form, strength: m.strength, pack: m.pack,
@@ -68,7 +70,8 @@ export async function priceCart(tx: Tx, cart: { lines: CartLine[]; months: numbe
     const available = Boolean(m?.active) && m?.mrp_paise != null;
     const unit = m && available ? unitPrice(m.mrp_paise, percent, m.cost_paise ?? null) : 0;
     return {
-      medicineId: String(l.medicineId), brand: m?.brand ?? "", molecule: m?.molecule ?? "", strength: m?.strength ?? "",
+      // the ERP's Product ID: what the pharmacy's own system knows the item by, kept on every order line
+      medicineId: String(l.medicineId), productId: m?.sku ?? null, brand: m?.brand ?? "", molecule: m?.molecule ?? "", strength: m?.strength ?? "",
       form: m?.form ?? "", pack: m?.pack ?? "", quantity: available ? l.quantity : 0, prescribed: l.prescribed,
       mrpPaise: m?.mrp_paise ?? 0, pricePaise: unit, available,
     };
@@ -112,8 +115,11 @@ export async function pendingPlan(tx: Tx, patientId: number) {
 export async function startPlan(tx: TransactionSql, userId: number, planId: number, orderId: string | null) {
   const [plan] = await tx`select duration_months from plans where id = ${planId}`;
   await tx`update subscriptions set status = 'Expired' where user_id = ${userId} and status = 'Active' and ends_at <= now()`;
-  await tx`insert into subscriptions (user_id, plan_id, status, starts_at, ends_at, payment_order_id)
-    values (${userId}, ${planId}, 'Active', now(), now() + make_interval(months => ${plan?.duration_months ?? 1}), ${orderId})`;
+  const [sub] = await tx`insert into subscriptions (user_id, plan_id, status, starts_at, ends_at, payment_order_id)
+    values (${userId}, ${planId}, 'Active', now(), now() + make_interval(months => ${plan?.duration_months ?? 1}), ${orderId})
+    returning id`;
+  // the health coach, and the fitness coach who starts three weeks in (lib/coaches.ts)
+  await assignCoaches(tx, userId, sub.id);
 }
 
 if (import.meta.main) {

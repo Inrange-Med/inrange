@@ -22,6 +22,8 @@ export const KIND_WORDS: Record<TaskKind, string> = {
   RECONCILE: "Payment check",
   MATCH_MEDICINE: "Match a medicine",
   LAB_ADD_ON: "Add a test to a lab booking",
+  COACH_FIRST_CALL: "First coach call",
+  FITNESS_START: "Start fitness coaching",
 };
 
 /** Tasks about an order the patient has not paid for: the call can end in these. */

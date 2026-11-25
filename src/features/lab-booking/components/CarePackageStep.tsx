@@ -5,12 +5,18 @@
  * place of the Redcliffe package list. The card lists what is included (the backend's lines, with no
  * consultation length) and how many markers the blood test reads, never the tests by name (client
  * call, 12 Nov 2026: a list of tests is a shopping list for any local lab; the promise is the cause,
- * then the plan). "Start your consultation" uses its Redcliffe package (for the fasting note and the
- * lab's age and sex limits) and moves on. Prices come from the backend.
+ * then the plan). Prices come from the backend.
+ * Pay first, then book (24 Nov 2026): someone who has not paid ticks any optional test and pays here
+ * (the shared checkout), and comes back to choose the collection time. Someone who has paid goes
+ * straight on to the address and the time, with nothing more to pay.
  */
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, WarningCircle } from "@phosphor-icons/react";
+import { useRouter } from "next/navigation";
+import { ArrowRight, Check, WarningCircle } from "@phosphor-icons/react";
+import { checkoutHref } from "@/lib/payments/checkoutHref";
+import { formatRupees } from "@/lib/format/money";
+import { getMyEligibility } from "@/services/eligibilityService";
 import { useApiResource } from "@/hooks/useApiResource";
 import { errorMessage } from "@/lib/http/apiClient";
 import { markerCount, withoutDuration } from "@/lib/format/carePackage";
@@ -25,8 +31,12 @@ import WasNow from "./WasNow";
 import styles from "../LabBookingFlow.module.css";
 
 type Props = {
-  onChoose: (chosen: { care: CarePackage; lab: LabPackage }) => void;
-  /** start the booking without a tap when there is exactly one package (already chosen elsewhere) */
+  onChoose: (chosen: {
+    care: CarePackage;
+    lab: LabPackage;
+    paid?: boolean;
+  }) => void;
+  /** on the first arrival: someone who has paid goes straight on to the address, without a tap */
   autoStart?: boolean;
 };
 
@@ -37,6 +47,11 @@ export default function CarePackageStep({
   const packages = useApiResource("care-packages", listCarePackages);
   // the lab packages, for each card's marker count; the same list "Start your consultation" uses
   const labPackages = useApiResource("lab-packages", listLabPackages);
+  const router = useRouter();
+  // paid for already? then there is only the time left to choose
+  const eligibility = useApiResource("eligibility", getMyEligibility);
+  const paid = Boolean(eligibility.data?.labCredit);
+  const [addOns, setAddOns] = useState<string[]>([]);
   const [startingCode, setStartingCode] = useState<string | null>(null);
   const [problem, setProblem] = useState<{
     code: string;
@@ -51,7 +66,19 @@ export default function CarePackageStep({
       const lab = (labPackages.data ?? (await listLabPackages()))?.find(
         (item) => item.code === care.labPackageCode,
       );
-      if (lab) onChoose({ care, lab });
+      if (lab && !paid) {
+        // pay first: the checkout shows the bill, then returns here to choose the time
+        router.push(
+          checkoutHref({
+            purpose: "CARE_PACKAGE",
+            referenceId: [care.code, ...addOns].join("+"),
+            returnTo: "/onboarding?step=report",
+            payNow: true,
+          }),
+        );
+        return;
+      }
+      if (lab) onChoose({ care, lab, paid: true });
       else
         setProblem({
           code: care.code,
@@ -72,14 +99,22 @@ export default function CarePackageStep({
   );
   const single = only.length === 1 ? only[0] : null;
   useEffect(() => {
-    if (!autoStart || autoStarted.current || !single || labPackages.loading)
+    // only someone who has paid goes on without a tap, and only where the caller asks (the first arrival):
+    // coming Back to this step must not push them forward again. Everyone else sees the price first.
+    if (
+      !autoStart ||
+      !paid ||
+      autoStarted.current ||
+      !single ||
+      labPackages.loading
+    )
       return;
     autoStarted.current = true;
     void start(single);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once, when the packages are in
-  }, [autoStart, single, labPackages.loading]);
+  }, [autoStart, paid, single, labPackages.loading]);
 
-  if (packages.loading) return <LoadingSkeleton />;
+  if (packages.loading || eligibility.loading) return <LoadingSkeleton />;
   if (packages.error)
     return <ErrorNotice message={packages.error} onRetry={packages.reload} />;
 
@@ -136,6 +171,37 @@ export default function CarePackageStep({
                 <span>{problem.message}</span>
               </p>
             )}
+            {!paid &&
+              care.addOns.map((addOn) => (
+                <button
+                  key={addOn.code}
+                  type="button"
+                  role="checkbox"
+                  aria-checked={addOns.includes(addOn.code)}
+                  className={styles.addOn}
+                  onClick={() =>
+                    setAddOns((now) =>
+                      now.includes(addOn.code)
+                        ? now.filter((c) => c !== addOn.code)
+                        : [...now, addOn.code],
+                    )
+                  }
+                >
+                  <span className={styles.addOnBox} aria-hidden="true">
+                    {addOns.includes(addOn.code) && (
+                      <Check size={13} weight="bold" />
+                    )}
+                  </span>
+                  <span className={styles.addOnWords}>
+                    Add a{" "}
+                    {addOn.name.charAt(0).toLowerCase() + addOn.name.slice(1)},{" "}
+                    <span className="num">
+                      {formatRupees(addOn.priceRupees)}
+                    </span>
+                    {addOn.description && <small>{addOn.description}</small>}
+                  </span>
+                </button>
+              ))}
             <button
               type="button"
               className={`btn ${formStyles.go}`}
@@ -143,7 +209,16 @@ export default function CarePackageStep({
               data-busy={startingCode === care.code}
               aria-busy={startingCode === care.code}
             >
-              <span>Book home blood tests</span>
+              <span>
+                {paid
+                  ? "Choose your collection time"
+                  : `Pay ${formatRupees(
+                      care.priceRupees +
+                        care.addOns
+                          .filter((a) => addOns.includes(a.code))
+                          .reduce((n, a) => n + a.priceRupees, 0),
+                    )}`}
+              </span>
               <span className="well" aria-hidden="true">
                 {startingCode === care.code ? (
                   <i className={formStyles.spin} />
@@ -152,6 +227,11 @@ export default function CarePackageStep({
                 )}
               </span>
             </button>
+            <p className={styles.foot}>
+              {paid
+                ? "Paid. Nothing more to pay."
+                : "You choose your collection time right after paying."}
+            </p>
           </li>
         );
       })}

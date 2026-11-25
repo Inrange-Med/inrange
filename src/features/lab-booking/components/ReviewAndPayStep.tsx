@@ -58,6 +58,7 @@ export default function ReviewAndPayStep({
   const {
     chosenPackage: labPackage,
     carePackage,
+    paid,
     address,
     patient,
     slot,
@@ -165,7 +166,9 @@ export default function ReviewAndPayStep({
             </small>
           </dt>
           <dd className="num">
-            {covered ? (
+            {paid ? (
+              "Paid"
+            ) : covered ? (
               formatRupees(0)
             ) : carePackage ? (
               <WasNow
@@ -182,7 +185,7 @@ export default function ReviewAndPayStep({
             )}
           </dd>
         </div>
-        {carePackage?.addOns.map((addOn) => (
+        {(paid ? [] : (carePackage?.addOns ?? [])).map((addOn) => (
           <div key={addOn.code}>
             <dt>
               <button
@@ -229,7 +232,7 @@ export default function ReviewAndPayStep({
         <div className={styles.total}>
           <dt>To pay now</dt>
           <dd className="num">
-            {covered
+            {covered || paid
               ? formatRupees(0)
               : formatRupees(liveHold ? liveHold.price.total : listedPrice)}
           </dd>
@@ -290,9 +293,11 @@ export default function ReviewAndPayStep({
           >
             <span>
               {busy
-                ? "Holding your time"
-                : covered
-                  ? "Book the test"
+                ? paid
+                  ? "Booking your time"
+                  : "Holding your time"
+                : covered || paid
+                  ? "Book this time"
                   : "Continue to payment"}
             </span>
             <span className="well" aria-hidden="true">
@@ -306,9 +311,11 @@ export default function ReviewAndPayStep({
           <p className={styles.foot}>
             {held
               ? "Your time was released. Continue to hold it again."
-              : covered
-                ? "Your plan covers this test."
-                : "We hold this time for 30 minutes while you pay."}
+              : paid
+                ? "Already paid. Nothing more to pay."
+                : covered
+                  ? "Your plan covers this test."
+                  : "We hold this time for 30 minutes while you pay."}
           </p>
         </>
       )}

@@ -80,6 +80,8 @@ export type NextStep =
   | { stage: "NOT_APPROVED"; note: string | null }
   | { stage: "BOOK_CONSULTATION"; paid: boolean }
   | { stage: "BLOOD_TEST_NEEDED" }
+  /** paid for; the collection is still to book */
+  | { stage: "BOOK_BLOOD_TEST" }
   | { stage: "IN_CARE"; prescription: PrescriptionSummary | null };
 
 export type Collection = {

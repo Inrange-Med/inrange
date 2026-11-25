@@ -9,7 +9,16 @@
  * COACH: a health or fitness coach, who works in /coach with their own patients.
  * SALES: a salesperson, who works in /sales with the customers assigned to them.
  */
-export type UserRole = "PATIENT" | "DOCTOR" | "ADMIN" | "COACH" | "SALES";
+export type UserRole =
+  | "PATIENT"
+  | "DOCTOR"
+  | "ADMIN"
+  | "COACH"
+  | "SALES"
+  /** the operations team: works in the admin workspace, on their desks only */
+  | "OPS";
+/** What someone on the operations team does: books blood tests, books consultations, runs the pharmacy. */
+export type Desk = "BLOOD_TESTS" | "CONSULTATIONS" | "MEDICINE";
 
 /** What we keep about the signed-in person between page loads. */
 type SessionUser = {
@@ -17,6 +26,8 @@ type SessionUser = {
   role: UserRole;
   fullName: string;
   mobile: string;
+  /** the operations team's desks; empty for everyone else */
+  desks?: Desk[];
 };
 
 const STORAGE_KEYS = {
@@ -84,6 +95,7 @@ export function saveSession(params: {
     userId?: number | string;
     fullName?: string;
     name?: string;
+    desks?: Desk[];
   } | null;
 }): SessionUser {
   const claims = decodeTokenPayload(params.accessToken);
@@ -92,7 +104,8 @@ export function saveSession(params: {
     claimed === "DOCTOR" ||
     claimed === "ADMIN" ||
     claimed === "COACH" ||
-    claimed === "SALES"
+    claimed === "SALES" ||
+    claimed === "OPS"
       ? claimed
       : "PATIENT";
   const rawId =
@@ -113,6 +126,7 @@ export function saveSession(params: {
         "",
     ),
     mobile: params.mobile,
+    desks: params.user?.desks ?? [],
   };
 
   localStorage.setItem(STORAGE_KEYS.accessToken, params.accessToken);
@@ -145,5 +159,6 @@ export function homePathFor(role: UserRole) {
   if (role === "ADMIN") return "/admin";
   if (role === "COACH") return "/coach";
   if (role === "SALES") return "/sales";
+  if (role === "OPS") return "/admin/medicine";
   return role === "DOCTOR" ? "/doctor-dashboard" : "/patient-dashboard";
 }

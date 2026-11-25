@@ -31,6 +31,7 @@ const planOf = sql`
 async function patientFor(me: AuthUser, patientId: number) {
   const [p] = await sql`
     select pu.id, pu.mobile, ${name} as name, pp.age_years, pp.gender, pp.height_cm, pp.weight_kg, pp.coach_id, pp.fitness_coach_id,
+      to_char(pp.fitness_starts_on, 'YYYY-MM-DD') as fitness_starts_on,
       pl.name as plan, ${iso("pl.starts_at")} as plan_starts, ${iso("pl.ends_at")} as plan_ends, pl.starts_at as plan_from,
       pl.doctor_consults, pl.coach_calls, pl.fitness_calls
     from users pu join patient_profiles pp on pp.user_id = pu.id ${planOf}
@@ -54,6 +55,7 @@ coachRoutes.get("/coach/patients", async (c) => {
       (select count(*) from coach_calls k where k.patient_id = pu.id and k.kind = 'FITNESS' and k.called_on >= coalesce(pl.starts_at, '-infinity')::date)::int as "fitnessCallsMade",
       (select to_char(max(k.called_on), 'YYYY-MM-DD') from coach_calls k where k.patient_id = pu.id) as "lastCallOn",
       exists (select 1 from coach_plans d where d.patient_id = pu.id and d.kind = 'DIET') as "hasDiet",
+      to_char(pp.fitness_starts_on, 'YYYY-MM-DD') as "fitnessStartsOn",
       (select count(*) from ops_tasks t where t.patient_id = pu.id and t.status = 'OPEN')::int as "openTasks"
     from users pu join patient_profiles pp on pp.user_id = pu.id ${planOf}
     where pu.role = 'PATIENT' ${scope(me)}
@@ -109,7 +111,9 @@ coachRoutes.get("/coach/patients/:patientId", async (c) => {
   return ok(c, {
     patient: { id: String(p.id), name: p.name, mobile: p.mobile, age: p.age_years ?? null, gender: p.gender ?? null,
       heightCm: p.height_cm != null ? Number(p.height_cm) : null, weightKg: p.weight_kg != null ? Number(p.weight_kg) : null,
-      doctors: doctors.map((d) => d.full_name), coachName: coach?.full_name ?? null, fitnessCoachName: fitness?.full_name ?? null },
+      doctors: doctors.map((d) => d.full_name), coachName: coach?.full_name ?? null, fitnessCoachName: fitness?.full_name ?? null,
+      // the fitness coach starts three weeks into a plan (lib/coaches.ts); null: already started
+      fitnessStartsOn: p.fitness_starts_on ?? null },
     plan: p.plan ? { name: p.plan, startedAt: p.plan_starts, endsAt: p.plan_ends, doctorConsults: p.doctor_consults ?? null,
       coachCalls: p.coach_calls ?? null, fitnessCalls: p.fitness_calls ?? null } : null,
     nextConsultation: next ? { startsAt: next.starts, doctorName: next.doctor } : null,

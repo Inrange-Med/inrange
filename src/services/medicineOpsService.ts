@@ -28,7 +28,8 @@
  *   GET   /api/admin/medicine/messages                     every message sent or skipped
  *   POST  /api/admin/medicine/messages/:id/reply           { code?, text? }: plays the patient's reply while WhatsApp is mocked (admin)
  *   GET   /api/admin/medicine/numbers?days=                the measures (admin)
- *   GET   /api/admin/coaches   POST /api/admin/coaches     the health coaches (admin)
+ *   GET   /api/admin/coaches   POST /api/admin/coaches     the coaches; PATCH /api/admin/coaches/:id { kind } (admin)
+ *   GET   /api/admin/team   POST /api/admin/team   PATCH /api/admin/team/:id   the operations team and their desks (admin)
  *   POST  /api/admin/medicine/patients/:id/payment-links   the sales form: makes a payment link -> { url } (admin)
  *   POST  /api/admin/payment-links/:id/check|cancel|simulate-paid  asks Razorpay, withdraws, or plays a test payment (admin)
  *   GET   /api/admin/payments                              every payment link, and payments matched to no order or link (admin)
@@ -50,9 +51,12 @@
 
 import { apiRequest, listFrom, type ApiEnvelope } from "@/lib/http/apiClient";
 import type { LinkForm, PlanOnSale } from "@/types/sales";
+import type { Desk } from "@/lib/session/authSession";
 import type {
   CallLinks,
   Coach,
+  CoachKind,
+  TeamMember,
   LabPlace,
   LabSlot,
   OpsPipeline,
@@ -321,9 +325,49 @@ export async function listCoaches(): Promise<Coach[]> {
   return listFrom<Coach>(await apiRequest("/api/admin/coaches"), "coaches");
 }
 
+export async function setCoachKind(
+  id: string,
+  kind: CoachKind,
+): Promise<Coach[]> {
+  return listFrom<Coach>(
+    await apiRequest(`/api/admin/coaches/${id}`, {
+      method: "PATCH",
+      body: { kind },
+    }),
+    "coaches",
+  );
+}
+
+export async function listTeam(): Promise<TeamMember[]> {
+  return listFrom<TeamMember>(await apiRequest("/api/admin/team"), "team");
+}
+
+/** Adds someone to the operations team; they sign in with this number. Returns the server's words. */
+export async function addTeamMember(input: {
+  fullName: string;
+  mobile: string;
+  desks: Desk[];
+}): Promise<string> {
+  const body = await apiRequest<{ message?: string }>("/api/admin/team", {
+    method: "POST",
+    body: input,
+  });
+  return body?.message ?? "Added";
+}
+
+/** Changes their desks; none takes them off the team and signs them out. */
+export async function setTeamDesks(id: string, desks: Desk[]): Promise<string> {
+  const body = await apiRequest<{ message?: string }>(`/api/admin/team/${id}`, {
+    method: "PATCH",
+    body: { desks },
+  });
+  return body?.message ?? "Saved";
+}
+
 export async function addCoach(input: {
   fullName: string;
   mobile: string;
+  kind?: CoachKind;
 }): Promise<Coach> {
   const body = await apiRequest<ApiEnvelope<Coach>>("/api/admin/coaches", {
     method: "POST",
@@ -447,6 +491,20 @@ export async function listLabSlots(
       `/api/admin/patients/${patientId}/lab/slots?addressId=${addressId}&date=${date}`,
     ),
   );
+}
+
+/** The blood tests were paid for outside the app (`paymentRef`), or that payment was refunded (null). Returns the server's words. */
+export async function setLabCredit(
+  patientId: string,
+  paymentRef: string | null,
+): Promise<string> {
+  const body = await apiRequest<{ message?: string }>(
+    `/api/admin/patients/${patientId}/lab/credit`,
+    paymentRef === null
+      ? { method: "DELETE" }
+      : { method: "POST", body: { paymentRef } },
+  );
+  return body?.message ?? "Saved";
 }
 
 /** Holds a collection time for the patient; returns the server's words. */

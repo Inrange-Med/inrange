@@ -10,6 +10,7 @@
 //   GET    /care-packages
 //   GET    /reports                  POST /reports (multipart)
 //   GET    /address/my-addresses     POST /address/add              DELETE /address/:addressId
+import { expireHolds } from "./labs.ts";
 import { Hono } from "hono";
 import type { Context } from "hono";
 import { sql } from "../lib/db.ts";
@@ -408,6 +409,7 @@ patientRoutes.delete("/trackers/weight/:id", async (c) => {
 
 patientRoutes.get("/eligibility", async (c) => {
   const me = await requirePatient(c);
+  await expireHolds(me.id);
   const [e] = await sql`select * from eligibility where user_id = ${me.id}`;
   // an active plan covers follow-ups ("Doctor review every 14 days, included"), so Book skips checkout
   const [{ covered }] = await sql`
@@ -419,6 +421,8 @@ patientRoutes.get("/eligibility", async (c) => {
     reviewNote: e?.review_note ?? null,
     labBookingId: e?.lab_booking_id ?? null,
     consultationPaid: (Boolean(e?.consultation_paid) && !e?.consultation_used) || covered,
+    // the blood tests are paid for and the collection is still to book
+    labCredit: Boolean(e?.lab_credit),
     updatedAt: e?.updated_at ?? null,
   });
 });

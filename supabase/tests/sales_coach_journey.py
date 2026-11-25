@@ -7,7 +7,9 @@ test doctor (9000000001). It pays nothing: a test patient's payment link is paid
 With Razorpay live it makes real payment links for the test patient (never texted) and withdraws them. It leaves
 the test people behind; remove them when the pilot is cleaned.
 
-  roles         each role reaches only its own routes; a salesperson only their customers; a coach only their patients
+  roles         each role reaches only its own routes; a salesperson only their leads; a coach only their patients;
+                the operations team only its desks
+  pay first     the care package is paid for with no time chosen; the patient then has the blood test to book
   sales         admin assigns a customer -> the salesperson sees them -> a payment link within the plan's discount ->
                 a new link replaces the last -> the app shows it to the patient -> paid: the plan starts, the sale is
                 recorded with the amount and the payment ID, the patient has an invoice
@@ -23,7 +25,7 @@ BASE = os.environ.get("BASE", "https://wcsglsrjixfrobujchen.supabase.co/function
 OTP = os.environ["OTP"]
 ADMIN = os.environ["ADMIN"]
 RUN = str(int(time.time()))[-4:]
-PATIENT, OTHER, SELLER, SELLER2, COACH = (f"98000{n}{RUN}" for n in (5, 4, 3, 2, 1))
+PATIENT, OTHER, SELLER, SELLER2, COACH, FITNESS, OPS = (f"98000{n}{RUN}" for n in (5, 4, 3, 2, 1, 6, 7))
 IST = timezone(timedelta(hours=5, minutes=30))
 passed = 0
 
@@ -110,8 +112,8 @@ def main():
     step("a patient reaches nothing of admin's, a doctor's, sales' or a coach's", ok, bad)
     ok, bad = refused(doctor, [r for r in admin_only if r[1] != "/api/admin/doctors"] + sales_only + coach_only)
     step("a doctor reaches nothing of admin's, sales' or a coach's", ok, bad)
-    ok, bad = refused(admin, sales_only)
-    step("the sales panel is one salesperson's own: an admin works from the admin area", ok, bad)
+    s, b = call("GET", "/api/sales/patients?salespersonId=none", admin)
+    step("an admin reaches every lead through the same routes", s == 200 and any(x["id"] == str(pid) for x in b["data"]), b)
     ok, bad = refused(None, admin_only + sales_only + coach_only + doctor_only + patient_only)
     step("nothing opens without a sign-in", ok, bad)
 
@@ -123,7 +125,50 @@ def main():
     s, b = call("POST", "/api/labs/bookings", patient, {"packageCode": "X", "addressId": 1, "collectionDate": day(4), "slotId": 1})
     step("nor hold a time beyond the day after tomorrow", s == 400 and "tomorrow" in b["message"], b)
     s, b = call("GET", "/api/admin/pipeline", admin)
-    step("admin sees who to call, by where they are stuck", s == 200 and set(b["data"]) == {"bloodTest", "labProblem", "consultation", "plan", "coach"}, b)
+    step("admin sees who to call, by where they are stuck", s == 200
+         and set(b["data"]) == {"bloodTest", "paidNoTest", "labProblem", "consultation", "plan", "coach"}, b)
+
+    # ---------------------------------------------------------------- pay first, then book
+    s, b = call("POST", "/api/payments/orders", other, {"purpose": "CARE_PACKAGE", "referenceId": "LAB_AND_CONSULT"})
+    step("the care package is paid for first: the order is for its price, with no time chosen",
+         s == 200 and b["data"]["amountPaise"] > 0 and b["data"]["lineItems"], b)
+    s, b = call("POST", f"/api/admin/patients/{oid}/lab/credit", admin, {"paymentRef": "pay_TESTCARE" + RUN})
+    step("a payment taken outside the app is recorded before any booking", s == 200, b)
+    s, b = call("GET", "/api/eligibility", other)
+    step("the patient has paid and has the blood test to book", s == 200 and b["data"]["labCredit"] is True, b)
+    s, b = call("GET", "/api/patient/next-step", other)
+    step("their app says: book your home blood test", b["data"]["stage"] == "BOOK_BLOOD_TEST", b["data"])
+    s, b = call("POST", "/api/payments/orders", other, {"purpose": "CARE_PACKAGE", "referenceId": "LAB_AND_CONSULT"})
+    step("it cannot be paid for twice", s == 409, b)
+    s, b = call("GET", "/api/admin/pipeline", admin)
+    step("the team's list has them: paid, blood test not booked", any(x["patientId"] == str(oid) for x in b["data"]["paidNoTest"]), b["data"]["paidNoTest"][:3])
+    s, b = call("GET", f"/api/admin/patients/{oid}/lab", admin)
+    step("and a time booked for them now would cost nothing", b["data"]["credit"] is True, b)
+    s, b = call("DELETE", f"/api/admin/patients/{oid}/lab/credit", admin)
+    step("a refund takes the payment back out", s == 200 and call("GET", "/api/eligibility", other)[1]["data"]["labCredit"] is False, b)
+
+    # ---------------------------------------------------------------- the operations team: one desk, only its work
+    s, b = call("POST", "/api/admin/team", admin, {"fullName": f"Test Desk {RUN}", "mobile": OPS, "desks": ["BLOOD_TESTS"]})
+    step("admin adds someone to the blood test desk", s == 200, b)
+    ops_id = next(x["id"] for x in b["data"] if x["mobile"] == OPS)
+    ops, _, role = sign_in(OPS)
+    step("their role is OPS", role == "OPS", role)
+    s, b = call("GET", "/api/admin/pipeline", ops)
+    step("the blood test desk sees its own lists, and none of the others", s == 200 and b["data"]["plan"] == [] and b["data"]["consultation"] == []
+         and b["data"]["coach"] == [], {k: len(v) for k, v in b["data"].items()})
+    s, b = call("GET", f"/api/admin/patients/{pid}/lab", ops)
+    step("and opens a patient's blood test bookings", s == 200, b)
+    ok, bad = refused(ops, [("GET", "/api/admin/calls"), ("GET", "/api/admin/medicine/orders"), ("GET", "/api/admin/payments"),
+                            ("GET", "/api/admin/medicine/tasks"), ("PUT", f"/api/admin/medicine/patients/{pid}/plan"),
+                            ("POST", f"/api/admin/medicine/patients/{pid}/consultations"), ("GET", "/api/admin/team"), ("POST", "/api/admin/coaches"),
+                            ("GET", "/api/admin/reviews"), ("PATCH", "/api/admin/plans/1")] + sales_only + coach_only + doctor_only + patient_only)
+    step("but nothing of the other desks, of admin's, of sales', a coach's, a doctor's or a patient's", ok, bad)
+    s, b = call("PATCH", f"/api/admin/team/{ops_id}", admin, {"desks": []})
+    step("admin takes them off the team", s == 200, b)
+    s, b = call("GET", "/api/admin/pipeline", ops)
+    step("and they are signed out at once", s == 401, b)
+    s, b = call("POST", "/api/admin/coaches", admin, {"fullName": f"Test Fitness {RUN}", "mobile": FITNESS, "kind": "FITNESS"})
+    step("admin adds a fitness coach", s == 200 and b["data"]["kind"] == "FITNESS", b)
     s, b = call("GET", f"/api/admin/patients/{pid}/lab", admin)
     step("admin opens what booking a blood test for the patient needs", s == 200 and b["data"]["bookings"] == [] and b["data"]["priceRupees"], b)
 
@@ -135,7 +180,19 @@ def main():
     s, b = call("GET", "/api/sales/patients", seller)
     step("the salesperson sees their customer, and only them", s == 200 and [p["id"] for p in b["data"]] == [str(pid)], b)
     s, b = call("GET", f"/api/sales/patients/{pid}", seller)
-    step("and opens them: no plan, no links", s == 200 and b["data"]["plan"] is None and b["data"]["links"] == [], b)
+    step("and opens them: where they stand, no plan, no links", s == 200 and b["data"]["lead"]["planName"] is None
+         and b["data"]["lead"]["stage"] in ("NEW", "PAID") and b["data"]["links"] == [] and b["data"]["sale"] is None, b)
+    s, b = call("POST", f"/api/sales/patients/{pid}/updates", seller, {})
+    step("a call note needs something in it", s == 400, b)
+    tomorrow = (datetime.now(IST) + timedelta(days=1)).date().isoformat()
+    s, b = call("POST", f"/api/sales/patients/{pid}/updates", seller, {"callStatus": "CALL_BACK", "remark": "Asked to call after 6", "followUpOn": tomorrow})
+    step("the salesperson notes a call and when to call again", s == 200, b)
+    lead = call("GET", "/api/sales/patients", seller)[1]["data"][0]
+    step("the lead shows the note", lead["callStatus"] == "CALL_BACK" and lead["followUpOn"] == tomorrow and lead["remark"] == "Asked to call after 6", lead)
+    s, b = call("POST", f"/api/sales/patients/{pid}/updates", seller2, {"remark": "x"})
+    step("another salesperson cannot write on the lead", s == 404, b)
+    s, b = call("PUT", f"/api/sales/patients/{pid}/sale-form", seller, {"condition": "Obesity"})
+    step("the sales form waits for the payment", s == 409, b)
     s, b = call("GET", f"/api/sales/patients/{pid}", seller2)
     step("another salesperson cannot", s == 404, b)
 
@@ -182,6 +239,18 @@ def main():
     step("the plan started, with the sale recorded from the link", p["plan"] == plan["name"] and sale["salesperson"] == names[SELLER]
          and sale["coachPreference"] == "Hindi, evenings" and sale["paid"]["where"] == "LINK" and sale["paid"]["amountRupees"] == plan["priceRupees"]
          and sale["paid"]["ref"].startswith("pay_"), p)
+    step("a health coach and a fitness coach were assigned when the plan started; fitness starts three weeks in",
+         p["coach"] is not None and p["fitnessCoach"] is not None and p["fitnessCoach"]["startsOn"] > datetime.now(IST).date().isoformat(), p)
+    d = call("GET", f"/api/sales/patients/{pid}", seller)[1]["data"]
+    step("the salesperson sees the sale, filled in from the payment, with the form to fill in",
+         d["lead"]["stage"] == "ON_PLAN" and d["lead"]["formDue"] is True and d["sale"]["paymentId"].startswith("pay_")
+         and d["sale"]["amountRupees"] == plan["priceRupees"] and d["sale"]["salesperson"] == names[SELLER] and d["sale"]["submittedAt"] is None, d["sale"])
+    s, b = call("PUT", f"/api/sales/patients/{pid}/sale-form", seller,
+                {"condition": "Obesity", "programme": "Weight care", "coachPreference": "Hindi, mornings", "note": "Starts Monday"})
+    step("the salesperson fills in the sales form", s == 200, b)
+    d = call("GET", f"/api/sales/patients/{pid}", seller)[1]["data"]
+    step("and it is kept with the sale", d["lead"]["formDue"] is False and d["sale"]["condition"] == "Obesity" and d["sale"]["programme"] == "Weight care"
+         and d["sale"]["coachPreference"] == "Hindi, mornings" and d["sale"]["submittedBy"], d["sale"])
     s, b = call("GET", "/api/payments", patient)
     step("the patient has the payment, with an invoice number", s == 200 and any(x["id"] == link and x["invoiceNumber"] for x in b["data"]), b)
     s, b = call("GET", "/api/patient/next-step", patient)
@@ -203,6 +272,7 @@ def main():
     coach, _, _ = sign_in(COACH)
     s, b = call("GET", f"/api/coach/patients/{pid}", coach)
     step("a coach cannot open a patient who is not theirs", s == 404, b)
+    call("PATCH", f"/api/admin/medicine/patients/{pid}/fitness-coach", admin, {"coachId": None})
     s, b = call("PATCH", f"/api/admin/medicine/patients/{pid}/coach", admin, {"coachId": coach_id})
     step("admin makes them the patient's health coach", s == 200, b)
     s, b = call("GET", "/api/coach/patients", coach)

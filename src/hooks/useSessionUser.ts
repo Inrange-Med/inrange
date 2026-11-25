@@ -14,7 +14,14 @@ import {
   subscribeToSession,
 } from "@/lib/session/authSession";
 
-type SessionStatus = "OUT" | "PATIENT" | "DOCTOR" | "ADMIN" | "COACH" | "SALES";
+type SessionStatus =
+  | "OUT"
+  | "PATIENT"
+  | "DOCTOR"
+  | "ADMIN"
+  | "COACH"
+  | "SALES"
+  | "OPS";
 
 function readStatus(): SessionStatus {
   return isSignedIn() ? (getSessionUser()?.role ?? "PATIENT") : "OUT";

@@ -15,6 +15,7 @@ const NOT_STARTED: Eligibility = {
   reviewNote: null,
   labBookingId: null,
   consultationPaid: false,
+  labCredit: false,
   updatedAt: null,
 };
 
