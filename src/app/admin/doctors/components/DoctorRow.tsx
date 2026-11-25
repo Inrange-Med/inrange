@@ -80,10 +80,7 @@ export default function DoctorRow({
                 ? "No fee set"
                 : `Fee ${formatRupees(doctor.consultationFeeRupees)}`}
             </span>{" "}
-            · <span>{hours}</span> ·{" "}
-            <span>
-              {upcoming} upcoming consultation{upcoming === 1 ? "" : "s"}
-            </span>
+            · <span>{hours}</span> · <span>{upcoming} upcoming</span>
           </span>
         </span>
       </span>
@@ -111,8 +108,8 @@ export default function DoctorRow({
         <div className={`${adminStyles.confirm} ${adminStyles.prowWide}`}>
           <p>
             {doctor.active
-              ? `Deactivate ${doctor.fullName}? Patients can no longer book them. Booked consultations stay; their open times are removed.`
-              : `Reactivate ${doctor.fullName}? Patients can book their hours again.`}
+              ? `Deactivate ${doctor.fullName}? Patients cannot book them. Booked consultations stay.`
+              : `Reactivate ${doctor.fullName}? Patients can book them again.`}
           </p>
           <div className={adminStyles.actions}>
             <button
@@ -142,7 +139,7 @@ export default function DoctorRow({
               data-busy={false}
               onClick={() => setConfirming(false)}
             >
-              {doctor.active ? "Keep active" : "Keep inactive"}
+              Cancel
             </button>
           </div>
         </div>
@@ -153,7 +150,7 @@ export default function DoctorRow({
             className={adminStyles.textBtn}
             onClick={onEdit}
           >
-            Edit details
+            Edit
           </button>
           <button
             type="button"

@@ -98,9 +98,7 @@ export default function ReviewItem({
   return (
     <li className={adminStyles.review}>
       <div className={adminStyles.itemHead}>
-        <strong className={adminStyles.name}>
-          {review.name || "Name not given"}
-        </strong>
+        <strong className={adminStyles.name}>{review.name || "No name"}</strong>
         {waiting ? (
           <span className={`${adminStyles.when} num`}>
             Waiting {waitedFor(review.waitingSince, now)}
@@ -132,7 +130,7 @@ export default function ReviewItem({
           ))}
         </ul>
       ) : (
-        <p className={adminStyles.muted}>No report attached yet.</p>
+        <p className={adminStyles.muted}>No report yet.</p>
       )}
 
       {!waiting && (
@@ -156,7 +154,7 @@ export default function ReviewItem({
           <label className={adminStyles.label} htmlFor={noteId}>
             Note for the patient{" "}
             <span id={`${noteId}-hint`} className={adminStyles.muted}>
-              The patient reads this. Say what happens next.
+              Say what happens next.
             </span>
           </label>
           <textarea
@@ -174,7 +172,7 @@ export default function ReviewItem({
           />
           {noteMissing && (
             <p id={`${noteId}-error`} className={formStyles.err}>
-              Add a short note. The patient reads it.
+              Add a note for the patient.
             </p>
           )}
         </div>
@@ -255,7 +253,7 @@ export default function ReviewItem({
                   className={adminStyles.textBtn}
                   onClick={() => setChanging(false)}
                 >
-                  Keep as it is
+                  Cancel
                 </button>
               )}
             </>
@@ -307,7 +305,7 @@ function ReportEntry({
         ) : (
           <span className={adminStyles.reportMissing}>
             <FileText size={18} aria-hidden="true" />
-            {report.title}: the file is missing
+            {report.title}: file missing
           </span>
         )}
         {earlier && (

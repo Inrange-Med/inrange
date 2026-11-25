@@ -23,7 +23,7 @@ export default function TeamView() {
       <PageHead
         className={adminStyles.pageHead}
         title="Team"
-        sub="Everyone who signs in to work. Each person signs in with their mobile number and sees only what their work needs."
+        sub="Each person signs in with their mobile number."
       />
       <div className={s.sheet}>
         <SalesTeamSheet inline onChanged={() => {}} />

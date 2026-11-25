@@ -37,34 +37,25 @@ const FIELDS: {
   label: string;
   max: number;
   hint?: string;
+  placeholder?: string;
   wide?: boolean;
 }[] = [
-  {
-    name: "mobile",
-    label: "Mobile number",
-    max: 16,
-    hint: "10 digits. The doctor signs in with it.",
-  },
   {
     name: "fullName",
     label: "Full name",
     max: 120,
-    hint: "As the patient should see it, for example Dr. Asha Rao.",
+    placeholder: "Dr. Asha Rao",
+  },
+  {
+    name: "mobile",
+    label: "Mobile",
+    max: 16,
+    hint: "The doctor signs in with this.",
   },
   { name: "specialization", label: "Specialisation", max: 120 },
   { name: "qualification", label: "Qualification", max: 200 },
-  {
-    name: "registrationNo",
-    label: "Registration number",
-    max: 60,
-    hint: "Medical council registration.",
-  },
-  {
-    name: "experience",
-    label: "Experience",
-    max: 60,
-    hint: "For example 12 years.",
-  },
+  { name: "registrationNo", label: "Registration number", max: 60 },
+  { name: "experience", label: "Experience", max: 60, placeholder: "12 years" },
   {
     name: "languages",
     label: "Languages",
@@ -73,9 +64,9 @@ const FIELDS: {
   },
   {
     name: "fee",
-    label: "Consultation fee in rupees",
+    label: "Fee in rupees",
     max: 7,
-    hint: "Whole rupees. Leave empty for no fee.",
+    hint: "Leave empty for no fee.",
   },
   { name: "about", label: "About", max: 1000, wide: true },
 ];
@@ -96,14 +87,13 @@ function problemsIn(values: Values, creating: boolean) {
   const problems: Partial<Record<Field, string>> = {};
   if (creating && !isValidMobile(mobileDigitsFrom(values.mobile)))
     problems.mobile = "Enter a 10-digit mobile number starting with 6 to 9.";
-  if (!values.fullName.trim())
-    problems.fullName = "Add the doctor's full name.";
+  if (!values.fullName.trim()) problems.fullName = "Add the full name.";
   if (!values.specialization.trim())
     problems.specialization = "Add the specialisation.";
   if (!values.registrationNo.trim())
-    problems.registrationNo = "Add the medical council registration number.";
+    problems.registrationNo = "Add the registration number.";
   if (values.fee.trim() && !/^\d+$/.test(values.fee.trim()))
-    problems.fee = "The fee is a whole number of rupees.";
+    problems.fee = "Use whole rupees, numbers only.";
   if (values.languages.split(",").filter((l) => l.trim()).length > 8)
     problems.languages = "List up to 8 languages.";
   return problems;
@@ -176,6 +166,7 @@ export default function DoctorForm({
             id,
             value: values[field.name],
             maxLength: field.max,
+            placeholder: field.placeholder,
             readOnly,
             "aria-invalid": Boolean(problem),
             "aria-describedby":
@@ -225,8 +216,7 @@ export default function DoctorForm({
               )}
               {readOnly && (
                 <p id={`${id}-note`} className={formStyles.hint}>
-                  The mobile is the doctor&apos;s sign-in and cannot be changed
-                  here.
+                  Cannot be changed.
                 </p>
               )}
             </div>
@@ -238,9 +228,7 @@ export default function DoctorForm({
 
       <div className={adminStyles.actions}>
         <button type="submit" className="btn" data-busy={busy} disabled={busy}>
-          <span>
-            {busy ? "Saving" : creating ? "Add doctor" : "Save changes"}
-          </span>
+          <span>{busy ? "Saving" : creating ? "Add doctor" : "Save"}</span>
           <span className="well" aria-hidden="true">
             {busy ? (
               <span className={formStyles.spin} />

@@ -1,7 +1,7 @@
 "use client";
 
 /*
-  /admin/doctors: the roster, active doctors first. "Add a doctor" opens the form above the list;
+  /admin/doctors: the roster, active doctors first. "Add doctor" opens the form above the list;
   Edit opens the same form in place of that doctor's row. A saved doctor replaces their row at once.
 */
 
@@ -39,7 +39,6 @@ export default function DoctorsView() {
       <PageHead
         className={adminStyles.pageHead}
         title="Doctors"
-        sub="Doctors set their own consultation hours from their dashboard. Until they do, they use the default hours."
         action={
           editing !== "new" && (
             <button
@@ -48,7 +47,7 @@ export default function DoctorsView() {
               onClick={() => setEditing("new")}
             >
               <Plus size={16} aria-hidden="true" />
-              Add a doctor
+              Add doctor
             </button>
           )
         }
@@ -66,7 +65,7 @@ export default function DoctorsView() {
             >
               <div className={adminStyles.panelHead}>
                 <h2 id="doctors-add-h" className={adminStyles.h2}>
-                  Add a doctor
+                  Add doctor
                 </h2>
               </div>
               <DoctorForm
@@ -82,14 +81,12 @@ export default function DoctorsView() {
           >
             <div className={adminStyles.panelHead}>
               <h2 id="doctors-roster-h" className={adminStyles.h2}>
-                Roster
+                All doctors
               </h2>
               <span className={`${adminStyles.count} num`}>{list.length}</span>
             </div>
             {list.length === 0 ? (
-              <p className={adminStyles.empty}>
-                No doctors yet. Add the first one with Add a doctor.
-              </p>
+              <p className={adminStyles.empty}>No doctors yet.</p>
             ) : (
               <div className={adminStyles.roster}>
                 <div className={adminStyles.listHead} aria-hidden="true">

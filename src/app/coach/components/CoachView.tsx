@@ -3,7 +3,7 @@
 /*
   /coach: the patients given to this coach (as health coach or fitness coach), and nobody else's. Whoever has
   waited longest for a call comes first. A row says the plan, the calls made against what it includes, and
-  the last call; it opens the patient (CoachPatientSheet): the diet chart or exercise plan, the calls, the
+  the last call; it opens the patient (CoachPatientSheet): the calls, the diet chart or exercise plan, the
   remarks for the doctor.
 */
 
@@ -51,22 +51,13 @@ export default function CoachView() {
 
   return (
     <main className={surfaceStyles.page}>
-      <PageHead
-        className={surfaceStyles.pageHead}
-        title="Your patients"
-        sub="Their diet chart or exercise plan, the calls you have made, and your remarks for the doctor."
-      />
-      <section className={surfaceStyles.panel} aria-labelledby="patients-h">
-        <div className={surfaceStyles.panelHead}>
-          <h2 id="patients-h" className={surfaceStyles.h2}>
-            Patients
-          </h2>
-        </div>
+      <PageHead className={surfaceStyles.pageHead} title="Patients" />
+      <section className={surfaceStyles.panel} aria-label="Patients">
         <input
           className={s.search}
           type="search"
           value={query}
-          placeholder="Name or mobile"
+          placeholder="Search name or mobile"
           aria-label="Find a patient by name or mobile"
           onChange={(e) => setQuery(e.target.value)}
         />
@@ -76,9 +67,7 @@ export default function CoachView() {
           <LoadingSkeleton />
         ) : patients.data.length === 0 ? (
           <p className={surfaceStyles.empty}>
-            {q
-              ? "No patient matches that."
-              : "No patients yet. Admin gives them to you once their plan starts."}
+            {q ? "No match." : "No patients yet."}
           </p>
         ) : (
           <ul className={s.rows}>
@@ -99,9 +88,7 @@ export default function CoachView() {
                           ? `Last call ${shortDate(p.lastCallOn)}`
                           : "No call yet"}
                       </span>
-                      {p.asHealth && !p.hasDiet && (
-                        <span>No diet chart yet</span>
-                      )}
+                      {p.asHealth && !p.hasDiet && <span>No diet chart</span>}
                       {p.asFitness &&
                         p.fitnessStartsOn &&
                         p.fitnessStartsOn > today && (
@@ -119,10 +106,10 @@ export default function CoachView() {
                     )}
                     <span className={surfaceStyles.muted}>
                       {p.asHealth && p.asFitness
-                        ? "Health and fitness coach"
+                        ? "Health and fitness"
                         : p.asFitness
-                          ? "Fitness coach"
-                          : "Health coach"}
+                          ? "Fitness"
+                          : "Health"}
                     </span>
                   </span>
                 </div>

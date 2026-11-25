@@ -1,10 +1,10 @@
 "use client";
 
 /*
-  One patient, for their coach (23 Nov 2026 call): who they are, their doctors, the plan and what it
-  includes, the next doctor's consultation, and the current prescription to follow (read only: a coach never
-  writes or changes one, and never sees a sale). Below: the diet chart or exercise plan, the calls made, and
-  the remarks the doctor reads at the follow-up. Opening the sheet is logged.
+  One patient, for their coach (23 Nov 2026 call): who they are, the plan and what it includes, the next
+  doctor's consultation, the current prescription to follow (read only: a coach never writes or changes one,
+  and never sees a sale), then their doctors and coaches. Below: the calls made, the diet chart or exercise
+  plan, and the remarks the doctor reads at the follow-up. Opening the sheet is logged.
 */
 
 import ErrorNotice from "@/components/ui/ErrorNotice";
@@ -72,23 +72,7 @@ export default function CoachPatientSheet({
                   p.weightKg && `${p.weightKg} kg at sign-up`,
                 ]
                   .filter(Boolean)
-                  .join(", ") || "Not filled in"}
-              </dd>
-            </div>
-            <div>
-              <dt>Doctors</dt>
-              <dd>{p.doctors.join(", ") || "No doctor yet"}</dd>
-            </div>
-            <div>
-              <dt>Coaches</dt>
-              <dd>
-                {[
-                  p.coachName && `${p.coachName} (health)`,
-                  p.fitnessCoachName &&
-                    `${p.fitnessCoachName} (fitness${p.fitnessStartsOn ? `, from ${shortDate(p.fitnessStartsOn)}` : ""})`,
-                ]
-                  .filter(Boolean)
-                  .join(", ")}
+                  .join(", ") || "Not given"}
               </dd>
             </div>
             <div>
@@ -113,12 +97,12 @@ export default function CoachPatientSheet({
                     </span>
                   </>
                 ) : (
-                  "No plan yet"
+                  "None yet"
                 )}
               </dd>
             </div>
             <div>
-              <dt>Next doctor call</dt>
+              <dt>Doctor call</dt>
               <dd>
                 {data.nextConsultation
                   ? `${when(data.nextConsultation.startsAt)}, ${data.nextConsultation.doctorName}`
@@ -154,6 +138,22 @@ export default function CoachPatientSheet({
                 </dd>
               </div>
             )}
+            <div>
+              <dt>Doctors</dt>
+              <dd>{p.doctors.join(", ") || "None yet"}</dd>
+            </div>
+            <div>
+              <dt>Coaches</dt>
+              <dd>
+                {[
+                  p.coachName && `${p.coachName} (health)`,
+                  p.fitnessCoachName &&
+                    `${p.fitnessCoachName} (fitness${p.fitnessStartsOn ? `, from ${shortDate(p.fitnessStartsOn)}` : ""})`,
+                ]
+                  .filter(Boolean)
+                  .join(", ")}
+              </dd>
+            </div>
           </dl>
           <CoachingSections
             key={p.id}

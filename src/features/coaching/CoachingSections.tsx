@@ -1,9 +1,9 @@
 "use client";
 
 /*
-  The coach's side of a patient (23 Nov 2026 call), on the coach's own sheet and on admin's: the diet chart
-  (the health coach), the exercise plan (the fitness coach) and the calls made, counted against what the plan
-  includes. Saving a chart keeps the old one and shows the new one to the patient (Care) and to the doctor
+  The coach's side of a patient (23 Nov 2026 call), on the coach's own sheet and on admin's: the calls made,
+  counted against what the plan includes, then the diet chart (the health coach) and the exercise plan (the
+  fitness coach). Saving a chart keeps the old one and shows the new one to the patient (Care) and to the doctor
   (the patient's page). `can` says which side this person may write; the API checks it again.
 */
 
@@ -17,6 +17,7 @@ import { logCoachCall, saveCoachPlan } from "@/services/coachService";
 import type { CoachCall, CoachPlan } from "@/types/coach";
 import surfaceStyles from "@/components/ui/styles/StaffSurfaces.module.css";
 import s from "@/components/ui/styles/StaffPanels.module.css";
+import c from "./Coaching.module.css";
 
 type Included = {
   coachCalls: number | null;
@@ -71,7 +72,7 @@ function PlanEditor({
         )}
       </h3>
       {editing ? (
-        <>
+        <div className={c.form}>
           <textarea
             className={s.textarea}
             rows={10}
@@ -79,24 +80,25 @@ function PlanEditor({
             maxLength={8000}
             placeholder={
               kind === "diet"
-                ? "Meal by meal: what to eat, how much, and when"
-                : "Day by day: the exercise, how long, and how hard"
+                ? "What to eat, how much, when"
+                : "Which exercise, how long, how hard"
             }
             aria-label={title}
             onChange={(e) => setText(e.target.value)}
           />
-          <span className={s.chips}>
+          <p className={c.note}>The patient and the doctor will see this.</p>
+          <div className={c.actions}>
             <button
               type="button"
-              className={s.chip}
+              className={c.btn}
               disabled={busy || text.trim().length < 10}
               onClick={save}
             >
-              {busy ? "Saving" : "Save. The patient and the doctor see it"}
+              {busy ? "Saving" : "Save"}
             </button>
             <button
               type="button"
-              className={s.chip}
+              className={c.btnQuiet}
               disabled={busy}
               onClick={() => {
                 setEditing(false);
@@ -105,33 +107,25 @@ function PlanEditor({
             >
               Cancel
             </button>
-          </span>
-        </>
+          </div>
+        </div>
       ) : (
         <>
           {plan ? (
             <p className={s.pre}>{plan.text}</p>
           ) : (
-            <p className={surfaceStyles.empty}>
-              {canWrite
-                ? "Not written yet."
-                : kind === "diet"
-                  ? "Not written yet. The patient's health coach writes it."
-                  : "Not written yet. The patient's fitness coach writes it."}
-            </p>
+            <p className={surfaceStyles.empty}>Not written yet.</p>
           )}
           {canWrite && (
-            <span className={s.chips}>
+            <div className={c.actions}>
               <button
                 type="button"
-                className={s.chip}
+                className={c.btnQuiet}
                 onClick={() => setEditing(true)}
               >
-                {plan
-                  ? "Write a new version"
-                  : `Write the ${title.toLowerCase()}`}
+                {plan ? "Edit" : "Write"}
               </button>
-            </span>
+            </div>
           )}
         </>
       )}
@@ -188,20 +182,6 @@ export default function CoachingSections({
 
   return (
     <>
-      <PlanEditor
-        patientId={patientId}
-        kind="diet"
-        plan={diet}
-        canWrite={can.health}
-        onSaved={onSaved}
-      />
-      <PlanEditor
-        patientId={patientId}
-        kind="fitness"
-        plan={fitness}
-        canWrite={can.fitness}
-        onSaved={onSaved}
-      />
       <section className={s.section} aria-label="Calls">
         <h3 className={s.sectionHead}>
           Calls
@@ -218,16 +198,15 @@ export default function CoachingSections({
                 included.fitnessCallsMade,
                 included.fitnessCalls,
                 "fitness calls",
-              )}{" "}
-              on this plan
+              )}
             </span>
           )}
         </h3>
         {(can.health || can.fitness) && (
-          <div className={s.planForm}>
+          <div className={c.form}>
             {both && (
               <SegmentedControl
-                label="Which call"
+                label="Call type"
                 value={kind}
                 options={[
                   { value: "HEALTH", label: "Coach call" },
@@ -237,7 +216,7 @@ export default function CoachingSections({
               />
             )}
             <DatePicker
-              label="Day of the call"
+              label="Date"
               value={calledOn}
               max={today}
               onChange={setCalledOn}
@@ -246,24 +225,22 @@ export default function CoachingSections({
               className={s.input}
               value={note}
               maxLength={2000}
-              placeholder="What you covered, if you want to note it"
-              aria-label="What the call covered"
+              placeholder="Note (optional)"
+              aria-label="Call note"
               onChange={(e) => setNote(e.target.value)}
             />
-            <span className={s.chips}>
-              <button
-                type="button"
-                className={s.chip}
-                disabled={busy}
-                onClick={log}
-              >
-                {busy ? "Saving" : "Log this call"}
-              </button>
-            </span>
+            <button
+              type="button"
+              className={c.btn}
+              disabled={busy}
+              onClick={log}
+            >
+              {busy ? "Saving" : "Log call"}
+            </button>
           </div>
         )}
         {calls.length === 0 ? (
-          <p className={surfaceStyles.empty}>No calls logged yet.</p>
+          <p className={surfaceStyles.empty}>No calls yet.</p>
         ) : (
           <ol className={s.timeline}>
             {calls.map((call) => (
@@ -281,6 +258,20 @@ export default function CoachingSections({
           </ol>
         )}
       </section>
+      <PlanEditor
+        patientId={patientId}
+        kind="diet"
+        plan={diet}
+        canWrite={can.health}
+        onSaved={onSaved}
+      />
+      <PlanEditor
+        patientId={patientId}
+        kind="fitness"
+        plan={fitness}
+        canWrite={can.fitness}
+        onSaved={onSaved}
+      />
     </>
   );
 }
