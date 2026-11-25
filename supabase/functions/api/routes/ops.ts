@@ -127,6 +127,8 @@ opsRoutes.get("/admin/medicine/summary", async (c) => {
     messages: { failed: me.role === "ADMIN" ? Number(m.failed) : 0, whatsapp: whatsappLive() ? "live" : "mock" },
     lastTickAt: tick?.at ?? null,
     role: me.role,
+    // the operations team's desks as they are now (the screens follow these, not the copy kept at sign-in)
+    desks: me.desks,
   });
 });
 
@@ -517,7 +519,7 @@ opsRoutes.patch("/admin/medicine/patients/:patientId/fitness-coach", async (c) =
  * doctor reads these on the patient's page at the follow-up. Written by the patient's coach, or by admin.
  */
 opsRoutes.post("/admin/medicine/patients/:patientId/remarks", async (c) => {
-  const me = await staff(c);
+  const me = await requireUser(c, "COACH"); // the patient's coach, or an admin: never the operations team
   const p = await patientFor(me, intParam(c.req.param("patientId"), "patient"));
   const text = String((await body<{ text?: unknown }>(c)).text ?? "").trim().slice(0, 4000);
   if (text.length < 3) fail(400, "Write the remark first.");

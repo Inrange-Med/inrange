@@ -10,6 +10,7 @@
 //   GET    /care-packages
 //   GET    /reports                  POST /reports (multipart)
 //   GET    /address/my-addresses     POST /address/add              DELETE /address/:addressId
+import { expireHolds } from "./labs.ts";
 import { Hono } from "hono";
 import type { Context } from "hono";
 import { sql } from "../lib/db.ts";
@@ -408,6 +409,7 @@ patientRoutes.delete("/trackers/weight/:id", async (c) => {
 
 patientRoutes.get("/eligibility", async (c) => {
   const me = await requirePatient(c);
+  await expireHolds(me.id);
   const [e] = await sql`select * from eligibility where user_id = ${me.id}`;
   // an active plan covers follow-ups ("Doctor review every 14 days, included"), so Book skips checkout
   const [{ covered }] = await sql`

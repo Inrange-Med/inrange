@@ -12,7 +12,6 @@ import type { LabPackage } from "@/types/labTest";
 import styles from "./FirstStepChoice.module.css";
 
 export default function FirstStepChoice({
-  autoLab = false,
   onLab,
   onUpload,
 }: {
@@ -23,7 +22,8 @@ export default function FirstStepChoice({
 }) {
   return (
     <div className={styles.choice}>
-      <CarePackageStep onChoose={onLab} autoStart={autoLab} />
+      {/* someone who has paid comes here only to choose the time: straight on */}
+      <CarePackageStep onChoose={onLab} autoStart />
       <button type="button" className={styles.upload} onClick={onUpload}>
         <span className={styles.icon} aria-hidden="true">
           <FileArrowUp size={20} />

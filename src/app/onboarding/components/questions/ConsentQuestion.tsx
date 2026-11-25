@@ -146,8 +146,7 @@ export default function ConsentQuestion({ consents, draft, update }: Props) {
             <Check size={12} weight="bold" />
           </i>
           <span className={pageStyles.agreeText}>
-            <strong>Optional.</strong> Updates about my care from inrange
-            on{" "}
+            <strong>Optional.</strong> Updates about my care from inrange on{" "}
             <a
               href="#whatsapp"
               className={styles.docLink}

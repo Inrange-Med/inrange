@@ -69,6 +69,8 @@ export type OpsTask = {
 };
 
 export type OpsSummary = {
+  /** the operations team's desks as they are now; empty for an admin */
+  desks?: Desk[];
   tasks: { open: number; overdue: number; critical: number; mine: number };
   orders: { toDispatch: number; onTheWay: number };
   messages: { failed: number; whatsapp: "live" | "mock" };

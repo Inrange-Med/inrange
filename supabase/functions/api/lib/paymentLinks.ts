@@ -131,8 +131,9 @@ export async function settle(linkId: string, paymentId: string) {
     if (l.purpose === "LAB_BOOKING") {
       // the booking was paid another way meanwhile, or cancelled: this money has nothing to book. Kept, flagged, refunded by the team.
       const [b] = await tx`select status, paid_at from lab_bookings where id = ${l.lab_booking_id} for update`;
-      if (!b || b.paid_at || b.status === "CANCELLED") {
-        const why = b?.paid_at ? "Paid on a link, but this blood test was already paid for. Refund it."
+      const [credit] = await tx`select 1 from eligibility where user_id = ${l.patient_id} and lab_credit`;
+      if (!b || b.paid_at || b.status === "CANCELLED" || credit) {
+        const why = b?.paid_at || credit ? "Paid on a link, but this blood test was already paid for. Refund it."
           : "Paid on a link, but this blood test was cancelled. Book a new time on this payment, or refund it.";
         await tx`update payment_links set ${tx({ ...paid, needs_attention: why })} where id = ${l.id}`;
         await openTask(tx, { kind: "RECONCILE", priority: "CRITICAL", patientId: l.patient_id, title: "A blood test payment link was paid with nothing to book",

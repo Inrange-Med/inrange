@@ -32,22 +32,19 @@ export async function assignCoaches(tx: TransactionSql, patientId: number, subsc
   await tx`insert into patient_profiles (user_id) values (${patientId}) on conflict (user_id) do nothing`;
   const [p] = await tx`select coach_id, fitness_coach_id from patient_profiles where user_id = ${patientId} for update`;
   const health = p.coach_id ? { id: p.coach_id as number } : await leastBusy(tx, "HEALTH");
-  if (health) {
-    if (!p.coach_id) {
-      await tx`update patient_profiles set coach_id = ${health.id} where user_id = ${patientId}`;
-      await tx`insert into audit_log (patient_id, actor_id, action) values (${patientId}, null, 'Health coach assigned when the plan started')`;
-    }
+  // a task only for a coach assigned here: someone renewing keeps their coaches and nobody is told to "start"
+  if (health && !p.coach_id) {
+    await tx`update patient_profiles set coach_id = ${health.id} where user_id = ${patientId}`;
+    await tx`insert into audit_log (patient_id, actor_id, action) values (${patientId}, null, 'Health coach assigned when the plan started')`;
     await task(tx, "COACH_FIRST_CALL", patientId, health.id, "First call: a new patient on a plan",
       "Welcome them, explain how the plan works and start their diet chart. Log the call on their page.",
       nextWorkingMorning(new Date()), `coach-first:${subscriptionId}`);
   }
   const starts = new Date(Date.now() + FITNESS_STARTS_AFTER_DAYS * 86_400_000);
   const fitness = p.fitness_coach_id ? { id: p.fitness_coach_id as number } : await leastBusy(tx, "FITNESS");
-  if (fitness) {
-    if (!p.fitness_coach_id) {
-      await tx`update patient_profiles set fitness_coach_id = ${fitness.id}, fitness_starts_on = ${starts} where user_id = ${patientId}`;
-      await tx`insert into audit_log (patient_id, actor_id, action) values (${patientId}, null, 'Fitness coach assigned when the plan started')`;
-    }
+  if (fitness && !p.fitness_coach_id) {
+    await tx`update patient_profiles set fitness_coach_id = ${fitness.id}, fitness_starts_on = ${starts} where user_id = ${patientId}`;
+    await tx`insert into audit_log (patient_id, actor_id, action) values (${patientId}, null, 'Fitness coach assigned when the plan started')`;
     await task(tx, "FITNESS_START", patientId, fitness.id, "Start fitness coaching",
       "Three weeks into the plan: make the first fitness call and write their exercise plan.", starts, `fitness-start:${subscriptionId}`);
   }

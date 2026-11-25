@@ -156,7 +156,8 @@ adminLabRoutes.post("/admin/patients/:patientId/lab/credit", async (c) => {
   const [e] = await sql`select lab_credit, stage from eligibility where user_id = ${p.id}`;
   if (e?.lab_credit) fail(409, "This patient has already paid. Book their blood test.");
   if (["LAB_SCHEDULED", "SAMPLE_COLLECTED", "UNDER_REVIEW", "APPROVED"].includes(e?.stage)) fail(409, "Their blood tests are already under way.");
-  const [used] = await sql`select 1 from payment_orders where provider_payment_id = ${ref} union all select 1 from plan_recommendations where payment_ref = ${ref} limit 1`;
+  const [used] = await sql`select 1 from payment_orders where provider_payment_id = ${ref} and status = 'PAID'
+                           union all select 1 from plan_recommendations where payment_ref = ${ref} limit 1`;
   if (used) fail(409, "That payment ID has been used already.");
   await sql.begin(async (tx) => {
     const [{ n }] = await tx`select nextval('invoice_seq') as n`;
@@ -165,20 +166,28 @@ adminLabRoutes.post("/admin/patients/:patientId/lab/credit", async (c) => {
              values (${`team_care_${p.id}_${Date.now().toString(36)}`}, ${p.id}, 'CARE_PACKAGE', ${care.code}, ${care.price_rupees * 100}, ${care.name},
                ${tx.json([{ label: care.name, amountPaise: care.price_rupees * 100 }])}, 'PAID', ${ref.startsWith("pay_") ? "razorpay" : "mock"},
                ${ref}, now(), ${`INR-${new Date().getUTCFullYear()}-${String(n).padStart(6, "0")}`}, now(), ${tx.json({ paidOutside: true, recordedBy: me.id })})`;
+    // the base package only: no optional test was paid for with it
     await tx`insert into eligibility (user_id, path, consultation_paid, lab_credit, lab_paid_at) values (${p.id}, 'LAB_TEST', true, true, now())
-             on conflict (user_id) do update set path = 'LAB_TEST', consultation_paid = true, lab_credit = true, lab_paid_at = now(), updated_at = now()`;
+             on conflict (user_id) do update set path = 'LAB_TEST', consultation_paid = true, lab_credit = true, lab_paid_at = now(),
+               lab_addons = '[]', updated_at = now()`;
+    // a hold waiting for its own payment, and any link made for it, give way to this payment
+    await tx`update lab_bookings set status = 'CANCELLED', updated_at = now() where user_id = ${p.id} and status = 'PAYMENT_PENDING' and paid_at is null`;
     await tx`update received_payments set used_for_patient = ${p.id}, used_at = now() where id = ${ref}`;
     await tx`insert into audit_log (patient_id, actor_id, action) values (${p.id}, ${me.id}, ${`Blood tests marked paid outside the app (${ref})`})`;
   });
+  await links.cancelOpen(sql, p.id, "LAB_BOOKING");
   return ok(c, null, "Marked paid. Their blood test can be booked now, at no charge.");
 });
 
 adminLabRoutes.delete("/admin/patients/:patientId/lab/credit", async (c) => {
   const me = await admin(c);
   const p = await patient(intParam(c.req.param("patientId"), "patient"));
-  const [e] = await sql`update eligibility set lab_credit = false, lab_paid_at = null, consultation_paid = false, updated_at = now()
+  const [e] = await sql`update eligibility set lab_credit = false, lab_paid_at = null, lab_addons = '[]', consultation_paid = false, updated_at = now()
                         where user_id = ${p.id} and lab_credit and not consultation_used returning user_id`;
   if (!e) fail(409, "This patient has no payment waiting for a booking.");
+  // the payment is no longer on their record as paid, and its ID can be recorded again if this was a mistake
+  await sql`update payment_orders set status = 'FAILED', failure_reason = 'Marked refunded by the team'
+            where id = (select id from payment_orders where user_id = ${p.id} and purpose = 'CARE_PACKAGE' and status = 'PAID' order by paid_at desc limit 1)`;
   await sql`insert into audit_log (patient_id, actor_id, action) values (${p.id}, ${me.id}, 'Blood test payment marked refunded')`;
   return ok(c, null, "Marked refunded.");
 });
@@ -302,7 +311,7 @@ adminLabRoutes.post("/admin/lab-bookings/:id/cancel", async (c) => {
   let saved;
   if (row.paid_at && row.status === "PAYMENT_PENDING") {
     [saved] = await sql`update lab_bookings set status = 'CANCELLED', updated_at = now() where id = ${row.id} returning *`;
-    await giveCreditBack(sql, row.user_id, row.id);
+    if (row.care_package_code) await giveCreditBack(sql, row.user_id, row.id);
   } else saved = await cancelBookingFor(row, reason);
   // a link made for this booking must not stay payable
   await links.cancelOpen(sql, row.user_id, "LAB_BOOKING");
@@ -311,9 +320,11 @@ adminLabRoutes.post("/admin/lab-bookings/:id/cancel", async (c) => {
   const refunded = Boolean(row.paid_at) && b.refunded === true;
   if (refunded) {
     await sql`update lab_bookings set paid_at = null, needs_attention = null where id = ${row.id}`;
-    await sql`update eligibility set stage = 'NOT_STARTED', lab_booking_id = null, lab_credit = false, lab_paid_at = null,
-                consultation_paid = false, updated_at = now()
-              where user_id = ${row.user_id} and not consultation_used`;
+    // only the care package's own booking: its payment is no longer a credit, and the patient is back at the start
+    if (row.care_package_code)
+      await sql`update eligibility set stage = 'NOT_STARTED', lab_booking_id = null, lab_credit = false, lab_paid_at = null,
+                  lab_addons = '[]', consultation_paid = false, updated_at = now()
+                where user_id = ${row.user_id} and lab_credit and not consultation_used`;
     [saved] = await bookingQuery(sql, row.id);
   }
   await sql`insert into audit_log (patient_id, actor_id, action) values (${row.user_id}, ${me.id},

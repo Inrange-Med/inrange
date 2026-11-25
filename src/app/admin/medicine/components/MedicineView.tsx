@@ -82,7 +82,9 @@ export default function MedicineView() {
   // AdminShell lets in an admin and the operations team; a coach works in /coach, a salesperson in /sales
   const { status, user } = useSessionUser();
   const role = status === "ADMIN" || status === "OPS" ? status : null;
-  const desks = status === "OPS" ? (user?.desks ?? []) : [];
+  // the desks as the API has them now (a change by admin shows without a new sign-in); the stored copy until it answers
+  const desks =
+    status === "OPS" ? (summary.data?.desks ?? user?.desks ?? []) : [];
   const works = (desk: Desk) => status === "ADMIN" || desks.includes(desk);
   const tabs =
     status === "ADMIN"
@@ -200,7 +202,13 @@ export default function MedicineView() {
         />
       )}
       {role && tab === "tocall" && (
-        <ToCallPanel version={version} onOpenPatient={setPatientId} />
+        <ToCallPanel
+          version={version}
+          admin={status === "ADMIN"}
+          lab={works("BLOOD_TESTS")}
+          dc={works("CONSULTATIONS")}
+          onOpenPatient={setPatientId}
+        />
       )}
       {works("CONSULTATIONS") && tab === "calls" && (
         <CallsPanel version={version} onOpenPatient={setPatientId} />

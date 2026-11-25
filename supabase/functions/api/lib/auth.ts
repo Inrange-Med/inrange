@@ -58,6 +58,8 @@ export async function requireUser(c: Context, ...roles: Role[]): Promise<AuthUse
   if (!user) return fail(401, "Your session has ended. Please sign in again.", "NOT_AUTHORISED");
   if (roles.length && !roles.includes(user.role) && user.role !== "ADMIN")
     return fail(403, "You do not have access to this.");
+  // someone taken off the operations team (no desks left) can still sign in, and reaches nothing
+  if (user.role === "OPS" && !user.desks.length) return fail(403, "You do not have access to this.");
   return user;
 }
 

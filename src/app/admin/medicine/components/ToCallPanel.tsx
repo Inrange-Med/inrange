@@ -15,7 +15,7 @@
 import ErrorNotice from "@/components/ui/ErrorNotice";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import { useApiResource } from "@/hooks/useApiResource";
-import { useSessionUser } from "@/hooks/useSessionUser";
+
 import { shortDate } from "@/lib/format/dateTime";
 import { spacedMobile } from "@/lib/format/phone";
 import { getPipeline } from "@/services/medicineOpsService";
@@ -87,17 +87,20 @@ function Bucket<Row extends PipelineRow>({
 
 export default function ToCallPanel({
   version,
+  admin,
+  lab,
+  dc,
   onOpenPatient,
 }: {
   version: number;
+  /** each desk sees its own lists (the API sends only those); an admin, all of them */
+  admin: boolean;
+  lab: boolean;
+  dc: boolean;
   onOpenPatient: (id: string) => void;
 }) {
   const pipeline = useApiResource(`admin-pipeline-${version}`, getPipeline);
-  // each desk sees its own lists (the API sends only those); an admin, all of them
-  const { status, user } = useSessionUser();
-  const admin = status === "ADMIN";
-  const lab = admin || Boolean(user?.desks?.includes("BLOOD_TESTS"));
-  const dc = admin || Boolean(user?.desks?.includes("CONSULTATIONS"));
+
   if (pipeline.error && !pipeline.data)
     return <ErrorNotice message={pipeline.error} onRetry={pipeline.reload} />;
   if (!pipeline.data) return <LoadingSkeleton />;

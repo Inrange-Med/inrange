@@ -68,6 +68,9 @@ async function price(tx: TransactionSql, userId: number, purpose: Purpose, refer
   if (purpose === "LAB_BOOKING") {
     const [b] = await tx`select * from lab_bookings where id = ${referenceId} for update`;
     if (!b || b.user_id !== userId) fail(400, "That lab booking was not found.");
+    // already paid for another way (pay first, or a payment the team recorded): never charged again
+    if (b.care_package_code && (await tx`select 1 from eligibility where user_id = ${userId} and lab_credit`).length)
+      fail(409, "Your blood tests are already paid for. Choose your collection time and it is booked at no charge.");
     if (b.paid_at || b.status !== "PAYMENT_PENDING" && b.status !== "EXPIRED") {
       if (b.paid_at) fail(409, "This lab booking is already paid.");
       fail(400, "This lab booking was cancelled. Book a new time.");
@@ -204,6 +207,8 @@ export async function fulfil(orderId: string, paymentId: string) {
       // the team on a call, on this credit.
       await setEligibility(tx, o.user_id, { path: "LAB_TEST", consultation_paid: true });
       await tx`update eligibility set lab_credit = true, lab_paid_at = now(), lab_addons = ${tx.json((meta.addOns ?? []) as never)} where user_id = ${o.user_id}`;
+      // an older hold waiting for its own payment gives way: this payment is the one that counts
+      await tx`update lab_bookings set status = 'CANCELLED', updated_at = now() where user_id = ${o.user_id} and status = 'PAYMENT_PENDING' and paid_at is null`;
     } else if (o.purpose === "PLAN") {
       await startPlan(tx, o.user_id, Number(o.reference_id), o.id);
     } else if (o.purpose === "MEDICINE_ORDER") {
@@ -250,7 +255,7 @@ export async function fulfil(orderId: string, paymentId: string) {
   // the confirmations go once the payment is committed
   if (medicineOrderId) await deliverQueued({ medicineOrderId }).catch((e) => console.error("order confirmation", e.message));
   // a blood test paid for in the app: a payment link the team made for it must not stay payable
-  if (done.purpose === "LAB_BOOKING") await links.cancelOpen(sql, done.user_id, "LAB_BOOKING").catch((e) => console.error("lab link", (e as Error).message));
+  if (done.purpose === "LAB_BOOKING" || done.purpose === "CARE_PACKAGE") await links.cancelOpen(sql, done.user_id, "LAB_BOOKING").catch((e) => console.error("lab link", (e as Error).message));
   await sendNow(messages);
   return done;
 }

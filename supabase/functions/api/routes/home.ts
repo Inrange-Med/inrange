@@ -13,6 +13,7 @@
 //   before the first consultation, from the eligibility review:
 //   BLOOD_TEST_NEEDED  BOOK_BLOOD_TEST (paid, to book)  LAB_UNPAID  TEST_BOOKED  WAITING_FOR_REPORT  UNDER_REVIEW  NOT_APPROVED  BOOK_CONSULTATION
 //   IN_CARE            nothing waiting: the next monthly review is theirs to book
+import { expireHolds } from "./labs.ts";
 import { Hono } from "hono";
 import { sql } from "../lib/db.ts";
 import { ok } from "../lib/http.ts";
@@ -34,6 +35,7 @@ const appointmentView = (a: Row) => ({
 
 export async function nextStep(patientId: number, now = new Date()) {
   const t = now.getTime();
+  await expireHolds(patientId);
   const [appointments, [e], [plan], rec, [rx], [cart], [order], [delivered], [link]] = await Promise.all([
     sql`select a.id, a.status, a.visit_type, a.started_at, a.ended_at, d.full_name as doctor,
           (s.slot_date + s.start_time) at time zone 'Asia/Kolkata' as starts_at,

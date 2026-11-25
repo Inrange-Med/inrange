@@ -108,6 +108,10 @@ async function ownedBooking(userId: number, id: string): Promise<Row> {
 export async function expireHolds(userId: number) {
   await sql`update lab_bookings set status = 'EXPIRED', updated_at = now()
     where user_id = ${userId} and status = 'PAYMENT_PENDING' and hold_expires_at < now()`;
+  // a hold that ended unpaid is no longer the patient's next step: they are back at the start (pay, then book)
+  await sql`update eligibility e set stage = 'NOT_STARTED', lab_booking_id = null, updated_at = now()
+    where e.user_id = ${userId} and e.stage = 'AWAITING_PAYMENT' and not exists (
+      select 1 from lab_bookings b where b.id = e.lab_booking_id and b.status = 'PAYMENT_PENDING')`;
 }
 
 /**
@@ -285,12 +289,21 @@ export async function holdBooking(userId: number, input: HoldInput): Promise<Row
   if (credit) {
     // already paid for: confirmed with the lab now. A time the lab will not confirm leaves the payment untouched.
     const messages = await sql.begin(async (tx) => {
-      await fulfilLabBooking(tx, row.id, me.id);
+      // the credit is claimed in one step, so two bookings made at the same moment can never both use it
+      const [claimed] = await tx`update eligibility set lab_credit = false where user_id = ${me.id} and lab_credit returning user_id`;
+      if (!claimed) return null;
+      await fulfilLabBooking(tx, row.id, me.id, true);
+      const [now] = await tx`select status from lab_bookings where id = ${row.id}`;
+      // not confirmed (the lab refused, or another booking replaced this hold): the payment is untouched
+      if (now?.status !== "BOOKED") await tx`update eligibility set lab_credit = true where user_id = ${me.id}`;
       return await notices.within(tx, (sp) => notices.labBooked(sp, row.id));
     });
     const [booked] = await bookingQuery(sql, row.id);
-    if (booked.status !== "BOOKED") fail(409, "That time is no longer free. Please choose another.");
-    await sendNow(messages);
+    if (booked.status !== "BOOKED") {
+      await sql`update lab_bookings set status = 'CANCELLED', updated_at = now() where id = ${row.id} and status = 'PAYMENT_PENDING'`;
+      fail(409, messages === null ? "Your blood test is already booked." : "That time is no longer free. Please choose another.");
+    }
+    await sendNow(messages ?? []);
     return booked;
   }
   if (care) await setEligibility(sql, me.id, { path: "LAB_TEST", stage: "AWAITING_PAYMENT", lab_booking_id: row.id });
@@ -305,8 +318,11 @@ export async function holdBooking(userId: number, input: HoldInput): Promise<Row
  */
 export async function giveCreditBack(db: Sql | TransactionSql, userId: number, bookingId: string) {
   await db`update lab_bookings set paid_at = null where id = ${bookingId}`;
-  await db`update eligibility set lab_credit = true, stage = 'NOT_STARTED', lab_booking_id = null, updated_at = now()
-           where user_id = ${userId} and (lab_booking_id = ${bookingId} or lab_booking_id is null)`;
+  // back to the start only when this booking was their step; a review already under way is never undone
+  await db`update eligibility set lab_credit = true, updated_at = now(),
+             stage = case when lab_booking_id = ${bookingId} then 'NOT_STARTED' else stage end,
+             lab_booking_id = case when lab_booking_id = ${bookingId} then null else lab_booking_id end
+           where user_id = ${userId}`;
 }
 
 labRoutes.get("/labs/bookings", async (c) => {
@@ -452,10 +468,11 @@ export async function applyLabEvent(bookingId: string, event: LabEvent, simulate
     }
   }
   await sql`update lab_bookings set status = ${event}, updated_at = now() where id = ${bookingId}`;
-  if (event === "CANCELLED" && forEligibility && row.paid_at) await giveCreditBack(sql, row.user_id, bookingId);
   if (event === "SAMPLE_COLLECTED" && forEligibility) await setEligibility(sql, row.user_id, { stage: "SAMPLE_COLLECTED" });
   // the report, or a cancelled collection, on WhatsApp (once each: the message is keyed on the booking)
   await notices.labEvent(bookingId, event).then(sendNow).catch((e) => console.error("lab notice", bookingId, (e as Error).message));
+  // after the message (which is only for a paid booking): the payment goes back to being a credit
+  if (event === "CANCELLED" && forEligibility && row.paid_at) await giveCreditBack(sql, row.user_id, bookingId);
 }
 
 async function attachReport(row: Row, forEligibility: boolean, simulated: boolean) {
@@ -497,12 +514,21 @@ async function attachReport(row: Row, forEligibility: boolean, simulated: boolea
  * lapsed), mark it BOOKED and move eligibility to LAB_SCHEDULED with the consultation prepaid.
  * If the lab refuses, the payment stays PAID and the booking is flagged (needs_attention) for the care team.
  */
-export async function fulfilLabBooking(tx: TransactionSql, bookingId: string, userId: number) {
+export async function fulfilLabBooking(tx: TransactionSql, bookingId: string, userId: number, onCredit = false) {
   const [row] = await tx`
     select b.*, a.line1, a.city, a.state, a.pincode, a.landmark, a.latitude, a.longitude
     from lab_bookings b left join addresses a on a.id = b.address_id where b.id = ${bookingId} for update of b`;
   if (!row || row.user_id !== userId) throw new Error(`lab booking ${bookingId} not found for payment`);
   if (RANK[row.status] >= 1) return; // already booked
+  if (row.status === "CANCELLED") {
+    // a hold that was cancelled meanwhile is never brought back. Money that just came in for it (a late payment)
+    // is kept as a credit for the next booking.
+    if (row.care_package_code && !onCredit) {
+      await setEligibility(tx, userId, { path: "LAB_TEST", consultation_paid: true });
+      await tx`update eligibility set lab_credit = true, lab_paid_at = coalesce(lab_paid_at, now()) where user_id = ${userId}`;
+    }
+    return;
+  }
   let partnerId: string = row.provider_booking_id ?? "";
   let problem: string | null = null;
   try {
@@ -537,8 +563,8 @@ export async function fulfilLabBooking(tx: TransactionSql, bookingId: string, us
     await setEligibility(tx, userId, {
       path: "LAB_TEST", stage: "LAB_SCHEDULED", lab_booking_id: bookingId, consultation_paid: true,
     });
-    // the credit, if this booking was made on one, is used now
-    await tx`update eligibility set lab_credit = false, lab_paid_at = coalesce(lab_paid_at, now()) where user_id = ${userId}`;
+    // (a booking made on the credit claimed it already, in holdBooking; one paid for by itself leaves any credit alone)
+    await tx`update eligibility set lab_paid_at = coalesce(lab_paid_at, now()) where user_id = ${userId}`;
   }
   // ponytail: an add-on (the cortisol test) is added to the lab booking by the team from Redcliffe's dashboard; send its
   // code with the package in createBooking once Redcliffe's production catalogue gives one, and drop this task

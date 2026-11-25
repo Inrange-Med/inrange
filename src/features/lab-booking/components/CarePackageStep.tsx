@@ -36,11 +36,14 @@ type Props = {
     lab: LabPackage;
     paid?: boolean;
   }) => void;
-  /** kept for callers: since pay first, only a paid package starts without a tap */
+  /** on the first arrival: someone who has paid goes straight on to the address, without a tap */
   autoStart?: boolean;
 };
 
-export default function CarePackageStep({ onChoose }: Props) {
+export default function CarePackageStep({
+  onChoose,
+  autoStart = false,
+}: Props) {
   const packages = useApiResource("care-packages", listCarePackages);
   // the lab packages, for each card's marker count; the same list "Start your consultation" uses
   const labPackages = useApiResource("lab-packages", listLabPackages);
@@ -96,12 +99,20 @@ export default function CarePackageStep({ onChoose }: Props) {
   );
   const single = only.length === 1 ? only[0] : null;
   useEffect(() => {
-    // only someone who has paid goes on without a tap; everyone else sees the price first
-    if (!paid || autoStarted.current || !single || labPackages.loading) return;
+    // only someone who has paid goes on without a tap, and only where the caller asks (the first arrival):
+    // coming Back to this step must not push them forward again. Everyone else sees the price first.
+    if (
+      !autoStart ||
+      !paid ||
+      autoStarted.current ||
+      !single ||
+      labPackages.loading
+    )
+      return;
     autoStarted.current = true;
     void start(single);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once, when the packages are in
-  }, [paid, single, labPackages.loading]);
+  }, [autoStart, paid, single, labPackages.loading]);
 
   if (packages.loading || eligibility.loading) return <LoadingSkeleton />;
   if (packages.error)
