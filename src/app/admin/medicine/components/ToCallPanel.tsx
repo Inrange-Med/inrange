@@ -3,7 +3,8 @@
 /*
   To call (23 Nov 2026 call): about a third of patients stop somewhere and move on only when someone calls
   them. Each list is one place they stop, with what the call is for:
-    blood test     signed up, nothing booked: call, then book the test for them (the patient's sheet, Blood test)
+    paid           paid, and no blood test booked (they did not book in their two days): book it on the call
+    not paid       signed up and gone quiet: a call to bring them back
     new time       a paid test that is not happening as booked: book a new time, at no charge
     consultation   the report is in: call and book the doctor, with the salesperson
     plan           seen by the doctor, not on a plan: the salesperson's to close with a payment link
@@ -14,6 +15,7 @@
 import ErrorNotice from "@/components/ui/ErrorNotice";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import { useApiResource } from "@/hooks/useApiResource";
+import { useSessionUser } from "@/hooks/useSessionUser";
 import { shortDate } from "@/lib/format/dateTime";
 import { spacedMobile } from "@/lib/format/phone";
 import { getPipeline } from "@/services/medicineOpsService";
@@ -91,6 +93,11 @@ export default function ToCallPanel({
   onOpenPatient: (id: string) => void;
 }) {
   const pipeline = useApiResource(`admin-pipeline-${version}`, getPipeline);
+  // each desk sees its own lists (the API sends only those); an admin, all of them
+  const { status, user } = useSessionUser();
+  const admin = status === "ADMIN";
+  const lab = admin || Boolean(user?.desks?.includes("BLOOD_TESTS"));
+  const dc = admin || Boolean(user?.desks?.includes("CONSULTATIONS"));
   if (pipeline.error && !pipeline.data)
     return <ErrorNotice message={pipeline.error} onRetry={pipeline.reload} />;
   if (!pipeline.data) return <LoadingSkeleton />;
@@ -98,62 +105,87 @@ export default function ToCallPanel({
 
   return (
     <div className={s.sheet}>
-      <Bucket
-        id="call-test"
-        title="No blood test yet"
-        empty="Everyone who signed up has booked a test or sent a report."
-        rows={p.bloodTest}
-        words={(row) => ({
-          sub: [`Signed up ${shortDate(row.since)}`],
-          pill: row.holding ? "Time held, not paid" : "Call and book the test",
-        })}
-        onOpen={onOpenPatient}
-      />
-      <Bucket
-        id="call-lab"
-        title="Blood test needs a new time"
-        empty="Every paid blood test is going ahead as booked."
-        rows={p.labProblem}
-        words={(row) => ({ sub: [row.why], pill: "Book a new time" })}
-        onOpen={onOpenPatient}
-      />
-      <Bucket
-        id="call-consult"
-        title="Report in, no consultation booked"
-        empty="Everyone with a report has a consultation booked."
-        rows={p.consultation}
-        words={(row) => ({
-          sub: [
-            row.stage === "UNDER_REVIEW"
-              ? "The review is still to be done (Reviews)"
-              : `Reviewed ${shortDate(row.since)}`,
-          ],
-          pill: "Call and book the doctor",
-        })}
-        onOpen={onOpenPatient}
-      />
-      <Bucket
-        id="call-plan"
-        title="Seen by the doctor, no plan"
-        empty="Everyone seen in the last 60 days is on a plan."
-        rows={p.plan}
-        words={(row) => ({
-          sub: [`Consultation ${shortDate(row.lastOn)}`],
-          pill: row.linkWaiting ? "Link sent, not paid" : "Sales to follow up",
-        })}
-        onOpen={onOpenPatient}
-      />
-      <Bucket
-        id="call-coach"
-        title="On a plan, no coach"
-        empty="Everyone on a plan has a health coach."
-        rows={p.coach}
-        words={(row) => ({
-          sub: [`${row.planName}, started ${shortDate(row.since)}`],
-          pill: "Assign a coach",
-        })}
-        onOpen={onOpenPatient}
-      />
+      {lab && (
+        <Bucket
+          id="call-paid"
+          title="Paid, blood test not booked"
+          empty="Everyone who has paid has a blood test booked."
+          rows={p.paidNoTest}
+          words={(row) => ({
+            sub: [row.since ? `Paid ${shortDate(row.since)}` : "Paid"],
+            pill: "Call and book the test",
+          })}
+          onOpen={onOpenPatient}
+        />
+      )}
+      {lab && (
+        <Bucket
+          id="call-test"
+          title="Signed up, not paid"
+          empty="Everyone who signed up has paid or sent a report."
+          rows={p.bloodTest}
+          words={(row) => ({
+            sub: [`Signed up ${shortDate(row.since)}`],
+            pill: row.holding ? "Time held, not paid" : "Call them",
+          })}
+          onOpen={onOpenPatient}
+        />
+      )}
+      {lab && (
+        <Bucket
+          id="call-lab"
+          title="Blood test needs a new time"
+          empty="Every paid blood test is going ahead as booked."
+          rows={p.labProblem}
+          words={(row) => ({ sub: [row.why], pill: "Book a new time" })}
+          onOpen={onOpenPatient}
+        />
+      )}
+      {dc && (
+        <Bucket
+          id="call-consult"
+          title="Report in, no consultation booked"
+          empty="Everyone with a report has a consultation booked."
+          rows={p.consultation}
+          words={(row) => ({
+            sub: [
+              row.stage === "UNDER_REVIEW"
+                ? "The review is still to be done (Reviews)"
+                : `Reviewed ${shortDate(row.since)}`,
+            ],
+            pill: "Call and book the doctor",
+          })}
+          onOpen={onOpenPatient}
+        />
+      )}
+      {admin && (
+        <Bucket
+          id="call-plan"
+          title="Seen by the doctor, no plan"
+          empty="Everyone seen in the last 60 days is on a plan."
+          rows={p.plan}
+          words={(row) => ({
+            sub: [`Consultation ${shortDate(row.lastOn)}`],
+            pill: row.linkWaiting
+              ? "Link sent, not paid"
+              : "Sales to follow up",
+          })}
+          onOpen={onOpenPatient}
+        />
+      )}
+      {admin && (
+        <Bucket
+          id="call-coach"
+          title="On a plan, no coach"
+          empty="Everyone on a plan has a health coach."
+          rows={p.coach}
+          words={(row) => ({
+            sub: [`${row.planName}, started ${shortDate(row.since)}`],
+            pill: "Assign a coach",
+          })}
+          onOpen={onOpenPatient}
+        />
+      )}
     </div>
   );
 }

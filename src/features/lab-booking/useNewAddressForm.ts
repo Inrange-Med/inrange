@@ -118,9 +118,7 @@ export function useNewAddressForm(
     );
   };
 
-  const complete =
-    line.trim().length > 0 &&
-    /^\d{6}$/.test(pincode);
+  const complete = line.trim().length > 0 && /^\d{6}$/.test(pincode);
 
   const save = async () => {
     if (!place || !complete || saving) return;

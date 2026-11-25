@@ -13,7 +13,7 @@ import ErrorNotice from "@/components/ui/ErrorNotice";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import PageHead from "@/components/ui/PageHead";
 import { useApiResource } from "@/hooks/useApiResource";
-import { shortDate } from "@/lib/format/dateTime";
+import { shortDate, toApiDate } from "@/lib/format/dateTime";
 import { listCoachPatients } from "@/services/coachService";
 import type { CoachPatientRow } from "@/types/coach";
 import CoachPatientSheet from "./CoachPatientSheet";
@@ -43,6 +43,7 @@ export default function CoachView() {
   const patients = useApiResource(`coach-patients-${q}-${version}`, () =>
     listCoachPatients(q),
   );
+  const today = toApiDate(new Date());
   const open = (id: string | null) =>
     router.replace(id ? `${pathname}?patient=${id}` : pathname, {
       scroll: false,
@@ -101,6 +102,13 @@ export default function CoachView() {
                       {p.asHealth && !p.hasDiet && (
                         <span>No diet chart yet</span>
                       )}
+                      {p.asFitness &&
+                        p.fitnessStartsOn &&
+                        p.fitnessStartsOn > today && (
+                          <span>
+                            Fitness starts {shortDate(p.fitnessStartsOn)}
+                          </span>
+                        )}
                     </span>
                   </button>
                   <span className={s.side}>

@@ -4,6 +4,7 @@
 
 import type { CoachCall, CoachPlan } from "@/types/coach";
 import type { PaymentLink } from "@/types/sales";
+import type { Desk } from "@/lib/session/authSession";
 
 export type TaskKind =
   | "NO_REPLY"
@@ -20,7 +21,10 @@ export type TaskKind =
   /** a medicine the doctor typed that is not on the master list (doctor portal v2) */
   | "MATCH_MEDICINE"
   /** a paid add-on test (cortisol) to add to the Redcliffe booking by hand */
-  | "LAB_ADD_ON";
+  | "LAB_ADD_ON"
+  /** a new patient on a plan: the health coach's first call; the fitness coach's start, three weeks in */
+  | "COACH_FIRST_CALL"
+  | "FITNESS_START";
 
 /** A hand-typed line waiting to be matched to the master list. */
 export type UnmatchedLine = {
@@ -180,7 +184,8 @@ export type OpsPatient = {
     planEndsAt: string | null;
     whatsappSince: string | null;
     coach: { id: string; name: string } | null;
-    fitnessCoach: { id: string; name: string } | null;
+    /** startsOn: three weeks into a plan (null: already started) */
+    fitnessCoach: { id: string; name: string; startsOn?: string | null } | null;
     /** how the plan they are on was sold and paid for (the sales form) */
     planSale: {
       startedAt: string;
@@ -325,11 +330,23 @@ export type OpsMeasure = {
   note?: string | null;
 };
 
+export type CoachKind = "HEALTH" | "FITNESS" | "BOTH";
 export type Coach = {
   id: string;
   fullName: string;
   mobile: string;
+  /** which patients a new plan gives them: as health coach, as fitness coach, or either */
+  kind: CoachKind;
   patients: number;
+  fitnessPatients: number;
+};
+
+/** Someone on the operations team, and the desks they work. No desks: off the team. */
+export type TeamMember = {
+  id: string;
+  fullName: string;
+  mobile: string;
+  desks: Desk[];
 };
 
 /** Someone on the sales team. `rank` is their place among the active people, 1 the best; null once off the team. */
@@ -423,8 +440,10 @@ export type PipelineRow = {
   salesperson: string | null;
 };
 export type OpsPipeline = {
-  /** signed up, no blood test booked and no report sent in */
+  /** signed up, not paid, no report sent in */
   bloodTest: (PipelineRow & { since: string; holding: boolean })[];
+  /** paid, and no blood test booked on it */
+  paidNoTest: (PipelineRow & { since: string | null })[];
   /** a paid blood test that is not happening as booked */
   labProblem: (PipelineRow & {
     bookingId: string;
@@ -470,6 +489,8 @@ export type TeamLabBooking = {
 
 /** What booking a blood test for a patient needs, and their bookings so far. */
 export type PatientLab = {
+  /** paid for already: a time booked now is confirmed at once, at no charge */
+  credit: boolean;
   person: { name: string; age: number | null; gender: string | null };
   addresses: { id: string; line: string; placed: boolean }[];
   priceRupees: number | null;

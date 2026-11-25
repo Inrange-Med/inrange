@@ -31,6 +31,8 @@ export type CoachPatientRow = {
   fitnessCallsMade: number;
   lastCallOn: string | null;
   hasDiet: boolean;
+  /** as fitness coach: the day they start with this patient, three weeks into the plan (null: started) */
+  fitnessStartsOn: string | null;
   openTasks: number;
 };
 
@@ -46,6 +48,8 @@ export type CoachPatient = {
     doctors: string[];
     coachName: string | null;
     fitnessCoachName: string | null;
+    /** the fitness coach starts three weeks into a plan (null: already started) */
+    fitnessStartsOn: string | null;
   };
   plan: {
     name: string;

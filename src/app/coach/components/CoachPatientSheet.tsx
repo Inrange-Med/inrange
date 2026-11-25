@@ -84,7 +84,8 @@ export default function CoachPatientSheet({
               <dd>
                 {[
                   p.coachName && `${p.coachName} (health)`,
-                  p.fitnessCoachName && `${p.fitnessCoachName} (fitness)`,
+                  p.fitnessCoachName &&
+                    `${p.fitnessCoachName} (fitness${p.fitnessStartsOn ? `, from ${shortDate(p.fitnessStartsOn)}` : ""})`,
                 ]
                   .filter(Boolean)
                   .join(", ")}

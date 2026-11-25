@@ -2,6 +2,7 @@
 
 /*
   /admin/medicine: the care team's one place for medicine work (PRD 9.1).
+    Sales     every lead, end to end, as each salesperson sees their own (features/sales/LeadsBoard)
     Queue     tasks the follow-up, deliveries and doses open, soonest due first; each opens with its
               patient, what happened, and the outcome to record
     Orders    the pharmacy's deliveries by step, one next step per row (admin)
@@ -11,8 +12,9 @@
     Payments  every payment link and who paid, and payments that matched no link
     Messages  every WhatsApp message, sent or not, and why (admin)
     Numbers   the PRD's measures against their targets (admin)
-  Admins only (AdminShell): a coach has their own panel at /coach. The tab is in the address (?tab=), so a
-  link and Back land on the same view.
+  An admin has every tab. Someone on the operations team (role OPS) has the tabs of their desks only: blood
+  tests (To call, Patients), consultations (To call, Calls, Patients), the pharmacy (Queue, Orders, Patients);
+  the API checks the same. The tab is in the address (?tab=), so a link and Back land on the same view.
 */
 
 import { useCallback, useEffect, useState } from "react";
@@ -26,6 +28,8 @@ import { useSessionUser } from "@/hooks/useSessionUser";
 import { timeAgo } from "@/lib/format/dateTime";
 import { getSummary } from "@/services/medicineOpsService";
 import CallsPanel from "./CallsPanel";
+import LeadsBoard from "@/features/sales/LeadsBoard";
+import type { Desk } from "@/lib/session/authSession";
 import MessagesPanel from "./MessagesPanel";
 import PaymentsPanel from "./PaymentsPanel";
 import NumbersPanel from "./NumbersPanel";
@@ -38,6 +42,7 @@ import adminStyles from "@/components/ui/styles/StaffSurfaces.module.css";
 import s from "@/components/ui/styles/StaffPanels.module.css";
 
 type Tab =
+  | "sales"
   | "queue"
   | "orders"
   | "patients"
@@ -47,15 +52,22 @@ type Tab =
   | "messages"
   | "numbers";
 const TABS: Tab[] = [
-  "queue",
-  "orders",
-  "patients",
   "tocall",
+  "sales",
+  "patients",
   "calls",
   "payments",
+  "queue",
+  "orders",
   "messages",
   "numbers",
 ];
+/** What each desk of the operations team works with; an admin has every tab. */
+const DESK_TABS: Record<Desk, Tab[]> = {
+  BLOOD_TESTS: ["tocall", "patients"],
+  CONSULTATIONS: ["tocall", "calls", "patients"],
+  MEDICINE: ["queue", "orders", "patients"],
+};
 
 export default function MedicineView() {
   const router = useRouter();
@@ -67,15 +79,21 @@ export default function MedicineView() {
   // bumped by any change in a sheet, so every panel's list reloads with the counts
   const [version, setVersion] = useState(0);
 
-  // AdminShell lets only an admin in; a coach works in /coach and a salesperson in /sales
-  const { status } = useSessionUser();
-  const role = status === "ADMIN" ? status : null;
-  const tabs = TABS;
+  // AdminShell lets in an admin and the operations team; a coach works in /coach, a salesperson in /sales
+  const { status, user } = useSessionUser();
+  const role = status === "ADMIN" || status === "OPS" ? status : null;
+  const desks = status === "OPS" ? (user?.desks ?? []) : [];
+  const works = (desk: Desk) => status === "ADMIN" || desks.includes(desk);
+  const tabs =
+    status === "ADMIN"
+      ? TABS
+      : TABS.filter((t) => desks.some((desk) => DESK_TABS[desk].includes(t)));
   const asked = params.get("tab") as Tab | null;
-  const tab: Tab = asked && tabs.includes(asked) ? asked : "queue";
+  const first = tabs[0] ?? "patients";
+  const tab: Tab = asked && tabs.includes(asked) ? asked : first;
 
   const go = (next: Tab) =>
-    router.replace(next === "queue" ? pathname : `${pathname}?tab=${next}`, {
+    router.replace(next === first ? pathname : `${pathname}?tab=${next}`, {
       scroll: false,
     });
 
@@ -102,6 +120,7 @@ export default function MedicineView() {
     </>
   );
   const LABELS: Record<Tab, React.ReactNode> = {
+    sales: "Sales",
     queue: label("Queue", t?.open),
     orders: label("Orders", o?.toDispatch),
     patients: "Patients",
@@ -116,8 +135,12 @@ export default function MedicineView() {
     <main className={adminStyles.page}>
       <PageHead
         className={adminStyles.pageHead}
-        title="Medicine"
-        sub="Everything around a patient: who needs a call, what to pack and dispatch, the consultations coming up, who has paid, and what patients were told."
+        title="Operations"
+        sub={
+          status === "OPS"
+            ? "Your team's work: who to call, what to book, and what is coming up."
+            : "Everything around a patient: who to call, every lead and sale, the consultations coming up, who has paid, and what to pack and dispatch."
+        }
       />
       <div className={s.bar}>
         {role && (
@@ -149,7 +172,7 @@ export default function MedicineView() {
         <ErrorNotice message={summary.error} onRetry={summary.reload} />
       )}
 
-      {role && tab === "queue" && (
+      {works("MEDICINE") && tab === "queue" && (
         <TasksPanel
           now={now}
           version={version}
@@ -157,7 +180,10 @@ export default function MedicineView() {
           onChanged={changed}
         />
       )}
-      {role === "ADMIN" && tab === "orders" && (
+      {role === "ADMIN" && tab === "sales" && (
+        <LeadsBoard admin onChanged={changed} />
+      )}
+      {works("MEDICINE") && tab === "orders" && (
         <OrdersPanel
           now={now}
           version={version}
@@ -173,10 +199,10 @@ export default function MedicineView() {
           onChanged={changed}
         />
       )}
-      {role === "ADMIN" && tab === "tocall" && (
+      {role && tab === "tocall" && (
         <ToCallPanel version={version} onOpenPatient={setPatientId} />
       )}
-      {role === "ADMIN" && tab === "calls" && (
+      {works("CONSULTATIONS") && tab === "calls" && (
         <CallsPanel version={version} onOpenPatient={setPatientId} />
       )}
       {role === "ADMIN" && tab === "payments" && (
@@ -199,12 +225,14 @@ export default function MedicineView() {
       <PatientSheet
         patientId={patientId}
         isAdmin={role === "ADMIN"}
+        lab={works("BLOOD_TESTS")}
+        consults={works("CONSULTATIONS")}
         mock={summary.data?.messages.whatsapp === "mock"}
         onClose={() => {
           setPatientId(null);
           if (params.get("patient"))
             router.replace(
-              tab === "queue" ? pathname : `${pathname}?tab=${tab}`,
+              tab === first ? pathname : `${pathname}?tab=${tab}`,
               { scroll: false },
             );
         }}

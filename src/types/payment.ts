@@ -9,13 +9,16 @@ export type PaymentPurpose =
   | "PLAN"
   | "LAB_BOOKING"
   | "CONSULTATION_FEE"
-  | "MEDICINE_ORDER";
+  | "MEDICINE_ORDER"
+  /** the care package paid for first; the blood test is booked after (referenceId: its code, "+ADDON" for each extra) */
+  | "CARE_PACKAGE";
 
 export const PAYMENT_PURPOSES: readonly PaymentPurpose[] = [
   "PLAN",
   "LAB_BOOKING",
   "CONSULTATION_FEE",
   "MEDICINE_ORDER",
+  "CARE_PACKAGE",
 ];
 
 export type PaymentLineItem = {

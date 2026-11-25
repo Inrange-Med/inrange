@@ -143,6 +143,12 @@ function wordsFor(step: NextStep): Words {
         action: { label: "Book home test", href: "/onboarding?step=report" },
         quiet: { label: "Upload a report instead", href: `${HOME}/reports` },
       };
+    case "BOOK_BLOOD_TEST":
+      return {
+        title: "Book your home blood test",
+        text: "It is paid for. Choose a time tomorrow or the day after.",
+        action: { label: "Choose a time", href: "/onboarding?step=report" },
+      };
     case "LAB_UNPAID": {
       const c = step.collection;
       return {

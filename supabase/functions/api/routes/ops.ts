@@ -107,7 +107,7 @@ const entry = (me: AuthUser, what: string) => sql.json([{ at: new Date().toISOSt
 // ---------------------------------------------------------------- summary and queue
 
 opsRoutes.get("/admin/medicine/summary", async (c) => {
-  const me = await queue(c);
+  const me = await staff(c);
   const [t] = await sql`
     select count(*) filter (where t.status = 'OPEN') as open,
       count(*) filter (where t.status = 'OPEN' and t.due_at < now()) as overdue,

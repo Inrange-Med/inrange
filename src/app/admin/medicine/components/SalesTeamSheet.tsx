@@ -36,12 +36,15 @@ const count = (n: number, one: string, many: string) =>
   `${n} ${n === 1 ? one : many}`;
 
 export default function SalesTeamSheet({
-  open,
+  open = true,
+  inline = false,
   onClose,
   onChanged,
 }: {
-  open: boolean;
-  onClose: () => void;
+  /** on the Team page the list sits in the page (`inline`); elsewhere it opens as a sheet */
+  open?: boolean;
+  inline?: boolean;
+  onClose?: () => void;
   /** a renamed salesperson changes the patient rows */
   onChanged: () => void;
 }) {
@@ -101,172 +104,180 @@ export default function SalesTeamSheet({
 
   const active = (team.data ?? []).filter((p) => p.active);
 
-  return (
-    <Sheet open={open} onClose={onClose} title="Sales team">
-      <div className={s.sheet}>
-        {team.error && !team.data ? (
-          <ErrorNotice message={team.error} onRetry={team.reload} />
-        ) : !team.data ? (
-          <LoadingSkeleton />
-        ) : team.data.length === 0 ? (
-          <p className={adminStyles.empty}>
-            Nobody on the sales team yet. Add the first person below, then
-            choose them on a patient&apos;s page.
-          </p>
-        ) : (
-          <ul className={s.rows}>
-            {team.data.map((p) => (
-              <li key={p.id} className={s.row}>
-                <span className={s.open}>
-                  <span className={s.what}>
-                    {p.rank !== null && <span className="num">{p.rank}.</span>}
-                    {p.fullName}
-                    {!p.active && (
-                      <span className={adminStyles.pill}>Not on the team</span>
-                    )}
-                  </span>
-                  <span className={`${s.sub} num`}>
-                    {p.mobile && <span>{spacedMobile(p.mobile)}</span>}
-                    {p.active && (
-                      <span>
-                        {p.canSignIn
-                          ? "Signs in to the sales panel"
-                          : "No sign-in: add a mobile number"}
-                      </span>
-                    )}
-                    <span>{count(p.patients, "patient", "patients")}</span>
-                    <span>{count(p.plansSold, "plan sold", "plans sold")}</span>
-                    {p.plansWaiting > 0 && (
-                      <span>{p.plansWaiting} waiting for payment</span>
-                    )}
-                  </span>
-                  <span className={s.chips}>
-                    {p.rank !== null && (
-                      <>
-                        <button
-                          type="button"
-                          className={s.chip}
-                          disabled={busy || p.rank === 1}
-                          aria-label={`Move ${p.fullName} up`}
-                          onClick={() =>
-                            change(
-                              () =>
-                                updateSalesperson(p.id, { rank: p.rank! - 1 }),
-                              `${p.fullName} is now number ${p.rank! - 1}`,
-                            )
-                          }
-                        >
-                          Move up
-                        </button>
-                        <button
-                          type="button"
-                          className={s.chip}
-                          disabled={busy || p.rank === active.length}
-                          aria-label={`Move ${p.fullName} down`}
-                          onClick={() =>
-                            change(
-                              () =>
-                                updateSalesperson(p.id, { rank: p.rank! + 1 }),
-                              `${p.fullName} is now number ${p.rank! + 1}`,
-                            )
-                          }
-                        >
-                          Move down
-                        </button>
-                      </>
-                    )}
-                    <button
-                      type="button"
-                      className={s.chip}
-                      disabled={busy}
-                      onClick={() => {
-                        setEditing(p);
-                        setName(p.fullName);
-                        setMobile(p.mobile ?? "");
-                        setProblem(null);
-                      }}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      className={s.chip}
-                      disabled={busy}
-                      onClick={() =>
-                        change(
-                          () => updateSalesperson(p.id, { active: !p.active }),
-                          p.active
-                            ? `${p.fullName} is off the sales team`
-                            : `${p.fullName} is back on the sales team`,
-                        )
-                      }
-                    >
-                      {p.active ? "Take off the team" : "Bring back"}
-                    </button>
-                  </span>
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-        <div className={s.formGrid} data-cols="2">
-          <label className={formStyles.field}>
-            <span className={formStyles.label}>Full name</span>
-            <input
-              className={s.input}
-              value={name}
-              maxLength={80}
-              autoComplete="off"
-              onChange={(e) => setName(e.target.value)}
-            />
-          </label>
-          <label className={formStyles.field}>
-            <span className={formStyles.label}>Mobile, to sign in with</span>
-            <input
-              className={s.input}
-              type="tel"
-              inputMode="numeric"
-              value={spacedMobile(mobile)}
-              placeholder="98765 43210"
-              onChange={(e) => setMobile(mobileDigitsFrom(e.target.value))}
-            />
-          </label>
-        </div>
-        {problem && (
-          <p className={formStyles.err} role="alert">
-            {problem}
-          </p>
-        )}
-        <button
-          type="button"
-          className={`btn ${formStyles.go}`}
-          data-busy={busy}
-          aria-busy={busy}
-          disabled={busy}
-          onClick={save}
-        >
-          <span>
-            {editing ? `Save ${editing.fullName}` : "Add to the sales team"}
-          </span>
-          <span className="well" aria-hidden="true">
-            {busy ? (
-              <i className={formStyles.spin} />
-            ) : (
-              <ArrowRight size={18} />
-            )}
-          </span>
-        </button>
-        {editing && (
-          <button type="button" className={adminStyles.textBtn} onClick={clear}>
-            Cancel the edit
-          </button>
-        )}
-        <p className={formStyles.hint}>
-          New people join at the bottom. Number 1 is your best salesperson. Each
-          one signs in with their mobile number and sees only the patients
-          assigned to them.
+  const body = (
+    <div className={s.sheet}>
+      {team.error && !team.data ? (
+        <ErrorNotice message={team.error} onRetry={team.reload} />
+      ) : !team.data ? (
+        <LoadingSkeleton />
+      ) : team.data.length === 0 ? (
+        <p className={adminStyles.empty}>
+          Nobody on the sales team yet. Add the first person below, then choose
+          them on a patient&apos;s page.
         </p>
+      ) : (
+        <ul className={s.rows}>
+          {team.data.map((p) => (
+            <li key={p.id} className={s.row}>
+              <span className={s.open}>
+                <span className={s.what}>
+                  {p.rank !== null && <span className="num">{p.rank}.</span>}
+                  {p.fullName}
+                  {!p.active && (
+                    <span className={adminStyles.pill}>Not on the team</span>
+                  )}
+                </span>
+                <span className={`${s.sub} num`}>
+                  {p.mobile && <span>{spacedMobile(p.mobile)}</span>}
+                  {p.active && (
+                    <span>
+                      {p.canSignIn
+                        ? "Signs in to the sales panel"
+                        : "No sign-in: add a mobile number"}
+                    </span>
+                  )}
+                  <span>{count(p.patients, "patient", "patients")}</span>
+                  <span>{count(p.plansSold, "plan sold", "plans sold")}</span>
+                  {p.plansWaiting > 0 && (
+                    <span>{p.plansWaiting} waiting for payment</span>
+                  )}
+                </span>
+                <span className={s.chips}>
+                  {p.rank !== null && (
+                    <>
+                      <button
+                        type="button"
+                        className={s.chip}
+                        disabled={busy || p.rank === 1}
+                        aria-label={`Move ${p.fullName} up`}
+                        onClick={() =>
+                          change(
+                            () =>
+                              updateSalesperson(p.id, { rank: p.rank! - 1 }),
+                            `${p.fullName} is now number ${p.rank! - 1}`,
+                          )
+                        }
+                      >
+                        Move up
+                      </button>
+                      <button
+                        type="button"
+                        className={s.chip}
+                        disabled={busy || p.rank === active.length}
+                        aria-label={`Move ${p.fullName} down`}
+                        onClick={() =>
+                          change(
+                            () =>
+                              updateSalesperson(p.id, { rank: p.rank! + 1 }),
+                            `${p.fullName} is now number ${p.rank! + 1}`,
+                          )
+                        }
+                      >
+                        Move down
+                      </button>
+                    </>
+                  )}
+                  <button
+                    type="button"
+                    className={s.chip}
+                    disabled={busy}
+                    onClick={() => {
+                      setEditing(p);
+                      setName(p.fullName);
+                      setMobile(p.mobile ?? "");
+                      setProblem(null);
+                    }}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    className={s.chip}
+                    disabled={busy}
+                    onClick={() =>
+                      change(
+                        () => updateSalesperson(p.id, { active: !p.active }),
+                        p.active
+                          ? `${p.fullName} is off the sales team`
+                          : `${p.fullName} is back on the sales team`,
+                      )
+                    }
+                  >
+                    {p.active ? "Take off the team" : "Bring back"}
+                  </button>
+                </span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className={s.formGrid} data-cols="2">
+        <label className={formStyles.field}>
+          <span className={formStyles.label}>Full name</span>
+          <input
+            className={s.input}
+            value={name}
+            maxLength={80}
+            autoComplete="off"
+            onChange={(e) => setName(e.target.value)}
+          />
+        </label>
+        <label className={formStyles.field}>
+          <span className={formStyles.label}>Mobile, to sign in with</span>
+          <input
+            className={s.input}
+            type="tel"
+            inputMode="numeric"
+            value={spacedMobile(mobile)}
+            placeholder="98765 43210"
+            onChange={(e) => setMobile(mobileDigitsFrom(e.target.value))}
+          />
+        </label>
       </div>
+      {problem && (
+        <p className={formStyles.err} role="alert">
+          {problem}
+        </p>
+      )}
+      <button
+        type="button"
+        className={`btn ${formStyles.go}`}
+        data-busy={busy}
+        aria-busy={busy}
+        disabled={busy}
+        onClick={save}
+      >
+        <span>
+          {editing ? `Save ${editing.fullName}` : "Add to the sales team"}
+        </span>
+        <span className="well" aria-hidden="true">
+          {busy ? <i className={formStyles.spin} /> : <ArrowRight size={18} />}
+        </span>
+      </button>
+      {editing && (
+        <button type="button" className={adminStyles.textBtn} onClick={clear}>
+          Cancel the edit
+        </button>
+      )}
+      <p className={formStyles.hint}>
+        New people join at the bottom. Number 1 is your best salesperson. Each
+        one signs in with their mobile number and sees only the patients
+        assigned to them.
+      </p>
+    </div>
+  );
+  return inline ? (
+    <section className={adminStyles.panel} aria-labelledby="sales-team-h">
+      <div className={adminStyles.panelHead}>
+        <h2 id="sales-team-h" className={adminStyles.h2}>
+          Sales team
+        </h2>
+      </div>
+      {body}
+    </section>
+  ) : (
+    <Sheet open={open} onClose={onClose ?? (() => {})} title="Sales team">
+      {body}
     </Sheet>
   );
 }
