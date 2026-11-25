@@ -9,7 +9,7 @@
 //   GET  /sales/patients?q=&salespersonId=      the leads, the ones to act on first
 //   GET  /sales/patients/:patientId             one lead, end to end
 //   POST /sales/patients/:patientId/updates     { callStatus?, remark?, followUpOn? } a note after a call
-//   PUT  /sales/patients/:patientId/sale-form   { condition, programme, coachPreference, note } the sales form, after the payment
+//   PUT  /sales/patients/:patientId/sale-form   { condition, programme, note } the sales form, after the payment
 //   POST /sales/patients/:patientId/payment-links  { planId, discountPercent?, coachPreference?, note? } makes the link;
 //                                               when it is paid the plan starts by itself
 //   POST /sales/payment-links/:id/check         asks Razorpay whether it was paid
@@ -162,7 +162,14 @@ salesRoutes.get("/sales/patients", async (c) => {
 salesRoutes.get("/sales/patients/:patientId", async (c) => {
   const x = await seller(c);
   const p = await customer(x, intParam(c.req.param("patientId"), "lead"));
-  await sql`insert into audit_log (patient_id, actor_id, action) values (${p.id}, ${x.me.id}, 'Viewed the lead (sales)')`;
+  // a payment link still waiting: Razorpay is asked now (at most every 10 seconds), so a payment shows on the page,
+  // the plan starts and the sale is recorded with nobody pressing anything. The page asks again while it is open,
+  // and only its first load is logged as a view.
+  const [open] = await sql`select id from payment_links where patient_id = ${p.id} and status = 'CREATED' and purpose = 'PLAN'
+                           and coalesce(checked_at, created_at) < now() - interval '10 seconds'`;
+  if (open) await links.check(open.id).catch((e) => console.error("link check", (e as Error).message));
+  if (c.req.query("quiet") !== "1")
+    await sql`insert into audit_log (patient_id, actor_id, action) values (${p.id}, ${x.me.id}, 'Viewed the lead (sales)')`;
   const [[lead], calls, [rx], mine, updates, payments, [sale]] = await Promise.all([
     leads(x, { only: p.id }),
     sql`select a.id::text as id, ${starts} as "startsAt", d.full_name as "doctorName", a.status,
@@ -232,7 +239,8 @@ salesRoutes.put("/sales/patients/:patientId/sale-form", async (c) => {
                          order by ends_at desc limit 1`;
   if (!sb) fail(409, "The sales form is filled in once the plan is paid for.");
   const by = x.me.fullName?.trim() || x.s?.full_name || "Care team";
-  const form = { form_condition: words(b.condition, 300), form_programme: words(b.programme, 120), coach_preference: words(b.coachPreference, 200),
+  // the coach asked for is no longer on the form (25 Nov 2026): what an older sale recorded stays as it is
+  const form = { form_condition: words(b.condition, 300), form_programme: words(b.programme, 120),
     note: words(b.note, 1000), form_submitted_at: new Date(), form_by: by };
   const [r] = await sql`select id, salesperson_id from plan_recommendations where patient_id = ${p.id} and plan_id = ${sb.plan_id}
                         and created_at <= (select created_at from subscriptions where id = ${sb.id}) order by created_at desc limit 1`;

@@ -44,9 +44,12 @@ export async function listLeads(q = "", salespersonId = ""): Promise<Lead[]> {
   );
 }
 
-export async function getLead(id: string): Promise<LeadDetail> {
+/** `quiet`: the page asking again by itself, which is not logged as someone opening the lead. */
+export async function getLead(id: string, quiet = false): Promise<LeadDetail> {
   return (
-    await apiRequest<ApiEnvelope<LeadDetail>>(`/api/sales/patients/${id}`)
+    await apiRequest<ApiEnvelope<LeadDetail>>(
+      `/api/sales/patients/${id}${quiet ? "?quiet=1" : ""}`,
+    )
   ).data!;
 }
 
