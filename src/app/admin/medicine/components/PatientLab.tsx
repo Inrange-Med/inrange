@@ -385,7 +385,7 @@ function TimeForm({
           }
           onClick={save}
         >
-          {busy ? "Saving" : moving ? "Move" : "Book"}
+          {busy ? "Saving" : moving ? "Move" : lab.credit ? "Book" : "Hold time"}
         </button>
         <button
           type="button"

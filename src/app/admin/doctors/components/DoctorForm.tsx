@@ -85,9 +85,10 @@ const valuesFor = (doctor: AdminDoctor | null): Values => ({
 
 function problemsIn(values: Values, creating: boolean) {
   const problems: Partial<Record<Field, string>> = {};
+  // in the order the fields stand, so focus lands on the first one with a problem
+  if (!values.fullName.trim()) problems.fullName = "Add the full name.";
   if (creating && !isValidMobile(mobileDigitsFrom(values.mobile)))
     problems.mobile = "Enter a 10-digit mobile number starting with 6 to 9.";
-  if (!values.fullName.trim()) problems.fullName = "Add the full name.";
   if (!values.specialization.trim())
     problems.specialization = "Add the specialisation.";
   if (!values.registrationNo.trim())

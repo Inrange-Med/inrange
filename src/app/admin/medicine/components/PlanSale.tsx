@@ -250,7 +250,7 @@ export default function PlanSale({
       {plans.error && !plans.data ? (
         <span className={adminStyles.muted}>The plans could not load.</span>
       ) : (
-        <span className={s.seg}>
+        <>
           <SegmentedControl
             label="Plan"
             value={planId}
@@ -265,7 +265,7 @@ export default function PlanSale({
               if (plan?.priceRupees) setAmount(String(plan.priceRupees));
             }}
           />
-        </span>
+        </>
       )}
       {chosen && (
         <span className="num">

@@ -113,7 +113,7 @@ export default function SalesTeamSheet({
         <ErrorNotice message={team.error} onRetry={team.reload} />
       ) : !team.data ? (
         <LoadingSkeleton />
-      ) : team.data.length === 0 ? (
+      ) : (showRemoved ? team.data : active).length === 0 ? (
         <p className={adminStyles.empty}>No salespeople yet.</p>
       ) : (
         <ul className={s.rows}>

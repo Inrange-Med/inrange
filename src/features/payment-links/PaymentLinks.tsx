@@ -220,7 +220,7 @@ export default function PaymentLinks({
           </span>
         ) : (
           <div className={a.form}>
-            <span className={s.seg}>
+            <>
               <SegmentedControl
                 label="Plan"
                 value={planId}
@@ -234,7 +234,7 @@ export default function PaymentLinks({
                   setProblem(null);
                 }}
               />
-            </span>
+            </>
             {plan && (
               <>
                 <span className={surfaceStyles.muted}>
