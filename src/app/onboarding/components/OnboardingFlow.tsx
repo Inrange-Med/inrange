@@ -110,9 +110,12 @@ async function loadStart(): Promise<Start> {
 
   // the profile is done: question 9 until a path is chosen (null: no eligibility endpoint yet, so ask)
   const eligibility = await getMyEligibility();
+  // someone who has paid and still has the blood test to book (pay first, then book), or whose hold ended
+  // unpaid, is still at question 9: only a path that is under way goes to the dashboard
   if (
     eligibility &&
-    (eligibility.path !== null || eligibility.stage !== "NOT_STARTED")
+    !eligibility.labCredit &&
+    (eligibility.path === "OWN_REPORT" || eligibility.stage !== "NOT_STARTED")
   )
     return { redirectTo: homePathFor("PATIENT") };
   return {
