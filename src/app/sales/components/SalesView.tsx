@@ -39,7 +39,7 @@ export default function SalesView() {
             : "The leads assigned to you: their calls, their plans and your notes."
         }
       />
-      <LeadsBoard onChanged={me.reload} />
+      <LeadsBoard />
     </main>
   );
 }

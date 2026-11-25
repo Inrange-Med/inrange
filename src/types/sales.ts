@@ -156,7 +156,6 @@ export type Sale = {
 export type SaleForm = {
   condition: string;
   programme: string;
-  coachPreference: string;
   note: string;
 };
 

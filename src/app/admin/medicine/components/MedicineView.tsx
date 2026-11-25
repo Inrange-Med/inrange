@@ -183,7 +183,7 @@ export default function MedicineView() {
         />
       )}
       {role === "ADMIN" && tab === "sales" && (
-        <LeadsBoard admin onChanged={changed} />
+        <LeadsBoard admin />
       )}
       {works("MEDICINE") && tab === "orders" && (
         <OrdersPanel
