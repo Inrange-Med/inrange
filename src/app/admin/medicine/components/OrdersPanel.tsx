@@ -19,6 +19,7 @@ import OrderSheet, { type OrderSheetStart } from "./OrderSheet";
 import { dueWords, NEXT_STEP, when } from "@/features/medicine-queue/words";
 import adminStyles from "@/components/ui/styles/StaffSurfaces.module.css";
 import s from "@/components/ui/styles/StaffPanels.module.css";
+import a from "@/features/medicine-queue/OpsActions.module.css";
 
 const GROUPS: {
   title: string;
@@ -29,7 +30,7 @@ const GROUPS: {
   {
     title: "To dispatch",
     statuses: ["PACKED"],
-    empty: "Nothing waiting for the courier.",
+    empty: "Nothing to dispatch.",
   },
   {
     title: "On the way",
@@ -37,7 +38,7 @@ const GROUPS: {
     empty: "Nothing on the way.",
   },
   {
-    title: "Delivered or cancelled lately",
+    title: "Delivered or cancelled",
     statuses: ["DELIVERED", "CANCELLED"],
     empty: "",
   },
@@ -73,9 +74,7 @@ export default function OrdersPanel({
     setBusy(order.id);
     try {
       await moveOrder(order.id, { to: next.to });
-      toast(
-        `${order.orderNumber}: ${next.label.toLowerCase()}. The patient was told.`,
-      );
+      toast(`${order.orderNumber}: ${next.label.toLowerCase()}. Patient told.`);
       onChanged();
     } catch (caught) {
       toast(errorMessage(caught, "That step could not be saved."));
@@ -95,10 +94,7 @@ export default function OrdersPanel({
     <div className={s.stack}>
       {!active && (
         <section className={adminStyles.panel} aria-label="Orders">
-          <p className={adminStyles.empty}>
-            Nothing to pack or send. A paid order appears here at once, with the
-            time it must be dispatched by.
-          </p>
+          <p className={adminStyles.empty}>Nothing to pack or send.</p>
         </section>
       )}
       {GROUPS.filter((g) => active || g.statuses.includes("DELIVERED")).map(
@@ -152,7 +148,7 @@ export default function OrdersPanel({
                                     : `Paid ${when(order.placedAt)}`}
                               </span>
                               {order.feedback === "ISSUE" && (
-                                <span>Patient reported a problem</span>
+                                <span>Problem reported</span>
                               )}
                             </span>
                           </button>
@@ -174,7 +170,7 @@ export default function OrdersPanel({
                             {next && (
                               <button
                                 type="button"
-                                className={adminStyles.textBtn}
+                                className={a.btn}
                                 disabled={busy === order.id}
                                 onClick={() => step(order)}
                               >

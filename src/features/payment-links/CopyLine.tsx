@@ -29,7 +29,7 @@ export default function CopyLine({
           }
         }}
       >
-        Copy the link
+        Copy link
       </button>{" "}
       <a href={value} target="_blank" rel="noreferrer">
         Open

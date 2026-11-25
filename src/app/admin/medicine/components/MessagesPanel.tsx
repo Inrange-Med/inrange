@@ -78,10 +78,7 @@ export default function MessagesPanel({
         )}
       </div>
       {rows.length === 0 ? (
-        <p className={adminStyles.empty}>
-          No messages yet. The first goes out with the first booking,
-          prescription or reminder.
-        </p>
+        <p className={adminStyles.empty}>No messages yet.</p>
       ) : (
         <ul className={s.rows}>
           {rows.map((m) => {
@@ -134,7 +131,7 @@ export default function MessagesPanel({
                     m.status === "READ") && (
                     <span
                       className={s.chips}
-                      aria-label="Play the patient's reply (test mode)"
+                      aria-label="Test the patient's reply"
                     >
                       {replies.map((r) => (
                         <button

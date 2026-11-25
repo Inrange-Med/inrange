@@ -60,7 +60,7 @@ export default function CoachesSheet({
     setProblem(null);
     try {
       await addCoach({ fullName: name.trim(), mobile, kind });
-      toast("Coach added. They sign in with this number.");
+      toast("Coach added");
       setName("");
       setMobile("");
       coaches.reload();
@@ -78,9 +78,7 @@ export default function CoachesSheet({
       ) : !coaches.data ? (
         <LoadingSkeleton />
       ) : coaches.data.length === 0 ? (
-        <p className={adminStyles.empty}>
-          No coaches yet. Add the first below.
-        </p>
+        <p className={adminStyles.empty}>No coaches yet.</p>
       ) : (
         <ul className={s.rows}>
           {coaches.data.map((c) => (
@@ -99,7 +97,7 @@ export default function CoachesSheet({
                 <select
                   className={s.input}
                   value={c.kind}
-                  aria-label={`What ${c.fullName} coaches`}
+                  aria-label={`Type of coach: ${c.fullName}`}
                   onChange={async (e) => {
                     try {
                       await setCoachKind(c.id, e.target.value as CoachKind);
@@ -121,6 +119,7 @@ export default function CoachesSheet({
           ))}
         </ul>
       )}
+      <h3 className={s.sectionHead}>Add a coach</h3>
       <div className={s.formGrid} data-cols="2">
         <label className={formStyles.field}>
           <span className={formStyles.label}>Full name</span>
@@ -144,23 +143,20 @@ export default function CoachesSheet({
           />
         </label>
       </div>
-      <select
-        className={s.input}
-        value={kind}
-        aria-label="What they coach"
-        onChange={(e) => setKind(e.target.value as CoachKind)}
-      >
-        {KINDS.map((k) => (
-          <option key={k.value} value={k.value}>
-            {k.label}
-          </option>
-        ))}
-      </select>
-      <p className={formStyles.hint}>
-        When a plan starts, the patient gets the health coach with the fewest
-        patients at once, and a fitness coach who starts three weeks in. You can
-        change either on the patient&apos;s page.
-      </p>
+      <label className={formStyles.field}>
+        <span className={formStyles.label}>Type</span>
+        <select
+          className={s.input}
+          value={kind}
+          onChange={(e) => setKind(e.target.value as CoachKind)}
+        >
+          {KINDS.map((k) => (
+            <option key={k.value} value={k.value}>
+              {k.label}
+            </option>
+          ))}
+        </select>
+      </label>
       {problem && (
         <p className={formStyles.err} role="alert">
           {problem}
@@ -174,7 +170,7 @@ export default function CoachesSheet({
         disabled={busy}
         onClick={add}
       >
-        <span>{busy ? "Adding" : "Add the coach"}</span>
+        <span>{busy ? "Adding" : "Add coach"}</span>
         <span className="well" aria-hidden="true">
           {busy ? <i className={formStyles.spin} /> : <ArrowRight size={18} />}
         </span>

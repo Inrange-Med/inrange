@@ -40,13 +40,10 @@ export default function CallLinksBlock({
           value={links.data.sales}
         />
       ) : (
-        <span className={adminStyles.muted}>
-          No salesperson on this patient, so no third link.
-        </span>
+        <span className={adminStyles.muted}>No salesperson.</span>
       )}
       <span className={adminStyles.muted}>
-        Each link lets its holder into the call until the doctor ends it. Send
-        each one only to the person it is for.
+        Send each link only to that person.
       </span>
     </div>
   );

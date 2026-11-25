@@ -75,9 +75,7 @@ function MatchLine({
         onChange={(e) => setQuery(e.target.value)}
       />
       {q.length >= 2 && found && items.length === 0 && (
-        <p className={s.sub}>
-          Nothing on the list is close. Add the item to the master list first.
-        </p>
+        <p className={s.sub}>No match. Add it to the master list first.</p>
       )}
       {items.length > 0 && (
         <ul className={s.matchResults}>
@@ -111,7 +109,7 @@ function MatchLine({
                   {item.molecule}
                   {item.orderable
                     ? ""
-                    : ". Not sold by our pharmacy yet: it will not reach the order"}
+                    : ". We do not stock it. It will not be ordered."}
                 </span>
               </button>
             </li>
@@ -135,11 +133,10 @@ export default function MatchMedicines({
   if (lines.error && !lines.data)
     return <ErrorNotice message={lines.error} onRetry={lines.reload} />;
   if (!lines.data) return <LoadingSkeleton />;
-  if (lines.data.length === 0)
-    return <p className={s.sub}>Every medicine is matched.</p>;
+  if (lines.data.length === 0) return <p className={s.sub}>All matched.</p>;
   return (
     <fieldset className={s.section}>
-      <legend className={s.sectionHead}>Match to the list</legend>
+      <legend className={s.sectionHead}>Match medicines</legend>
       <ul className={s.matchLines}>
         {lines.data.map((line) => (
           <MatchLine

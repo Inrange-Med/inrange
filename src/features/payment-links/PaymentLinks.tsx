@@ -17,14 +17,16 @@ import { shortDate } from "@/lib/format/dateTime";
 import { formatRupees } from "@/lib/format/money";
 import { errorMessage } from "@/lib/http/apiClient";
 import type { LinkForm, PaymentLink, PlanOnSale } from "@/types/sales";
+import formStyles from "@/components/ui/styles/FormControls.module.css";
 import surfaceStyles from "@/components/ui/styles/StaffSurfaces.module.css";
 import s from "@/components/ui/styles/StaffPanels.module.css";
+import a from "@/features/medicine-queue/OpsActions.module.css";
 
 const STATUS: Record<PaymentLink["status"], string> = {
-  CREATED: "Waiting for payment",
+  CREATED: "Not paid yet",
   PAID: "Paid",
-  CANCELLED: "Withdrawn",
-  EXPIRED: "Ended unpaid",
+  CANCELLED: "Cancelled",
+  EXPIRED: "Expired",
 };
 
 export default function PaymentLinks({
@@ -76,7 +78,7 @@ export default function PaymentLinks({
   const copy = async (url: string) => {
     try {
       await navigator.clipboard.writeText(url);
-      toast("Link copied. Send it to the customer.");
+      toast("Link copied. Send it to them.");
     } catch {
       toast(url);
     }
@@ -141,7 +143,7 @@ export default function PaymentLinks({
             {link.status === "PAID" && link.paidAt
               ? ` ${shortDate(link.paidAt)}`
               : link.status === "CREATED"
-                ? `, made ${shortDate(link.createdAt)}, good until ${shortDate(link.expiresAt)}`
+                ? `. Made ${shortDate(link.createdAt)}, ends ${shortDate(link.expiresAt)}`
                 : ""}
             .
           </span>
@@ -157,17 +159,17 @@ export default function PaymentLinks({
             </span>
           )}
           {link.status === "CREATED" && (
-            <span className={s.chips}>
+            <span className={a.actions}>
               <button
                 type="button"
-                className={s.chip}
+                className={a.btn}
                 onClick={() => copy(link.url)}
               >
-                Copy the link
+                Copy link
               </button>
               <button
                 type="button"
-                className={s.chip}
+                className={surfaceStyles.textBtn}
                 disabled={busy}
                 onClick={() => act(link.id, "check")}
               >
@@ -175,20 +177,20 @@ export default function PaymentLinks({
               </button>
               <button
                 type="button"
-                className={s.chip}
+                className={surfaceStyles.textBtn}
                 disabled={busy}
                 onClick={() => act(link.id, "cancel")}
               >
-                Withdraw
+                Cancel link
               </button>
               {sellers && link.test && (
                 <button
                   type="button"
-                  className={s.chip}
+                  className={surfaceStyles.textBtn}
                   disabled={busy}
                   onClick={() => act(link.id, "simulate")}
                 >
-                  Play the payment (test)
+                  Test: mark paid
                 </button>
               )}
             </span>
@@ -197,32 +199,42 @@ export default function PaymentLinks({
       ))}
       {canMake &&
         (!making ? (
-          <span className={s.chips}>
-            <button
-              type="button"
-              className={s.chip}
-              onClick={() => setMaking(true)}
-            >
-              {links.some((l) => l.status === "CREATED")
-                ? "Make a new link instead"
-                : "Make a payment link"}
-            </button>
+          <span className={a.actions}>
+            {links.some((l) => l.status === "CREATED") ? (
+              <button
+                type="button"
+                className={surfaceStyles.textBtn}
+                onClick={() => setMaking(true)}
+              >
+                Make a new link
+              </button>
+            ) : (
+              <button
+                type="button"
+                className={a.btn}
+                onClick={() => setMaking(true)}
+              >
+                Make payment link
+              </button>
+            )}
           </span>
         ) : (
-          <div className={s.planForm}>
-            <SegmentedControl
-              label="Plan length"
-              value={planId}
-              options={plans.map((p) => ({
-                value: p.id,
-                label: `${p.months} months`,
-              }))}
-              onChange={(id) => {
-                setPlanId(id);
-                setDiscount("");
-                setProblem(null);
-              }}
-            />
+          <div className={a.form}>
+            <span className={s.seg}>
+              <SegmentedControl
+                label="Plan"
+                value={planId}
+                options={plans.map((p) => ({
+                  value: p.id,
+                  label: `${p.months} months`,
+                }))}
+                onChange={(id) => {
+                  setPlanId(id);
+                  setDiscount("");
+                  setProblem(null);
+                }}
+              />
+            </span>
             {plan && (
               <>
                 <span className={surfaceStyles.muted}>
@@ -237,77 +249,87 @@ export default function PaymentLinks({
                     .join(", ")}
                 </span>
                 {most > 0 && (
-                  <input
-                    className={s.input}
-                    inputMode="numeric"
-                    value={discount}
-                    placeholder={`Discount in percent, up to ${most}`}
-                    aria-label={`Discount in percent, up to ${most}`}
-                    onChange={(e) =>
-                      setDiscount(e.target.value.replace(/\D/g, "").slice(0, 2))
-                    }
-                  />
+                  <label className={formStyles.field}>
+                    <span className={formStyles.label}>
+                      Discount %, up to {most}
+                    </span>
+                    <input
+                      className={s.input}
+                      inputMode="numeric"
+                      value={discount}
+                      placeholder="0"
+                      onChange={(e) =>
+                        setDiscount(
+                          e.target.value.replace(/\D/g, "").slice(0, 2),
+                        )
+                      }
+                    />
+                  </label>
                 )}
                 <span className="num">
-                  {plan.name}: the customer pays {formatRupees(amount)}
+                  {plan.name}. Customer pays {formatRupees(amount)}
                   {percent > 0
-                    ? `, ${percent}% off ${formatRupees(plan.priceRupees)}`
+                    ? ` (${percent}% off ${formatRupees(plan.priceRupees)})`
                     : ""}
                 </span>
               </>
             )}
             {sellers && (
-              <select
-                className={s.input}
-                value={sellers.some((p) => p.id === seller) ? seller : ""}
-                aria-label="Sold by"
-                onChange={(e) => setSeller(e.target.value)}
-              >
-                <option value="">Sold by: not recorded</option>
-                {sellers.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    Sold by {p.label}
-                  </option>
-                ))}
-              </select>
+              <label className={formStyles.field}>
+                <span className={formStyles.label}>Sold by</span>
+                <select
+                  className={s.input}
+                  value={sellers.some((p) => p.id === seller) ? seller : ""}
+                  onChange={(e) => setSeller(e.target.value)}
+                >
+                  <option value="">Not recorded</option>
+                  {sellers.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
             )}
-            <input
-              className={s.input}
-              value={coachPreference}
-              maxLength={200}
-              placeholder="The coach they asked for (language, timing), if any"
-              aria-label="The kind of coach the customer asked for"
-              onChange={(e) => setCoachPreference(e.target.value)}
-            />
-            <input
-              className={s.input}
-              value={note}
-              maxLength={1000}
-              placeholder="Remarks from the sale, if any"
-              aria-label="Remarks from the sale"
-              onChange={(e) => setNote(e.target.value)}
-            />
+            <label className={formStyles.field}>
+              <span className={formStyles.label}>Coach request</span>
+              <input
+                className={s.input}
+                value={coachPreference}
+                maxLength={200}
+                placeholder="Language, timing"
+                onChange={(e) => setCoachPreference(e.target.value)}
+              />
+            </label>
+            <label className={formStyles.field}>
+              <span className={formStyles.label}>Remarks</span>
+              <input
+                className={s.input}
+                value={note}
+                maxLength={1000}
+                onChange={(e) => setNote(e.target.value)}
+              />
+            </label>
             <span className={surfaceStyles.muted}>
-              When the customer pays, the plan starts by itself and the payment
-              is recorded. The link is good for 7 days.
+              The plan starts when they pay. The link lasts 7 days.
             </span>
             {problem && (
               <span className={s.problem} role="alert">
                 {problem}
               </span>
             )}
-            <span className={s.chips}>
+            <span className={a.actions}>
               <button
                 type="button"
-                className={s.chip}
+                className={a.btn}
                 disabled={!plan || busy}
                 onClick={make}
               >
-                {busy ? "Making the link" : "Make the link"}
+                {busy ? "Making" : "Make link"}
               </button>
               <button
                 type="button"
-                className={s.chip}
+                className={surfaceStyles.textBtn}
                 disabled={busy}
                 onClick={() => {
                   setMaking(false);

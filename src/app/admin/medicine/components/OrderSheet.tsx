@@ -141,13 +141,13 @@ export default function OrderSheet({
             ...(link ? { trackingUrl: typed } : { trackingNo: typed }),
             expectedAt: dayToIso(day),
           }),
-        `${order.orderNumber} dispatched. The patient has the tracking.`,
+        `${order.orderNumber} dispatched. Patient told.`,
       );
     }
     if (mode === "deliver")
       return run(
         () => moveOrder(order.id, { to: "DELIVERED" }),
-        `${order.orderNumber} delivered. The patient was told.`,
+        `${order.orderNumber} delivered. Patient told.`,
       );
     if (mode === "delay") {
       const late = dayProblem(day);
@@ -162,7 +162,7 @@ export default function OrderSheet({
         return setProblem("Say why the order is cancelled.");
       return run(
         () => cancelOrder(order.id, reason.trim()),
-        "Cancelled. The refund is on its way to the patient.",
+        "Cancelled and refunded",
       );
     }
   };
@@ -173,7 +173,7 @@ export default function OrderSheet({
       : mode === "deliver"
         ? `Mark ${order.orderNumber} delivered`
         : mode === "delay"
-          ? "A new expected date"
+          ? "New delivery date"
           : mode === "cancel"
             ? `Cancel ${order.orderNumber}`
             : order.orderNumber;
@@ -215,7 +215,7 @@ export default function OrderSheet({
                 <dd>{order.address || "No address on the order"}</dd>
               </div>
               <div>
-                <dt>In the order</dt>
+                <dt>Items</dt>
                 <dd>
                   {order.items.map((i) => (
                     <span key={i.name} className={s.lineItem}>
@@ -265,7 +265,7 @@ export default function OrderSheet({
                   className={adminStyles.textBtn}
                   onClick={() => setMode("delay")}
                 >
-                  Give a new expected date
+                  Change date
                 </button>
                 <button
                   type="button"
@@ -304,8 +304,7 @@ export default function OrderSheet({
                     onChange={(e) => setTracking(e.target.value)}
                   />
                   <span className={formStyles.hint}>
-                    A link the patient can open is best. A link must start with
-                    https://.
+                    A link must start with https://.
                   </span>
                 </label>
               </>
@@ -323,27 +322,24 @@ export default function OrderSheet({
                 />
                 {mode === "delay" && (
                   <span className={formStyles.hint}>
-                    The patient gets the new date on WhatsApp, with an apology.
+                    The patient is told on WhatsApp.
                   </span>
                 )}
               </div>
             )}
             {mode === "deliver" && (
               <p className={adminStyles.confirm}>
-                The patient is told the order has arrived and, two hours later,
-                asked whether it came as it should. A delivered order cannot be
-                moved back.
+                The patient is told. This cannot be undone.
               </p>
             )}
             {mode === "cancel" && (
               <>
                 <p className={adminStyles.confirm}>
-                  The patient is refunded in full (
+                  Full refund for{" "}
                   {order.items.length === 1
                     ? "one item"
                     : `${order.items.length} items`}
-                  ) and told on WhatsApp. Upcoming dose reminders from this
-                  order stop. This cannot be undone.
+                  . The patient is told. This cannot be undone.
                 </p>
                 <label className={formStyles.field}>
                   <span className={formStyles.label}>
@@ -377,7 +373,7 @@ export default function OrderSheet({
                   {busy
                     ? "Saving"
                     : mode === "dispatch"
-                      ? "Dispatch and tell the patient"
+                      ? "Dispatch"
                       : mode === "deliver"
                         ? "Mark delivered"
                         : mode === "delay"

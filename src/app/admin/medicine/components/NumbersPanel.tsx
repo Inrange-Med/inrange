@@ -30,7 +30,7 @@ export default function NumbersPanel() {
     <section className={adminStyles.panel} aria-labelledby="numbers-h">
       <div className={`${adminStyles.panelHead} ${s.headWrap}`}>
         <h2 id="numbers-h" className={adminStyles.h2}>
-          How it is going
+          Numbers
         </h2>
         <span className={s.seg}>
           <SegmentedControl
