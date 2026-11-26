@@ -121,14 +121,14 @@ export default function Nav({ home = true }: { home?: boolean }) {
   }, [current]);
 
   // Mobile action bar: visible once the hero has scrolled away, hidden
-  // while the check, pricing or the footer is on screen, where the
-  // same action is already in view.
+  // only while another booking button (the calculator's) or the footer
+  // is on screen, so the action is always one tap away.
   useEffect(() => {
     // a page that cannot take a booking yet (a coming-soon programme) never shows the booking dock
     if (document.querySelector("[data-no-dock]")) return;
     // the homepage hero, or on inner pages the page's own head band
     const hero = document.getElementById("top") ?? document.querySelector("main > :first-child");
-    const hides = document.querySelectorAll("#check, #foot, [data-dock-hide]");
+    const hides = document.querySelectorAll("#foot, [data-dock-hide]");
     const state = { past: false, hide: new Set<Element>() };
     const sync = () => setDock(state.past && state.hide.size === 0);
     const heroIo = new IntersectionObserver(([e]) => {
