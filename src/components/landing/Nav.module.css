@@ -589,11 +589,20 @@
   box-shadow:
     inset 0 0 0 1px rgb(255 255 255 / 0.06),
     0 18px 40px -20px rgb(0 0 0 / 0.45);
-  transform: translateY(calc(100% + 24px));
-  transition: transform 520ms var(--ease-drawer);
+  /* hidden: below its own bottom offset and the home-bar inset too, so no sliver peeks on iPhones;
+     visibility drops only after the slide, so iOS 26 never paints it under the toolbars */
+  transform: translateY(calc(100% + 34px + env(safe-area-inset-bottom)));
+  visibility: hidden;
+  transition:
+    transform 520ms var(--ease-drawer),
+    visibility 0s linear 520ms;
 }
 .dock[data-show="true"] {
   transform: translateY(calc(-1 * var(--vv-gap)));
+  visibility: visible;
+  transition:
+    transform 520ms var(--ease-drawer),
+    visibility 0s;
 }
 .dock p {
   font-size: 0.8125rem;

@@ -241,7 +241,8 @@ export default function LossCalculator({ bare = false }: { bare?: boolean }) {
           </p>
         )}
 
-        <div className={s.next}>
+        {/* the dock steps aside only while this row (the calculator's own booking button) is on screen */}
+        <div className={s.next} data-dock-hide>
           {r.state !== "under" && (
             <a href={ASSESSMENT_URL} className={`btn ${s.go}`}>
               <span>Book consultation</span>
