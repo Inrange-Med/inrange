@@ -65,7 +65,8 @@ export const forgetList = () => { cache = null; };
  */
 export function matchList(rows: ListItem[], query: string, limit = 12) {
   const words = query.toLowerCase().replace(FORM_WORDS, " ").split(/[\s,]+/).map(keyOf).filter(Boolean).slice(0, 5);
-  if (!words.length) return { matches: [] as ListItem[], didYouMean: [] as ListItem[] };
+  // nothing typed: the whole list, so the doctor can pick without typing (27 Nov 2026)
+  if (!words.length) return { matches: rows.slice(0, 500), didYouMean: [] as ListItem[] };
   const hay = (m: ListItem) => keyOf(`${m.brand} ${m.molecule} ${m.strength} ${m.form}`);
   const whole = keyOf(query);
   const strength = /^(\d+(?:\.\d+)?)(?:mg|mcg|g|ml|iu|units?)?$/;
@@ -92,7 +93,7 @@ export function matchList(rows: ListItem[], query: string, limit = 12) {
   return { matches: [], didYouMean };
 }
 
-export async function searchList(query: string, limit = 12) {
+export async function searchList(query: string, limit = 50) {
   return matchList(await list(), query.slice(0, 60), limit);
 }
 
@@ -136,6 +137,7 @@ if (import.meta.main) {
   assert(ids("mounjaro") === "4,6,7", "every strength without a number");
   assert(ids("vitamin d3") === "8", "a number inside a name stays a word");
   assert(ids("ensure") === "5", "a supplement");
+  assert(ids("") === "1,2,3,4,6,7,8,5" && ids("tab") === "1,2,3,4,6,7,8,5", "nothing typed lists everything");
   assert(matchList(rows, "rybelsis").didYouMean[0]?.id === 1, "did you mean a misspelling");
   assert(matchList(rows, "glycomett 500").didYouMean[0]?.id === 3, "did you mean with a strength");
   assert(!matchList(rows, "zzqx").didYouMean.length, "nothing alike");
