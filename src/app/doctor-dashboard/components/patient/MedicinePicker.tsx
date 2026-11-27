@@ -33,7 +33,7 @@ export default function MedicinePicker({
   const showing = open || first;
 
   useEffect(() => {
-    if (q.length < 2) return;
+    if (!showing) return;
     const stale = new AbortController();
     const timer = window.setTimeout(() => {
       searchMedicines(q, stale.signal)
@@ -42,12 +42,12 @@ export default function MedicinePicker({
           setFailed(false);
         })
         .catch(() => !stale.signal.aborted && setFailed(true));
-    }, 180);
+    }, q ? 180 : 0);
     return () => {
       stale.abort();
       clearTimeout(timer);
     };
-  }, [q]);
+  }, [q, showing]);
 
   const pick = (item: ListItem | null) => {
     onPick(item, item ? undefined : q);
@@ -72,7 +72,8 @@ export default function MedicinePicker({
     );
   }
 
-  const results = q.length >= 2 && found?.q === q ? found : null;
+  // between keystrokes the last list stays up, so the dropdown never blinks shut
+  const results = found;
 
   return (
     <div className={styles.picker}>
@@ -83,7 +84,7 @@ export default function MedicinePicker({
           ref={input}
           value={query}
           maxLength={60}
-          placeholder="Type a medicine or supplement"
+          placeholder="Pick below or type to search"
           autoComplete="off"
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => {
@@ -123,7 +124,7 @@ export default function MedicinePicker({
         </ul>
       )}
 
-      {results && results.matches.length === 0 && (
+      {results && q && found?.q === q && results.matches.length === 0 && (
         <div className={styles.noMatch}>
           {results.didYouMean.length > 0 ? (
             <>
